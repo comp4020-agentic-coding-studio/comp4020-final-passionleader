@@ -75,3 +75,4 @@ was clean English.
 - [`12b1c09`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/12b1c09): calm looping background music (CC0), a synthesised fart on every poop, and a mute button.
 - [`8bd8d7e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8bd8d7e): fixes from live QA: sinks rebuilt as a vanity counter with a mirror, and phone-specific help text.
 - [`2560fa6`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2560fa6): crit 8 reflection.
+- [`cb7a46b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/cb7a46b): poop emoji throughout the README.
