@@ -70,3 +70,6 @@ was clean English.
 - [`11de407`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/11de407): `CLAUDE.md` rules.
 - [`a0ff52f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a0ff52f): the 3D client (toilet room, join modal, movement, one poop, name labels, phone controls).
 - [`49f9442`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/49f9442): poop favicon.
+- [`73b3a20`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/73b3a20): README (first version of what good means, sources) and this file.
+- [`b7ed8eb`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b7ed8eb): the toilet becomes a public bathroom: 10 open stalls with a toilet each, 3 sinks, collision.
+- [`12b1c09`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/12b1c09): calm looping background music (CC0), a synthesised fart on every poop, and a mute button.
