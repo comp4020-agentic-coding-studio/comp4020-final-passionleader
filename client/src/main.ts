@@ -1,6 +1,7 @@
 import "./style.css";
 import * as THREE from "three";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
+import { playFart, startBgm } from "./audio.ts";
 import { ApiError, getPoops, isValidName, join, postPoop, type Poop, type Session } from "./api.ts";
 import {
   BOUND,
@@ -180,6 +181,7 @@ function enterRoom(): void {
   touch.hidden = false;
   hudName.textContent = `You are ${session.name}`;
   playing = true;
+  startBgm();
   // Move focus out of the form so keystrokes go to the game, not a hidden input.
   (document.activeElement as HTMLElement | null)?.blur();
   stage.focus();
@@ -252,6 +254,7 @@ let pooping = false;
 async function poop(): Promise<void> {
   if (!session || pooping) return;
   pooping = true;
+  playFart();
   try {
     const saved = await postPoop(session.token, player.position.x, player.position.z);
     upsertPoop(saved);
