@@ -109,12 +109,42 @@ function primitiveToilet(): THREE.Group {
   return g;
 }
 
-function primitiveSink(): THREE.Group {
+// A public-bathroom vanity: one long counter against the back wall with a
+// basin and tap per sink and a mirror above. Built from primitives because a
+// lone sink model on a post read as a white "T" from across the room.
+function buildVanity(): THREE.Group {
   const white = new THREE.MeshLambertMaterial({ color: 0xf6f6f0 });
+  const steel = new THREE.MeshLambertMaterial({ color: 0xb8bcc2 });
   const g = new THREE.Group();
-  const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.25, 0.2, 20), white);
-  basin.position.y = 0.9;
-  g.add(basin);
+  const width = SINK_COUNT * SINK_SPACING - 0.6;
+  const depth = 0.7;
+  const z = -(BOUND - depth / 2);
+
+  const counter = new THREE.Mesh(
+    new THREE.BoxGeometry(width, 0.85, depth),
+    new THREE.MeshLambertMaterial({ color: 0x8a8f96 }),
+  );
+  counter.position.set(0, 0.425, z);
+  g.add(counter);
+  colliders.push(boxFrom(counter, 0.1));
+
+  const mirror = new THREE.Mesh(
+    new THREE.PlaneGeometry(width, 1.1),
+    new THREE.MeshLambertMaterial({ color: 0xcfe6f2 }),
+  );
+  mirror.position.set(0, 1.75, -BOUND + 0.02);
+  g.add(mirror);
+
+  for (let i = 0; i < SINK_COUNT; i++) {
+    const x = (i - (SINK_COUNT - 1) / 2) * SINK_SPACING;
+    const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.16, 24), white);
+    basin.position.set(x, 0.9, z + 0.05);
+    const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 10), steel);
+    tap.position.set(x, 1.0, z - 0.25);
+    const spout = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.22), steel);
+    spout.position.set(x, 1.13, z - 0.15);
+    g.add(basin, tap, spout);
+  }
   return g;
 }
 
@@ -177,10 +207,7 @@ export async function buildBathroom(): Promise<THREE.Group> {
   const root = new THREE.Group();
   root.add(buildPartitions());
 
-  const [toiletModel, sinkModel] = await Promise.all([
-    loadNormalized("toilet.glb", { height: 1.1 }),
-    loadNormalized("bathroomSink.glb", { width: 0.9 }),
-  ]);
+  const toiletModel = await loadNormalized("toilet.glb", { height: 1.1 });
 
   for (const side of [-1, 1]) {
     for (let i = 0; i < STALLS_PER_ROW; i++) {
@@ -194,20 +221,7 @@ export async function buildBathroom(): Promise<THREE.Group> {
     }
   }
 
-  for (let i = 0; i < SINK_COUNT; i++) {
-    const sink = new THREE.Group();
-    const basin = (sinkModel ?? primitiveSink()).clone(true);
-    basin.position.y = 0.85;
-    const pedestal = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.14, 0.2, 0.85, 16),
-      new THREE.MeshLambertMaterial({ color: 0xf6f6f0 }),
-    );
-    pedestal.position.y = 0.425;
-    sink.add(basin, pedestal);
-    sink.position.set((i - (SINK_COUNT - 1) / 2) * SINK_SPACING, 0, -(BOUND - 0.45));
-    root.add(sink);
-    colliders.push(boxFrom(sink, 0.1));
-  }
+  root.add(buildVanity());
   return root;
 }
 

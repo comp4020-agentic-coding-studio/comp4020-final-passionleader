@@ -88,3 +88,10 @@ html, body {
   font-size: 1.3rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 #mute:focus-visible { outline: 3px solid #6b3f1d; outline-offset: 2px; }
+
+/* The help line matches the controls on screen: keys on desktop, pad on phones. */
+.touch-help { display: none; }
+@media (pointer: coarse), (max-width: 700px) {
+  .keys-help { display: none; }
+  .touch-help { display: inline; }
+}
