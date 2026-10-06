@@ -65,3 +65,6 @@ yellowish walls under flat light, and everyone is the same white clay figure.
   browser can feel like.
 - [FrameVR](https://learn.framevr.io/), virtual meeting spaces: the closest
   thing to where I want the final project to end up.
+
+<img width="1386" height="1021" alt="image" src="https://github.com/user-attachments/assets/fe997cd4-21b2-4d32-a0e2-4193ba617e15" />
+
