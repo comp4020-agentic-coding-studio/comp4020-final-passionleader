@@ -86,3 +86,4 @@ was clean English.
 - [`cb7a46b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/cb7a46b): poop emoji throughout the README.
 - [`8a6532b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8a6532b): fix for poops vanishing: the database now lives on the Fly volume, not the machine's wiped disk.
 - [`d00d5c1`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d00d5c1): one poop every 5 seconds, enforced on the server, to keep a mashed key from hammering the database.
+- [`6e75cf9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/6e75cf9): four diagrams (architecture, database choice, crit 8 to final, work split) added here and to the reflection.
