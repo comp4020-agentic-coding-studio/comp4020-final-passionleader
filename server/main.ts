@@ -4,7 +4,7 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { marked } from "marked";
-import { allPoops, createVisitor, findByName, findByToken, placePoop } from "./db.ts";
+import { POOP_COOLDOWN_SECONDS, allPoops, createVisitor, findByName, findByToken, placePoop } from "./db.ts";
 
 // Letters and underscores, at most eight: short enough to float over a poop,
 // and narrow enough that a stranger can't write a sentence into the room.
@@ -53,7 +53,11 @@ app.post("/api/poop", async (c) => {
     return c.json({ error: "A poop needs a place." }, 400);
   }
   const clamp = (n: number) => Math.max(-ROOM, Math.min(ROOM, n));
-  return c.json(placePoop(token, clamp(x), clamp(z)));
+  const poop = placePoop(token, clamp(x), clamp(z));
+  if (!poop) {
+    return c.json({ error: `One poop every ${POOP_COOLDOWN_SECONDS} seconds. Hold it in.` }, 429);
+  }
+  return c.json(poop);
 });
 
 // The 3D client, once Vite has built it.

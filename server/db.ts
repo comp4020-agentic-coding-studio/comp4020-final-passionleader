@@ -39,11 +39,16 @@ export function createVisitor(name: string, token: string): void {
   db.prepare("INSERT INTO visitors (name, token) VALUES (?, ?)").run(name, token);
 }
 
+// One poop per visitor every few seconds, so a held-down key can't hammer the
+// database. Returns undefined when the visitor is still cooling down.
+export const POOP_COOLDOWN_SECONDS = 5;
+
 export function placePoop(token: string, x: number, z: number): Poop | undefined {
   return db
     .prepare(
       `UPDATE visitors SET poop_x = ?, poop_z = ?, pooped_at = datetime('now')
        WHERE token = ?
+         AND (pooped_at IS NULL OR unixepoch('now') - unixepoch(pooped_at) >= ${POOP_COOLDOWN_SECONDS})
        RETURNING name, poop_x AS x, poop_z AS z, pooped_at AS updatedAt`,
     )
     .get(x, z, token) as Poop | undefined;

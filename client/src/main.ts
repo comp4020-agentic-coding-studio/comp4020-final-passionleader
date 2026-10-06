@@ -250,9 +250,19 @@ $("poop-btn").addEventListener("pointerdown", (e) => {
 
 // --- actions ---------------------------------------------------------------
 
+// Mirrors the server's 5-second cooldown, so a mashed key gets a message
+// instead of a fart and a rejected request.
+const POOP_COOLDOWN_MS = 5000;
+let lastPoopAt = 0;
 let pooping = false;
 async function poop(): Promise<void> {
   if (!session || pooping) return;
+  const wait = lastPoopAt + POOP_COOLDOWN_MS - Date.now();
+  if (wait > 0) {
+    toast(`Hold it in… ${Math.ceil(wait / 1000)}s`);
+    return;
+  }
+  lastPoopAt = Date.now();
   pooping = true;
   playFart();
   try {

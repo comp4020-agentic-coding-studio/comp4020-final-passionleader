@@ -26,7 +26,7 @@ Read before planning or building: `README.md` (what good means for this app),
 - Names are 1–8 letters or underscores, unique regardless of case. A name can
   only be reclaimed by the browser holding the token issued when it was taken.
 - Each visitor has exactly one poop: a new poop moves the old one. Poops never
-  expire (for now).
+  expire (for now). One poop per visitor every 5 seconds, enforced on the server.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (arrows/WASD + Space) and on a phone (on-screen
   D-pad + Poop button).

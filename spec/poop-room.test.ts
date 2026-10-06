@@ -51,10 +51,17 @@ describe("the trace", () => {
     expect(poops).toContainEqual(expect.objectContaining({ name, x: 1.5, z: -2 }));
   });
 
-  it("is one poop per person: a new one moves the old", async () => {
+  it("can't be repeated within five seconds", async () => {
+    const { token } = await (await post("/api/join", { name: freshName() })).json();
+    expect((await post("/api/poop", { token, x: 1, z: 1 })).status).toBe(200);
+    expect((await post("/api/poop", { token, x: 2, z: 2 })).status).toBe(429);
+  });
+
+  it("is one poop per person: a new one moves the old", { timeout: 15000 }, async () => {
     const name = freshName();
     const { token } = await (await post("/api/join", { name })).json();
     await post("/api/poop", { token, x: 1, z: 1 });
+    await new Promise((r) => setTimeout(r, 6000));
     await post("/api/poop", { token, x: -3, z: 4 });
 
     const poops: { name: string; x: number; z: number }[] = await (await fetch(new URL("/api/poops", baseUrl))).json();
