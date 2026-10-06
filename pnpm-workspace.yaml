@@ -1,3 +1,7 @@
 # esbuild (used by Vitest) needs its postinstall to set up its native binary.
 allowBuilds:
   esbuild: true
+
+# the 3D client is its own package, built by Vite into client/dist
+packages:
+  - client
