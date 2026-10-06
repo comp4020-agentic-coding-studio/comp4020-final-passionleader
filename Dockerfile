@@ -2,8 +2,10 @@
 
 # One Node process serves everything: the Vite-built 3D client from
 # client/dist, the JSON API, and README.md rendered at /readme/. It listens on
-# 0.0.0.0:$PORT (fly.toml sets PORT) and keeps its SQLite file at
-# $DATABASE_PATH, which fly.toml points at the /data volume.
+# 0.0.0.0:$PORT (fly.toml sets PORT) and keeps its SQLite file on the /data
+# volume that fly.toml mounts. fly.toml sets no DATABASE_PATH, so it's set
+# here: without it the file landed in the container's own disk, which is wiped
+# on every deploy and every auto-stop, and poops vanished.
 
 FROM docker.io/library/node:24.21.0-slim AS build
 WORKDIR /app
@@ -20,4 +22,5 @@ COPY server/ server/
 COPY README.md ./
 COPY --from=build /app/client/dist client/dist
 ENV NODE_ENV=production
+ENV DATABASE_PATH=/data/app.db
 CMD ["node", "server/main.ts"]
