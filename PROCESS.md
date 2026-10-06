@@ -74,3 +74,4 @@ was clean English.
 - [`b7ed8eb`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b7ed8eb): the toilet becomes a public bathroom: 10 open stalls with a toilet each, 3 sinks, collision.
 - [`12b1c09`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/12b1c09): calm looping background music (CC0), a synthesised fart on every poop, and a mute button.
 - [`8bd8d7e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8bd8d7e): fixes from live QA: sinks rebuilt as a vanity counter with a mirror, and phone-specific help text.
+- [`2560fa6`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2560fa6): crit 8 reflection.
