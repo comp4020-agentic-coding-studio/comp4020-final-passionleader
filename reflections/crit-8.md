@@ -15,6 +15,8 @@ small parallel jobs like assets and QA. Splitting the work like that really
 paid off. Dropping my ambition for real-time and aiming only for a prototype
 made it finish fast, and that felt good.
 
+![Crit 8 work split between the Opus session (server, deploy, docs) and the Sonnet session (client, assets, QA)](../diagrams/4-work-split.png)
+
 ## What this changed about who I want to be as a developer
 
 This was my first time simulating 3D in a browser, and I was surprised how
@@ -30,3 +32,5 @@ actually work? I'll need that for the final project. People say real-time
 needs Redis, but on a single small instance I doubt caching buys much, two
 processes on one machine might overload it, and managed Postgres and Redis on
 Fly are paid anyway.
+
+![From crit 8 to the final project: REST writes now, WebSockets and in-memory positions next](../diagrams/3-crit8-to-final.png)

@@ -30,6 +30,8 @@ waited. Only one session was allowed to commit, so the history stays readable.
 The client session also did the browser QA: keyboard-only, a phone viewport
 with real touch events, the duplicate-name case, and a reload to check the trace.
 
+![Crit 8 work split between the Opus session (server, deploy, docs) and the Sonnet session (client, assets, QA)](diagrams/4-work-split.png)
+
 **A correction I made.** The agent ran the spec against the live site to check
 the deploy, which left three random test poops in the production database for
 my pod to find. Nothing broke, but random names in a room meant for people
@@ -41,6 +43,8 @@ had the agent translate it. The arguments and sources are mine; the agent's job
 was clean English.
 
 ## Why this stack
+
+![How one poop travels: browser, Hono server and SQLite on the Fly volume](diagrams/1-crit8-architecture.png)
 
 - **3D in the browser (WebGL, Three.js).** A 3D world is the most original and
   eye-catching way into the idea. I weighed Three.js against Babylon.js and
@@ -58,11 +62,15 @@ was clean English.
 
 ### What I ruled out
 
+![Database choice: SQLite on the volume (chosen) vs. managed Postgres and Redis (given up)](diagrams/2-database-choice.png)
+
 - **Postgres + Redis.** Managed versions on Fly cost money, and I want to stay
   inside the course credit. Extra processes on one machine worried me, and with
   a single server there's nothing for Redis to cache.
 - **A NoSQL database.** It needs its own server process, which doesn't fit one
   machine and one volume.
+
+![From crit 8 to the final project: REST writes now, WebSockets and in-memory positions next](diagrams/3-crit8-to-final.png)
 
 ## History
 
