@@ -9,8 +9,48 @@ const WALL_HEIGHT = 4;
 const FLOOR_COLOR = 0xd9c86a;
 const WALL_COLOR = 0xc9b556;
 
-export const TOILET_POS = new THREE.Vector3(0, 0, -(BOUND - 0.4));
-export const TOILET_RADIUS = 1.2;
+/** Axis-aligned footprint on the floor plane, used for simple player collision. */
+export interface Box {
+  minX: number;
+  maxX: number;
+  minZ: number;
+  maxZ: number;
+}
+export const colliders: Box[] = [];
+
+/** Pushes a circle (the player) out of every collider. Two passes settle corners. */
+export function pushOut(pos: THREE.Vector3, radius: number): void {
+  for (let pass = 0; pass < 2; pass++) {
+    for (const b of colliders) {
+      const cx = THREE.MathUtils.clamp(pos.x, b.minX, b.maxX);
+      const cz = THREE.MathUtils.clamp(pos.z, b.minZ, b.maxZ);
+      const dx = pos.x - cx;
+      const dz = pos.z - cz;
+      const d = Math.hypot(dx, dz);
+      if (d >= radius) continue;
+      if (d > 1e-6) {
+        pos.x = cx + (dx / d) * radius;
+        pos.z = cz + (dz / d) * radius;
+      } else {
+        // Centre is inside the box: leave through the nearest face.
+        const out = [
+          [pos.x - b.minX, -1, 0],
+          [b.maxX - pos.x, 1, 0],
+          [pos.z - b.minZ, 0, -1],
+          [b.maxZ - pos.z, 0, 1],
+        ].sort((a, c) => a[0]! - c[0]!)[0]!;
+        pos.x += out[1]! * (out[0]! + radius);
+        pos.z += out[2]! * (out[0]! + radius);
+      }
+    }
+  }
+}
+
+const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
+  o.updateMatrixWorld(true);
+  const b = new THREE.Box3().setFromObject(o);
+  return { minX: b.min.x - pad, maxX: b.max.x + pad, minZ: b.min.z - pad, maxZ: b.max.z + pad };
+};
 
 /** Flat, uniform, bright light: no shadows, no direction. */
 export function addLights(scene: THREE.Scene): void {
@@ -61,26 +101,114 @@ export function buildRoom(): THREE.Group {
 function primitiveToilet(): THREE.Group {
   const white = new THREE.MeshLambertMaterial({ color: 0xf6f6f0 });
   const g = new THREE.Group();
-  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.6, 0.45, 0.6, 24), white);
-  bowl.position.y = 0.3;
-  const tank = new THREE.Mesh(new THREE.BoxGeometry(1, 1, 0.4), white);
-  tank.position.set(0, 0.8, -0.55);
+  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.45, 20), white);
+  bowl.position.set(0, 0.22, 0.1);
+  const tank = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.22), white);
+  tank.position.set(0, 0.6, -0.3);
   g.add(bowl, tank);
   return g;
 }
 
-/** Loads the CC0 Kenney toilet; falls back to a primitive one if the load fails. */
-export async function buildToilet(): Promise<THREE.Object3D> {
-  let model: THREE.Object3D;
+function primitiveSink(): THREE.Group {
+  const white = new THREE.MeshLambertMaterial({ color: 0xf6f6f0 });
+  const g = new THREE.Group();
+  const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.25, 0.2, 20), white);
+  basin.position.y = 0.9;
+  g.add(basin);
+  return g;
+}
+
+/**
+ * Loads a GLB and normalises it: scaled to a target height or width, centred on
+ * x/z with its base at y=0, wrapped in a group so callers can rotate/place it.
+ * Returns null when the file cannot be loaded (callers fall back to primitives).
+ */
+async function loadNormalized(file: string, target: { height?: number; width?: number }): Promise<THREE.Group | null> {
   try {
-    const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/toilet.glb`);
-    model = gltf.scene;
-    model.scale.setScalar(3);
+    const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/${file}`);
+    const model = gltf.scene;
+    model.updateMatrixWorld(true);
+    let box = new THREE.Box3().setFromObject(model);
+    const size = box.getSize(new THREE.Vector3());
+    model.scale.setScalar(target.height ? target.height / size.y : (target.width ?? 1) / size.x);
+    model.updateMatrixWorld(true);
+    box = new THREE.Box3().setFromObject(model);
+    const c = box.getCenter(new THREE.Vector3());
+    model.position.set(-c.x, -box.min.y, -c.z);
+    const g = new THREE.Group();
+    g.add(model);
+    return g;
   } catch {
-    model = primitiveToilet();
+    return null;
   }
-  model.position.copy(TOILET_POS);
-  return model;
+}
+
+// --- public bathroom layout -------------------------------------------------
+// Two rows of five open stalls (no doors) run along the left and right walls,
+// each opening toward the middle of the room. Sinks stand against the back wall.
+
+const STALLS_PER_ROW = 5;
+const STALL_WIDTH = 3.2; // along z
+const STALL_DEPTH = 3; // from the side wall toward the room centre
+const PARTITION_HEIGHT = 1.8;
+const PARTITION_THICKNESS = 0.12;
+const ROW_HALF = (STALLS_PER_ROW * STALL_WIDTH) / 2; // 8: stalls span z in [-8, 8]
+const SINK_COUNT = 3;
+const SINK_SPACING = 3;
+
+const PARTITION_MAT = new THREE.MeshLambertMaterial({ color: 0xe9e2bf });
+
+function buildPartitions(): THREE.Group {
+  const g = new THREE.Group();
+  const geo = new THREE.BoxGeometry(STALL_DEPTH, PARTITION_HEIGHT, PARTITION_THICKNESS);
+  for (const side of [-1, 1]) {
+    for (let i = 0; i <= STALLS_PER_ROW; i++) {
+      const m = new THREE.Mesh(geo, PARTITION_MAT);
+      m.position.set(side * (BOUND - STALL_DEPTH / 2), PARTITION_HEIGHT / 2, -ROW_HALF + i * STALL_WIDTH);
+      g.add(m);
+      colliders.push(boxFrom(m));
+    }
+  }
+  return g;
+}
+
+/** Partitions, ten toilets and the sinks. Adds colliders as a side effect. */
+export async function buildBathroom(): Promise<THREE.Group> {
+  const root = new THREE.Group();
+  root.add(buildPartitions());
+
+  const [toiletModel, sinkModel] = await Promise.all([
+    loadNormalized("toilet.glb", { height: 1.1 }),
+    loadNormalized("bathroomSink.glb", { width: 0.9 }),
+  ]);
+
+  for (const side of [-1, 1]) {
+    for (let i = 0; i < STALLS_PER_ROW; i++) {
+      const toilet = new THREE.Group();
+      toilet.add((toiletModel ?? primitiveToilet()).clone(true));
+      // The model faces +z; turn it to face the room centre, then back it onto the wall.
+      toilet.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
+      toilet.position.set(side * (BOUND - 0.6), 0, -ROW_HALF + (i + 0.5) * STALL_WIDTH);
+      root.add(toilet);
+      colliders.push(boxFrom(toilet, 0.05));
+    }
+  }
+
+  for (let i = 0; i < SINK_COUNT; i++) {
+    const sink = new THREE.Group();
+    const basin = (sinkModel ?? primitiveSink()).clone(true);
+    basin.position.y = 0.85;
+    const pedestal = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.14, 0.2, 0.85, 16),
+      new THREE.MeshLambertMaterial({ color: 0xf6f6f0 }),
+    );
+    pedestal.position.y = 0.425;
+    sink.add(basin, pedestal);
+    sink.position.set((i - (SINK_COUNT - 1) / 2) * SINK_SPACING, 0, -(BOUND - 0.45));
+    root.add(sink);
+    colliders.push(boxFrom(sink, 0.1));
+  }
+  return root;
 }
 
 const CLAY = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 1, metalness: 0 });

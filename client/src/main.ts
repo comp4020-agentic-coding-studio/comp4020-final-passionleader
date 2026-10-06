@@ -4,18 +4,19 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import { ApiError, getPoops, isValidName, join, postPoop, type Poop, type Session } from "./api.ts";
 import {
   BOUND,
-  TOILET_POS,
-  TOILET_RADIUS,
   addLights,
   buildPlayer,
   buildPoop,
   buildRoom,
-  buildToilet,
+  buildBathroom,
+  pushOut,
 } from "./world.ts";
 
 const SPEED = 5; // world units per second
 const LABEL_RANGE = 2; // show the owner's name within this distance of a poop
-const CAMERA_OFFSET = new THREE.Vector3(0, 5, 8);
+const PLAYER_RADIUS = 0.4;
+// High enough to see over the 1.8-unit stall partitions.
+const CAMERA_OFFSET = new THREE.Vector3(0, 6, 7);
 const CAMERA_LIMIT = BOUND + 0.3;
 
 const $ = <T extends HTMLElement>(id: string): T => {
@@ -41,7 +42,7 @@ const scene = new THREE.Scene();
 scene.background = new THREE.Color(0xd8c870);
 addLights(scene);
 scene.add(buildRoom());
-void buildToilet().then((toilet) => scene.add(toilet));
+void buildBathroom().then((bathroom) => scene.add(bathroom));
 
 const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -58,13 +59,15 @@ function resize(): void {
   renderer.setSize(w, h);
   labelRenderer.setSize(w, h);
   camera.aspect = w / h;
+  // Portrait screens would otherwise see a thin slice of the room: widen the vertical FOV.
+  camera.fov = THREE.MathUtils.clamp(60 / camera.aspect ** 0.6, 60, 85);
   camera.updateProjectionMatrix();
 }
 window.addEventListener("resize", resize);
 resize();
 
 const player = buildPlayer();
-player.position.set(0, 0, 4);
+player.position.set(0, 0, 5);
 scene.add(player);
 camera.position.copy(player.position).add(CAMERA_OFFSET);
 
@@ -280,17 +283,9 @@ function update(dt: number): void {
       player.position.addScaledVector(move, SPEED * dt);
       player.rotation.y = Math.atan2(move.x, move.z); // model faces +z
     }
+    pushOut(player.position, PLAYER_RADIUS);
     player.position.x = THREE.MathUtils.clamp(player.position.x, -BOUND, BOUND);
     player.position.z = THREE.MathUtils.clamp(player.position.z, -BOUND, BOUND);
-
-    // Keep the player out of the toilet.
-    const dx = player.position.x - TOILET_POS.x;
-    const dz = player.position.z - TOILET_POS.z;
-    const dist = Math.hypot(dx, dz);
-    if (dist < TOILET_RADIUS && dist > 0) {
-      player.position.x = TOILET_POS.x + (dx / dist) * TOILET_RADIUS;
-      player.position.z = TOILET_POS.z + (dz / dist) * TOILET_RADIUS;
-    }
   }
 
   // Third-person camera, smoothly following behind the player.
