@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <title>Poop Room</title>
+  </head>
+  <body>
+    <main id="stage" tabindex="0" aria-label="3D bathroom"></main>
+
+    <div id="hud" hidden>
+      <p id="hud-name"></p>
+      <p id="hud-help">Move: WASD / arrows &middot; Poop: Space</p>
+      <p id="toast" role="status" aria-live="polite"></p>
+    </div>
+
+    <div id="touch" hidden>
+      <div id="dpad">
+        <button type="button" data-dir="up" tabindex="-1" aria-label="Move up">&#9650;</button>
+        <button type="button" data-dir="left" tabindex="-1" aria-label="Move left">&#9664;</button>
+        <button type="button" data-dir="right" tabindex="-1" aria-label="Move right">&#9654;</button>
+        <button type="button" data-dir="down" tabindex="-1" aria-label="Move down">&#9660;</button>
+      </div>
+      <button type="button" id="poop-btn" tabindex="-1">Poop</button>
+    </div>
+
+    <div id="join" role="dialog" aria-modal="true" aria-labelledby="join-title">
+      <form id="join-form" novalidate>
+        <h1 id="join-title">Poop Room</h1>
+        <label for="name">Your name (A&ndash;Z and _ only, up to 8)</label>
+        <input id="name" name="name" maxlength="8" autocomplete="off" autocapitalize="off" spellcheck="false" required />
+        <p id="join-error" role="alert"></p>
+        <button type="submit" id="enter">Enter</button>
+        <ul id="flavour">
+          <li>You pooped the moment you saw me.</li>
+          <li>We carved forever into poop &mdash; remember?</li>
+          <li>I was glad to put my poop next to yours.</li>
+        </ul>
+      </form>
+    </div>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
