@@ -118,3 +118,4 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`12f9cac`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/12f9cac): buildings 155 and 154 reshaped after the real ones; occluders handle multi-material meshes and hide a building the camera is inside.
 - [`c8ae34e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c8ae34e): a settings dialog (gear beside mute) with Low/High graphics, Low by default, after the user reported frame drops.
 - [`88a384a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/88a384a): wave and dance move the body; wave, yes, no and "mate" are spoken aloud to people nearby in the same space.
+- [`93c09a7`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/93c09a7): Low quality loads the photographed sky too; without it the scene washed out white.
