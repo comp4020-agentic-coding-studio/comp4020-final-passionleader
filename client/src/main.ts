@@ -99,10 +99,12 @@ const outdoorEnv = pmrem.fromScene(skyScene).texture;
 const indoorEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 // A photographed sky (Poly Haven, CC0) replaces the procedural one once it
-// loads: it's both the backdrop and the light reflected in the glass.
+// loads: it's both the backdrop and the light reflected in the glass. Low
+// quality loads it too: it costs one download, and the procedural sky alone
+// lights the scene far too brightly.
 let outdoorSky: THREE.Texture | null = null;
 let outdoorLight = outdoorEnv;
-if (highQuality) new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/autumn_field_puresky_1k.hdr`, (hdr) => {
+new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/autumn_field_puresky_1k.hdr`, (hdr) => {
   hdr.mapping = THREE.EquirectangularReflectionMapping;
   outdoorSky = hdr;
   outdoorLight = pmrem.fromEquirectangular(hdr).texture;

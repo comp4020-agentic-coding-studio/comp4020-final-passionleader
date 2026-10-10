@@ -39,8 +39,8 @@ want an in-joke. You poop, you leave, and later you come back and remember:
    (a sixth replaces your oldest). Walk onto one and press **E** to read it and
    comment.
 7. The gear button (top right, beside mute) sets graphics quality: Low (the
-   default) runs smoothly anywhere; High adds shadows, the photographed sky
-   and more trees.
+   default) runs smoothly anywhere; High adds shadows, smoother edges,
+   shinier glass and more trees.
 
 ## What good means for this app (v1)
 
