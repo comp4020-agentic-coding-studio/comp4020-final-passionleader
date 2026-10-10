@@ -21,7 +21,7 @@ export function roomShell(g: THREE.Group, colliders: Box[], halfX: number, halfZ
 /** A potted plant: a pot and a round green top. */
 export function plant(g: THREE.Group, colliders: Box[], x: number, z: number): void {
   block(g, colliders, [0.6, 0.6, 0.6], [x, z], 0x8a5a3c);
-  const top = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), new THREE.MeshLambertMaterial({ color: 0x4f8a3c }));
+  const top = new THREE.Mesh(new THREE.IcosahedronGeometry(0.55, 1), new THREE.MeshStandardMaterial({ color: 0x4f8a3c, roughness: 0.9 }));
   top.position.set(x, 1.15, z);
   g.add(top);
 }

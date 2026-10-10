@@ -40,6 +40,8 @@ export interface SpaceDef {
   /** Camera offset from the player: further back outside, closer indoors. */
   camera: THREE.Vector3;
   bgm: string;
+  /** Outdoors: a real sky and haze toward the horizon. Indoors: neither. */
+  outdoor?: boolean;
 }
 
 /** Pushes a circle (the player) out of every collider. Two passes settle corners. */
@@ -76,20 +78,51 @@ export const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
   return { minX: b.min.x - pad, maxX: b.max.x + pad, minZ: b.min.z - pad, maxZ: b.max.z + pad };
 };
 
-/** Soft daylight: a sky/ground fill and one sun, no shadows (cheap on phones). */
-export function addLights(scene: THREE.Scene): void {
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xb8a888, 1.6));
-  const sun = new THREE.DirectionalLight(0xffffff, 1.4);
-  sun.position.set(12, 20, 8);
-  scene.add(sun);
+/** Where the sun sits relative to whatever it follows: the sky shader uses the same direction. */
+export const SUN_DIR = new THREE.Vector3(0.55, 0.75, 0.35).normalize();
+
+/**
+ * Daylight: a soft sky/ground fill and one sun. The sun casts shadows over a
+ * box that follows the player (the caller moves it), so the shadow map stays
+ * sharp without covering the whole campus.
+ */
+export function addLights(scene: THREE.Scene, shadows: boolean): THREE.DirectionalLight {
+  scene.add(new THREE.HemisphereLight(0xdfefff, 0x8a7a62, 0.9));
+  const sun = new THREE.DirectionalLight(0xfff3e0, 2.6);
+  sun.castShadow = shadows;
+  sun.shadow.mapSize.set(2048, 2048);
+  const c = sun.shadow.camera;
+  c.left = c.bottom = -22;
+  c.right = c.top = 22;
+  c.near = 1;
+  c.far = 90;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.03;
+  scene.add(sun, sun.target);
+  return sun;
 }
 
-const mats = new Map<number, THREE.MeshLambertMaterial>();
-export const mat = (color: number): THREE.MeshLambertMaterial => {
+/** Turns on shadows for everything in a group: floors only receive them. */
+export function enableShadows(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    if (!(o as THREE.Mesh).isMesh) return;
+    const m = o as THREE.Mesh;
+    const flat = m.geometry instanceof THREE.PlaneGeometry;
+    m.castShadow = !flat && !o.userData.noShadow;
+    m.receiveShadow = true;
+  });
+}
+
+const mats = new Map<number, THREE.MeshStandardMaterial>();
+export const mat = (color: number): THREE.MeshStandardMaterial => {
   let m = mats.get(color);
-  if (!m) mats.set(color, (m = new THREE.MeshLambertMaterial({ color })));
+  if (!m) mats.set(color, (m = new THREE.MeshStandardMaterial({ color, roughness: 0.85, metalness: 0 })));
   return m;
 };
+
+/** Window glass: dark, a little blue, and reflective under the environment map. */
+export const glassMat = (tint = 0xb7d0e0): THREE.MeshPhysicalMaterial =>
+  new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
 
 // CC0 textures from assets/tex (credited in assets/CREDITS.md), tiled by
 // world size so a brick is the same size on every wall.
@@ -98,8 +131,8 @@ export const mat = (color: number): THREE.MeshLambertMaterial => {
 // upload, and uploading one with no image yet makes three.js warn.
 const loaderTex = new THREE.TextureLoader();
 const textures = new Map<string, { image: THREE.Texture | null; waiting: (() => void)[] }>();
-export function texMat(file: string, repeatX: number, repeatY: number, tint = 0xffffff): THREE.MeshLambertMaterial {
-  const material = new THREE.MeshLambertMaterial({ color: tint });
+export function texMat(file: string, repeatX: number, repeatY: number, tint = 0xffffff, roughness = 0.9): THREE.MeshStandardMaterial {
+  const material = new THREE.MeshStandardMaterial({ color: tint, roughness, metalness: 0 });
   // One material per call, never shared: occluders may fade it in place.
   material.userData.unique = true;
   let entry = textures.get(file);
@@ -125,6 +158,49 @@ export function texMat(file: string, repeatX: number, repeatY: number, tint = 0x
   return material;
 }
 
+/**
+ * Light concrete paving drawn on a canvas: large pale slabs with thin joints
+ * and a little speckle, like the paving around Kambri. Generated, so there's
+ * no asset to credit.
+ */
+let paving: THREE.CanvasTexture | null = null;
+export function pavingMat(repeatX: number, repeatY: number, tint = 0xffffff): THREE.MeshStandardMaterial {
+  if (!paving) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#d9d5cd";
+    ctx.fillRect(0, 0, 256, 256);
+    for (let i = 0; i < 2600; i++) {
+      const v = 200 + Math.floor(Math.random() * 30);
+      ctx.fillStyle = `rgb(${v},${v - 3},${v - 8})`;
+      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
+    }
+    ctx.strokeStyle = "#b9b4aa";
+    ctx.lineWidth = 3;
+    // Two rows of long slabs, offset like a running bond.
+    ctx.strokeRect(0, 0, 256, 128);
+    ctx.strokeRect(0, 128, 256, 128);
+    ctx.beginPath();
+    ctx.moveTo(128, 0);
+    ctx.lineTo(128, 128);
+    ctx.moveTo(0, 128);
+    ctx.lineTo(0, 256);
+    ctx.moveTo(256, 128);
+    ctx.lineTo(256, 256);
+    ctx.stroke();
+    paving = new THREE.CanvasTexture(c);
+    paving.colorSpace = THREE.SRGBColorSpace;
+    paving.wrapS = paving.wrapT = THREE.RepeatWrapping;
+    paving.anisotropy = 4;
+  }
+  const map = paving.clone();
+  map.repeat.set(repeatX, repeatY);
+  const m = new THREE.MeshStandardMaterial({ map, color: tint, roughness: 0.92 });
+  m.userData.unique = true;
+  return m;
+}
+
 /** A collision footprint with nothing drawn, for furniture drawn by a model. */
 export function solid(colliders: Box[], w: number, d: number, x: number, z: number): void {
   colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
@@ -137,6 +213,7 @@ export function place(g: THREE.Group, file: string, height: number, x: number, z
     const m = model.clone(true);
     m.position.set(x, 0, z);
     m.rotation.y = rotY;
+    enableShadows(m);
     g.add(m);
   });
 }

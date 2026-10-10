@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { block, doorway, floor, texMat, textPlane, tree, type Box, type SpaceDef } from "../world.ts";
-import { markOccluder } from "./occluders.ts";
+import { block, doorway, floor, pavingMat, texMat, textPlane, tree, type Box, type SpaceDef } from "../world.ts";
+import { building } from "./buildings.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
 // view (used only as a reference, never shipped): the lawn to the north-west,
@@ -15,11 +15,12 @@ export function buildOutdoor(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
 
-  floor(g, OUTDOOR.halfX * 2 + 20, OUTDOOR.halfZ * 2 + 20, 0, 0, texMat("pavement.jpg", 28, 22, 0xd8d2c6));
-  // The path between the two buildings, a shade darker.
-  floor(g, 14, OUTDOOR.halfZ * 2, -2, 0, texMat("pavement.jpg", 5, 16, 0xb8b0a2), 0.01);
-  // The lawn.
-  floor(g, 20, 16, -16, -14, texMat("grass.jpg", 6, 5), 0.02);
+  // Grass out to the horizon (the fog hides where it ends), the paved campus
+  // on top of it, a lighter path between the buildings, and the lawn.
+  floor(g, 700, 700, 0, 0, texMat("grass.jpg", 180, 180, 0x9fb38a), -0.02);
+  floor(g, OUTDOOR.halfX * 2 + 6, OUTDOOR.halfZ * 2 + 6, 0, 0, pavingMat(18, 26));
+  floor(g, 14, OUTDOOR.halfZ * 2 + 6, -2, 0, pavingMat(4, 28, 0xf3efe6), 0.01);
+  floor(g, 20, 16, -16, -14, texMat("grass.jpg", 14, 11, 0xa9bd8f), 0.02);
   for (const [x, z, s] of [
     [-24, -20, 1.1],
     [-9, -20, 1],
@@ -33,28 +34,34 @@ export function buildOutdoor(): SpaceDef {
   block(g, colliders, [2.4, 0.5, 0.7], [-20, -5.5], 0x6b4a2b);
 
   // Building 155: Marie Reay Teaching Centre.
-  const b155 = block(g, colliders, [18, 9, 18], [-19, 7], texMat("brick.jpg", 6, 3, 0xe8d6bd));
-  markOccluder(g, b155);
-  windows(g, -19, 7 + 9.01, 18, 9, 0);
-  const sign155 = textPlane(["155", "Marie Reay Teaching Centre"], 6, 1.6, { bg: "#1f2d3d", fg: "#ffffff", font: 0.45 });
-  sign155.position.set(-9.94, 6.5, 7);
-  sign155.rotation.y = Math.PI / 2;
-  g.add(sign155);
-  doorway(g, -9.94, 7, Math.PI / 2, "155 · COMP8280 classroom");
+  building(g, colliders, {
+    cx: -19,
+    cz: 7,
+    w: 18,
+    d: 18,
+    floors: 3,
+    frame: 0xe9e6df,
+    glass: 0xb5cfdf,
+    solid: { west: { color: 0xc9b79c }, north: { color: 0xc9b79c, from: 1 } },
+    entrance: { side: "east", at: 0 },
+  });
+  sign(g, ["155", "Marie Reay Teaching Centre"], -9.7, 4.2, 7, Math.PI / 2);
+  doorway(g, -9.7, 7, Math.PI / 2, "155 · COMP8280 classroom");
 
   // Building 154: Di Riddell Student Centre (Brian Kenyon Student Space).
-  const b154 = block(g, colliders, [20, 12, 34], [16, -3], texMat("brick.jpg", 10, 4, 0xc4d2de));
-  markOccluder(g, b154);
-  windows(g, 16, -3 + 17.01, 20, 12, 0);
-  const sign154 = textPlane(["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 7, 2.2, {
-    bg: "#1f2d3d",
-    fg: "#ffffff",
-    font: 0.4,
+  building(g, colliders, {
+    cx: 16,
+    cz: -3,
+    w: 20,
+    d: 34,
+    floors: 4,
+    frame: 0xf2f0ea,
+    glass: 0xa9c6d8,
+    solid: { east: { color: 0xa0724b } },
+    entrance: { side: "west", at: 3 },
   });
-  sign154.position.set(5.94, 7, 0);
-  sign154.rotation.y = -Math.PI / 2;
-  g.add(sign154);
-  doorway(g, 5.94, 0, -Math.PI / 2, "154 · Student Hub");
+  sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 4.6, -3, -Math.PI / 2);
+  doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
 
   // A signpost south, toward the library just off this map.
   block(g, colliders, [0.15, 2.4, 0.15], [-2, 21], 0x555555);
@@ -71,23 +78,22 @@ export function buildOutdoor(): SpaceDef {
     group: g,
     colliders,
     doors: [
-      { x: -8.9, z: 7, label: "Enter 155 (COMP8280 classroom)", to: "comp8280", arrive: { x: -8.4, z: 6 } },
-      { x: 4.9, z: 0, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -10.4, z: 6 } },
+      { x: -8.6, z: 7, label: "Enter 155 (COMP8280 classroom)", to: "comp8280", arrive: { x: -8.4, z: 6 } },
+      { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -10.4, z: 6 } },
     ],
     ...OUTDOOR,
     background: 0xbfdcf2,
-    camera: new THREE.Vector3(0, 9, 11),
+    // Lower and further back than indoors, so the sky and the buildings' height show.
+    camera: new THREE.Vector3(0, 5.5, 10.5),
     bgm: "Outdoor_Map.mp3",
+    outdoor: true,
   };
 }
 
-/** Rows of dark window strips on the face of a building that looks toward +z. */
-function windows(g: THREE.Group, cx: number, faceZ: number, width: number, height: number, y0: number): void {
-  const geo = new THREE.PlaneGeometry(width - 2, 0.9);
-  const glass = new THREE.MeshLambertMaterial({ color: 0x2f4a63 });
-  for (let y = y0 + 2; y < y0 + height - 1; y += 2.4) {
-    const w = new THREE.Mesh(geo, glass);
-    w.position.set(cx, y, faceZ);
-    g.add(w);
-  }
+/** A building sign on a facade, facing the way `rotY` points. */
+function sign(g: THREE.Group, lines: string[], x: number, y: number, z: number, rotY: number): void {
+  const plate = textPlane(lines, 6.5, lines.length * 0.75, { bg: "#1f2d3d", fg: "#ffffff", font: 0.42 });
+  plate.position.set(x, y, z);
+  plate.rotation.y = rotY;
+  g.add(plate);
 }

@@ -60,7 +60,7 @@ export function buildHub(): SpaceDef {
     title: "Student Hub",
     group: g,
     colliders,
-    doors: [{ x: -10.9, z: 6, label: "Go outside", to: "outdoor", arrive: { x: 4.4, z: 0 } }],
+    doors: [{ x: -10.9, z: 6, label: "Go outside", to: "outdoor", arrive: { x: 4.1, z: 3 } }],
     ...HALF,
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 6.5, 7.5),

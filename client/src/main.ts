@@ -1,5 +1,7 @@
 import "./style.css";
 import * as THREE from "three";
+import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
+import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
 import {
@@ -26,7 +28,7 @@ import { mountNotePanel, type CommentView } from "./notepanel.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId } from "./spaces/index.ts";
 import { occludersOf } from "./spaces/occluders.ts";
-import { addLights, buildNote, buildPlayer, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, buildPlayer, enableShadows, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
 const SPEED = 5; // world units per second
 const JUMP_SPEED = 7;
@@ -58,13 +60,37 @@ const touch = $("touch");
 
 // --- three.js setup --------------------------------------------------------
 
-const scene = new THREE.Scene();
-addLights(scene);
+// Phones get the same scene without shadows, and at a lower pixel ratio.
+const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
+const highQuality = !touchScreen.matches;
 
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
+const scene = new THREE.Scene();
+const sun = addLights(scene, highQuality);
+
+const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+renderer.setPixelRatio(Math.min(window.devicePixelRatio, highQuality ? 2 : 1.5));
+renderer.toneMapping = THREE.ACESFilmicToneMapping;
+renderer.toneMappingExposure = 0.85;
+renderer.shadowMap.enabled = highQuality;
+renderer.shadowMap.type = THREE.PCFSoftShadowMap;
 stage.appendChild(renderer.domElement);
+
+// Lighting for reflections: outdoors it's the sky itself, indoors a neutral
+// room. Both are prefiltered once.
+const pmrem = new THREE.PMREMGenerator(renderer);
+const sky = new Sky();
+sky.scale.setScalar(2000);
+const skyU = sky.material.uniforms;
+skyU.turbidity!.value = 3.5;
+skyU.rayleigh!.value = 1.4;
+skyU.mieCoefficient!.value = 0.004;
+skyU.mieDirectionalG!.value = 0.8;
+skyU.sunPosition!.value.copy(SUN_DIR);
+const skyScene = new THREE.Scene();
+skyScene.add(sky.clone());
+const outdoorEnv = pmrem.fromScene(skyScene).texture;
+const indoorEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.style.cssText = "position:absolute;inset:0;pointer-events:none";
@@ -330,8 +356,22 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   noteRequest++;
 
   space = getSpace(id);
+  if (!space.group.userData.shadowsOn) {
+    enableShadows(space.group);
+    space.group.userData.shadowsOn = true;
+  }
   scene.add(space.group);
-  scene.background = new THREE.Color(space.background);
+  if (space.outdoor) {
+    scene.add(sky);
+    scene.background = null;
+    scene.environment = outdoorEnv;
+    scene.fog = new THREE.Fog(0xc9dcea, 60, 220);
+  } else {
+    scene.remove(sky);
+    scene.background = new THREE.Color(space.background);
+    scene.environment = indoorEnv;
+    scene.fog = null;
+  }
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(space.camera);
@@ -621,9 +661,6 @@ function interact(): void {
 
 // --- game loop -------------------------------------------------------------
 
-// Same test the CSS uses to show the on-screen buttons.
-const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
-
 let lastTime = performance.now();
 const move = new THREE.Vector3();
 const lookTarget = new THREE.Vector3();
@@ -674,10 +711,14 @@ function update(dt: number, now: number): void {
     view.label.visible = view.group.position.distanceTo(player.position) <= NOTE_LABEL_RANGE;
   }
 
+  // The sun's shadow box follows the player.
+  sun.target.position.copy(player.position).setY(0);
+  sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 50);
+
   // Third-person camera, following across the floor but not up a jump.
   const desired = player.position.clone().setY(0).add(space.camera);
   camera.position.lerp(desired, 1 - Math.exp(-8 * dt));
-  lookTarget.copy(player.position).setY(1);
+  lookTarget.copy(player.position).setY(space.outdoor ? 1.8 : 1);
   camera.lookAt(lookTarget);
 
   // Fade walls and buildings standing between the camera and the player.
@@ -687,9 +728,11 @@ function update(dt: number, now: number): void {
   for (const o of occludersOf(space.group)) {
     const p = ray.intersectBox(o.box, hit);
     const blocking = (p !== null && p.distanceTo(camera.position) < reach) || o.box.containsPoint(camera.position);
-    const m = o.mesh.material as THREE.MeshLambertMaterial;
-    m.opacity += ((blocking ? 0.2 : 1) - m.opacity) * ease;
-    m.depthWrite = m.opacity > 0.95;
+    for (const mesh of o.meshes) {
+      const m = mesh.material as THREE.MeshStandardMaterial;
+      m.opacity += ((blocking ? 0.2 : 1) - m.opacity) * ease;
+      m.depthWrite = m.opacity > 0.95;
+    }
   }
 }
 
