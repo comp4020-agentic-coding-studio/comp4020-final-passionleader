@@ -1,0 +1,174 @@
+/* Reading a sticky note: a yellow paper card with the note, its comments,
+   and a small compose box to add one. A modal dialog, centred. */
+
+#note-panel {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(59, 42, 18, 0.55);
+}
+
+#note-panel.is-open {
+  display: flex;
+}
+
+.note-card {
+  width: min(360px, 100%);
+  max-height: min(560px, 90vh);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 4px 16px 4px 16px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transform: rotate(-0.6deg);
+  font-family: system-ui, sans-serif;
+}
+
+.note-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 4px;
+}
+
+.note-author {
+  font-weight: 700;
+}
+
+.note-date {
+  font-size: 0.75rem;
+  opacity: 0.7;
+}
+
+.note-text {
+  margin: 8px 0 14px;
+  white-space: pre-wrap;
+  word-break: break-word;
+  line-height: 1.4;
+}
+
+.note-delete,
+.comment-delete {
+  border: 0;
+  background: none;
+  color: #a01818;
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.note-comments {
+  border-top: 2px dashed var(--accent, #6b3f1d);
+  padding-top: 10px;
+  margin-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.note-comment {
+  background: rgba(255, 251, 224, 0.7);
+  border-radius: 8px;
+  padding: 6px 8px;
+}
+
+.note-comment-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 0.8rem;
+}
+
+.note-comment-author {
+  font-weight: 700;
+}
+
+.note-comment-text {
+  margin: 2px 0 0;
+  font-size: 0.85rem;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.note-empty {
+  font-size: 0.82rem;
+  opacity: 0.7;
+  font-style: italic;
+}
+
+.note-compose {
+  margin-top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.note-compose textarea {
+  resize: vertical;
+  min-height: 56px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid var(--accent, #6b3f1d);
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  font-size: 0.85rem;
+}
+
+.note-compose-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.note-counter {
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.note-counter.is-over {
+  color: #a01818;
+  opacity: 1;
+  font-weight: 700;
+}
+
+.note-post {
+  border: 0;
+  border-radius: 8px;
+  padding: 6px 14px;
+  background: var(--accent, #6b3f1d);
+  color: var(--paper, #f3e7a6);
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.note-post:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.note-error {
+  min-height: 1.2em;
+  margin: 4px 0 0;
+  color: #a01818;
+  font-size: 0.8rem;
+}
+
+.note-close {
+  border: 0;
+  background: none;
+  color: var(--ink, #3b2a12);
+  font-size: 1.2rem;
+  line-height: 1;
+  cursor: pointer;
+  padding: 2px 6px;
+}

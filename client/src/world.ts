@@ -1,13 +1,13 @@
 import * as THREE from "three";
+import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 
-export const BOUND = 10; // playable floor is x,z in [-BOUND, BOUND]
-const WALL = BOUND + 0.5;
-const WALL_HEIGHT = 4;
+// Building blocks shared by every space (client/src/spaces/): collision
+// boxes, doors, signs, simple furniture, the player figure and sticky notes.
+// A space is a group of meshes plus the boxes you can't walk through and the
+// doors you can walk through.
 
-// Yellowish ("nurikkuri") bathroom palette.
-const FLOOR_COLOR = 0xd9c86a;
-const WALL_COLOR = 0xc9b556;
+export type SpaceId = "outdoor" | "hub" | "comp8280";
 
 /** Axis-aligned footprint on the floor plane, used for simple player collision. */
 export interface Box {
@@ -16,10 +16,34 @@ export interface Box {
   minZ: number;
   maxZ: number;
 }
-export const colliders: Box[] = [];
+
+export interface Door {
+  /** Where you stand to use it. */
+  x: number;
+  z: number;
+  /** What the E hint says, e.g. "Enter the Student Hub". */
+  label: string;
+  to: SpaceId;
+  /** Where you appear on the other side. */
+  arrive: { x: number; z: number };
+}
+
+export interface SpaceDef {
+  id: SpaceId;
+  title: string;
+  group: THREE.Group;
+  colliders: Box[];
+  doors: Door[];
+  halfX: number;
+  halfZ: number;
+  background: number;
+  /** Camera offset from the player: further back outside, closer indoors. */
+  camera: THREE.Vector3;
+  bgm: string;
+}
 
 /** Pushes a circle (the player) out of every collider. Two passes settle corners. */
-export function pushOut(pos: THREE.Vector3, radius: number): void {
+export function pushOut(pos: THREE.Vector3, radius: number, colliders: Box[]): void {
   for (let pass = 0; pass < 2; pass++) {
     for (const b of colliders) {
       const cx = THREE.MathUtils.clamp(pos.x, b.minX, b.maxX);
@@ -46,188 +70,136 @@ export function pushOut(pos: THREE.Vector3, radius: number): void {
   }
 }
 
-const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
+export const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
   o.updateMatrixWorld(true);
   const b = new THREE.Box3().setFromObject(o);
   return { minX: b.min.x - pad, maxX: b.max.x + pad, minZ: b.min.z - pad, maxZ: b.max.z + pad };
 };
 
-/** Flat, uniform, bright light: no shadows, no direction. */
+/** Soft daylight: a sky/ground fill and one sun, no shadows (cheap on phones). */
 export function addLights(scene: THREE.Scene): void {
-  scene.add(new THREE.AmbientLight(0xffffff, 1.6));
-  scene.add(new THREE.HemisphereLight(0xffffff, 0xfff2b0, 1.0));
+  scene.add(new THREE.HemisphereLight(0xffffff, 0xb8a888, 1.6));
+  const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+  sun.position.set(12, 20, 8);
+  scene.add(sun);
 }
 
-export function buildRoom(): THREE.Group {
-  const room = new THREE.Group();
+const mats = new Map<number, THREE.MeshLambertMaterial>();
+export const mat = (color: number): THREE.MeshLambertMaterial => {
+  let m = mats.get(color);
+  if (!m) mats.set(color, (m = new THREE.MeshLambertMaterial({ color })));
+  return m;
+};
 
-  const floor = new THREE.Mesh(
-    new THREE.PlaneGeometry(WALL * 2, WALL * 2),
-    new THREE.MeshLambertMaterial({ color: FLOOR_COLOR }),
-  );
-  floor.rotation.x = -Math.PI / 2;
-  room.add(floor);
-
-  // Checker tiles drawn as thin darker squares keep the floor readable while moving.
-  const tileMat = new THREE.MeshLambertMaterial({ color: 0xcdbb55 });
-  const tileGeo = new THREE.PlaneGeometry(2, 2);
-  for (let i = -5; i < 5; i++) {
-    for (let j = -5; j < 5; j++) {
-      if ((i + j) % 2 === 0) continue;
-      const tile = new THREE.Mesh(tileGeo, tileMat);
-      tile.rotation.x = -Math.PI / 2;
-      tile.position.set(i * 2 + 1, 0.01, j * 2 + 1);
-      room.add(tile);
-    }
-  }
-
-  const wallMat = new THREE.MeshLambertMaterial({ color: WALL_COLOR, side: THREE.DoubleSide });
-  const wallGeo = new THREE.PlaneGeometry(WALL * 2, WALL_HEIGHT);
-  const walls: Array<[number, number, number]> = [
-    [0, -WALL, 0], // back
-    [0, WALL, Math.PI], // front
-    [-WALL, 0, Math.PI / 2], // left
-    [WALL, 0, -Math.PI / 2], // right
-  ];
-  for (const [x, z, rotY] of walls) {
-    const wall = new THREE.Mesh(wallGeo, wallMat);
-    wall.position.set(x, WALL_HEIGHT / 2, z);
-    wall.rotation.y = rotY;
-    room.add(wall);
-  }
-  return room;
+/** A box sitting on the floor at (x, z). Solid ones are added to colliders. */
+export function block(
+  g: THREE.Group,
+  colliders: Box[] | null,
+  size: [w: number, h: number, d: number],
+  at: [x: number, z: number, y?: number],
+  color: number,
+): THREE.Mesh {
+  const [w, h, d] = size;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
+  m.position.set(at[0], (at[2] ?? 0) + h / 2, at[1]);
+  g.add(m);
+  if (colliders) colliders.push(boxFrom(m));
+  return m;
 }
 
-function primitiveToilet(): THREE.Group {
-  const white = new THREE.MeshLambertMaterial({ color: 0xf6f6f0 });
-  const g = new THREE.Group();
-  const bowl = new THREE.Mesh(new THREE.CylinderGeometry(0.35, 0.28, 0.45, 20), white);
-  bowl.position.set(0, 0.22, 0.1);
-  const tank = new THREE.Mesh(new THREE.BoxGeometry(0.6, 0.8, 0.22), white);
-  tank.position.set(0, 0.6, -0.3);
-  g.add(bowl, tank);
-  return g;
+/** A flat floor rectangle, slightly lifted so layers don't flicker. */
+export function floor(g: THREE.Group, w: number, d: number, x: number, z: number, color: number, y = 0): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(color));
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, y, z);
+  g.add(m);
+  return m;
 }
 
-// A public-bathroom vanity: one long counter against the back wall with a
-// basin and tap per sink and a mirror above. Built from primitives because a
-// lone sink model on a post read as a white "T" from across the room.
-function buildVanity(): THREE.Group {
-  const white = new THREE.MeshLambertMaterial({ color: 0xf6f6f0 });
-  const steel = new THREE.MeshLambertMaterial({ color: 0xb8bcc2 });
-  const g = new THREE.Group();
-  const width = SINK_COUNT * SINK_SPACING - 0.6;
-  const depth = 0.7;
-  const z = -(BOUND - depth / 2);
-
-  const counter = new THREE.Mesh(
-    new THREE.BoxGeometry(width, 0.85, depth),
-    new THREE.MeshLambertMaterial({ color: 0x8a8f96 }),
-  );
-  counter.position.set(0, 0.425, z);
-  g.add(counter);
-  colliders.push(boxFrom(counter, 0.1));
-
-  const mirror = new THREE.Mesh(
-    new THREE.PlaneGeometry(width, 1.1),
-    new THREE.MeshLambertMaterial({ color: 0xcfe6f2 }),
-  );
-  mirror.position.set(0, 1.75, -BOUND + 0.02);
-  g.add(mirror);
-
-  for (let i = 0; i < SINK_COUNT; i++) {
-    const x = (i - (SINK_COUNT - 1) / 2) * SINK_SPACING;
-    const basin = new THREE.Mesh(new THREE.CylinderGeometry(0.32, 0.24, 0.16, 24), white);
-    basin.position.set(x, 0.9, z + 0.05);
-    const tap = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.3, 10), steel);
-    tap.position.set(x, 1.0, z - 0.25);
-    const spout = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.05, 0.22), steel);
-    spout.position.set(x, 1.13, z - 0.15);
-    g.add(basin, tap, spout);
-  }
-  return g;
+/** Text painted on a canvas and used as a texture: signs, whiteboards. */
+export function textPlane(lines: string[], w: number, h: number, opts: { bg?: string; fg?: string; font?: number } = {}): THREE.Mesh {
+  const scale = 128;
+  const canvas = document.createElement("canvas");
+  canvas.width = Math.round(w * scale);
+  canvas.height = Math.round(h * scale);
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = opts.bg ?? "#ffffff";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  ctx.fillStyle = opts.fg ?? "#222222";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  const size = (opts.font ?? 0.35) * scale;
+  ctx.font = `700 ${size}px system-ui, sans-serif`;
+  lines.forEach((line, i) => {
+    ctx.fillText(line, canvas.width / 2, canvas.height / 2 + (i - (lines.length - 1) / 2) * size * 1.25);
+  });
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return new THREE.Mesh(new THREE.PlaneGeometry(w, h), new THREE.MeshBasicMaterial({ map: tex }));
 }
 
 /**
- * Loads a GLB and normalises it: scaled to a target height or width, centred on
- * x/z with its base at y=0, wrapped in a group so callers can rotate/place it.
- * Returns null when the file cannot be loaded (callers fall back to primitives).
+ * A door in a wall: a dark frame with a lit panel and a floating label. `facing`
+ * is the direction (radians around y) the door's front looks toward.
  */
-async function loadNormalized(file: string, target: { height?: number; width?: number }): Promise<THREE.Group | null> {
-  try {
-    const gltf = await new GLTFLoader().loadAsync(`${import.meta.env.BASE_URL}assets/${file}`);
-    const model = gltf.scene;
-    model.updateMatrixWorld(true);
-    let box = new THREE.Box3().setFromObject(model);
-    const size = box.getSize(new THREE.Vector3());
-    model.scale.setScalar(target.height ? target.height / size.y : (target.width ?? 1) / size.x);
-    model.updateMatrixWorld(true);
-    box = new THREE.Box3().setFromObject(model);
-    const c = box.getCenter(new THREE.Vector3());
-    model.position.set(-c.x, -box.min.y, -c.z);
-    const g = new THREE.Group();
-    g.add(model);
-    return g;
-  } catch {
-    return null;
-  }
+export function doorway(g: THREE.Group, x: number, z: number, facing: number, label: string): void {
+  const d = new THREE.Group();
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(1.8, 2.6, 0.12), mat(0x2b2b2b));
+  frame.position.y = 1.3;
+  const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.3), new THREE.MeshBasicMaterial({ color: 0xbfe3ff }));
+  panel.position.set(0, 1.2, 0.07);
+  d.add(frame, panel);
+  const el = document.createElement("div");
+  el.className = "door-label";
+  el.textContent = label;
+  const tag = new CSS2DObject(el);
+  tag.position.set(0, 3.1, 0.2);
+  d.add(tag);
+  d.position.set(x, 0, z);
+  d.rotation.y = facing;
+  g.add(d);
 }
 
-// --- public bathroom layout -------------------------------------------------
-// Two rows of five open stalls (no doors) run along the left and right walls,
-// each opening toward the middle of the room. Sinks stand against the back wall.
-
-const STALLS_PER_ROW = 5;
-const STALL_WIDTH = 3.2; // along z
-const STALL_DEPTH = 3; // from the side wall toward the room centre
-const PARTITION_HEIGHT = 1.8;
-const PARTITION_THICKNESS = 0.12;
-const ROW_HALF = (STALLS_PER_ROW * STALL_WIDTH) / 2; // 8: stalls span z in [-8, 8]
-const SINK_COUNT = 3;
-const SINK_SPACING = 3;
-
-const PARTITION_MAT = new THREE.MeshLambertMaterial({ color: 0xe9e2bf });
-
-function buildPartitions(): THREE.Group {
-  const g = new THREE.Group();
-  const geo = new THREE.BoxGeometry(STALL_DEPTH, PARTITION_HEIGHT, PARTITION_THICKNESS);
-  for (const side of [-1, 1]) {
-    for (let i = 0; i <= STALLS_PER_ROW; i++) {
-      const m = new THREE.Mesh(geo, PARTITION_MAT);
-      m.position.set(side * (BOUND - STALL_DEPTH / 2), PARTITION_HEIGHT / 2, -ROW_HALF + i * STALL_WIDTH);
-      g.add(m);
-      colliders.push(boxFrom(m));
-    }
-  }
-  return g;
+export function tree(g: THREE.Group, colliders: Box[], x: number, z: number, s = 1): void {
+  block(g, colliders, [0.4 * s, 1.6 * s, 0.4 * s], [x, z], 0x6b4a2b);
+  const crown = new THREE.Mesh(new THREE.IcosahedronGeometry(1.4 * s, 1), mat(0x4f8a3c));
+  crown.position.set(x, 2.6 * s, z);
+  g.add(crown);
 }
 
-/** Partitions, ten toilets and the sinks. Adds colliders as a side effect. */
-export async function buildBathroom(): Promise<THREE.Group> {
-  const root = new THREE.Group();
-  root.add(buildPartitions());
-
-  const toiletModel = await loadNormalized("toilet.glb", { height: 1.1 });
-
-  for (const side of [-1, 1]) {
-    for (let i = 0; i < STALLS_PER_ROW; i++) {
-      const toilet = new THREE.Group();
-      toilet.add((toiletModel ?? primitiveToilet()).clone(true));
-      // The model faces +z; turn it to face the room centre, then back it onto the wall.
-      toilet.rotation.y = side === -1 ? Math.PI / 2 : -Math.PI / 2;
-      toilet.position.set(side * (BOUND - 0.6), 0, -ROW_HALF + (i + 0.5) * STALL_WIDTH);
-      root.add(toilet);
-      colliders.push(boxFrom(toilet, 0.05));
-    }
+/**
+ * Loads a GLB scaled to a target height, centred on x/z with its base at y=0.
+ * Null when the file can't be loaded, so callers keep their primitive version.
+ */
+const loader = new GLTFLoader();
+const cache = new Map<string, Promise<THREE.Group | null>>();
+export function loadModel(file: string, height: number): Promise<THREE.Group | null> {
+  const key = `${file}@${height}`;
+  let p = cache.get(key);
+  if (!p) {
+    p = loader
+      .loadAsync(`${import.meta.env.BASE_URL}assets/${file}`)
+      .then((gltf) => {
+        const model = gltf.scene;
+        let box = new THREE.Box3().setFromObject(model);
+        model.scale.setScalar(height / (box.max.y - box.min.y));
+        box = new THREE.Box3().setFromObject(model);
+        const c = box.getCenter(new THREE.Vector3());
+        model.position.set(-c.x, -box.min.y, -c.z);
+        const g = new THREE.Group();
+        g.add(model);
+        return g;
+      })
+      .catch(() => null);
+    cache.set(key, p);
   }
-
-  root.add(buildVanity());
-  return root;
+  return p;
 }
+
+// --- people and notes -------------------------------------------------------
 
 const CLAY = new THREE.MeshStandardMaterial({ color: 0xf4f1ea, roughness: 1, metalness: 0 });
 
-/** Plain white clay humanoid: capsule body, sphere head, stub arms and legs. */
 export function buildPlayer(): THREE.Group {
   const g = new THREE.Group();
   const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.34, 0.6, 6, 16), CLAY);
@@ -238,8 +210,10 @@ export function buildPlayer(): THREE.Group {
   const legGeo = new THREE.CapsuleGeometry(0.12, 0.35, 4, 8);
   const left = new THREE.Mesh(armGeo, CLAY);
   left.position.set(-0.46, 1.0, 0);
+  left.name = "armL";
   const right = left.clone();
   right.position.x = 0.46;
+  right.name = "armR";
   const legL = new THREE.Mesh(legGeo, CLAY);
   legL.position.set(-0.17, 0.3, 0);
   const legR = legL.clone();
@@ -255,20 +229,18 @@ export function buildPlayer(): THREE.Group {
   return g;
 }
 
-const POOP_MAT = new THREE.MeshLambertMaterial({ color: 0x6b3f1d });
+const NOTE_COLORS = [0xfff07a, 0xffc6e0, 0xb9f0c8, 0xbfe1ff, 0xffd6a5];
 
-/** Soft-serve swirl: three stacked tori and a cone on top. */
-export function buildPoop(): THREE.Group {
+/** A sticky note lying on the floor, its colour picked from the note id. */
+export function buildNote(id: number): THREE.Group {
   const g = new THREE.Group();
-  const radii = [0.34, 0.26, 0.18];
-  radii.forEach((r, i) => {
-    const t = new THREE.Mesh(new THREE.TorusGeometry(r, 0.12, 12, 24), POOP_MAT);
-    t.rotation.x = Math.PI / 2;
-    t.position.y = 0.12 + i * 0.17;
-    g.add(t);
-  });
-  const tip = new THREE.Mesh(new THREE.ConeGeometry(0.14, 0.3, 16), POOP_MAT);
-  tip.position.y = 0.12 + 3 * 0.17 + 0.05;
-  g.add(tip);
+  const paper = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.7), mat(NOTE_COLORS[id % NOTE_COLORS.length]!));
+  paper.position.y = 0.02;
+  // A slight curl at one corner so it reads as paper, not a tile.
+  const curl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.2), mat(0xffffff));
+  curl.position.set(0.25, 0.05, 0.25);
+  curl.rotation.z = 0.4;
+  g.add(paper, curl);
+  g.rotation.y = ((id * 37) % 30) * (Math.PI / 180) - Math.PI / 12;
   return g;
 }

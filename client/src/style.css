@@ -9,7 +9,7 @@ html, body {
   margin: 0;
   height: 100%;
   overflow: hidden;
-  background: #cdbb60;
+  background: #bfdcf2;
   color: var(--ink);
   font-family: system-ui, sans-serif;
   touch-action: none;
@@ -25,13 +25,6 @@ html, body {
 #hud-name { font-weight: 700; }
 #hud-help { font-size: 0.85rem; opacity: 0.8; }
 #toast { min-height: 1.2em; font-size: 0.9rem; font-weight: 600; }
-
-.poop-label {
-  padding: 2px 8px; border-radius: 10px;
-  background: rgba(255, 255, 255, 0.92); color: var(--ink);
-  font: 700 14px system-ui, sans-serif; white-space: nowrap;
-  border: 2px solid var(--accent);
-}
 
 #join {
   position: fixed; inset: 0; display: grid; place-items: center;
@@ -79,9 +72,9 @@ html, body {
 #dpad [data-dir="left"] { grid-column: 1; grid-row: 2; }
 #dpad [data-dir="down"] { grid-column: 2; grid-row: 2; }
 #dpad [data-dir="right"] { grid-column: 3; grid-row: 2; }
-#actions { display: flex; gap: 12px; align-items: flex-end; }
-#poop-btn { width: 96px; height: 96px; border-radius: 50%; font-size: 1.1rem; }
-#jump-btn { width: 72px; height: 72px; border-radius: 50%; font-size: 1rem; }
+#actions { display: flex; gap: 10px; align-items: flex-end; }
+#use-btn { width: 84px; height: 84px; border-radius: 50%; font-size: 1.05rem; }
+#jump-btn, #menu-btn { width: 64px; height: 64px; border-radius: 50%; font-size: 0.95rem; }
 
 #mute {
   position: fixed; top: 10px; right: 12px; z-index: 20;
@@ -97,19 +90,50 @@ html, body {
   .touch-help { display: block; }
 }
 
-/* Centre of the screen, bold: a message the player must not miss mid-movement. */
-#notice {
-  position: fixed; top: 38%; left: 50%; transform: translate(-50%, -50%);
-  margin: 0; padding: 12px 20px; max-width: min(90vw, 520px); text-align: center;
-  border-radius: 12px; background: rgba(255, 251, 224, 0.95); color: var(--ink);
-  border: 3px solid var(--accent); box-shadow: 0 6px 18px rgba(0, 0, 0, 0.25);
-  font: 800 1.25rem/1.3 system-ui, sans-serif; pointer-events: none; z-index: 15;
-}
-#notice[hidden] { display: none; }
-
 /* Other players' names float over their heads, always visible. */
 .player-label {
   padding: 1px 7px; border-radius: 8px;
   background: rgba(59, 42, 18, 0.85); color: #fff;
   font: 700 12px system-ui, sans-serif; white-space: nowrap;
+}
+
+/* What E would do right now: a door to go through or a note to read. */
+#hint {
+  position: fixed; left: 50%; bottom: 22%; transform: translateX(-50%);
+  margin: 0; padding: 8px 16px; border-radius: 999px;
+  background: rgba(31, 45, 61, 0.88); color: #fff;
+  font: 700 0.95rem system-ui, sans-serif; pointer-events: none; z-index: 5;
+  max-width: calc(100vw - 32px); white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+#hint[hidden] { display: none; }
+
+.door-label {
+  padding: 2px 8px; border-radius: 6px; background: rgba(31, 45, 61, 0.85); color: #fff;
+  font: 700 12px system-ui, sans-serif; white-space: nowrap;
+}
+.note-label {
+  padding: 1px 6px; border-radius: 6px; background: #fff7b0; color: var(--ink);
+  border: 1px solid #c9b23a; font: 600 11px system-ui, sans-serif; white-space: nowrap;
+}
+.bubble {
+  max-width: 220px; padding: 6px 10px; border-radius: 12px; background: #fff; color: var(--ink);
+  border: 2px solid var(--ink); font: 600 13px/1.3 system-ui, sans-serif; text-align: center;
+  white-space: normal; overflow-wrap: anywhere;
+}
+
+.join-sub { margin: -4px 0 12px; font-size: 0.85rem; opacity: 0.85; }
+#password-row { margin-top: 10px; }
+#password-row[hidden] { display: none; }
+#password {
+  width: 100%; padding: 10px 12px; font-size: 1.1rem; border-radius: 8px;
+  border: 2px solid var(--accent); background: #fffbe0; color: var(--ink);
+}
+
+/* Narrow phones: the pad and three action buttons must fit side by side. */
+@media (max-width: 420px) {
+  #touch:not([hidden]) { padding: 12px; }
+  #dpad { gap: 6px; grid-template-columns: repeat(3, 48px); grid-template-rows: repeat(2, 48px); }
+  #actions { gap: 6px; }
+  #use-btn { width: 68px; height: 68px; }
+  #jump-btn, #menu-btn { width: 52px; height: 52px; font-size: 0.85rem; }
 }

@@ -1,0 +1,78 @@
+/* GTA-style radial picker: a ring of choices centred on the screen,
+   regardless of where the player or camera is. Opens on hold, closes on
+   release (the caller drives open()/close()); this module only draws the
+   ring and tracks which wedge is highlighted. */
+
+#radial {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  /* A faint backdrop reads as "something is open" without hiding the scene. */
+  background: rgba(59, 42, 18, 0.18);
+}
+
+#radial.is-open {
+  display: flex;
+}
+
+.radial-ring {
+  position: relative;
+  width: 1px;
+  height: 1px;
+}
+
+/* The centre dot: the dead zone where the pointer picks nothing. */
+.radial-centre {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 14px;
+  height: 14px;
+  margin: -7px;
+  border-radius: 50%;
+  background: var(--accent, #6b3f1d);
+  box-shadow: 0 0 0 3px rgba(255, 255, 255, 0.7);
+  pointer-events: none;
+}
+
+.radial-item {
+  position: absolute;
+  left: 0;
+  top: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 92px;
+  height: 92px;
+  margin: -46px;
+  padding: 0 10px;
+  border-radius: 50%;
+  border: 2px solid var(--accent, #6b3f1d);
+  background: rgba(243, 231, 166, 0.9); /* --paper */
+  color: var(--ink, #3b2a12);
+  font: 700 0.85rem/1.2 system-ui, sans-serif;
+  text-align: center;
+  cursor: pointer;
+  user-select: none;
+  -webkit-user-select: none;
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.25);
+  transition: background 80ms linear, transform 80ms linear;
+}
+
+.radial-item.is-highlighted {
+  background: var(--accent, #6b3f1d);
+  color: var(--paper, #f3e7a6);
+  transform: scale(1.12);
+}
+
+@media (max-width: 390px) {
+  .radial-item {
+    width: 76px;
+    height: 76px;
+    margin: -38px;
+    font-size: 0.75rem;
+  }
+}

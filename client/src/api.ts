@@ -1,18 +1,33 @@
-// Thin wrapper around the server API. Append ?mock to the page URL to run
-// against an in-browser fake (localStorage) while the real server is down.
+import type { SpaceId } from "./world.ts";
 
-export interface Poop {
-  name: string;
-  x: number;
-  z: number;
-  updatedAt: string | number;
-}
+// Thin wrapper around the server's HTTP API (server/main.ts). Live movement,
+// chat and emotes go over the socket instead (net.ts).
 
 export interface Session {
   name: string;
   token: string;
-  /** Where to stand on entering: the visitor's last spot, or the room's spawn. */
-  spawn?: { x: number; z: number };
+  role: "user" | "admin";
+  /** Where to stand on entering: the last space and spot, or the campus spawn. */
+  spawn: { space: SpaceId; x: number; z: number };
+}
+
+export interface Note {
+  id: number;
+  space: SpaceId;
+  author: string;
+  x: number;
+  z: number;
+  text: string;
+  createdAt: string;
+  comments: number;
+}
+
+export interface Comment {
+  id: number;
+  noteId: number;
+  author: string;
+  text: string;
+  createdAt: string;
 }
 
 export class ApiError extends Error {
@@ -24,12 +39,13 @@ export class ApiError extends Error {
   }
 }
 
-const NAME_RE = /^[A-Za-z_]{1,8}$/;
-export const isValidName = (name: string): boolean => NAME_RE.test(name);
+// Ordinary names: letters, digits, underscore, up to 8. qa_ names are the
+// password accounts, which may run to 12.
+const NAME_RE = /^[A-Za-z0-9_]{1,8}$/;
+export const RESERVED_RE = /^qa_/i;
+export const isValidName = (name: string): boolean => NAME_RE.test(name) || /^qa_[A-Za-z0-9_]{1,9}$/i.test(name);
 
-const useMock = new URLSearchParams(location.search).has("mock");
-
-async function request<T>(path: string, method: string, body?: unknown): Promise<T> {
+async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
   let res: Response;
   try {
     res = await fetch(path, {
@@ -53,53 +69,22 @@ async function request<T>(path: string, method: string, body?: unknown): Promise
   return data as T;
 }
 
-// --- mock server -----------------------------------------------------------
+export const join = (name: string, token?: string, password?: string): Promise<Session> =>
+  request<Session>("/api/join", "POST", { name, token, password });
 
-interface MockDb {
-  users: Record<string, { name: string; token: string }>; // keyed by lowercase name
-  poops: Record<string, Poop>; // keyed by lowercase name
-}
+export const getNotes = (space: SpaceId): Promise<Note[]> => request<Note[]>(`/api/notes?space=${space}`);
 
-function mockDb(): MockDb {
-  try {
-    return JSON.parse(localStorage.getItem("poop.mockdb") ?? "") as MockDb;
-  } catch {
-    return { users: {}, poops: {} };
-  }
-}
-const saveMock = (db: MockDb): void => localStorage.setItem("poop.mockdb", JSON.stringify(db));
-const clamp = (v: number): number => Math.max(-10, Math.min(10, v));
+export const myNoteCount = (token: string, space: SpaceId): Promise<{ count: number; limit: number }> =>
+  request("/api/notes/mine", "POST", { token, space });
 
-async function mockJoin(name: string, token?: string): Promise<Session> {
-  if (!isValidName(name)) throw new ApiError(400, "Letters and underscore only, 1-8 characters.");
-  const db = mockDb();
-  const key = name.toLowerCase();
-  const existing = db.users[key];
-  if (existing && existing.token !== token) throw new ApiError(409, "That name is taken.");
-  const user = existing ?? { name, token: crypto.randomUUID() };
-  db.users[key] = user;
-  saveMock(db);
-  return { name: user.name, token: user.token, spawn: { x: 0, z: 5 } };
-}
+export const postNote = (token: string, space: SpaceId, x: number, z: number, text: string): Promise<{ note: Note; replaced: number | null }> =>
+  request("/api/notes", "POST", { token, space, x, z, text });
 
-async function mockPoop(token: string, x: number, z: number): Promise<Poop> {
-  const db = mockDb();
-  const user = Object.values(db.users).find((u) => u.token === token);
-  if (!user) throw new ApiError(401, "Unknown session.");
-  if (!Number.isFinite(x) || !Number.isFinite(z)) throw new ApiError(400, "Bad coordinates.");
-  const poop: Poop = { name: user.name, x: clamp(x), z: clamp(z), updatedAt: Date.now() };
-  db.poops[user.name.toLowerCase()] = poop;
-  saveMock(db);
-  return poop;
-}
+export const deleteNote = (token: string, id: number): Promise<unknown> => request(`/api/notes/${id}`, "DELETE", { token });
 
-// --- public API ------------------------------------------------------------
+export const getComments = (noteId: number): Promise<Comment[]> => request<Comment[]>(`/api/notes/${noteId}/comments`);
 
-export const join = (name: string, token?: string): Promise<Session> =>
-  useMock ? mockJoin(name, token) : request<Session>("/api/join", "POST", { name, token });
+export const postComment = (token: string, noteId: number, text: string): Promise<Comment> =>
+  request<Comment>(`/api/notes/${noteId}/comments`, "POST", { token, text });
 
-export const getPoops = (): Promise<Poop[]> =>
-  useMock ? Promise.resolve(Object.values(mockDb().poops)) : request<Poop[]>("/api/poops", "GET");
-
-export const postPoop = (token: string, x: number, z: number): Promise<Poop> =>
-  useMock ? mockPoop(token, x, z) : request<Poop>("/api/poop", "POST", { token, x, z });
+export const deleteComment = (token: string, id: number): Promise<unknown> => request(`/api/comments/${id}`, "DELETE", { token });

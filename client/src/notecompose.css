@@ -1,0 +1,116 @@
+/* Writing a new sticky note: a blank paper card with a textarea. A modal
+   dialog, centred, the same family as notepanel's reading view. */
+
+#note-composer {
+  position: fixed;
+  inset: 0;
+  z-index: 25;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: rgba(59, 42, 18, 0.55);
+}
+
+#note-composer.is-open {
+  display: flex;
+}
+
+.composer-card {
+  width: min(360px, 100%);
+  padding: 20px;
+  border-radius: 4px 16px 4px 16px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  transform: rotate(0.6deg);
+  font-family: system-ui, sans-serif;
+}
+
+.composer-title {
+  margin: 0 0 8px;
+  font-size: 1.1rem;
+  font-weight: 700;
+}
+
+.composer-warning {
+  margin: 0 0 10px;
+  font-weight: 700;
+  font-size: 0.85rem;
+  color: #7a3b00;
+}
+
+.composer-warning:empty {
+  display: none;
+}
+
+#note-composer textarea {
+  width: 100%;
+  resize: vertical;
+  min-height: 90px;
+  padding: 8px;
+  border-radius: 8px;
+  border: 2px solid var(--accent, #6b3f1d);
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  font-size: 0.9rem;
+}
+
+.composer-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.composer-counter {
+  font-size: 0.72rem;
+  opacity: 0.7;
+}
+
+.composer-counter.is-over {
+  color: #a01818;
+  opacity: 1;
+  font-weight: 700;
+}
+
+.composer-actions {
+  display: flex;
+  gap: 8px;
+  margin-top: 14px;
+  justify-content: flex-end;
+}
+
+.composer-stick,
+.composer-cancel {
+  border: 0;
+  border-radius: 8px;
+  padding: 8px 16px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.composer-stick {
+  background: var(--accent, #6b3f1d);
+  color: var(--paper, #f3e7a6);
+}
+
+.composer-stick:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.composer-cancel {
+  background: none;
+  color: var(--ink, #3b2a12);
+  border: 2px solid var(--accent, #6b3f1d);
+}
+
+.composer-error {
+  min-height: 1.2em;
+  margin: 6px 0 0;
+  color: #a01818;
+  font-size: 0.8rem;
+}

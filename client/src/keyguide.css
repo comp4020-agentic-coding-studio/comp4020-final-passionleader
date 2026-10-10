@@ -96,3 +96,6 @@
     display: none;
   }
 }
+
+/* ENTER is a wider key than the letters. */
+.keyguide-enter { width: auto; padding: 0 6px; font-size: 9px; }

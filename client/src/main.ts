@@ -1,28 +1,40 @@
 import "./style.css";
 import * as THREE from "three";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { playFart, startBgm } from "./audio.ts";
-import { ApiError, getPoops, isValidName, join, postPoop, type Poop, type Session } from "./api.ts";
-import { mountKeyGuide } from "./keyguide.ts";
-import { connect, type RemotePlayer } from "./net.ts";
+import { playTrack } from "./audio.ts";
 import {
-  BOUND,
-  addLights,
-  buildPlayer,
-  buildPoop,
-  buildRoom,
-  buildBathroom,
-  pushOut,
-} from "./world.ts";
+  ApiError,
+  RESERVED_RE,
+  deleteComment,
+  deleteNote,
+  getComments,
+  getNotes,
+  isValidName,
+  join,
+  myNoteCount,
+  postComment,
+  postNote,
+  type Comment,
+  type Note,
+  type Session,
+} from "./api.ts";
+import { mountChat } from "./chatui.ts";
+import { mountKeyGuide } from "./keyguide.ts";
+import { connect, type Emote, type Net, type RemotePlayer } from "./net.ts";
+import { mountNoteComposer } from "./notecompose.ts";
+import { mountNotePanel, type CommentView } from "./notepanel.ts";
+import { mountRadial } from "./radial.ts";
+import { getSpace, isSpaceId } from "./spaces/index.ts";
+import { occludersOf } from "./spaces/occluders.ts";
+import { addLights, buildNote, buildPlayer, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
 const SPEED = 5; // world units per second
-const JUMP_SPEED = 7; // initial upward speed, units per second
+const JUMP_SPEED = 7;
 const GRAVITY = 20;
-const LABEL_RANGE = 2; // show the owner's name within this distance of a poop
 const PLAYER_RADIUS = 0.4;
-// High enough to see over the 1.8-unit stall partitions.
-const CAMERA_OFFSET = new THREE.Vector3(0, 6, 7);
-const CAMERA_LIMIT = BOUND + 0.3;
+const DOOR_RANGE = 1.6; // how close you must be for E to open a door
+const NOTE_RANGE = 1.3; // ...or to read a note
+const NOTE_LABEL_RANGE = 3; // a note shows its author's name within this
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -34,23 +46,22 @@ const stage = $("stage");
 const joinDialog = $("join");
 const joinForm = $<HTMLFormElement>("join-form");
 const nameInput = $<HTMLInputElement>("name");
+const passwordRow = $("password-row");
+const passwordInput = $<HTMLInputElement>("password");
 const joinError = $("join-error");
 const enterBtn = $<HTMLButtonElement>("enter");
 const hud = $("hud");
 const hudName = $("hud-name");
 const toastEl = $("toast");
-const noticeEl = $("notice");
+const hintEl = $("hint");
 const touch = $("touch");
 
 // --- three.js setup --------------------------------------------------------
 
 const scene = new THREE.Scene();
-scene.background = new THREE.Color(0xd8c870);
 addLights(scene);
-scene.add(buildRoom());
-void buildBathroom().then((bathroom) => scene.add(bathroom));
 
-const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 100);
+const camera = new THREE.PerspectiveCamera(60, 1, 0.1, 200);
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
 stage.appendChild(renderer.domElement);
@@ -65,7 +76,7 @@ function resize(): void {
   renderer.setSize(w, h);
   labelRenderer.setSize(w, h);
   camera.aspect = w / h;
-  // Portrait screens would otherwise see a thin slice of the room: widen the vertical FOV.
+  // Portrait screens would otherwise see a thin slice of the space: widen the vertical FOV.
   camera.fov = THREE.MathUtils.clamp(60 / camera.aspect ** 0.6, 60, 85);
   camera.updateProjectionMatrix();
 }
@@ -73,37 +84,67 @@ window.addEventListener("resize", resize);
 resize();
 
 const player = buildPlayer();
-player.position.set(0, 0, 5);
 scene.add(player);
-camera.position.copy(player.position).add(CAMERA_OFFSET);
 
-// --- other players ---------------------------------------------------------
+/** A label floating over a figure; `kind` picks the CSS look. */
+function tag(group: THREE.Object3D, text: string, y: number, kind: string): CSS2DObject {
+  const el = document.createElement("div");
+  el.className = kind;
+  el.textContent = text;
+  const obj = new CSS2DObject(el);
+  obj.position.set(0, y, 0);
+  group.add(obj);
+  return obj;
+}
 
-// Everyone else in the room, drawn from what the server broadcasts. Positions
-// arrive ten times a second; each frame eases the figure toward the latest
-// one, so movement looks continuous rather than stepping.
+const removeTags = (group: THREE.Object3D): void =>
+  group.traverse((o) => {
+    if (o instanceof CSS2DObject) o.element.remove();
+  });
+
+// Speech bubbles (chat and emotes) sit above a figure for a few seconds.
+const bubbles = new WeakMap<THREE.Object3D, { obj: CSS2DObject; timer: number }>();
+function speak(group: THREE.Object3D, text: string, ms: number): void {
+  const old = bubbles.get(group);
+  if (old) {
+    window.clearTimeout(old.timer);
+    old.obj.element.remove();
+    group.remove(old.obj);
+  }
+  const obj = tag(group, text, 2.75, "bubble");
+  const timer = window.setTimeout(() => {
+    obj.element.remove();
+    group.remove(obj);
+    bubbles.delete(group);
+  }, ms);
+  bubbles.set(group, { obj, timer });
+}
+
+// --- other people ----------------------------------------------------------
+
+// Everyone else in this space, drawn from what the server broadcasts.
+// Positions arrive ten times a second; each frame eases the figure toward the
+// latest one, so movement looks continuous rather than stepping.
 interface OtherView {
   group: THREE.Group;
   target: THREE.Vector3;
   rot: number;
+  danceUntil: number;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
+let selfDanceUntil = 0;
+let space: SpaceDef | null = null;
 
 function upsertOther(p: RemotePlayer): void {
-  if (p.id === selfId) return;
+  if (p.id === selfId || p.space !== space?.id) return;
   let view = others.get(p.id);
   if (!view) {
     const group = buildPlayer();
-    const el = document.createElement("div");
-    el.className = "player-label";
-    el.textContent = p.name;
-    const label = new CSS2DObject(el);
-    label.position.set(0, 2.25, 0);
-    group.add(label);
+    tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { group, target: new THREE.Vector3(), rot: p.rot };
+    view = { group, target: new THREE.Vector3(), rot: p.rot, danceUntil: 0 };
     others.set(p.id, view);
   }
   view.target.set(p.x, p.y, p.z);
@@ -114,75 +155,217 @@ function removeOther(id: string): void {
   const view = others.get(id);
   if (!view) return;
   // CSS2D labels are DOM nodes: remove them too, or they linger on screen.
-  view.group.traverse((o) => {
-    if (o instanceof CSS2DObject) o.element.remove();
-  });
+  removeTags(view.group);
   scene.remove(view.group);
   others.delete(id);
 }
 
-let net: ReturnType<typeof connect> | null = null;
+const figureOf = (id: string): THREE.Object3D | undefined => (id === selfId ? player : others.get(id)?.group);
 
-function goOnline(token: string): void {
-  net?.close();
-  net = connect(token, {
-    welcome(id, players) {
-      selfId = id;
-      for (const oid of [...others.keys()]) removeOther(oid);
-      players.forEach(upsertOther);
-    },
-    players(players) {
-      const present = new Set(players.map((p) => p.id));
-      for (const id of [...others.keys()]) if (!present.has(id)) removeOther(id);
-      players.forEach(upsertOther);
-    },
-    leave: removeOther,
-    poop: upsertPoop,
-    status(online) {
-      if (session) hudName.textContent = online ? `You are ${session.name}` : `You are ${session.name} · reconnecting…`;
-    },
-  });
+const EMOTE_TEXT: Record<Emote, string> = {
+  wave: "👋",
+  yes: "👍 Yes",
+  no: "👎 No",
+  mate: "How ya doing, mate?",
+  dance: "💃",
+};
+
+function showEmote(id: string, kind: Emote): void {
+  const figure = figureOf(id);
+  if (!figure) return;
+  speak(figure, EMOTE_TEXT[kind], 3000);
+  if (kind === "dance") {
+    const until = performance.now() + 3000;
+    if (id === selfId) selfDanceUntil = until;
+    else others.get(id)!.danceUntil = until;
+  }
 }
 
-// --- poops -----------------------------------------------------------------
+// --- sticky notes ----------------------------------------------------------
 
-interface PoopView {
+interface NoteViewState {
+  note: Note;
   group: THREE.Group;
   label: CSS2DObject;
 }
-const poops = new Map<string, PoopView>(); // keyed by lowercase owner name
+const notes = new Map<number, NoteViewState>();
+// Bumped on every space change, so a slow note list for the old space is dropped.
+let noteRequest = 0;
 
-function upsertPoop(p: Poop): void {
-  const key = p.name.toLowerCase();
-  let view = poops.get(key);
+const noteLabel = (n: Note): string => `${n.author}'s note${n.comments ? ` · ${n.comments} 💬` : ""}`;
+
+function upsertNote(n: Note): void {
+  if (n.space !== space?.id) return;
+  let view = notes.get(n.id);
   if (!view) {
-    const group = buildPoop();
-    const el = document.createElement("div");
-    el.className = "poop-label";
-    const label = new CSS2DObject(el);
-    label.position.set(0, 1.1, 0);
+    const group = buildNote(n.id);
+    group.position.set(n.x, 0, n.z);
+    const label = tag(group, "", 0.6, "note-label");
     label.visible = false;
-    group.add(label);
     scene.add(group);
-    view = { group, label };
-    poops.set(key, view);
+    view = { note: n, group, label };
+    notes.set(n.id, view);
   }
-  view.label.element.textContent = p.name;
-  view.group.position.set(p.x, 0, p.z);
+  view.note = n;
+  view.label.element.textContent = noteLabel(n);
 }
 
-async function loadPoops(): Promise<void> {
+function removeNote(id: number): void {
+  const view = notes.get(id);
+  if (!view) return;
+  removeTags(view.group);
+  scene.remove(view.group);
+  notes.delete(id);
+  if (panel.openNoteId() === id) panel.close();
+}
+
+async function loadNotes(id: SpaceId): Promise<void> {
+  const ticket = noteRequest;
   try {
-    (await getPoops()).forEach(upsertPoop);
+    const list = await getNotes(id);
+    if (ticket === noteRequest) list.forEach(upsertNote);
   } catch (err) {
-    toast(err instanceof ApiError ? err.message : "Could not load poops.");
+    toast(err instanceof ApiError ? err.message : "Could not load notes.");
+  }
+}
+
+let session: Session | null = null;
+
+const mine = (author: string): boolean =>
+  !!session && (session.role === "admin" || session.name.toLowerCase() === author.toLowerCase());
+
+const commentViews = (list: Comment[]): CommentView[] => list.map((c) => ({ ...c, canDelete: mine(c.author) }));
+
+async function refreshComments(noteId: number): Promise<void> {
+  const list = await getComments(noteId);
+  panel.setComments(noteId, commentViews(list));
+  const view = notes.get(noteId);
+  if (view) upsertNote({ ...view.note, comments: list.length });
+}
+
+// Errors reach the dialogs as rejected promises; they show the message.
+const asError = (err: unknown): Error => new Error(err instanceof ApiError ? err.message : "Something went wrong.");
+
+const panel = mountNotePanel({
+  async onComment(noteId, text) {
+    if (!session) return;
+    try {
+      await postComment(session.token, noteId, text);
+      await refreshComments(noteId);
+    } catch (err) {
+      throw asError(err);
+    }
+  },
+  async onDeleteNote(noteId) {
+    if (!session) return;
+    try {
+      await deleteNote(session.token, noteId);
+      removeNote(noteId);
+      toast("Note removed.");
+    } catch (err) {
+      throw asError(err);
+    }
+  },
+  async onDeleteComment(noteId, commentId) {
+    if (!session) return;
+    try {
+      await deleteComment(session.token, commentId);
+      await refreshComments(noteId);
+    } catch (err) {
+      throw asError(err);
+    }
+  },
+});
+
+const composer = mountNoteComposer(async (text) => {
+  if (!session || !space) return;
+  try {
+    const { note, replaced } = await postNote(session.token, space.id, player.position.x, player.position.z, text);
+    if (replaced !== null) removeNote(replaced);
+    upsertNote(note);
+    toast(replaced !== null ? "Note stuck. Your oldest note here was removed." : "Note stuck.");
+  } catch (err) {
+    throw asError(err);
+  }
+});
+
+// --- chat and the Q menu ---------------------------------------------------
+
+let net: Net | null = null;
+const chat = mountChat({ onSend: (text) => net?.chat(text), maxLength: 200 });
+
+const radial = mountRadial(
+  [
+    { id: "note", label: "📝 Sticky note" },
+    { id: "wave", label: "👋 Wave" },
+    { id: "yes", label: "👍 Yes" },
+    { id: "no", label: "👎 No" },
+    { id: "mate", label: "How ya doing, mate?" },
+    { id: "dance", label: "💃 Dance" },
+  ],
+  (id) => {
+    if (id === "note") void writeNote();
+    else net?.emote(id as Emote);
+    stage.focus();
+  },
+);
+
+const busy = (): boolean => chat.isTyping() || panel.isOpen() || composer.isOpen();
+const keyGuide = mountKeyGuide();
+
+// --- the current space -----------------------------------------------------
+
+let playing = false;
+let vy = 0;
+
+function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): void {
+  if (space) {
+    scene.remove(space.group);
+    // The label renderer only updates what's in the scene, so the old space's
+    // door labels would linger; it re-attaches them when we come back.
+    removeTags(space.group);
+  }
+  for (const nid of [...notes.keys()]) removeNote(nid);
+  for (const oid of [...others.keys()]) removeOther(oid);
+  noteRequest++;
+
+  space = getSpace(id);
+  scene.add(space.group);
+  scene.background = new THREE.Color(space.background);
+  player.position.set(at.x, 0, at.z);
+  vy = 0;
+  camera.position.copy(player.position).add(space.camera);
+  if (session) hudName.textContent = `You are ${session.name} · ${space.title}`;
+  // Sound only after joining: the Enter click is the gesture browsers require.
+  if (playing) playTrack(space.bgm);
+  if (tell) net?.enter(id, at.x, at.z);
+  void loadNotes(id);
+}
+
+async function openNote(id: number): Promise<void> {
+  const view = notes.get(id);
+  if (!view) return;
+  stopMoving();
+  try {
+    const list = await getComments(id);
+    panel.open({ ...view.note, canDelete: mine(view.note.author) }, commentViews(list));
+  } catch (err) {
+    toast(err instanceof ApiError ? err.message : "Could not open that note.");
+  }
+}
+
+async function writeNote(): Promise<void> {
+  if (!session || !space) return;
+  stopMoving();
+  try {
+    const { count, limit } = await myNoteCount(session.token, space.id);
+    composer.open(count >= limit ? `You already have ${limit} notes here. Sticking this one removes your oldest.` : undefined);
+  } catch (err) {
+    toast(err instanceof ApiError ? err.message : "Could not start a note.");
   }
 }
 
 // --- session / join --------------------------------------------------------
-
-let session: Session | null = null;
-let playing = false;
 
 const storage = {
   get: (k: string): string => {
@@ -199,20 +382,19 @@ const storage = {
       // Private mode: the user simply re-enters their name next time.
     }
   },
-  remove: (k: string): void => {
-    try {
-      localStorage.removeItem(k);
-    } catch {
-      // ignore
-    }
-  },
 };
 
-nameInput.value = storage.get("poop.name");
+nameInput.value = storage.get("campus.name");
+const syncPasswordRow = (): void => {
+  passwordRow.hidden = !RESERVED_RE.test(nameInput.value.trim());
+};
+nameInput.addEventListener("input", syncPasswordRow);
+syncPasswordRow();
 
 function showJoin(message = ""): void {
   playing = false;
   keyGuide.hide();
+  chat.hide();
   net?.close();
   net = null;
   for (const id of [...others.keys()]) removeOther(id);
@@ -220,6 +402,7 @@ function showJoin(message = ""): void {
   joinDialog.hidden = false;
   hud.hidden = true;
   touch.hidden = true;
+  hintEl.hidden = true;
   nameInput.focus();
 }
 
@@ -227,20 +410,25 @@ joinForm.addEventListener("submit", (e) => {
   e.preventDefault();
   const name = nameInput.value.trim();
   if (!isValidName(name)) {
-    joinError.textContent = "Use letters and underscore only, 1 to 8 characters.";
+    joinError.textContent = "Use letters, digits and underscore only, 1 to 8 characters.";
+    return;
+  }
+  const reserved = RESERVED_RE.test(name);
+  if (reserved && !passwordInput.value) {
+    joinError.textContent = "This account needs its password.";
     return;
   }
   joinError.textContent = "";
   enterBtn.disabled = true;
   // Only reuse the stored token for the name it was issued to.
-  const token = storage.get("poop.name").toLowerCase() === name.toLowerCase() ? storage.get("poop.token") : "";
-  join(name, token || undefined)
-    .then(async (s) => {
+  const token = storage.get("campus.name").toLowerCase() === name.toLowerCase() ? storage.get("campus.token") : "";
+  join(name, token || undefined, reserved ? passwordInput.value : undefined)
+    .then((s) => {
       session = s;
-      storage.set("poop.name", s.name);
-      storage.set("poop.token", s.token);
-      await loadPoops();
-      enterRoom();
+      passwordInput.value = "";
+      storage.set("campus.name", s.name);
+      storage.set("campus.token", s.token);
+      enterWorld();
     })
     .catch((err: unknown) => {
       joinError.textContent = err instanceof ApiError ? err.message : "Something went wrong.";
@@ -250,44 +438,80 @@ joinForm.addEventListener("submit", (e) => {
     });
 });
 
-function enterRoom(): void {
+function enterWorld(): void {
   if (!session) return;
   joinDialog.hidden = true;
   hud.hidden = false;
   touch.hidden = false;
-  hudName.textContent = `You are ${session.name}`;
-  const spawn = session.spawn ?? { x: 0, z: 5 };
-  player.position.set(spawn.x, 0, spawn.z);
-  camera.position.copy(player.position).add(CAMERA_OFFSET);
   playing = true;
   keyGuide.show();
+  chat.show();
+  const spawn = session.spawn;
+  setSpace(isSpaceId(spawn.space) ? spawn.space : "outdoor", spawn, false);
   goOnline(session.token);
-  startBgm();
   // Move focus out of the form so keystrokes go to the game, not a hidden input.
   (document.activeElement as HTMLElement | null)?.blur();
   stage.focus();
 }
 
-// Big, centred and bold: for messages the player must not miss mid-movement.
-let noticeTimer = 0;
-function notice(msg: string): void {
-  noticeEl.textContent = msg;
-  noticeEl.hidden = false;
-  window.clearTimeout(noticeTimer);
-  noticeTimer = window.setTimeout(() => (noticeEl.hidden = true), 1500);
+function goOnline(token: string): void {
+  net?.close();
+  net = connect(token, {
+    welcome(id, _space, players) {
+      selfId = id;
+      // The server may have us elsewhere after a reconnect: tell it where we are.
+      if (space) net?.enter(space.id, player.position.x, player.position.z);
+      players.forEach(upsertOther);
+    },
+    players(players) {
+      const present = new Set(players.map((p) => p.id));
+      for (const id of [...others.keys()]) if (!present.has(id)) removeOther(id);
+      players.forEach(upsertOther);
+    },
+    leave: removeOther,
+    chat(id, name, text) {
+      chat.add({ name, text, self: id === selfId });
+      const figure = figureOf(id);
+      if (figure) speak(figure, text, 5000);
+    },
+    emote: showEmote,
+    note: upsertNote,
+    noteRemoved: removeNote,
+    comment(c) {
+      if (panel.openNoteId() === c.noteId) void refreshComments(c.noteId);
+      else {
+        const view = notes.get(c.noteId);
+        if (view) upsertNote({ ...view.note, comments: view.note.comments + 1 });
+      }
+    },
+    commentRemoved(_id, noteId) {
+      if (panel.openNoteId() === noteId) void refreshComments(noteId);
+      else {
+        const view = notes.get(noteId);
+        if (view) upsertNote({ ...view.note, comments: Math.max(0, view.note.comments - 1) });
+      }
+    },
+    status(online) {
+      if (session && space) {
+        hudName.textContent = `You are ${session.name} · ${space.title}${online ? "" : " · reconnecting…"}`;
+      }
+    },
+  });
 }
 
 let toastTimer = 0;
 function toast(msg: string): void {
   toastEl.textContent = msg;
   window.clearTimeout(toastTimer);
-  toastTimer = window.setTimeout(() => (toastEl.textContent = ""), 2500);
+  toastTimer = window.setTimeout(() => (toastEl.textContent = ""), 3000);
 }
 
 // --- input -----------------------------------------------------------------
 
-const keyGuide = mountKeyGuide();
 const dirs = { up: false, down: false, left: false, right: false };
+function stopMoving(): void {
+  dirs.up = dirs.down = dirs.left = dirs.right = false;
+}
 const KEY_MAP: Record<string, keyof typeof dirs> = {
   KeyW: "up",
   ArrowUp: "up",
@@ -300,17 +524,30 @@ const KEY_MAP: Record<string, keyof typeof dirs> = {
 };
 
 window.addEventListener("keydown", (e) => {
-  if (!playing) return;
+  if (!playing || busy()) return;
   keyGuide.press(e.code, true);
-  if (e.code === "Space") {
-    e.preventDefault();
-    jump();
+  if (radial.isOpen() && /^Digit[1-6]$/.test(e.code)) {
+    radial.highlight(Number(e.code.slice(5)) - 1);
     return;
   }
-  if (e.code === "KeyE") {
-    e.preventDefault();
-    if (!e.repeat) void poop();
-    return;
+  switch (e.code) {
+    case "Space":
+      e.preventDefault();
+      jump();
+      return;
+    case "KeyE":
+      e.preventDefault();
+      if (!e.repeat) interact();
+      return;
+    case "KeyQ":
+      e.preventDefault();
+      if (!e.repeat && !radial.isOpen()) radial.open();
+      return;
+    case "Enter":
+      e.preventDefault();
+      stopMoving();
+      chat.openInput();
+      return;
   }
   const dir = KEY_MAP[e.code];
   if (dir) {
@@ -320,12 +557,11 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => {
   keyGuide.press(e.code, false);
+  if (e.code === "KeyQ" && radial.isOpen()) radial.close();
   const dir = KEY_MAP[e.code];
   if (dir) dirs[dir] = false;
 });
-window.addEventListener("blur", () => {
-  dirs.up = dirs.down = dirs.left = dirs.right = false;
-});
+window.addEventListener("blur", stopMoving);
 
 // On-screen controls call the same functions as the keyboard.
 for (const btn of touch.querySelectorAll<HTMLButtonElement>("[data-dir]")) {
@@ -341,108 +577,130 @@ for (const btn of touch.querySelectorAll<HTMLButtonElement>("[data-dir]")) {
   btn.addEventListener("pointercancel", release);
   btn.addEventListener("pointerleave", release);
 }
-$("poop-btn").addEventListener("pointerdown", (e) => {
-  e.preventDefault();
-  if (playing) void poop();
-});
-$("jump-btn").addEventListener("pointerdown", (e) => {
-  e.preventDefault();
-  if (playing) jump();
-});
+const tap = (id: string, fn: () => void): void =>
+  $(id).addEventListener("pointerdown", (e) => {
+    e.preventDefault();
+    if (playing && !busy()) fn();
+  });
+tap("jump-btn", () => jump());
+tap("use-btn", () => interact());
+tap("menu-btn", () => (radial.isOpen() ? radial.close() : radial.open()));
 
 // --- actions ---------------------------------------------------------------
 
-let vy = 0;
 function jump(): void {
   // Only from the floor: no double jumps.
   if (player.position.y > 0) return;
   vy = JUMP_SPEED;
 }
 
-// Mirrors the server's 5-second cooldown, so a mashed key gets a message
-// instead of a fart and a rejected request.
-const POOP_COOLDOWN_MS = 5000;
-let lastPoopAt = 0;
-let pooping = false;
-async function poop(): Promise<void> {
-  if (!session || pooping) return;
-  const wait = lastPoopAt + POOP_COOLDOWN_MS - Date.now();
-  if (wait > 0) {
-    notice(`One poop every 5 seconds. Hold it in… ${Math.ceil(wait / 1000)}s`);
-    return;
+type Target = { kind: "door"; door: Door } | { kind: "note"; id: number; author: string };
+
+/** The door or note within reach, nearest first. */
+function nearestTarget(): Target | null {
+  if (!space) return null;
+  let best: Target | null = null;
+  let bestD = Infinity;
+  for (const door of space.doors) {
+    const d = Math.hypot(player.position.x - door.x, player.position.z - door.z);
+    if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "door", door }, d];
   }
-  lastPoopAt = Date.now();
-  pooping = true;
-  playFart();
-  try {
-    const saved = await postPoop(session.token, player.position.x, player.position.z);
-    upsertPoop(saved);
-    toast("You left your mark.");
-  } catch (err) {
-    if (err instanceof ApiError && err.status === 401) {
-      storage.remove("poop.token");
-      session = null;
-      showJoin("Your session expired. Please enter your name again.");
-    } else {
-      toast(err instanceof ApiError ? err.message : "Could not save your poop.");
-    }
-  } finally {
-    pooping = false;
+  for (const [id, view] of notes) {
+    const d = Math.hypot(player.position.x - view.note.x, player.position.z - view.note.z);
+    if (d < NOTE_RANGE && d < bestD) [best, bestD] = [{ kind: "note", id, author: view.note.author }, d];
   }
+  return best;
+}
+
+function interact(): void {
+  const target = nearestTarget();
+  if (!target) return;
+  if (target.kind === "door") setSpace(target.door.to, target.door.arrive, true);
+  else void openNote(target.id);
 }
 
 // --- game loop -------------------------------------------------------------
 
+// Same test the CSS uses to show the on-screen buttons.
+const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
+
 let lastTime = performance.now();
 const move = new THREE.Vector3();
 const lookTarget = new THREE.Vector3();
+const ray = new THREE.Ray();
+const hit = new THREE.Vector3();
 
-function update(dt: number): void {
+function update(dt: number, now: number): void {
+  if (!space) return;
   if (playing) {
-    move.set(Number(dirs.right) - Number(dirs.left), 0, Number(dirs.down) - Number(dirs.up));
-    if (move.lengthSq() > 0) {
-      move.normalize();
-      player.position.addScaledVector(move, SPEED * dt);
-      player.rotation.y = Math.atan2(move.x, move.z); // model faces +z
+    if (!busy()) {
+      move.set(Number(dirs.right) - Number(dirs.left), 0, Number(dirs.down) - Number(dirs.up));
+      if (move.lengthSq() > 0) {
+        move.normalize();
+        player.position.addScaledVector(move, SPEED * dt);
+        player.rotation.y = Math.atan2(move.x, move.z); // model faces +z
+      }
     }
     vy -= GRAVITY * dt;
     player.position.y = Math.max(0, player.position.y + vy * dt);
     if (player.position.y === 0) vy = 0;
-    pushOut(player.position, PLAYER_RADIUS);
-    player.position.x = THREE.MathUtils.clamp(player.position.x, -BOUND, BOUND);
-    player.position.z = THREE.MathUtils.clamp(player.position.z, -BOUND, BOUND);
+    pushOut(player.position, PLAYER_RADIUS, space.colliders);
+    player.position.x = THREE.MathUtils.clamp(player.position.x, -space.halfX, space.halfX);
+    player.position.z = THREE.MathUtils.clamp(player.position.z, -space.halfZ, space.halfZ);
+    if (now < selfDanceUntil) player.rotation.y += dt * 8;
     net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
+
+    const target = busy() ? null : nearestTarget();
+    hintEl.hidden = !target;
+    if (target) {
+      const key = touchScreen.matches ? "Use" : "E";
+      hintEl.textContent = target.kind === "door" ? `${key} · ${target.door.label}` : `${key} · Read ${target.author}'s note`;
+    }
   }
 
   const ease = 1 - Math.exp(-12 * dt);
   for (const view of others.values()) {
     view.group.position.lerp(view.target, ease);
+    if (now < view.danceUntil) {
+      view.group.rotation.y += dt * 8;
+      continue;
+    }
     // Turn the short way round, not through a full spin.
     const d = Math.atan2(Math.sin(view.rot - view.group.rotation.y), Math.cos(view.rot - view.group.rotation.y));
     view.group.rotation.y += d * ease;
   }
 
-  // Third-person camera, smoothly following behind the player.
-  // Follows the player across the floor but not up a jump, so the view stays steady.
-  const desired = player.position.clone().setY(0).add(CAMERA_OFFSET);
-  desired.x = THREE.MathUtils.clamp(desired.x, -CAMERA_LIMIT, CAMERA_LIMIT);
-  desired.z = THREE.MathUtils.clamp(desired.z, -CAMERA_LIMIT, CAMERA_LIMIT);
+  for (const view of notes.values()) {
+    view.label.visible = view.group.position.distanceTo(player.position) <= NOTE_LABEL_RANGE;
+  }
+
+  // Third-person camera, following across the floor but not up a jump.
+  const desired = player.position.clone().setY(0).add(space.camera);
   camera.position.lerp(desired, 1 - Math.exp(-8 * dt));
   lookTarget.copy(player.position).setY(1);
   camera.lookAt(lookTarget);
 
-  for (const view of poops.values()) {
-    const near = view.group.position.distanceTo(player.position) <= LABEL_RANGE;
-    view.label.visible = near;
+  // Fade walls and buildings standing between the camera and the player.
+  ray.origin.copy(camera.position);
+  ray.direction.copy(lookTarget).sub(camera.position).normalize();
+  const reach = camera.position.distanceTo(lookTarget);
+  for (const o of occludersOf(space.group)) {
+    const p = ray.intersectBox(o.box, hit);
+    const blocking = (p !== null && p.distanceTo(camera.position) < reach) || o.box.containsPoint(camera.position);
+    const m = o.mesh.material as THREE.MeshLambertMaterial;
+    m.opacity += ((blocking ? 0.2 : 1) - m.opacity) * ease;
+    m.depthWrite = m.opacity > 0.95;
   }
 }
 
 renderer.setAnimationLoop(() => {
   const now = performance.now();
-  update(Math.min((now - lastTime) / 1000, 0.1));
+  update(Math.min((now - lastTime) / 1000, 0.1), now);
   lastTime = now;
   renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 });
 
+// Show the campus behind the join form.
+setSpace("outdoor", { x: -6, z: 10 }, false);
 showJoin();

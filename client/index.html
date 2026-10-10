@@ -3,19 +3,19 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Poop Room</title>
+    <title>ANU campus, unofficially</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
   <body>
-    <main id="stage" tabindex="0" aria-label="3D bathroom"></main>
+    <main id="stage" tabindex="0" aria-label="3D campus"></main>
 
     <div id="hud" hidden>
       <p id="hud-name"></p>
-      <p id="hud-help" class="touch-help">Move: arrow pad &middot; Jump and Poop: the buttons</p>
+      <p id="hud-help" class="touch-help">Move: arrow pad &middot; Use, Menu and Jump: the buttons</p>
       <p id="toast" role="status" aria-live="polite"></p>
     </div>
 
-    <p id="notice" role="alert" hidden></p>
+    <p id="hint" role="status" aria-live="polite" hidden></p>
 
     <div id="touch" hidden>
       <div id="dpad">
@@ -25,22 +25,28 @@
         <button type="button" data-dir="down" tabindex="-1" aria-label="Move down">&#9660;</button>
       </div>
       <div id="actions">
+        <button type="button" id="menu-btn" tabindex="-1">Menu</button>
         <button type="button" id="jump-btn" tabindex="-1">Jump</button>
-        <button type="button" id="poop-btn" tabindex="-1">Poop</button>
+        <button type="button" id="use-btn" tabindex="-1">Use</button>
       </div>
     </div>
 
     <div id="join" role="dialog" aria-modal="true" aria-labelledby="join-title">
       <form id="join-form" novalidate>
-        <h1 id="join-title">Poop Room</h1>
-        <label for="name">Your name (A&ndash;Z and _ only, up to 8)</label>
-        <input id="name" name="name" maxlength="8" autocomplete="off" autocapitalize="off" spellcheck="false" required />
+        <h1 id="join-title">ANU campus, unofficially</h1>
+        <p class="join-sub">A small 3D space to run into people: students, staff, anyone. Not an official ANU service.</p>
+        <label for="name">Your name (letters, digits and _ only, up to 8)</label>
+        <input id="name" name="name" maxlength="12" autocomplete="off" autocapitalize="off" spellcheck="false" required />
+        <div id="password-row" hidden>
+          <label for="password">Password (test and admin accounts only, never your ANU password)</label>
+          <input id="password" name="password" type="password" autocomplete="current-password" />
+        </div>
         <p id="join-error" role="alert"></p>
         <button type="submit" id="enter">Enter</button>
         <ul id="flavour">
-          <li>You pooped the moment you saw me.</li>
-          <li>We carved forever into poop &mdash; remember?</li>
-          <li>I was glad to put my poop next to yours.</li>
+          <li>WASD to walk, Space to jump.</li>
+          <li>Q for the menu: wave, dance, stick a note.</li>
+          <li>E to read a note or go through a door. Enter to chat.</li>
         </ul>
       </form>
     </div>
