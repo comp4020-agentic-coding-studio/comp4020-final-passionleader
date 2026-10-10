@@ -8,7 +8,7 @@ import { markOccluder } from "./occluders.ts";
 const WALL_H = 4;
 const T = 0.3;
 
-export function roomShell(g: THREE.Group, colliders: Box[], halfX: number, halfZ: number, floorColor: number, wallColor: number): void {
+export function roomShell(g: THREE.Group, colliders: Box[], halfX: number, halfZ: number, floorColor: number | THREE.Material, wallColor: number): void {
   floor(g, halfX * 2 + 2, halfZ * 2 + 2, 0, 0, floorColor);
   block(g, colliders, [halfX * 2 + 2 * T, WALL_H, T], [0, -halfZ - T / 2], wallColor);
   for (const side of [-1, 1]) {

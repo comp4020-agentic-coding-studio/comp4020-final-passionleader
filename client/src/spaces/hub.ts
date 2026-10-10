@@ -1,6 +1,6 @@
 import * as THREE from "three";
-import { block, doorway, textPlane, type Box, type SpaceDef } from "../world.ts";
-import { plant, roomShell } from "./room.ts";
+import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { roomShell } from "./room.ts";
 
 // The Student Hub, inside building 154: a lounge to run into people in. Not
 // a copy of the real one, and not an official ANU service.
@@ -10,7 +10,7 @@ const HALF = { halfX: 12, halfZ: 9 };
 export function buildHub(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
-  roomShell(g, colliders, HALF.halfX, HALF.halfZ, 0xcdb48c, 0xe8e4da);
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("woodfloor.jpg", 6, 5), 0xe8e4da);
 
   // The desk at the back, with the sign above it.
   block(g, colliders, [6, 1.1, 1.2], [0, -7.6], 0x2f5d8a);
@@ -21,26 +21,37 @@ export function buildHub(): SpaceDef {
   board.position.set(-8, 2.2, -HALF.halfZ + 0.01);
   g.add(board);
 
-  // Lounge corner: two sofas facing a coffee table.
-  block(g, colliders, [3.2, 0.8, 1], [-7.5, 0.2], 0x7b4b6a);
-  block(g, colliders, [3.2, 0.8, 1], [-7.5, 3.8], 0x7b4b6a);
-  block(g, colliders, [1.8, 0.45, 1], [-7.5, 2], 0x6b4a2b);
+  // Lounge corner: two sofas facing a coffee table (Kenney models, CC0).
+  place(g, "loungeSofa.glb", 0.9, -7.5, 0.2, 0);
+  place(g, "loungeSofa.glb", 0.9, -7.5, 3.8, Math.PI);
+  place(g, "tableCoffee.glb", 0.45, -7.5, 2);
+  solid(colliders, 3, 1, -7.5, 0.2);
+  solid(colliders, 3, 1, -7.5, 3.8);
+  solid(colliders, 1.6, 0.9, -7.5, 2);
 
-  // Study tables with stools.
+  // Study tables with chairs.
   for (const [x, z] of [
     [4, -2],
     [8, -2],
     [4, 3],
     [8, 3],
   ] as const) {
-    block(g, colliders, [1.8, 0.75, 1.2], [x, z], 0xf2efe6);
-    block(g, null, [0.45, 0.45, 0.45], [x - 0.6, z + 0.95], 0x3d6f8f);
-    block(g, null, [0.45, 0.45, 0.45], [x + 0.6, z + 0.95], 0x3d6f8f);
+    place(g, "table.glb", 0.75, x, z);
+    place(g, "chair.glb", 0.9, x - 0.6, z + 0.9, Math.PI);
+    place(g, "chair.glb", 0.9, x + 0.6, z + 0.9, Math.PI);
+    solid(colliders, 1.6, 1, x, z);
   }
+  place(g, "bookcaseOpen.glb", 2, 10.6, -4, -Math.PI / 2);
+  solid(colliders, 1, 2, 10.6, -4);
 
-  plant(g, colliders, -11, -8);
-  plant(g, colliders, 11, -8);
-  plant(g, colliders, 11, 8);
+  for (const [x, z] of [
+    [-11, -8],
+    [11, -8],
+    [11, 8],
+  ] as const) {
+    place(g, "pottedPlant.glb", 1.3, x, z);
+    solid(colliders, 0.7, 0.7, x, z);
+  }
 
   doorway(g, -HALF.halfX + 0.05, 6, Math.PI / 2, "Exit to campus");
 

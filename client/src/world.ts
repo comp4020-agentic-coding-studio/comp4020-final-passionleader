@@ -91,16 +91,50 @@ export const mat = (color: number): THREE.MeshLambertMaterial => {
   return m;
 };
 
+// CC0 textures from assets/tex (credited in assets/CREDITS.md), tiled by
+// world size so a brick is the same size on every wall.
+const loaderTex = new THREE.TextureLoader();
+const textures = new Map<string, THREE.Texture>();
+export function texMat(file: string, repeatX: number, repeatY: number, tint = 0xffffff): THREE.MeshLambertMaterial {
+  let base = textures.get(file);
+  if (!base) {
+    base = loaderTex.load(`${import.meta.env.BASE_URL}assets/tex/${file}`);
+    base.colorSpace = THREE.SRGBColorSpace;
+    base.wrapS = base.wrapT = THREE.RepeatWrapping;
+    textures.set(file, base);
+  }
+  const map = base.clone();
+  map.needsUpdate = true;
+  map.repeat.set(repeatX, repeatY);
+  return new THREE.MeshLambertMaterial({ map, color: tint });
+}
+
+/** A collision footprint with nothing drawn, for furniture drawn by a model. */
+export function solid(colliders: Box[], w: number, d: number, x: number, z: number): void {
+  colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+}
+
+/** Places a model once it loads (it's drawn a moment later than the room). */
+export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0): void {
+  void loadModel(file, height).then((model) => {
+    if (!model) return;
+    const m = model.clone(true);
+    m.position.set(x, 0, z);
+    m.rotation.y = rotY;
+    g.add(m);
+  });
+}
+
 /** A box sitting on the floor at (x, z). Solid ones are added to colliders. */
 export function block(
   g: THREE.Group,
   colliders: Box[] | null,
   size: [w: number, h: number, d: number],
   at: [x: number, z: number, y?: number],
-  color: number,
+  color: number | THREE.Material,
 ): THREE.Mesh {
   const [w, h, d] = size;
-  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat(color));
+  const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), typeof color === "number" ? mat(color) : color);
   m.position.set(at[0], (at[2] ?? 0) + h / 2, at[1]);
   g.add(m);
   if (colliders) colliders.push(boxFrom(m));
@@ -108,8 +142,8 @@ export function block(
 }
 
 /** A flat floor rectangle, slightly lifted so layers don't flicker. */
-export function floor(g: THREE.Group, w: number, d: number, x: number, z: number, color: number, y = 0): THREE.Mesh {
-  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), mat(color));
+export function floor(g: THREE.Group, w: number, d: number, x: number, z: number, color: number | THREE.Material, y = 0): THREE.Mesh {
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(w, d), typeof color === "number" ? mat(color) : color);
   m.rotation.x = -Math.PI / 2;
   m.position.set(x, y, z);
   g.add(m);

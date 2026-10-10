@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { block, doorway, floor, textPlane, tree, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, texMat, textPlane, tree, type Box, type SpaceDef } from "../world.ts";
 import { markOccluder } from "./occluders.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
@@ -15,11 +15,11 @@ export function buildOutdoor(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
 
-  floor(g, OUTDOOR.halfX * 2 + 20, OUTDOOR.halfZ * 2 + 20, 0, 0, 0xc9c3b6);
-  // The paved path between the two buildings, a shade darker.
-  floor(g, 14, OUTDOOR.halfZ * 2, -2, 0, 0xb3ab9c, 0.01);
+  floor(g, OUTDOOR.halfX * 2 + 20, OUTDOOR.halfZ * 2 + 20, 0, 0, texMat("pavement.jpg", 28, 22, 0xd8d2c6));
+  // The path between the two buildings, a shade darker.
+  floor(g, 14, OUTDOOR.halfZ * 2, -2, 0, texMat("pavement.jpg", 5, 16, 0xb8b0a2), 0.01);
   // The lawn.
-  floor(g, 20, 16, -16, -14, 0x7fb35a, 0.02);
+  floor(g, 20, 16, -16, -14, texMat("grass.jpg", 6, 5), 0.02);
   for (const [x, z, s] of [
     [-24, -20, 1.1],
     [-9, -20, 1],
@@ -33,7 +33,7 @@ export function buildOutdoor(): SpaceDef {
   block(g, colliders, [2.4, 0.5, 0.7], [-20, -5.5], 0x6b4a2b);
 
   // Building 155: Marie Reay Teaching Centre.
-  const b155 = block(g, colliders, [18, 9, 18], [-19, 7], 0xb9a58c);
+  const b155 = block(g, colliders, [18, 9, 18], [-19, 7], texMat("brick.jpg", 6, 3, 0xe8d6bd));
   markOccluder(g, b155);
   windows(g, -19, 7 + 9.01, 18, 9, 0);
   const sign155 = textPlane(["155", "Marie Reay Teaching Centre"], 6, 1.6, { bg: "#1f2d3d", fg: "#ffffff", font: 0.45 });
@@ -43,7 +43,7 @@ export function buildOutdoor(): SpaceDef {
   doorway(g, -9.94, 7, Math.PI / 2, "155 · COMP8280 classroom");
 
   // Building 154: Di Riddell Student Centre (Brian Kenyon Student Space).
-  const b154 = block(g, colliders, [20, 12, 34], [16, -3], 0xa7b8c6);
+  const b154 = block(g, colliders, [20, 12, 34], [16, -3], texMat("brick.jpg", 10, 4, 0xc4d2de));
   markOccluder(g, b154);
   windows(g, 16, -3 + 17.01, 20, 12, 0);
   const sign154 = textPlane(["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 7, 2.2, {
