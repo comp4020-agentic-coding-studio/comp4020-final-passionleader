@@ -1,4 +1,4 @@
-// Wipes every visitor (names, tokens, poops, last spots) from the database the
+// Wipes every visitor (names, tokens, last spots) and every note and comment from the database the
 // server uses. An operator tool, not a route: it only runs from a shell on the
 // machine, e.g.
 //
@@ -17,5 +17,9 @@ if (!existsSync(path)) {
   process.exit(1);
 }
 const db = new DatabaseSync(path);
+for (const table of ["comments", "notes"]) {
+  const exists = db.prepare("SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = ?").get(table);
+  if (exists) db.prepare(`DELETE FROM ${table}`).run();
+}
 const { changes } = db.prepare("DELETE FROM visitors").run();
 console.log(`${path}: removed ${changes} visitor(s)`);

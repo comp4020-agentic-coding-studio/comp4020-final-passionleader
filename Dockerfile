@@ -19,8 +19,8 @@ RUN npm install -g pnpm@11.9.0
 COPY package.json pnpm-lock.yaml pnpm-workspace.yaml ./
 RUN pnpm install --prod --frozen-lockfile --filter . --ignore-scripts
 COPY server/ server/
-# operator tool: flyctl ssh console -C "node /app/scripts/reset-db.ts"
-COPY scripts/reset-db.ts scripts/
+# operator tools, run over flyctl ssh: reset-db.ts and seed-accounts.ts
+COPY scripts/reset-db.ts scripts/seed-accounts.ts scripts/
 COPY README.md ./
 COPY --from=build /app/client/dist client/dist
 ENV NODE_ENV=production
