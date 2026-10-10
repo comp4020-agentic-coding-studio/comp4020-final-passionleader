@@ -32,7 +32,7 @@ export function markOccluder(group: THREE.Group, mesh: THREE.Mesh): void {
 }
 
 /** Every mesh under `part` fades together when `part`'s bounding box is in the way. */
-export function markOccluderGroup(group: THREE.Group, part: THREE.Object3D): void {
+export function markOccluderGroup(group: THREE.Group, part: THREE.Object3D, box?: THREE.Box3): void {
   const meshes: THREE.Mesh[] = [];
   part.updateMatrixWorld(true);
   part.traverse((o) => {
@@ -42,7 +42,7 @@ export function markOccluderGroup(group: THREE.Group, part: THREE.Object3D): voi
     }
   });
   const list = occluders.get(group) ?? [];
-  list.push({ meshes, box: new THREE.Box3().setFromObject(part) });
+  list.push({ meshes, box: box ?? new THREE.Box3().setFromObject(part) });
   occluders.set(group, list);
 }
 

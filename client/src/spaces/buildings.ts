@@ -102,6 +102,12 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
 
   g.add(b);
   colliders.push({ minX: s.cx - s.w / 2, maxX: s.cx + s.w / 2, minZ: s.cz - s.d / 2, maxZ: s.cz + s.d / 2 });
-  markOccluderGroup(g, b);
+  // Only the building's own footprint counts as "in the way": the roof
+  // overhang and canopy would fade it while you stand at the door.
+  markOccluderGroup(
+    g,
+    b,
+    new THREE.Box3(new THREE.Vector3(s.cx - s.w / 2, 0, s.cz - s.d / 2), new THREE.Vector3(s.cx + s.w / 2, H, s.cz + s.d / 2)),
+  );
   return b;
 }

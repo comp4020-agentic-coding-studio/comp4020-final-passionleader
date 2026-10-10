@@ -4,7 +4,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
-import { Avatar, motionFor } from "./character.ts";
+import { Avatar, motionFor, variantFor } from "./character.ts";
 import {
   ApiError,
   RESERVED_RE,
@@ -111,9 +111,20 @@ function resize(): void {
 window.addEventListener("resize", resize);
 resize();
 
-const me = new Avatar();
-const player = me.group;
+let me = new Avatar("male-a");
+let player = me.group;
 scene.add(player);
+
+/** Swaps in this visitor's own figure once we know their name. */
+function becomeAvatar(name: string): void {
+  const next = new Avatar(variantFor(name));
+  next.group.position.copy(player.position);
+  next.group.rotation.copy(player.rotation);
+  scene.remove(player);
+  me = next;
+  player = next.group;
+  scene.add(player);
+}
 
 /** A label floating over a figure; `kind` picks the CSS look. */
 function tag(group: THREE.Object3D, text: string, y: number, kind: string): CSS2DObject {
@@ -172,7 +183,7 @@ function upsertOther(p: RemotePlayer): void {
   if (p.id === selfId || p.space !== space?.id) return;
   let view = others.get(p.id);
   if (!view) {
-    const avatar = new Avatar();
+    const avatar = new Avatar(variantFor(p.name));
     const group = avatar.group;
     tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
@@ -207,6 +218,8 @@ function showEmote(id: string, kind: Emote): void {
   const figure = figureOf(id);
   if (!figure) return;
   speak(figure, EMOTE_TEXT[kind], 3000);
+  const avatar = id === selfId ? me : others.get(id)?.avatar;
+  if (kind === "yes" || kind === "no") avatar?.gesture(kind);
   if (kind === "dance") {
     const until = performance.now() + 3000;
     if (id === selfId) selfDanceUntil = until;
@@ -488,6 +501,7 @@ joinForm.addEventListener("submit", (e) => {
 
 function enterWorld(): void {
   if (!session) return;
+  becomeAvatar(session.name);
   joinDialog.hidden = true;
   hud.hidden = false;
   touch.hidden = false;
