@@ -99,3 +99,6 @@
 
 /* ENTER is a wider key than the letters. */
 .keyguide-enter { width: auto; padding: 0 6px; font-size: 9px; }
+
+/* Captions sit over brick and pavement outdoors: give them a light backing. */
+.keyguide-caption { padding: 0 4px; border-radius: 4px; background: rgba(255, 251, 224, 0.85); }

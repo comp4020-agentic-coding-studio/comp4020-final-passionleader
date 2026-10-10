@@ -93,20 +93,36 @@ export const mat = (color: number): THREE.MeshLambertMaterial => {
 
 // CC0 textures from assets/tex (credited in assets/CREDITS.md), tiled by
 // world size so a brick is the same size on every wall.
+// Each material gets its own clone (its own repeat) of one shared image,
+// attached only once the image has arrived: cloning flags a texture for
+// upload, and uploading one with no image yet makes three.js warn.
 const loaderTex = new THREE.TextureLoader();
-const textures = new Map<string, THREE.Texture>();
+const textures = new Map<string, { image: THREE.Texture | null; waiting: (() => void)[] }>();
 export function texMat(file: string, repeatX: number, repeatY: number, tint = 0xffffff): THREE.MeshLambertMaterial {
-  let base = textures.get(file);
-  if (!base) {
-    base = loaderTex.load(`${import.meta.env.BASE_URL}assets/tex/${file}`);
-    base.colorSpace = THREE.SRGBColorSpace;
-    base.wrapS = base.wrapT = THREE.RepeatWrapping;
-    textures.set(file, base);
+  const material = new THREE.MeshLambertMaterial({ color: tint });
+  // One material per call, never shared: occluders may fade it in place.
+  material.userData.unique = true;
+  let entry = textures.get(file);
+  if (!entry) {
+    const e: { image: THREE.Texture | null; waiting: (() => void)[] } = { image: null, waiting: [] };
+    loaderTex.load(`${import.meta.env.BASE_URL}assets/tex/${file}`, (tex) => {
+      tex.colorSpace = THREE.SRGBColorSpace;
+      tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      e.image = tex;
+      for (const attach of e.waiting.splice(0)) attach();
+    });
+    textures.set(file, (entry = e));
   }
-  const map = base.clone();
-  map.needsUpdate = true;
-  map.repeat.set(repeatX, repeatY);
-  return new THREE.MeshLambertMaterial({ map, color: tint });
+  const e = entry;
+  const attach = (): void => {
+    const map = e.image!.clone();
+    map.repeat.set(repeatX, repeatY);
+    material.map = map;
+    material.needsUpdate = true;
+  };
+  if (e.image) attach();
+  else e.waiting.push(attach);
+  return material;
 }
 
 /** A collision footprint with nothing drawn, for furniture drawn by a model. */

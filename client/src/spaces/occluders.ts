@@ -12,7 +12,10 @@ export interface Occluder {
 const occluders = new WeakMap<THREE.Group, Occluder[]>();
 
 export function markOccluder(group: THREE.Group, mesh: THREE.Mesh): void {
-  mesh.material = (mesh.material as THREE.MeshLambertMaterial).clone();
+  // Shared colour materials are copied; textured ones are already unique, and
+  // copying them would lose the texture that arrives after loading.
+  const m = mesh.material as THREE.MeshLambertMaterial;
+  if (!m.userData.unique) mesh.material = m.clone();
   (mesh.material as THREE.MeshLambertMaterial).transparent = true;
   mesh.updateMatrixWorld(true);
   const list = occluders.get(group) ?? [];
