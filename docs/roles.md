@@ -64,6 +64,11 @@ message that says it came from the helper session, and adds the
 
 ## Testing the live site
 
-Only the main session touches production, and only as the single reused
-`qa_bot` visitor: one realistic visit, never the spec suite, so the room
-people see isn't filled with test names.
+Only the main session touches production, and only as the pre-made test
+visitors (`qa_bot01`–`qa_bot10`, plus `qa_master` for admin-only actions):
+realistic visits, never the spec suite, so the rooms people see aren't filled
+with random test names. The tokens live outside the repo.
+
+## This week's split
+
+What each session is doing in the current crit is listed in `docs/plan.md`.
