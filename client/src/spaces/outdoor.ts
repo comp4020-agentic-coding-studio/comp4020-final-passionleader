@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { block, doorway, floor, pavingMat, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { HIGH } from "../settings.ts";
 import { building } from "./buildings.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
@@ -24,8 +25,8 @@ export function buildOutdoor(): SpaceDef {
   // Trees, bushes and flowers (Quaternius, CC0): a row along the lawn, a few
   // between the buildings, and a belt round the edge of the map.
   const trees = ["CommonTree_3.glb", "CommonTree_4.glb", "CommonTree_5.glb"];
-  const tree = (x: number, z: number, h: number, i: number): void => {
-    place(g, `nature/${trees[i % trees.length]}`, h, x, z, (i * 1.7) % (Math.PI * 2));
+  const tree = (x: number, z: number, h: number, i: number, shadow = true): void => {
+    place(g, `nature/${trees[i % trees.length]}`, h, x, z, (i * 1.7) % (Math.PI * 2), shadow);
     solid(colliders, 0.8, 0.8, x, z);
   };
   [
@@ -38,9 +39,10 @@ export function buildOutdoor(): SpaceDef {
     [-9.5, 16, 6.5],
     [5.5, 21, 7],
   ].forEach(([x, z, h], i) => tree(x!, z!, h!, i));
-  for (let i = 0; i < 26; i++) {
-    const a = (i / 26) * Math.PI * 2;
-    tree(Math.cos(a) * 40, Math.sin(a) * 31, 7 + ((i * 7) % 4), i);
+  // The far belt is scenery: fewer trees, none casting shadows, and only on High.
+  for (let i = 0; i < (HIGH ? 16 : 0); i++) {
+    const a = (i / 16) * Math.PI * 2;
+    tree(Math.cos(a) * 40, Math.sin(a) * 31, 7 + ((i * 7) % 4), i, false);
   }
   for (const [x, z, f] of [
     [-20, -6.4, 1],
@@ -52,7 +54,7 @@ export function buildOutdoor(): SpaceDef {
   ] as const) {
     place(g, f ? "nature/Bush_Common_Flowers.glb" : "nature/Bush_Common.glb", 1.1, x, z, x);
   }
-  for (let i = 0; i < 14; i++) {
+  for (let i = 0; i < (HIGH ? 14 : 0); i++) {
     place(g, i % 3 ? "nature/Grass_Common_Tall.glb" : "nature/Flower_3_Group.glb", 0.45, -24 + ((i * 5.3) % 17), -21 + ((i * 3.7) % 13), i);
   }
   // A couple of benches on the lawn edge.

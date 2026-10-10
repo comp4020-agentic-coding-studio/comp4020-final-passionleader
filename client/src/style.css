@@ -141,3 +141,32 @@ html, body {
   #use-btn { width: 68px; height: 68px; }
   #jump-btn, #menu-btn { width: 52px; height: 52px; font-size: 0.85rem; }
 }
+
+/* Settings: a gear beside the mute button, and a small dialog. */
+#settings-btn {
+  position: fixed; top: 10px; right: 62px; z-index: 20;
+  width: 44px; height: 44px; border-radius: 50%;
+  border: 0; background: rgba(255, 255, 255, 0.9);
+  font-size: 1.25rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+}
+#settings-btn:focus-visible { outline: 3px solid #6b3f1d; outline-offset: 2px; }
+#settings {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  padding: 16px; background: rgba(20, 20, 20, 0.45);
+}
+#settings[hidden] { display: none; }
+.settings-card {
+  width: min(360px, 100%); padding: 20px; border-radius: 14px;
+  background: var(--paper); color: var(--ink); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+.settings-card h2 { margin: 0 0 12px; font-size: 1.3rem; }
+.settings-card fieldset { border: 0; margin: 0; padding: 0; display: grid; gap: 8px; }
+.settings-card legend { font-weight: 700; margin-bottom: 6px; }
+.settings-card label { display: flex; gap: 8px; align-items: center; cursor: pointer; }
+.settings-note { font-size: 0.82rem; opacity: 0.8; margin: 12px 0; }
+.settings-actions { display: flex; gap: 8px; justify-content: flex-end; }
+.settings-actions button {
+  padding: 8px 16px; border-radius: 8px; border: 0; font-weight: 700; cursor: pointer;
+  background: #e6dcc0; color: var(--ink);
+}
+.settings-actions button[type="submit"] { background: var(--accent); color: #fff; }

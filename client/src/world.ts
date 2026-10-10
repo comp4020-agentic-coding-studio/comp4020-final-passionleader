@@ -1,6 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
+import { HIGH } from "./settings.ts";
 
 // Building blocks shared by every space (client/src/spaces/): collision
 // boxes, doors, signs, simple furniture, the player figure and sticky notes.
@@ -123,8 +124,10 @@ export const mat = (color: number): THREE.MeshStandardMaterial => {
 };
 
 /** Window glass: dark, a little blue, and reflective under the environment map. */
-export const glassMat = (tint = 0xb7d0e0): THREE.MeshPhysicalMaterial =>
-  new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
+export const glassMat = (tint = 0xb7d0e0): THREE.MeshStandardMaterial =>
+  !HIGH
+    ? new THREE.MeshStandardMaterial({ color: tint, roughness: 0.15, metalness: 0.2 })
+    : new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
 
 // CC0 textures from assets/tex (credited in assets/CREDITS.md), tiled by
 // world size so a brick is the same size on every wall.
@@ -209,13 +212,14 @@ export function solid(colliders: Box[], w: number, d: number, x: number, z: numb
 }
 
 /** Places a model once it loads (it's drawn a moment later than the room). */
-export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0): void {
+export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0, shadow = true): void {
   void loadModel(file, height).then((model) => {
     if (!model) return;
     const m = model.clone(true);
     m.position.set(x, 0, z);
     m.rotation.y = rotY;
-    enableShadows(m);
+    if (shadow) enableShadows(m);
+    else m.traverse((o) => void (o.userData.noShadow = true));
     g.add(m);
   });
 }

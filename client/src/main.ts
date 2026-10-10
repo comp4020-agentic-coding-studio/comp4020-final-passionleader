@@ -5,6 +5,7 @@ import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
+import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
 import { Avatar, motionFor, variantFor } from "./character.ts";
 import {
   ApiError,
@@ -63,16 +64,17 @@ const touch = $("touch");
 
 // --- three.js setup --------------------------------------------------------
 
-// Phones get the same scene without shadows, and at a lower pixel ratio.
 const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
-const highQuality = !touchScreen.matches;
+// Low (the default) vs High graphics: see settings.ts.
+const highQuality = HIGH;
+mountSettings();
 
 const scene = new THREE.Scene();
 const sun = addLights(scene, highQuality);
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
-const renderer = new THREE.WebGLRenderer({ antialias: true });
-renderer.setPixelRatio(Math.min(window.devicePixelRatio, highQuality ? 2 : 1.5));
+const renderer = new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance" });
+renderer.setPixelRatio(highQuality ? Math.min(window.devicePixelRatio, 2) : 1);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.85;
 renderer.shadowMap.enabled = highQuality;
@@ -99,7 +101,7 @@ const indoorEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 // loads: it's both the backdrop and the light reflected in the glass.
 let outdoorSky: THREE.Texture | null = null;
 let outdoorLight = outdoorEnv;
-new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/autumn_field_puresky_1k.hdr`, (hdr) => {
+if (highQuality) new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/autumn_field_puresky_1k.hdr`, (hdr) => {
   hdr.mapping = THREE.EquirectangularReflectionMapping;
   outdoorSky = hdr;
   outdoorLight = pmrem.fromEquirectangular(hdr).texture;
@@ -380,7 +382,7 @@ const radial = mountRadial(
   },
 );
 
-const busy = (): boolean => chat.isTyping() || panel.isOpen() || composer.isOpen();
+const busy = (): boolean => chat.isTyping() || panel.isOpen() || composer.isOpen() || settingsOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
