@@ -32,11 +32,15 @@ want an in-joke. You poop, you leave, and later you come back and remember:
 4. Press **Enter** to chat: a bubble over your head and a line in the chat log,
    gone after a minute.
 5. Hold **Q** for the menu: stick a note, wave, say yes or no, "How ya doing,
-   mate?", or dance.
+   mate?", or dance. Waving, yes, no and "mate" are also spoken aloud, and
+   people near you in the same space hear them (unless they've muted).
 6. A sticky note stays on the floor where you stood until you (or the admin)
    remove it: up to 100 words, one every 30 seconds, five per person per space
    (a sixth replaces your oldest). Walk onto one and press **E** to read it and
    comment.
+7. The gear button (top right, beside mute) sets graphics quality: Low (the
+   default) runs smoothly anywhere; High adds shadows, the photographed sky
+   and more trees.
 
 ## What good means for this app (v1)
 
