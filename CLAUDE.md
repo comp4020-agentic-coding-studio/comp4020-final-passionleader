@@ -17,9 +17,11 @@ Read before planning or building: `README.md` (what good means for this app),
   changed. History belongs to the current crit only: when a new crit week
   starts, clear it and start again (crit 8's history is removed when crit 9
   work begins).
-- Stay inside the current crit's scope. Crit 8 is proof of life: no real-time
-  sync, chat, inventory, cleaning up poop, character customisation or lighting
-  work.
+- Stay inside the current crit's scope. Crit 9 is real time: everyone sees
+  each other move and poop live. Still out: chat, inventory, cleaning up poop,
+  character customisation, lighting. The room and its one action may change
+  later, so keep the real-time layer generic ("move" and "action"), not
+  poop-specific.
 
 ## Product rules the code must keep
 
@@ -28,8 +30,10 @@ Read before planning or building: `README.md` (what good means for this app),
 - Each visitor has exactly one poop: a new poop moves the old one. Poops never
   expire (for now). One poop per visitor every 5 seconds, enforced on the server.
 - The server never trusts the client's coordinates: they're clamped to the room.
-- Everything works keyboard-only (arrows/WASD + Space) and on a phone (on-screen
-  D-pad + Poop button).
+- Everything works keyboard-only (WASD to move, E to poop, Space to jump) and on
+  a phone (on-screen D-pad + Jump and Poop buttons).
+- Live positions stay in server memory and are never written per move; a
+  visitor's spot reaches SQLite only when their socket closes.
 - Third-party assets are CC0 or properly licensed, and credited in
   `client/public/assets/CREDITS.md`.
 

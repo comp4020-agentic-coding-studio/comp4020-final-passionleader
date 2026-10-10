@@ -74,16 +74,7 @@ was clean English.
 
 ## History
 
-- [`4a0838b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/4a0838b): server, database and spec tests for names and one poop per visitor.
-- [`11de407`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/11de407): `CLAUDE.md` rules.
-- [`a0ff52f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a0ff52f): the 3D client (toilet room, join modal, movement, one poop, name labels, phone controls).
-- [`49f9442`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/49f9442): poop favicon.
-- [`73b3a20`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/73b3a20): README (first version of what good means, sources) and this file.
-- [`b7ed8eb`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b7ed8eb): the toilet becomes a public bathroom: 10 open stalls with a toilet each, 3 sinks, collision.
-- [`12b1c09`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/12b1c09): calm looping background music (CC0), a synthesised fart on every poop, and a mute button.
-- [`8bd8d7e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8bd8d7e): fixes from live QA: sinks rebuilt as a vanity counter with a mirror, and phone-specific help text.
-- [`2560fa6`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2560fa6): crit 8 reflection.
-- [`cb7a46b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/cb7a46b): poop emoji throughout the README.
-- [`8a6532b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8a6532b): fix for poops vanishing: the database now lives on the Fly volume, not the machine's wiped disk.
-- [`d00d5c1`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d00d5c1): one poop every 5 seconds, enforced on the server, to keep a mashed key from hammering the database.
-- [`6e75cf9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/6e75cf9): four diagrams (architecture, database choice, crit 8 to final, work split) added here and to the reflection.
+Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/tree/crit-8) tag).
+
+- [`1cb36a4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1cb36a4): WebSocket layer on the server: live positions in memory, poops broadcast the moment they land, last spot saved on leaving.
+- [`a83202c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a83202c): the client shows everyone live; WASD + E to poop + Space to jump; keyboard key guide; centred cooldown notice.

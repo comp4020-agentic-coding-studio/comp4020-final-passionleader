@@ -1,7 +1,7 @@
 # 💩 Poop Room 💩
 
 A 3D toilet you walk into, leave a poop in, and come back to. Pick a name,
-press **Space**, and your poop stays where you left it, with your name floating
+press **E**, and your poop stays where you left it, with your name floating
 over it whenever someone walks close. You only ever have one: poop again and it
 moves.
 
@@ -23,8 +23,10 @@ want an in-joke. You poop, you leave, and later you come back and remember:
 
 1. Type a name: letters and underscores, up to 8. Names are first come, first
    served; your browser remembers yours so you can come back as you.
-2. Walk with the arrow keys or WASD (on a phone, the on-screen pad).
-3. Press **Space** (or the Poop button) to poop where you stand. 💩
+2. Walk with **WASD** and jump with **Space** (on a phone, the on-screen pad
+   and the Jump button). Everyone else in the room is there with you, live.
+3. Press **E** (or the Poop button) to poop where you stand. Everyone sees it
+   land at once. One poop every 5 seconds. 💩
 4. Walk up to any poop to see whose it is.
 
 ## 💩 What good means for this app (v1)
@@ -47,7 +49,7 @@ it breaks the ice, whether it feels like a place.
 
 ## 💩 What I chose not to build (yet)
 
-Real-time sync (others appear only when you reload), chat, an inventory,
+Chat, an inventory,
 cleaning up poop, character customisation, and lighting. The toilet is plain
 yellowish walls under flat light, and everyone is the same white clay figure.
 
