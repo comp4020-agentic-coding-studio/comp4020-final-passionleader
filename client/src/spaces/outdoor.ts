@@ -46,7 +46,7 @@ export function buildOutdoor(): SpaceDef {
     entrance: { side: "east", at: 0 },
   });
   sign(g, ["155", "Marie Reay Teaching Centre"], -9.7, 4.2, 7, Math.PI / 2);
-  doorway(g, -9.7, 7, Math.PI / 2, "155 · COMP8280 classroom");
+  doorway(g, -9.7, 7, Math.PI / 2, "155 · COMP8020 classroom");
 
   // Building 154: Di Riddell Student Centre (Brian Kenyon Student Space).
   building(g, colliders, {
@@ -78,7 +78,7 @@ export function buildOutdoor(): SpaceDef {
     group: g,
     colliders,
     doors: [
-      { x: -8.6, z: 7, label: "Enter 155 (COMP8280 classroom)", to: "comp8280", arrive: { x: -8.4, z: 6 } },
+      { x: -8.6, z: 7, label: "Enter 155 (COMP8020 classroom)", to: "comp8020", arrive: { x: -8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -10.4, z: 6 } },
     ],
     ...OUTDOOR,

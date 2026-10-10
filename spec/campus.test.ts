@@ -35,15 +35,15 @@ describe("names", () => {
 describe("sticky notes", () => {
   it("is still there on the next visit", async () => {
     const { name, token } = await visitor();
-    const res = await api("/api/notes", "POST", { token, space: "hub", x: 1.5, z: -2, text: "Anyone doing COMP8280?" });
+    const res = await api("/api/notes", "POST", { token, space: "hub", x: 1.5, z: -2, text: "Anyone doing COMP8020?" });
     expect(res.status).toBe(201);
     const notes = await (await api("/api/notes?space=hub")).json();
-    expect(notes).toContainEqual(expect.objectContaining({ author: name, x: 1.5, z: -2, text: "Anyone doing COMP8280?" }));
+    expect(notes).toContainEqual(expect.objectContaining({ author: name, x: 1.5, z: -2, text: "Anyone doing COMP8020?" }));
   });
 
   it("belongs to the space it was stuck in", async () => {
     const { token } = await visitor();
-    const { note } = await (await api("/api/notes", "POST", { token, space: "comp8280", x: 0, z: 0, text: "here" })).json();
+    const { note } = await (await api("/api/notes", "POST", { token, space: "comp8020", x: 0, z: 0, text: "here" })).json();
     const outdoor = await (await api("/api/notes?space=outdoor")).json();
     expect(outdoor.map((n: { id: number }) => n.id)).not.toContain(note.id);
   });

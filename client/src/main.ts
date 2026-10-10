@@ -4,6 +4,7 @@ import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment
 import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
+import { Avatar, motionFor } from "./character.ts";
 import {
   ApiError,
   RESERVED_RE,
@@ -28,9 +29,10 @@ import { mountNotePanel, type CommentView } from "./notepanel.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId } from "./spaces/index.ts";
 import { occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, buildPlayer, enableShadows, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
-const SPEED = 5; // world units per second
+const SPEED = 4.2; // walking, world units per second
+const RUN_SPEED = 8; // with Shift held
 const JUMP_SPEED = 7;
 const GRAVITY = 20;
 const PLAYER_RADIUS = 0.4;
@@ -109,7 +111,8 @@ function resize(): void {
 window.addEventListener("resize", resize);
 resize();
 
-const player = buildPlayer();
+const me = new Avatar();
+const player = me.group;
 scene.add(player);
 
 /** A label floating over a figure; `kind` picks the CSS look. */
@@ -152,10 +155,13 @@ function speak(group: THREE.Object3D, text: string, ms: number): void {
 // Positions arrive ten times a second; each frame eases the figure toward the
 // latest one, so movement looks continuous rather than stepping.
 interface OtherView {
+  avatar: Avatar;
   group: THREE.Group;
   target: THREE.Vector3;
   rot: number;
   danceUntil: number;
+  /** Smoothed ground speed, to pick idle / walk / run for the animation. */
+  speed: number;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
@@ -166,11 +172,12 @@ function upsertOther(p: RemotePlayer): void {
   if (p.id === selfId || p.space !== space?.id) return;
   let view = others.get(p.id);
   if (!view) {
-    const group = buildPlayer();
+    const avatar = new Avatar();
+    const group = avatar.group;
     tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { group, target: new THREE.Vector3(), rot: p.rot, danceUntil: 0 };
+    view = { avatar, group, target: new THREE.Vector3(), rot: p.rot, danceUntil: 0, speed: 0 };
     others.set(p.id, view);
   }
   view.target.set(p.x, p.y, p.z);
@@ -322,12 +329,13 @@ const chat = mountChat({ onSend: (text) => net?.chat(text), maxLength: 200 });
 
 const radial = mountRadial(
   [
-    { id: "note", label: "📝 Sticky note" },
-    { id: "wave", label: "👋 Wave" },
-    { id: "yes", label: "👍 Yes" },
-    { id: "no", label: "👎 No" },
-    { id: "mate", label: "How ya doing, mate?" },
-    { id: "dance", label: "💃 Dance" },
+    // Numbered, because keys 1–6 pick them while Q is held.
+    { id: "note", label: "1 · 📝 Sticky note" },
+    { id: "wave", label: "2 · 👋 Wave" },
+    { id: "yes", label: "3 · 👍 Yes" },
+    { id: "no", label: "4 · 👎 No" },
+    { id: "mate", label: "5 · How ya doing, mate?" },
+    { id: "dance", label: "6 · 💃 Dance" },
   ],
   (id) => {
     if (id === "note") void writeNote();
@@ -549,8 +557,10 @@ function toast(msg: string): void {
 // --- input -----------------------------------------------------------------
 
 const dirs = { up: false, down: false, left: false, right: false };
+let running = false;
 function stopMoving(): void {
   dirs.up = dirs.down = dirs.left = dirs.right = false;
+  running = false;
 }
 const KEY_MAP: Record<string, keyof typeof dirs> = {
   KeyW: "up",
@@ -566,6 +576,7 @@ const KEY_MAP: Record<string, keyof typeof dirs> = {
 window.addEventListener("keydown", (e) => {
   if (!playing || busy()) return;
   keyGuide.press(e.code, true);
+  if (e.key === "Shift") running = true;
   if (radial.isOpen() && /^Digit[1-6]$/.test(e.code)) {
     radial.highlight(Number(e.code.slice(5)) - 1);
     return;
@@ -597,6 +608,7 @@ window.addEventListener("keydown", (e) => {
 });
 window.addEventListener("keyup", (e) => {
   keyGuide.press(e.code, false);
+  if (e.key === "Shift") running = false;
   if (e.code === "KeyQ" && radial.isOpen()) radial.close();
   const dir = KEY_MAP[e.code];
   if (dir) dirs[dir] = false;
@@ -634,7 +646,10 @@ function jump(): void {
   vy = JUMP_SPEED;
 }
 
-type Target = { kind: "door"; door: Door } | { kind: "note"; id: number; author: string };
+type Target =
+  | { kind: "door"; door: Door }
+  | { kind: "link"; label: string; url: string }
+  | { kind: "note"; id: number; author: string };
 
 /** The door or note within reach, nearest first. */
 function nearestTarget(): Target | null {
@@ -644,6 +659,10 @@ function nearestTarget(): Target | null {
   for (const door of space.doors) {
     const d = Math.hypot(player.position.x - door.x, player.position.z - door.z);
     if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "door", door }, d];
+  }
+  for (const link of space.links ?? []) {
+    const d = Math.hypot(player.position.x - link.x, player.position.z - link.z);
+    if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "link", label: link.label, url: link.url }, d];
   }
   for (const [id, view] of notes) {
     const d = Math.hypot(player.position.x - view.note.x, player.position.z - view.note.z);
@@ -656,7 +675,11 @@ function interact(): void {
   const target = nearestTarget();
   if (!target) return;
   if (target.kind === "door") setSpace(target.door.to, target.door.arrive, true);
-  else void openNote(target.id);
+  else if (target.kind === "link") {
+    stopMoving();
+    // A new tab, so the campus stays open behind it.
+    window.open(target.url, "_blank", "noopener");
+  } else void openNote(target.id);
 }
 
 // --- game loop -------------------------------------------------------------
@@ -670,14 +693,20 @@ const hit = new THREE.Vector3();
 function update(dt: number, now: number): void {
   if (!space) return;
   if (playing) {
+    let moving = false;
     if (!busy()) {
       move.set(Number(dirs.right) - Number(dirs.left), 0, Number(dirs.down) - Number(dirs.up));
       if (move.lengthSq() > 0) {
+        moving = true;
         move.normalize();
-        player.position.addScaledVector(move, SPEED * dt);
-        player.rotation.y = Math.atan2(move.x, move.z); // model faces +z
+        player.position.addScaledVector(move, (running ? RUN_SPEED : SPEED) * dt);
+        // Turn smoothly toward the way we're going (the model faces +z).
+        const want = Math.atan2(move.x, move.z);
+        const turn = Math.atan2(Math.sin(want - player.rotation.y), Math.cos(want - player.rotation.y));
+        player.rotation.y += turn * Math.min(1, dt * 14);
       }
     }
+    me.setMotion(moving ? (running ? "run" : "walk") : "idle");
     vy -= GRAVITY * dt;
     player.position.y = Math.max(0, player.position.y + vy * dt);
     if (player.position.y === 0) vy = 0;
@@ -691,13 +720,24 @@ function update(dt: number, now: number): void {
     hintEl.hidden = !target;
     if (target) {
       const key = touchScreen.matches ? "Use" : "E";
-      hintEl.textContent = target.kind === "door" ? `${key} · ${target.door.label}` : `${key} · Read ${target.author}'s note`;
+      hintEl.textContent =
+        target.kind === "door"
+          ? `${key} · ${target.door.label}`
+          : target.kind === "link"
+            ? `${key} · ${target.label}`
+            : `${key} · Read ${target.author}'s note`;
     }
   }
 
   const ease = 1 - Math.exp(-12 * dt);
+  me.update(dt);
   for (const view of others.values()) {
+    const before = view.group.position.clone();
     view.group.position.lerp(view.target, ease);
+    const step = Math.hypot(view.group.position.x - before.x, view.group.position.z - before.z) / Math.max(dt, 1e-3);
+    view.speed += (step - view.speed) * Math.min(1, dt * 8);
+    view.avatar.setMotion(motionFor(view.speed));
+    view.avatar.update(dt);
     if (now < view.danceUntil) {
       view.group.rotation.y += dt * 8;
       continue;

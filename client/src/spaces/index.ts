@@ -9,7 +9,7 @@ import { buildOutdoor } from "./outdoor.ts";
 const builders: Record<SpaceId, () => SpaceDef> = {
   outdoor: buildOutdoor,
   hub: buildHub,
-  comp8280: buildClassroom,
+  comp8020: buildClassroom,
 };
 const built = new Map<SpaceId, SpaceDef>();
 

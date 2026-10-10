@@ -1,12 +1,12 @@
 // A small on-screen key guide: a mini keyboard showing WASD (move), E
-// (interact), Q (menu), Enter (chat) and Space (jump), so a new player sees
+// (interact), Q (menu), Enter (chat), Shift (run) and Space (jump), so a new player sees
 // the controls without reading text.
 // Purely decorative and click-through — mountKeyGuide() builds it once,
 // appended to <body> and hidden until the caller shows it.
 
 import "./keyguide.css";
 
-const TRACKED_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyE", "KeyQ", "Enter", "Space"] as const;
+const TRACKED_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyE", "KeyQ", "Enter", "Space", "ShiftLeft"] as const;
 type TrackedCode = (typeof TRACKED_CODES)[number];
 
 function isTracked(code: string): code is TrackedCode {
@@ -64,13 +64,15 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
   space.classList.add("keyguide-space");
   const spaceRow = document.createElement("div");
   spaceRow.className = "keyguide-space-row";
-  spaceRow.append(space);
+  const shift = key("shift", "SHIFT");
+  shift.classList.add("keyguide-e", "keyguide-enter");
+  spaceRow.append(shift, space);
   const spaceGroup = document.createElement("div");
   spaceGroup.className = "keyguide-group";
   spaceGroup.append(spaceRow);
   const spaceCaption = document.createElement("span");
   spaceCaption.className = "keyguide-caption";
-  spaceCaption.textContent = "Jump";
+  spaceCaption.textContent = "Shift run · Space jump";
   spaceGroup.append(spaceCaption);
 
   root.append(main, spaceGroup);
@@ -85,6 +87,7 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
     KeyQ: q,
     Enter: enter,
     Space: space,
+    ShiftLeft: shift,
   };
 
   return {

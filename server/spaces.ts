@@ -3,7 +3,7 @@
 // can refuse a space that doesn't exist and clamp a position that wanders
 // outside one. Doors between spaces are the client's business.
 
-export type SpaceId = "outdoor" | "hub" | "comp8280";
+export type SpaceId = "outdoor" | "hub" | "comp8020";
 
 export interface Space {
   label: string;
@@ -15,7 +15,7 @@ export interface Space {
 export const SPACES: Record<SpaceId, Space> = {
   outdoor: { label: "ANU campus", halfX: 32, halfZ: 24, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 12, halfZ: 9, spawn: { x: 0, z: 6.5 } },
-  comp8280: { label: "COMP8280 classroom", halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } },
+  comp8020: { label: "COMP8020 classroom", halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } },
 };
 
 // First-timers start outside, on the path between the two buildings.

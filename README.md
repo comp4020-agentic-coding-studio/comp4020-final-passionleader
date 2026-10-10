@@ -2,7 +2,7 @@
 
 A small 3D, real-time space for the ANU community: a stretch of campus between
 building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
-Centre), the Student Hub inside 154, and a COMP8280 classroom inside 155.
+Centre), the Student Hub inside 154, and a COMP8020 classroom inside 155.
 Everyone in a space sees everyone else walk, chat, wave and leave sticky notes
 on the floor, live. It is not an official ANU service.
 

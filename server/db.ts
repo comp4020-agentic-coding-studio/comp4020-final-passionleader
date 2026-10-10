@@ -82,6 +82,10 @@ for (const [col, type] of Object.entries(wanted)) {
 for (const col of ["poop_x", "poop_z", "pooped_at"]) {
   if (columns().includes(col)) db.exec(`ALTER TABLE visitors DROP COLUMN ${col}`);
 }
+// The classroom was first created under the wrong course code (COMP8280);
+// it's COMP8020. Move anything saved under the old id.
+db.exec("UPDATE notes SET space = 'comp8020' WHERE space = 'comp8280'");
+db.exec("UPDATE visitors SET last_space = 'comp8020' WHERE last_space = 'comp8280'");
 
 // --- visitors --------------------------------------------------------------
 

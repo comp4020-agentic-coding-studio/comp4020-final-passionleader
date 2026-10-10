@@ -40,7 +40,7 @@ describe("real time", () => {
     const sa = await connect(a.token);
     const sb = await connect(b.token);
     const sc = await connect(c.token);
-    sc.send({ t: "enter", space: "comp8280", x: 0, z: 5 });
+    sc.send({ t: "enter", space: "comp8020", x: 0, z: 5 });
     await sc.next((m) => m.t === "players");
     sa.send({ t: "chat", text: "  How ya going?  " });
     await expect(sb.next((m) => m.t === "chat" && m.name === a.name)).resolves.toMatchObject({ text: "How ya going?" });

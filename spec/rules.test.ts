@@ -40,7 +40,7 @@ describe("five notes per person per space", () => {
   it("deletes a note's comments with it", () => {
     db.createVisitor("owner", "t-owner");
     db.createVisitor("reply", "t-reply");
-    const r = db.addNote("owner", "comp8280", 0, 0, "q");
+    const r = db.addNote("owner", "comp8020", 0, 0, "q");
     if (!r.ok) throw new Error("cooldown");
     db.addComment("reply", r.note.id, "a");
     db.deleteNote(r.note.id);

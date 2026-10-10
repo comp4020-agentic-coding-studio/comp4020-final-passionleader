@@ -7,7 +7,7 @@ import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 // A space is a group of meshes plus the boxes you can't walk through and the
 // doors you can walk through.
 
-export type SpaceId = "outdoor" | "hub" | "comp8280";
+export type SpaceId = "outdoor" | "hub" | "comp8020";
 
 /** Axis-aligned footprint on the floor plane, used for simple player collision. */
 export interface Box {
@@ -42,6 +42,8 @@ export interface SpaceDef {
   bgm: string;
   /** Outdoors: a real sky and haze toward the horizon. Indoors: neither. */
   outdoor?: boolean;
+  /** Spots where E opens a web page in a new tab (e.g. the classroom whiteboard). */
+  links?: { x: number; z: number; label: string; url: string }[];
 }
 
 /** Pushes a circle (the player) out of every collider. Two passes settle corners. */

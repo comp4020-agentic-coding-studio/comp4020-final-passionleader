@@ -10,7 +10,7 @@ A small 3D, real-time social space for the ANU community. The problem I care
 about: students and staff (especially academics) almost never meet
 informally, so finding a supervisor, or a student for a lab, depends on luck.
 The space gives them somewhere to bump into each other: a stretch of campus
-outside, the Student Hub, classrooms named after courses (e.g. `COMP8280`),
+outside, the Student Hub, classrooms named after courses (e.g. `COMP8020`),
 joined by doors. It is not an official ANU service and never looks like one.
 
 Started in crit 8 as Poop Room: one toilet, one poop each. The real-time
@@ -38,7 +38,7 @@ layer from crit 9 carries over unchanged; the toilet and the poop don't.
    Brian Kenyon Student Space, and the path between them, modelled from
    reference photos and OpenStreetMap outlines (credited)
 5. ✅ Student Hub interior (door in the Brian Kenyon Student Space)
-6. ✅ `COMP8280` classroom (door in building 155)
+6. ✅ `COMP8020` classroom (door in building 155)
 
 **Talking**
 
@@ -57,6 +57,11 @@ layer from crit 9 carries over unchanged; the toilet and the poop don't.
 
 11. Classrooms: only `qa_master` creates them (course-code names); rows older
     than six months are deleted; a question board per class
+11b. Classroom showcase board beside the whiteboard: links to classmates'
+    live final projects (public `comp4020-final-*` repos → their `fly.dev`
+    URLs, only ones that answer), and a guestbook beside it (300 words per
+    entry). Crit 9 only places the two boards and makes the whiteboard open
+    the course page.
 12. Hub boards: lab ads, looking-for-a-lab posts, CV posts, and a suggestions
     board, each marked unofficial with unverified authors
 
