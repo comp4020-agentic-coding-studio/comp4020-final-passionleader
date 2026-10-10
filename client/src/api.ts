@@ -11,6 +11,8 @@ export interface Poop {
 export interface Session {
   name: string;
   token: string;
+  /** Where to stand on entering: the visitor's last spot, or the room's spawn. */
+  spawn?: { x: number; z: number };
 }
 
 export class ApiError extends Error {
@@ -77,7 +79,7 @@ async function mockJoin(name: string, token?: string): Promise<Session> {
   const user = existing ?? { name, token: crypto.randomUUID() };
   db.users[key] = user;
   saveMock(db);
-  return { name: user.name, token: user.token };
+  return { name: user.name, token: user.token, spawn: { x: 0, z: 5 } };
 }
 
 async function mockPoop(token: string, x: number, z: number): Promise<Poop> {

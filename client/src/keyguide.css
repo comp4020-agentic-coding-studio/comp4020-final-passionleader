@@ -1,0 +1,98 @@
+/* Mini on-screen keyboard: teaches the controls without asking for attention.
+   Bottom-left, decorative, click-through. Hidden on touch/narrow screens,
+   same breakpoint the rest of the app uses for its touch controls. */
+
+#keyguide {
+  position: fixed;
+  left: 12px;
+  bottom: 12px;
+  z-index: 15;
+  width: 184px;
+  pointer-events: none;
+  user-select: none;
+  display: grid;
+  gap: 8px;
+  font-family: system-ui, sans-serif;
+}
+
+#keyguide[hidden] {
+  display: none;
+}
+
+.keyguide-key {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 28px;
+  min-width: 28px;
+  padding: 0 6px;
+  border-radius: 6px;
+  border: 1.5px solid var(--accent, #6b3f1d);
+  background: rgba(243, 231, 166, 0.55); /* --paper, translucent */
+  color: var(--ink, #3b2a12);
+  font-size: 0.72rem;
+  font-weight: 700;
+  line-height: 1;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.15);
+  transition: background 60ms linear, transform 60ms linear;
+}
+
+.keyguide-key.is-down {
+  background: var(--accent, #6b3f1d);
+  color: var(--paper, #f3e7a6);
+  transform: translateY(1px);
+}
+
+.keyguide-main {
+  display: flex;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.keyguide-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+/* The inverted-T for WASD: an empty slot above A and D keeps W centred. */
+.keyguide-wasd {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  gap: 4px;
+}
+.keyguide-wasd .keyguide-key[data-slot="w"] { grid-column: 2; grid-row: 1; }
+.keyguide-wasd .keyguide-key[data-slot="a"] { grid-column: 1; grid-row: 2; }
+.keyguide-wasd .keyguide-key[data-slot="s"] { grid-column: 2; grid-row: 2; }
+.keyguide-wasd .keyguide-key[data-slot="d"] { grid-column: 3; grid-row: 2; }
+
+.keyguide-e {
+  align-self: center;
+}
+
+.keyguide-caption {
+  font-size: 0.62rem;
+  font-weight: 600;
+  color: var(--ink, #3b2a12);
+  text-shadow: 0 1px 2px rgba(243, 231, 166, 0.8);
+  letter-spacing: 0.02em;
+}
+
+.keyguide-space-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.keyguide-space {
+  flex: 1;
+  height: 28px;
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  #keyguide {
+    display: none;
+  }
+}

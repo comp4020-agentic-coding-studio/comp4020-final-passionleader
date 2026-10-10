@@ -11,9 +11,11 @@
 
     <div id="hud" hidden>
       <p id="hud-name"></p>
-      <p id="hud-help"><span class="keys-help">Move: WASD / arrows &middot; Poop: Space</span><span class="touch-help">Move: arrow pad &middot; Poop: the Poop button</span></p>
+      <p id="hud-help" class="touch-help">Move: arrow pad &middot; Jump and Poop: the buttons</p>
       <p id="toast" role="status" aria-live="polite"></p>
     </div>
+
+    <p id="notice" role="alert" hidden></p>
 
     <div id="touch" hidden>
       <div id="dpad">
@@ -22,7 +24,10 @@
         <button type="button" data-dir="right" tabindex="-1" aria-label="Move right">&#9654;</button>
         <button type="button" data-dir="down" tabindex="-1" aria-label="Move down">&#9660;</button>
       </div>
-      <button type="button" id="poop-btn" tabindex="-1">Poop</button>
+      <div id="actions">
+        <button type="button" id="jump-btn" tabindex="-1">Jump</button>
+        <button type="button" id="poop-btn" tabindex="-1">Poop</button>
+      </div>
     </div>
 
     <div id="join" role="dialog" aria-modal="true" aria-labelledby="join-title">
