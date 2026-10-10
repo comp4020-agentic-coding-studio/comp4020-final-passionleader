@@ -10,6 +10,8 @@ Read before planning or building: `README.md` (what good means for this app),
 
 ## Rules
 
+- When two sessions run in parallel, follow the role split and its limits in
+  @docs/roles.md. Only the main session commits.
 - Commit one feature at a time, small, with a message that says why.
 - Write every file in this repo in English (docs, comments, commit messages).
 - After each task I give you, add a line to the **History** section at the
