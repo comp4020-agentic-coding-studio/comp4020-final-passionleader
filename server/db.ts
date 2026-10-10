@@ -23,6 +23,25 @@ db.exec(`
   )
 `);
 
+// Where each visitor last stood, written when their connection closes (never
+// per move: live positions stay in server memory), so a returning visitor
+// walks back in where they left. Added after crit 8, hence the migration.
+const columns = (db.prepare("PRAGMA table_info(visitors)").all() as { name: string }[]).map((c) => c.name);
+if (!columns.includes("last_x")) {
+  db.exec("ALTER TABLE visitors ADD COLUMN last_x REAL; ALTER TABLE visitors ADD COLUMN last_z REAL;");
+}
+
+export function lastSpot(name: string): { x: number; z: number } | null {
+  const row = db.prepare("SELECT last_x AS x, last_z AS z FROM visitors WHERE name = ?").get(name) as
+    | { x: number | null; z: number | null }
+    | undefined;
+  return row && row.x !== null && row.z !== null ? { x: row.x, z: row.z } : null;
+}
+
+export function saveLastSpot(name: string, x: number, z: number): void {
+  db.prepare("UPDATE visitors SET last_x = ?, last_z = ? WHERE name = ?").run(x, z, name);
+}
+
 export function findByName(name: string): { name: string; token: string } | undefined {
   return db.prepare("SELECT name, token FROM visitors WHERE name = ?").get(name) as
     | { name: string; token: string }

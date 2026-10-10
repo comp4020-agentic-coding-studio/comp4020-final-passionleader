@@ -1,10 +1,12 @@
 import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
+import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono } from "hono";
 import { marked } from "marked";
-import { POOP_COOLDOWN_SECONDS, allPoops, createVisitor, findByName, findByToken, placePoop } from "./db.ts";
+import { POOP_COOLDOWN_SECONDS, allPoops, createVisitor, findByName, findByToken, lastSpot, placePoop } from "./db.ts";
+import { SPAWN, attachRealtime, broadcast } from "./realtime.ts";
 
 // Letters and underscores, at most eight: short enough to float over a poop,
 // and narrow enough that a stranger can't write a sentence into the room.
@@ -34,12 +36,14 @@ app.post("/api/join", async (c) => {
   const existing = findByName(name);
   if (existing) {
     // A name belongs to whoever first took it; only their browser's token gets it back.
-    if (existing.token === token) return c.json({ name: existing.name, token: existing.token });
+    if (existing.token === token) {
+      return c.json({ name: existing.name, token: existing.token, spawn: lastSpot(existing.name) ?? SPAWN });
+    }
     return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
   }
   const fresh = randomUUID();
   createVisitor(name, fresh);
-  return c.json({ name, token: fresh });
+  return c.json({ name, token: fresh, spawn: SPAWN });
 });
 
 app.get("/api/poops", (c) => c.json(allPoops()));
@@ -57,6 +61,8 @@ app.post("/api/poop", async (c) => {
   if (!poop) {
     return c.json({ error: `One poop every ${POOP_COOLDOWN_SECONDS} seconds. Hold it in.` }, 429);
   }
+  // Everyone else in the room sees it land now, not on their next reload.
+  broadcast({ t: "action", kind: "poop", poop });
   return c.json(poop);
 });
 
@@ -69,6 +75,7 @@ if (existsSync(dist)) {
 }
 
 const port = Number(process.env.PORT ?? 8080);
-serve({ fetch: app.fetch, hostname: "0.0.0.0", port }, () => {
+const server = serve({ fetch: app.fetch, hostname: "0.0.0.0", port }, () => {
   console.log(`listening on http://0.0.0.0:${port}`);
 });
+attachRealtime(server as Server);
