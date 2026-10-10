@@ -29,7 +29,7 @@ import { mountNoteComposer } from "./notecompose.ts";
 import { mountNotePanel, type CommentView } from "./notepanel.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId } from "./spaces/index.ts";
-import { occludersOf } from "./spaces/occluders.ts";
+import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
 const SPEED = 4.2; // walking, world units per second
@@ -802,11 +802,16 @@ function update(dt: number, now: number): void {
   const reach = camera.position.distanceTo(lookTarget);
   for (const o of occludersOf(space.group)) {
     const p = ray.intersectBox(o.box, hit);
-    const blocking = (p !== null && p.distanceTo(camera.position) < reach) || o.box.containsPoint(camera.position);
+    // With the camera inside a building, fading would wash the view white:
+    // hide the building outright until the camera is out again.
+    const inside = o.box.containsPoint(camera.position);
+    const blocking = inside || (p !== null && p.distanceTo(camera.position) < reach);
     for (const mesh of o.meshes) {
-      const m = mesh.material as THREE.MeshStandardMaterial;
-      m.opacity += ((blocking ? 0.2 : 1) - m.opacity) * ease;
-      m.depthWrite = m.opacity > 0.95;
+      mesh.visible = !inside;
+      for (const m of materialsOf(mesh)) {
+        m.opacity += ((blocking ? 0.2 : 1) - m.opacity) * ease;
+        m.depthWrite = m.opacity > 0.95;
+      }
     }
   }
 }

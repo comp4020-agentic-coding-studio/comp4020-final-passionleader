@@ -15,13 +15,18 @@ const occluders = new WeakMap<THREE.Group, Occluder[]>();
 function own(mesh: THREE.Mesh): void {
   // Shared colour materials are copied; textured ones are already unique, and
   // copying them would lose the texture that arrives after loading.
-  const m = mesh.material as THREE.MeshStandardMaterial;
-  if (!m.userData.unique) {
-    mesh.material = m.clone();
-    (mesh.material as THREE.Material).userData.unique = true;
-  }
-  (mesh.material as THREE.MeshStandardMaterial).transparent = true;
+  const one = (m: THREE.Material): THREE.Material => {
+    const mine = m.userData.unique ? m : m.clone();
+    mine.userData.unique = true;
+    mine.transparent = true;
+    return mine;
+  };
+  mesh.material = Array.isArray(mesh.material) ? mesh.material.map(one) : one(mesh.material);
 }
+
+/** Every material on a mesh, whether it has one or an array. */
+export const materialsOf = (mesh: THREE.Mesh): THREE.MeshStandardMaterial[] =>
+  (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as THREE.MeshStandardMaterial[];
 
 export function markOccluder(group: THREE.Group, mesh: THREE.Mesh): void {
   own(mesh);

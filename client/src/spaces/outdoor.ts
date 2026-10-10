@@ -59,32 +59,57 @@ export function buildOutdoor(): SpaceDef {
   block(g, colliders, [2.4, 0.5, 0.7], [-16, -5.5], 0x6b4a2b);
   block(g, colliders, [2.4, 0.5, 0.7], [-20, -5.5], 0x6b4a2b);
 
-  // Building 155: Marie Reay Teaching Centre.
+  // Building 155: Marie Reay Teaching Centre. Six storeys of glass with the
+  // timber structure showing through (warm mullions and floor edges), as
+  // offset stacked volumes, and a taller glass top floor under timber trusses.
+  const TIMBER = 0xb07a48;
   building(g, colliders, {
     cx: -19,
     cz: 7,
     w: 18,
     d: 18,
     floors: 3,
-    frame: 0xe9e6df,
-    glass: 0xb5cfdf,
-    solid: { west: { color: 0xc9b79c }, north: { color: 0xc9b79c, from: 1 } },
-    entrance: { side: "east", at: 0 },
+    frame: TIMBER,
+    slabEdge: 0x8a5a32,
+    glass: 0xbcd3e0,
+    bay: 1.8,
+    roofOverhang: 0.4,
+    bareRoof: true,
+    entrance: { side: "east", at: 0, color: 0xe9e6df },
+  });
+  building(g, colliders, {
+    cx: -20.5,
+    cz: 5.5,
+    w: 16,
+    d: 16,
+    floors: 3,
+    y0: 3 * 3.8,
+    frame: TIMBER,
+    slabEdge: 0x8a5a32,
+    glass: 0xbcd3e0,
+    bay: 1.8,
+    roofOverhang: 0.6,
+    apex: { color: TIMBER },
   });
   sign(g, ["155", "Marie Reay Teaching Centre"], -9.7, 4.2, 7, Math.PI / 2);
   doorway(g, -9.7, 7, Math.PI / 2, "155 · COMP8020 classroom");
 
-  // Building 154: Di Riddell Student Centre (Brian Kenyon Student Space).
+  // Building 154: Di Riddell Student Centre (Brian Kenyon Student Space). A
+  // sleek white block on a slender steel colonnade, ribbon windows, and a
+  // taller top floor under timber trusses.
   building(g, colliders, {
     cx: 16,
     cz: -3,
     w: 20,
     d: 34,
     floors: 4,
-    frame: 0xf2f0ea,
-    glass: 0xa9c6d8,
-    solid: { east: { color: 0xa0724b } },
-    entrance: { side: "west", at: 3 },
+    frame: 0xf4f3ef,
+    solidBody: 0xf6f5f1,
+    colonnade: 0x6f7378,
+    glass: 0x9fbfd2,
+    roofOverhang: 0.5,
+    apex: { color: 0xb07a48 },
+    entrance: { side: "west", at: 3, color: 0xf4f3ef },
   });
   sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 4.6, -3, -Math.PI / 2);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");

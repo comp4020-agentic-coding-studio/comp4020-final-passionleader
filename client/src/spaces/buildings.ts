@@ -23,6 +23,18 @@ export interface BuildingSpec {
   roofOverhang?: number;
   /** Entrance canopy: which side, and where along it (offset from centre). */
   entrance?: { side: "north" | "south" | "east" | "west"; at: number; color?: number };
+  /** Height this volume starts at, for volumes stacked on another. */
+  y0?: number;
+  /** Colour of the slab edges (e.g. timber showing at each level). */
+  slabEdge?: number;
+  /** A white block with ribbon windows instead of a full curtain wall. */
+  solidBody?: number;
+  /** Ground floor set back behind a row of slender columns. */
+  colonnade?: number;
+  /** A taller top floor under exposed roof trusses. */
+  apex?: { color: number };
+  /** No plant room on the roof (a lower volume with another on top). */
+  bareRoof?: boolean;
 }
 
 const SLAB = 0.42;
@@ -33,15 +45,57 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
   const H = s.floors * floorH;
   const frame = mat(s.frame);
   const bay = s.bay ?? 2.4;
+  const y0 = s.y0 ?? 0;
+  b.position.y = y0;
+  const inset = s.colonnade !== undefined ? 2.2 : 0.5;
 
-  // The glazed body, set back a little behind the slab edges.
-  const body = new THREE.Mesh(new THREE.BoxGeometry(s.w - 0.5, H, s.d - 0.5), glassMat(s.glass ?? 0x8fb2c8));
-  body.position.set(s.cx, H / 2, s.cz);
-  b.add(body);
+  // The body: glass set back behind the slab edges, or (for a solid block)
+  // white cladding with a ribbon window on every floor.
+  if (s.solidBody !== undefined) {
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(s.w - 0.3, H, s.d - 0.3), mat(s.solidBody));
+    shell.position.set(s.cx, H / 2, s.cz);
+    b.add(shell);
+    const ribbon = glassMat(s.glass ?? 0x8fb2c8);
+    for (let f = s.colonnade !== undefined ? 1 : 0; f < s.floors; f++) {
+      const r = new THREE.Mesh(new THREE.BoxGeometry(s.w - 1.2, floorH * 0.5, s.d - 1.2 + 0.5), ribbon);
+      r.position.set(s.cx, f * floorH + floorH * 0.55, s.cz);
+      const r2 = new THREE.Mesh(new THREE.BoxGeometry(s.w - 1.2 + 0.5, floorH * 0.5, s.d - 1.2), ribbon);
+      r2.position.copy(r.position);
+      b.add(r, r2);
+    }
+  } else {
+    const body = new THREE.Mesh(new THREE.BoxGeometry(s.w - 0.5, H, s.d - 0.5), glassMat(s.glass ?? 0x8fb2c8));
+    body.position.set(s.cx, H / 2, s.cz);
+    b.add(body);
+  }
 
-  // Floor slabs and the roof edge, proud of the glass.
+  // A recessed glass ground floor behind slender steel columns.
+  if (s.colonnade !== undefined) {
+    const ground = new THREE.Mesh(new THREE.BoxGeometry(s.w - inset * 2, floorH, s.d - inset * 2), glassMat(0xb9d2e2));
+    ground.position.set(s.cx, floorH / 2, s.cz);
+    b.add(ground);
+    const col = mat(s.colonnade);
+    for (let x = -s.w / 2 + 1; x <= s.w / 2 - 1; x += 3.2) {
+      for (const z of [-s.d / 2 + 0.6, s.d / 2 - 0.6]) {
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, floorH, 10), col);
+        c.position.set(s.cx + x, floorH / 2, s.cz + z);
+        b.add(c);
+      }
+    }
+    for (let z = -s.d / 2 + 1; z <= s.d / 2 - 1; z += 3.2) {
+      for (const x of [-s.w / 2 + 0.6, s.w / 2 - 0.6]) {
+        const c = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.12, floorH, 10), col);
+        c.position.set(s.cx + x, floorH / 2, s.cz + z);
+        b.add(c);
+      }
+    }
+  }
+
+  // Floor slabs and the roof edge, proud of the glass; the edge strip can
+  // show a different material (timber floors seen through the glass).
+  const edge = s.slabEdge !== undefined ? mat(s.slabEdge) : frame;
   for (let f = 0; f <= s.floors; f++) {
-    const slab = new THREE.Mesh(new THREE.BoxGeometry(s.w, SLAB, s.d), frame);
+    const slab = new THREE.Mesh(new THREE.BoxGeometry(s.w, SLAB, s.d), [edge, edge, frame, frame, edge, edge]);
     slab.position.set(s.cx, f * floorH + (f === 0 ? SLAB / 2 : 0), s.cz);
     b.add(slab);
   }
@@ -54,6 +108,7 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
   for (let z = -s.d / 2 + bay / 2; z < s.d / 2; z += bay) {
     along.push({ x: s.cx + s.w / 2 - 0.22, z: s.cz + z, ry: Math.PI / 2 }, { x: s.cx - s.w / 2 + 0.22, z: s.cz + z, ry: Math.PI / 2 });
   }
+  if (s.solidBody !== undefined) along.length = 0;
   const mull = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, H, 0.24), frame, along.length);
   const m4 = new THREE.Matrix4();
   along.forEach((p, i) => {
@@ -80,12 +135,33 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
 
   // A thin roof plate with an overhang, and a plant room on top.
   const o = s.roofOverhang ?? 1.2;
+  let top = H;
+  if (s.apex) {
+    // A 1.5-storey glass pavilion on top, under a row of timber trusses.
+    const ah = floorH * 1.5;
+    const pav = new THREE.Mesh(new THREE.BoxGeometry(s.w - 2, ah, s.d - 2), glassMat(0xc8dbe6));
+    pav.position.set(s.cx, H + ah / 2, s.cz);
+    b.add(pav);
+    const timber = mat(s.apex.color);
+    for (let x = -s.w / 2 + 1.5; x <= s.w / 2 - 1.5; x += 2) {
+      const chord = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.35, s.d - 1.6), timber);
+      chord.position.set(s.cx + x, H + ah - 0.1, s.cz);
+      const post = new THREE.Mesh(new THREE.BoxGeometry(0.22, ah, 0.22), timber);
+      post.position.set(s.cx + x, H + ah / 2, s.cz + s.d / 2 - 1.05);
+      const post2 = post.clone();
+      post2.position.z = s.cz - s.d / 2 + 1.05;
+      b.add(chord, post, post2);
+    }
+    top = H + ah;
+  }
   const roof = new THREE.Mesh(new THREE.BoxGeometry(s.w + o * 2, 0.3, s.d + o * 2), frame);
-  roof.position.set(s.cx, H + 0.3, s.cz);
+  roof.position.set(s.cx, top + 0.3, s.cz);
   b.add(roof);
-  const plant = new THREE.Mesh(new THREE.BoxGeometry(s.w * 0.3, 1.6, s.d * 0.25), mat(0x9aa3a8));
-  plant.position.set(s.cx + s.w * 0.15, H + 1.25, s.cz - s.d * 0.15);
-  b.add(plant);
+  if (!s.bareRoof && !s.apex) {
+    const plant = new THREE.Mesh(new THREE.BoxGeometry(s.w * 0.3, 1.6, s.d * 0.25), mat(0x9aa3a8));
+    plant.position.set(s.cx + s.w * 0.15, top + 1.25, s.cz - s.d * 0.15);
+    b.add(plant);
+  }
 
   if (s.entrance) {
     const { side, at } = s.entrance;
@@ -101,13 +177,13 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
   }
 
   g.add(b);
-  colliders.push({ minX: s.cx - s.w / 2, maxX: s.cx + s.w / 2, minZ: s.cz - s.d / 2, maxZ: s.cz + s.d / 2 });
+  if (y0 === 0) colliders.push({ minX: s.cx - s.w / 2, maxX: s.cx + s.w / 2, minZ: s.cz - s.d / 2, maxZ: s.cz + s.d / 2 });
   // Only the building's own footprint counts as "in the way": the roof
   // overhang and canopy would fade it while you stand at the door.
   markOccluderGroup(
     g,
     b,
-    new THREE.Box3(new THREE.Vector3(s.cx - s.w / 2, 0, s.cz - s.d / 2), new THREE.Vector3(s.cx + s.w / 2, H, s.cz + s.d / 2)),
+    new THREE.Box3(new THREE.Vector3(s.cx - s.w / 2, y0, s.cz - s.d / 2), new THREE.Vector3(s.cx + s.w / 2, y0 + top, s.cz + s.d / 2)),
   );
   return b;
 }
