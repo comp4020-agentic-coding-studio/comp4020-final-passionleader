@@ -78,3 +78,4 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 
 - [`1cb36a4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1cb36a4): WebSocket layer on the server: live positions in memory, poops broadcast the moment they land, last spot saved on leaving.
 - [`a83202c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a83202c): the client shows everyone live; WASD + E to poop + Space to jump; keyboard key guide; centred cooldown notice.
+- [`238efdf`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/238efdf): `docs/roles.md`, the role split between the two parallel sessions, linked from `CLAUDE.md`.
