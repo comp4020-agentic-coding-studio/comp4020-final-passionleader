@@ -78,7 +78,10 @@ keeps the history readable.
   it, and I checked by restarting the machine with a poop in place.
 - Resetting the live database took several tries: a one-line command quoted
   through `flyctl ssh` was mangled, then a script path resolved from the wrong
-  folder. It's now a script with an absolute path, `scripts/reset-db.ts`.
+  folder, and finally the real blocker: the machine had auto-stopped, so
+  there was nothing to ssh into, and the error never reached my screen. It's
+  now a script with an absolute path, `scripts/reset-db.ts`, run after
+  `flyctl machine start`.
 - Live testing goes through named test accounts only, never the spec suite,
   so the rooms people see aren't full of random names.
 
