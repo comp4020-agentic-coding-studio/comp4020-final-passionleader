@@ -110,3 +110,4 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`70b03b9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/70b03b9): client for the campus: three spaces joined by doors, chat, the Q menu, sticky notes; radial, chat and note dialogs built by the helper session.
 - [`5240e76`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/5240e76): per-space music (made with Google AI), CC0 textures and furniture models.
 - [`6a4b122`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/6a4b122): README facts, CLAUDE.md rules and the plan brought up to date.
+- [`c822dd4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c822dd4): texture warnings fixed (found in the helper session's QA); key guide captions readable outdoors.
