@@ -37,16 +37,23 @@ Read before planning or building: `README.md` (what good means for this app),
 
 ## Product rules the code must keep
 
-- Names are 1–8 letters or underscores, unique regardless of case. A name can
-  only be reclaimed by the browser holding the token issued when it was taken.
-- Each visitor has exactly one poop: a new poop moves the old one. Poops never
-  expire (for now). One poop per visitor every 5 seconds, enforced on the server.
-  (Until sticky notes replace poops in crit 9; then this rule moves to notes.)
+- Names are 1–8 letters, digits or underscores, unique regardless of case. A
+  name can only be reclaimed by the browser holding the token issued when it
+  was taken. `qa_` names are reserved for the password accounts.
+- Sticky notes: up to 100 words (and 600 characters), one per person every
+  30 seconds, five per person per space (a sixth replaces their oldest, after a
+  warning). They never expire; only the author or an admin removes one.
+  Comments: same text limits, one every 10 seconds, same removal rule.
+- Chat is never stored: 200 characters, the space only, gone from screens
+  after a minute.
+- Everything a person does reaches only the people in the same space.
 - The server never trusts the client's coordinates: they're clamped to the room.
-- Everything works keyboard-only (WASD to move, E to poop, Space to jump) and on
-  a phone (on-screen D-pad + Jump and Poop buttons).
+- Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
+  Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
 - Live positions stay in server memory and are never written per move; a
-  visitor's spot reaches SQLite only when their socket closes.
+  visitor's space and spot reach SQLite only when their socket closes.
+- Spaces' bounds live in both `server/spaces.ts` and `client/src/spaces/`;
+  change them together.
 - Third-party assets are CC0 or properly licensed, and credited in
   `client/public/assets/CREDITS.md`. Photos and satellite images of real
   buildings are modelling references only: never shipped in the app or the repo.

@@ -25,27 +25,27 @@ layer from crit 9 carries over unchanged; the toilet and the poop don't.
 0. ✅ Real-time positions and actions over WebSocket
    ([`1cb36a4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1cb36a4),
    [`a83202c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a83202c))
-1. Test and admin accounts: `qa_master` (admin) and `qa_bot01`–`qa_bot10`
+1. ✅ Test and admin accounts: `qa_master` (admin) and `qa_bot01`–`qa_bot10`
    (ordinary users), created by a script; a role column in the database
-2. Spaces: the server keeps one channel per space, so you only see and hear
+2. ✅ Spaces: the server keeps one channel per space, so you only see and hear
    people in the same space
-3. Doors: press E at a door to load another space (only one space rendered at
+3. ✅ Doors: press E at a door to load another space (only one space rendered at
    a time)
 
 **Maps**
 
-4. A stretch of campus outside: the Marie Reay Teaching Centre (155) and the
+4. ✅ A stretch of campus outside: the Marie Reay Teaching Centre (155) and the
    Brian Kenyon Student Space, and the path between them, modelled from
    reference photos and OpenStreetMap outlines (credited)
-5. Student Hub interior (door in the Brian Kenyon Student Space)
-6. `COMP8280` classroom (door in building 155)
+5. ✅ Student Hub interior (door in the Brian Kenyon Student Space)
+6. ✅ `COMP8280` classroom (door in building 155)
 
 **Talking**
 
-7. Chat: Enter to type, a speech bubble over your figure, a chat log at the
+7. ✅ Chat: Enter to type, a speech bubble over your figure, a chat log at the
    bottom left; messages disappear after a minute
-8. Q emote menu (a radial picker): wave, yes / no, "How ya doing mate", dance
-9. Sticky notes (replacing poops): stick one from the Q menu, read with E,
+8. ✅ Q emote menu (a radial picker): wave, yes / no, "How ya doing mate", dance
+9. ✅ Sticky notes (replacing poops): stick one from the Q menu, read with E,
    kept per space
 
 **Crit 10 requirement**
@@ -66,6 +66,7 @@ layer from crit 9 carries over unchanged; the toilet and the poop don't.
     and credits, UI language
 14. Character colours: skin, hair, eyes, clothes
 15. Better graphics: CC0 textures, low / high presets, checked on phones
+    (CC0 textures and furniture models are already in; presets are not)
 
 **Messages**
 

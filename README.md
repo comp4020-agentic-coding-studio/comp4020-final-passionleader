@@ -1,59 +1,71 @@
-# 💩 Poop Room 💩
+# ANU campus, unofficially
 
-A 3D toilet you walk into, leave a poop in, and come back to. Pick a name,
-press **E**, and your poop stays where you left it, with your name floating
-over it whenever someone walks close. You only ever have one: poop again and it
-moves.
+A small 3D, real-time space for the ANU community: a stretch of campus between
+building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
+Centre), the Student Hub inside 154, and a COMP8280 classroom inside 155.
+Everyone in a space sees everyone else walk, chat, wave and leave sticky notes
+on the floor, live. It is not an official ANU service.
 
-It's the first step of a bigger idea: a small 3D social space, closer to a
-lightweight VRChat or Gather.town than to a game, where people who barely know
-each other have something silly to do together.
+It started in crit 8 as Poop Room, a toilet you could leave one poop in. From
+crit 9 the poop is gone and the toilet became the campus; the real-time layer
+underneath stayed.
 
-## 💩 Who it's for
+## Who it's for
 
 Anyone who wants to leave a mark online, but mostly people who are a bit awkward
 with each other: a new crit group, a project team that just met, friends who
 want an in-joke. You poop, you leave, and later you come back and remember:
 
-> "You pooped the moment you saw me." 💩
-> "We carved forever into poop. Remember?" 💩
-> "I was glad to put my poop next to yours." 💩💩
+> "You pooped the moment you saw me."
+> "We carved forever into poop. Remember?"
+> "I was glad to put my poop next to yours."
 
-## 💩 How to use it
+## How to use it
 
-1. Type a name: letters and underscores, up to 8. Names are first come, first
-   served; your browser remembers yours so you can come back as you.
-2. Walk with **WASD** and jump with **Space** (on a phone, the on-screen pad
-   and the Jump button). Everyone else in the room is there with you, live.
-3. Press **E** (or the Poop button) to poop where you stand. Everyone sees it
-   land at once. One poop every 5 seconds. 💩
-4. Walk up to any poop to see whose it is.
+1. Type a name: letters, digits and underscores, up to 8. Names are first
+   come, first served; your browser remembers yours so you come back as you,
+   where you left.
+2. Walk with **WASD**, jump with **Space**. On a phone, use the pad and the
+   Menu / Jump / Use buttons.
+3. Walk up to a door and press **E** to go in or out. Only the people in the
+   same space see and hear you.
+4. Press **Enter** to chat: a bubble over your head and a line in the chat log,
+   gone after a minute.
+5. Hold **Q** for the menu: stick a note, wave, say yes or no, "How ya doing,
+   mate?", or dance.
+6. A sticky note stays on the floor where you stood until you (or the admin)
+   remove it: up to 100 words, one every 30 seconds, five per person per space
+   (a sixth replaces your oldest). Walk onto one and press **E** to read it and
+   comment.
 
-## 💩 What good means for this app (v1)
+## What good means for this app (v1)
 
 - **A childish, dirty subject breaks the ice.** Poop is silly enough that two
   awkward people can laugh at the same thing without needing to talk first.
 - **It feels like being somewhere.** A 3D room you walk around in, not a form
   you fill in.
-- **A poop is a guestbook.** 💩 Where you leave it, and next to whose, is the
+- **A poop is a guestbook.** Where you leave it, and next to whose, is the
   message: a vow, a love, a to-do, remembered when you come back.
 - **No need to actually need to go.** Anyone can poop, any time.
 - **The satisfaction is in the keyboard.** One key, instant result.
 
-### 💩 Which of these are checked
+### Which of these are checked
 
-Enforced by `spec/poop-room.test.ts`: names are 1–8 letters or underscores and
-can't be taken twice; your poop is still there on the next visit; one poop per
-person; poops stay inside the room. Judged by people (the pod at crit 8): whether
-it breaks the ice, whether it feels like a place.
+Enforced by `spec/`: names and their limits (`campus.test.ts`); a sticky note
+is still there on the next visit, belongs to its space, keeps to 100 words, one
+every 30 seconds, five per person per space, and only its author or an admin
+removes it (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes and new
+notes reach everyone in the same space within a second, and nobody in another
+space (`realtime.test.ts`). Judged by people: whether it breaks the ice,
+whether it feels like a place.
 
-## 💩 What I chose not to build (yet)
+## What I chose not to build (yet)
 
-Chat, an inventory,
-cleaning up poop, character customisation, and lighting. The toilet is plain
-yellowish walls under flat light, and everyone is the same white clay figure.
+Boards (supervisor and lab posts), more classrooms, mail, one-to-one chat,
+voice, character colours and graphics settings. Everyone is still the same
+white clay figure, and the buildings are simplified, not surveyed.
 
-## 💩 What I read while deciding
+## What I read while deciding
 
 - Andrew Dowell, [A practical guide to Game Design](https://www.artstation.com/blogs/andrewdowell/PQaWj/a-practical-guide-to-game-design)
   (ArtStation). Good games make players choose, grow, fail and try again.
