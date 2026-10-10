@@ -2,6 +2,7 @@ import "./style.css";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
+import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
 import { Avatar, motionFor, variantFor } from "./character.ts";
@@ -93,6 +94,28 @@ const skyScene = new THREE.Scene();
 skyScene.add(sky.clone());
 const outdoorEnv = pmrem.fromScene(skyScene).texture;
 const indoorEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
+
+// A photographed sky (Poly Haven, CC0) replaces the procedural one once it
+// loads: it's both the backdrop and the light reflected in the glass.
+let outdoorSky: THREE.Texture | null = null;
+let outdoorLight = outdoorEnv;
+new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/autumn_field_puresky_1k.hdr`, (hdr) => {
+  hdr.mapping = THREE.EquirectangularReflectionMapping;
+  outdoorSky = hdr;
+  outdoorLight = pmrem.fromEquirectangular(hdr).texture;
+  if (space?.outdoor) applySky();
+});
+function applySky(): void {
+  if (outdoorSky) {
+    scene.remove(sky);
+    scene.background = outdoorSky;
+    scene.backgroundIntensity = 0.9;
+  } else {
+    scene.add(sky);
+    scene.background = null;
+  }
+  scene.environment = outdoorLight;
+}
 
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.style.cssText = "position:absolute;inset:0;pointer-events:none";
@@ -383,9 +406,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   }
   scene.add(space.group);
   if (space.outdoor) {
-    scene.add(sky);
-    scene.background = null;
-    scene.environment = outdoorEnv;
+    applySky();
     scene.fog = new THREE.Fog(0xc9dcea, 60, 220);
   } else {
     scene.remove(sky);
