@@ -111,3 +111,6 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`5240e76`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/5240e76): per-space music (made with Google AI), CC0 textures and furniture models.
 - [`6a4b122`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/6a4b122): README facts, CLAUDE.md rules and the plan brought up to date.
 - [`c822dd4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c822dd4): texture warnings fixed (found in the helper session's QA); key guide captions readable outdoors.
+- [`c2d8e9c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c2d8e9c): graphics pass after the user called it clay: PBR materials, sun shadows, a real sky, glass curtain-wall buildings, light concrete paving.
+- [`149ebbe`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/149ebbe): COMP8020 (not COMP8280) everywhere, numbered Q menu, the classroom whiteboard opens the course page; spots for the classmates' projects board and guestbook.
+- [`fcfc418`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/fcfc418): animated characters (idle, walk, run, nod, head shake) replace the clay figures.
