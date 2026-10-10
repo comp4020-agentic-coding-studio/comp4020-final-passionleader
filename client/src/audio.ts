@@ -57,3 +57,5 @@ export function playTrack(file: string): void {
   }
   if (!muted) void bgm.play().catch(() => {});
 }
+
+export const isMuted = (): boolean => muted;

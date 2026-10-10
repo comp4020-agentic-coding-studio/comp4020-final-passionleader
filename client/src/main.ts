@@ -5,6 +5,7 @@ import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
+import { say } from "./voice.ts";
 import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
 import { Avatar, motionFor, variantFor } from "./character.ts";
 import {
@@ -195,13 +196,11 @@ interface OtherView {
   group: THREE.Group;
   target: THREE.Vector3;
   rot: number;
-  danceUntil: number;
   /** Smoothed ground speed, to pick idle / walk / run for the animation. */
   speed: number;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
-let selfDanceUntil = 0;
 let space: SpaceDef | null = null;
 
 function upsertOther(p: RemotePlayer): void {
@@ -213,7 +212,7 @@ function upsertOther(p: RemotePlayer): void {
     tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { avatar, group, target: new THREE.Vector3(), rot: p.rot, danceUntil: 0, speed: 0 };
+    view = { avatar, group, target: new THREE.Vector3(), rot: p.rot, speed: 0 };
     others.set(p.id, view);
   }
   view.target.set(p.x, p.y, p.z);
@@ -231,8 +230,16 @@ function removeOther(id: string): void {
 
 const figureOf = (id: string): THREE.Object3D | undefined => (id === selfId ? player : others.get(id)?.group);
 
+// What the emote says out loud (and nearby people hear); dance is silent.
+const EMOTE_VOICE: Partial<Record<Emote, string>> = {
+  wave: "Hello!",
+  yes: "Yes!",
+  no: "No.",
+  mate: "How ya doing, mate?",
+};
+
 const EMOTE_TEXT: Record<Emote, string> = {
-  wave: "👋",
+  wave: "👋 Hello!",
   yes: "👍 Yes",
   no: "👎 No",
   mate: "How ya doing, mate?",
@@ -245,10 +252,13 @@ function showEmote(id: string, kind: Emote): void {
   speak(figure, EMOTE_TEXT[kind], 3000);
   const avatar = id === selfId ? me : others.get(id)?.avatar;
   if (kind === "yes" || kind === "no") avatar?.gesture(kind);
-  if (kind === "dance") {
-    const until = performance.now() + 3000;
-    if (id === selfId) selfDanceUntil = until;
-    else others.get(id)!.danceUntil = until;
+  if (kind === "wave" || kind === "dance") avatar?.perform(kind);
+  const line = EMOTE_VOICE[kind];
+  if (line) {
+    const d = id === selfId ? 0 : Math.hypot(figure.position.x - player.position.x, figure.position.z - player.position.z);
+    // A stable pitch per person, so two people saying "Hello" sound different.
+    const pitch = 0.85 + (Math.abs([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)) % 30) / 100;
+    say(line, d, pitch);
   }
 }
 
@@ -750,7 +760,6 @@ function update(dt: number, now: number): void {
     pushOut(player.position, PLAYER_RADIUS, space.colliders);
     player.position.x = THREE.MathUtils.clamp(player.position.x, -space.halfX, space.halfX);
     player.position.z = THREE.MathUtils.clamp(player.position.z, -space.halfZ, space.halfZ);
-    if (now < selfDanceUntil) player.rotation.y += dt * 8;
     net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
 
     const target = busy() ? null : nearestTarget();
@@ -775,10 +784,6 @@ function update(dt: number, now: number): void {
     view.speed += (step - view.speed) * Math.min(1, dt * 8);
     view.avatar.setMotion(motionFor(view.speed));
     view.avatar.update(dt);
-    if (now < view.danceUntil) {
-      view.group.rotation.y += dt * 8;
-      continue;
-    }
     // Turn the short way round, not through a full spin.
     const d = Math.atan2(Math.sin(view.rot - view.group.rotation.y), Math.cos(view.rot - view.group.rotation.y));
     view.group.rotation.y += d * ease;
