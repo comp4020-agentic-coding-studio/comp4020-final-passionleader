@@ -22,9 +22,10 @@ want an in-joke. You poop, you leave, and later you come back and remember:
 
 ## How to use it
 
-1. Type a name: letters, digits and underscores, up to 8. Names are first
-   come, first served; your browser remembers yours so you come back as you,
-   where you left.
+1. Type your student number (e.g. `u1234567`), or any name of up to 8
+   letters, digits and underscores if you're staff or a visitor. Nothing
+   checks that a number is real. Names are first come, first served; your
+   browser remembers yours so you come back as you, where you left.
 2. Walk with **WASD**, jump with **Space**. On a phone, use the pad and the
    Menu / Jump / Use buttons.
 3. Walk up to a door and press **E** to go in or out. Only the people in the
@@ -37,7 +38,7 @@ want an in-joke. You poop, you leave, and later you come back and remember:
 6. A sticky note stays on the floor where you stood until you (or the admin)
    remove it: up to 100 words, one every 30 seconds, five per person per space
    (a sixth replaces your oldest). Walk onto one and press **E** to read it and
-   comment.
+   comment; where several overlap, **E** lists them so you can pick one.
 7. The gear button (top right, beside mute) sets graphics quality: Low (the
    default) runs smoothly anywhere; High adds shadows, smoother edges,
    shinier glass and more trees.

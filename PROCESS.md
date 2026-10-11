@@ -119,3 +119,10 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`c8ae34e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c8ae34e): a settings dialog (gear beside mute) with Low/High graphics, Low by default, after the user reported frame drops.
 - [`88a384a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/88a384a): wave and dance move the body; wave, yes, no and "mate" are spoken aloud to people nearby in the same space.
 - [`93c09a7`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/93c09a7): Low quality loads the photographed sky too; without it the scene washed out white.
+- [`7182068`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/7182068): trees in an even row round the map's edge, bushes and flowers evenly spaced on the lawn and round both buildings, new benches; plants are instanced so they stay cheap on Low.
+- [`a4bf4a9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a4bf4a9): a cloudy CC0 sky with a deeper blue, drawn on a dome that follows the camera.
+- [`344402a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/344402a): both character variants preload, so your figure isn't clay while it loads.
+- [`a08a08e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a08a08e): sign text shrinks to fit (the COMP8020 whiteboard was clipped); sticky notes get a dark rim.
+- [`4126b9b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/4126b9b): pressing E where notes overlap lists them to pick from, so the one underneath can be read.
+- [`1ba3c0f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1ba3c0f): the join screen asks for your student number.
+- [`865dc15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/865dc15): the Student Hub is bigger, with six counselling room doors (not open yet).
