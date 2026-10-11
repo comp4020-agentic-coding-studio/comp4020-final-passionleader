@@ -129,3 +129,6 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`ced558a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ced558a): the Student Hub becomes an office (desk pods, monitors, coffee bar) and a lounge (sofas facing each other on rugs) instead of rows of tables.
 - [`2390eb1`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2390eb1): sticky notes in vivid colours, unlit so they stay bright, with a thinner rim.
 - [`82dd867`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/82dd867): on 154 the sign, canopy and door now line up over each other, as on 155.
+- [`c868ed3`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c868ed3): a new, deeper sky backdrop made from the user's Gemini image (clouds and sky only; the buildings along its bottom are cropped out).
+- [`c9a9159`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c9a9159): the user's Gemini textures for 154's facade, the paving, grass, classroom carpet and Hub floorboards replace the old ones.
+- [`5091344`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/5091344): your own chat lines are left-aligned like everyone else's.
