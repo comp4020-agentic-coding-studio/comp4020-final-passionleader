@@ -126,6 +126,7 @@ html, body {
 }
 
 .join-sub { margin: -4px 0 12px; font-size: 0.85rem; opacity: 0.85; }
+.join-hint { margin: 2px 0 6px; font-size: 0.8rem; opacity: 0.75; }
 #password-row { margin-top: 10px; }
 #password-row[hidden] { display: none; }
 #password {
