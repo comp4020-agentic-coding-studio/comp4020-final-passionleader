@@ -300,7 +300,11 @@ export function textPlane(lines: string[], w: number, h: number, opts: { bg?: st
   ctx.fillStyle = opts.fg ?? "#222222";
   ctx.textAlign = "center";
   ctx.textBaseline = "middle";
-  const size = (opts.font ?? 0.35) * scale;
+  // Shrink the type until the longest line fits, rather than clip it.
+  let size = (opts.font ?? 0.35) * scale;
+  ctx.font = `700 ${size}px system-ui, sans-serif`;
+  const widest = Math.max(...lines.map((l) => ctx.measureText(l).width));
+  if (widest > canvas.width * 0.92) size *= (canvas.width * 0.92) / widest;
   ctx.font = `700 ${size}px system-ui, sans-serif`;
   lines.forEach((line, i) => {
     ctx.fillText(line, canvas.width / 2, canvas.height / 2 + (i - (lines.length - 1) / 2) * size * 1.25);
@@ -408,6 +412,10 @@ export function buildNote(id: number): THREE.Group {
   const g = new THREE.Group();
   const paper = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.7), mat(NOTE_COLORS[id % NOTE_COLORS.length]!));
   paper.position.y = 0.02;
+  // A dark rim just below the paper, so a note stands out on pale paving.
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.016, 0.78), mat(0x3a3530));
+  rim.position.y = 0.012;
+  g.add(rim);
   // A slight curl at one corner so it reads as paper, not a tile.
   const curl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.2), mat(0xffffff));
   curl.position.set(0.25, 0.05, 0.25);
