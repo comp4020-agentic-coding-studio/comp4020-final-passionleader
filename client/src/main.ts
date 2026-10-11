@@ -7,7 +7,7 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import { playTrack } from "./audio.ts";
 import { say } from "./voice.ts";
 import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
-import { Avatar, motionFor, variantFor } from "./character.ts";
+import { Avatar, motionFor, preloadCharacters, variantFor } from "./character.ts";
 import {
   ApiError,
   RESERVED_RE,
@@ -152,6 +152,7 @@ function resize(): void {
 window.addEventListener("resize", resize);
 resize();
 
+preloadCharacters();
 let me = new Avatar("male-a");
 let player = me.group;
 scene.add(player);

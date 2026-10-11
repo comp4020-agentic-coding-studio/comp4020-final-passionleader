@@ -80,6 +80,11 @@ function loadTemplate(v: Variant): Promise<Template | null> {
   return template;
 }
 
+/** Starts loading every variant, so your own figure is ready by the time you've picked a name. */
+export function preloadCharacters(): void {
+  for (const v of ["male-a", "female-a"] as Variant[]) void loadTemplate(v);
+}
+
 /** A stable variant per name, so everyone sees the same person for the same name. */
 export function variantFor(name: string): Variant {
   let h = 0;
