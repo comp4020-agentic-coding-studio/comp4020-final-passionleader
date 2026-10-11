@@ -224,6 +224,45 @@ export function place(g: THREE.Group, file: string, height: number, x: number, z
   });
 }
 
+/** Where one copy of a scattered model goes. */
+export interface Spot {
+  x: number;
+  z: number;
+  rotY?: number;
+  scale?: number;
+}
+
+/**
+ * Places many copies of one model as instanced meshes: one draw call per
+ * part of the model however many copies there are, which keeps a lawn full
+ * of bushes cheap on Low.
+ */
+export function scatter(g: THREE.Group, file: string, height: number, spots: Spot[], shadow = true): void {
+  if (spots.length === 0) return;
+  void loadModel(file, height).then((model) => {
+    if (!model) return;
+    model.updateMatrixWorld(true);
+    const at = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const up = new THREE.Vector3(0, 1, 0);
+    model.traverse((o) => {
+      const mesh = o as THREE.Mesh;
+      if (!mesh.isMesh) return;
+      const inst = new THREE.InstancedMesh(mesh.geometry, mesh.material, spots.length);
+      spots.forEach((s, i) => {
+        q.setFromAxisAngle(up, s.rotY ?? 0);
+        at.compose(new THREE.Vector3(s.x, 0, s.z), q, new THREE.Vector3().setScalar(s.scale ?? 1));
+        inst.setMatrixAt(i, at.multiply(mesh.matrixWorld));
+      });
+      inst.computeBoundingSphere();
+      inst.castShadow = shadow;
+      inst.receiveShadow = true;
+      inst.userData.noShadow = !shadow;
+      g.add(inst);
+    });
+  });
+}
+
 /** A box sitting on the floor at (x, z). Solid ones are added to colliders. */
 export function block(
   g: THREE.Group,

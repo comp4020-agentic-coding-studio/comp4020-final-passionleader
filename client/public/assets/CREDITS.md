@@ -52,7 +52,7 @@ low-poly scene needs.
 | `nature/CommonTree_5.glb` | tree | 277 KB |
 | `nature/CommonTree_3.glb` | tree | 320 KB |
 | `nature/CommonTree_4.glb` | tree | 330 KB |
-| `nature/Bush_Common.glb` | bush | 120 KB |
+| `nature/Bush_Hedge.glb` | the pack's `Bush_Common`, leaf texture recoloured from red to green | 149 KB |
 | `nature/Bush_Common_Flowers.glb` | bush (flowering) | 218 KB |
 | `nature/Grass_Common_Tall.glb` | grass clump | 20 KB |
 | `nature/Flower_3_Group.glb` | flower patch | 168 KB |
