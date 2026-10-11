@@ -449,6 +449,10 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
     scene.environment = indoorEnv;
     scene.fog = null;
   }
+  // Indoors there's no sun through a ceiling: daylight at full strength on
+  // pale walls and floors glared, so rooms get a softer sun and fill.
+  sun.intensity = space.outdoor ? 2.6 : 1.3;
+  scene.environmentIntensity = space.outdoor ? 1 : 0.55;
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(space.camera);
