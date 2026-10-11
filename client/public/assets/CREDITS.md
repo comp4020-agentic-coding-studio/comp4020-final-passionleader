@@ -19,12 +19,10 @@ alongside them.
 | `char/character-female-a.glb` | female variant |
 | `char/Textures/colormap.png` | shared texture atlas for both |
 
-## Sky (`sky/`, Poly Haven, CC0)
+## Sky lighting (`sky/`, Poly Haven, CC0)
 
 A partly cloudy midday sky. The 1K HDRI (1024×512) lights the scene and
-shows in reflections; `campus_sky.jpg` is the backdrop you see, made from
-Poly Haven's tonemapped JPG of the same sky, scaled to 4096×2048 with the
-colour deepened (saturation +35%, brightness −8%, contrast +8%).
+shows in reflections; it isn't drawn as the backdrop.
 
 - Name: Kloofendal 48d Partly Cloudy (Pure Sky)
 - Authors: Greg Zaal (original), Jarod Guest (sky edits)
@@ -35,7 +33,15 @@ colour deepened (saturation +35%, brightness −8%, contrast +8%).
 | File | Size |
 | --- | --- |
 | `sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | 1.37 MB |
-| `sky/campus_sky.jpg` | 0.37 MB |
+
+## Sky backdrop (`sky/campus_sky.jpg`, generated with Google Gemini)
+
+The sky you see. Made from an image generated with Google AI (Gemini) for
+this project: only the clouds and blue sky were kept (the generated picture
+also had buildings and trees along the bottom, which were cropped out), the
+strip was made to wrap seamlessly and repeated twice round a 4096×2048
+panorama, with a gradient up to a deep blue zenith and a soft haze below the
+horizon. 0.24 MB.
 
 ## Nature (`nature/`, Quaternius Stylized Nature MegaKit, CC0)
 
