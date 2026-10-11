@@ -1,0 +1,94 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1300" height="800" viewBox="0 0 1300 800" role="img" aria-label="Browsers join over HTTP, then talk to the server over one WebSocket each: moves, chat and emotes go up without waiting for a reply, and the server pushes positions every 100 ms, chat, emotes and new notes to everyone in the same space. Server and SQLite database run in one Fly machine; positions stay in memory and SQLite is written only for joins, notes, comments and the last spot on disconnect." font-family="system-ui, 'Noto Sans', 'DejaVu Sans', sans-serif">
+<title>Crit 9: how the real-time layer talks</title>
+<defs><marker id="m-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b2111"/></marker><marker id="m-acc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b3f1d"/></marker><marker id="m-new" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker></defs>
+<rect width="1300" height="800" fill="#ffffff"/>
+<rect x="0" y="0" width="1300" height="64" fill="#fbf7e4"/>
+<text x="40" y="40" text-anchor="start" font-size="21" font-weight="700" fill="#2b2111">Crit 9: how the real-time layer talks (browser, server, database)</text>
+<rect x="30" y="110" width="220" height="320" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="140.0" y="134" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2111">Browser A</text>
+<text x="140.0" y="156" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">Vite + Three.js client</text>
+<text x="140.0" y="174" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">net.ts: one WebSocket</text>
+<text x="140.0" y="192" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="140.0" y="210" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">sends its position only</text>
+<text x="140.0" y="228" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">when it moved, ≤ 10 / s,</text>
+<text x="140.0" y="246" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">and never waits for a reply</text>
+<text x="140.0" y="264" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="140.0" y="282" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">onmessage → moves others&#x27;</text>
+<text x="140.0" y="300" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">figures toward their spot</text>
+<rect x="30" y="480" width="220" height="170" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="140.0" y="504" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2111">Browser B (same space)</text>
+<text x="140.0" y="526" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">same client, gets the</text>
+<text x="140.0" y="544" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">same pushes whenever</text>
+<text x="140.0" y="562" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">they arrive</text>
+<text x="140.0" y="580" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="140.0" y="598" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">in another space?</text>
+<text x="140.0" y="616" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">→ hears nothing</text>
+<rect x="470" y="88" width="800" height="590" rx="12" fill="none" stroke="#8a8478" stroke-width="1.4" stroke-dasharray="3 5"/>
+<text x="484" y="108" text-anchor="start" font-size="12" font-weight="600" fill="#8a8478">Fly.io machine: ONE instance runs the server and holds the database (one small machine, one volume)</text>
+<rect x="495" y="122" width="460" height="540" rx="10" fill="#fbfaf6" stroke="#2b2111" stroke-width="1.6"/>
+<text x="725" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2111">Node 24 process: one thread, one event loop</text>
+<rect x="515" y="160" width="420" height="110" rx="8" fill="#ffffff" stroke="#2b2111" stroke-width="1.6"/>
+<text x="725.0" y="184" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Hono HTTP API</text>
+<text x="725.0" y="206" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">POST /api/join {name, token?} → token</text>
+<text x="725.0" y="224" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">POST /api/notes · comments · DELETE …</text>
+<text x="725.0" y="242" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">await body → validate → SQLite → broadcast</text>
+<rect x="515" y="310" width="420" height="150" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="1.6"/>
+<text x="725.0" y="334" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">WebSocket /ws  (ws library)</text>
+<text x="725.0" y="356" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">upgrade only with a valid token</text>
+<text x="725.0" y="374" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">on(&#x27;message&#x27;) runs when a message arrives:</text>
+<text x="725.0" y="392" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">move → clamp to the room, mark space dirty</text>
+<text x="725.0" y="410" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">chat / emote → push at once to the space</text>
+<text x="725.0" y="428" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">on(&#x27;close&#x27;) → save last spot, push &#x27;leave&#x27;</text>
+<rect x="515" y="500" width="200" height="140" rx="8" fill="#ffffff" stroke="#2b2111" stroke-width="1.6"/>
+<text x="615.0" y="524" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">In memory only</text>
+<text x="615.0" y="546" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">players: socket → spot</text>
+<text x="615.0" y="564" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">dirty spaces</text>
+<text x="615.0" y="582" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">chat is never stored</text>
+<text x="615.0" y="600" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">(nothing written per move)</text>
+<rect x="735" y="500" width="200" height="140" rx="8" fill="#ffffff" stroke="#2b2111" stroke-width="1.6"/>
+<text x="835.0" y="524" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Timers</text>
+<text x="835.0" y="546" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">every 100 ms: push</text>
+<text x="835.0" y="564" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">&#x27;players&#x27; to each dirty</text>
+<text x="835.0" y="582" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">space, then clear</text>
+<text x="835.0" y="600" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">every 25 s: ping,</text>
+<text x="835.0" y="618" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">drop dead sockets</text>
+<rect x="1035" y="200" width="215" height="300" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="1142.5" y="224" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2111">/data volume</text>
+<text x="1142.5" y="246" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">SQLite file app.db</text>
+<text x="1142.5" y="264" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="1142.5" y="282" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">visitors: name, token,</text>
+<text x="1142.5" y="300" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">last space and spot</text>
+<text x="1142.5" y="318" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">notes · comments</text>
+<text x="1142.5" y="336" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="1142.5" y="354" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">node:sqlite DatabaseSync</text>
+<text x="1142.5" y="372" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">= synchronous: a write</text>
+<text x="1142.5" y="390" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">briefly holds the loop</text>
+<polyline points="250,190 515,190" fill="none" stroke="#2b2111" stroke-width="1.8" marker-end="url(#m-ink)"/>
+<text x="360" y="182" text-anchor="middle" font-size="12" font-weight="600" fill="#2b2111" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">① POST /api/join (once)</text>
+<text x="360" y="206" text-anchor="middle" font-size="11" font-weight="500" fill="#8a8478" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">→ {name, token}</text>
+<polyline points="250,248 515,248" fill="none" stroke="#6b3f1d" stroke-width="2.2" marker-end="url(#m-acc)"/>
+<text x="360" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#6b3f1d" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">POST /api/notes (stick a note)</text>
+<text x="360" y="264" text-anchor="middle" font-size="11" font-weight="500" fill="#8a8478" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">plain HTTP: it must be saved</text>
+<polyline points="250,340 515,340" fill="none" stroke="#0f766e" stroke-width="2.6" marker-end="url(#m-new)"/>
+<text x="360" y="332" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">② open /ws?token=…, then</text>
+<text x="360" y="358" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">③ move · enter · chat · emote</text>
+<polyline points="515,410 250,410" fill="none" stroke="#0f766e" stroke-width="2.6" marker-end="url(#m-new)"/>
+<text x="360" y="402" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">④ push: players · chat · emote</text>
+<text x="360" y="428" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">· leave · new note</text>
+<polyline points="515,450 440,450 440,560 250,560" fill="none" stroke="#0f766e" stroke-width="2.6" marker-end="url(#m-new)"/>
+<text x="345" y="552" text-anchor="middle" font-size="12" font-weight="700" fill="#0f766e" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">④ the same pushes</text>
+<text x="345" y="578" text-anchor="middle" font-size="11" font-weight="500" fill="#8a8478" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">same space only</text>
+<polyline points="725,270 725,310" fill="none" stroke="#6b3f1d" stroke-width="2" marker-end="url(#m-acc)"/>
+<text x="733" y="295" text-anchor="start" font-size="11" font-weight="600" fill="#6b3f1d" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">note saved → broadcast &#x27;action&#x27;</text>
+<polyline points="615,460 615,500" fill="none" stroke="#2b2111" stroke-width="1.6" marker-end="url(#m-ink)" marker-start="url(#m-ink)"/>
+<polyline points="835,500 835,460" fill="none" stroke="#2b2111" stroke-width="1.6" marker-end="url(#m-ink)"/>
+<text x="843" y="484" text-anchor="start" font-size="11" font-weight="600" fill="#2b2111" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">tick</text>
+<polyline points="935,240 1035,240" fill="none" stroke="#6b3f1d" stroke-width="2.2" marker-end="url(#m-acc)" marker-start="url(#m-acc)"/>
+<text x="985" y="232" text-anchor="middle" font-size="11" font-weight="700" fill="#6b3f1d" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">INSERT / read</text>
+<polyline points="935,430 1035,430" fill="none" stroke="#2b2111" stroke-width="1.8" marker-end="url(#m-ink)"/>
+<text x="985" y="422" text-anchor="middle" font-size="11" font-weight="600" fill="#2b2111" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">on close:</text>
+<text x="985" y="448" text-anchor="middle" font-size="11" font-weight="600" fill="#2b2111" stroke="#ffffff" stroke-width="5" paint-order="stroke" stroke-linejoin="round">last spot</text>
+<text x="40" y="712" text-anchor="start" font-size="12.5" font-weight="400" fill="#8a8478">Asynchronous and event-driven: nobody waits for a reply. Each message runs its handler on Node&#x27;s single event loop when it arrives,</text>
+<text x="40" y="732" text-anchor="start" font-size="12.5" font-weight="400" fill="#8a8478">and the server pushes to everyone in that space. Positions live only in server memory; SQLite is written on join, notes, comments</text>
+<text x="40" y="752" text-anchor="start" font-size="12.5" font-weight="400" fill="#8a8478">and a visitor&#x27;s last spot when their socket closes, never per move. Server and database share one instance, so a write is a local file call.</text>
+</svg>
