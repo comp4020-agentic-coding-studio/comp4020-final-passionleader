@@ -99,25 +99,38 @@ const outdoorEnv = pmrem.fromScene(skyScene).texture;
 const indoorEnv = pmrem.fromScene(new RoomEnvironment(), 0.04).texture;
 
 // A photographed sky (Poly Haven, CC0) replaces the procedural one once it
-// loads: it's both the backdrop and the light reflected in the glass. Low
-// quality loads it too: it costs one download, and the procedural sky alone
-// lights the scene far too brightly.
-let outdoorSky: THREE.Texture | null = null;
+// loads: the HDRI is the light reflected in the glass, and a sharper JPG of
+// the same sky (colour deepened) is painted inside a big dome round the
+// camera, so the clouds stay crisp. Low quality loads both too: it costs two
+// downloads, and the procedural sky alone lights the scene far too brightly.
+const skyDome = new THREE.Mesh(
+  new THREE.SphereGeometry(1400, 48, 24),
+  new THREE.MeshBasicMaterial({ side: THREE.BackSide, depthWrite: false, fog: false, toneMapped: false }),
+);
+skyDome.scale.x = -1; // seen from inside, so un-mirror it
+skyDome.renderOrder = -1;
+let domeReady = false;
 let outdoorLight = outdoorEnv;
-new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/autumn_field_puresky_1k.hdr`, (hdr) => {
+new RGBELoader().load(`${import.meta.env.BASE_URL}assets/sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr`, (hdr) => {
   hdr.mapping = THREE.EquirectangularReflectionMapping;
-  outdoorSky = hdr;
   outdoorLight = pmrem.fromEquirectangular(hdr).texture;
+  hdr.dispose();
+  if (space?.outdoor) applySky();
+});
+new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/sky/campus_sky.jpg`, (jpg) => {
+  jpg.colorSpace = THREE.SRGBColorSpace;
+  skyDome.material.map = jpg;
+  skyDome.material.needsUpdate = true;
+  domeReady = true;
   if (space?.outdoor) applySky();
 });
 function applySky(): void {
-  if (outdoorSky) {
+  scene.background = null;
+  if (domeReady) {
     scene.remove(sky);
-    scene.background = outdoorSky;
-    scene.backgroundIntensity = 0.9;
+    scene.add(skyDome);
   } else {
     scene.add(sky);
-    scene.background = null;
   }
   scene.environment = outdoorLight;
 }
@@ -423,7 +436,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
     applySky();
     scene.fog = new THREE.Fog(0xc9dcea, 60, 220);
   } else {
-    scene.remove(sky);
+    scene.remove(sky, skyDome);
     scene.background = new THREE.Color(space.background);
     scene.environment = indoorEnv;
     scene.fog = null;
@@ -804,6 +817,7 @@ function update(dt: number, now: number): void {
   camera.position.lerp(desired, 1 - Math.exp(-8 * dt));
   lookTarget.copy(player.position).setY(space.outdoor ? 1.8 : 1);
   camera.lookAt(lookTarget);
+  skyDome.position.copy(camera.position);
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);

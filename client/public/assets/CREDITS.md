@@ -21,17 +21,21 @@ alongside them.
 
 ## Sky (`sky/`, Poly Haven, CC0)
 
-A clear-sky daytime HDRI, 1K equirectangular (1024×512), for `RGBELoader`.
+A partly cloudy midday sky. The 1K HDRI (1024×512) lights the scene and
+shows in reflections; `campus_sky.jpg` is the backdrop you see, made from
+Poly Haven's tonemapped JPG of the same sky, scaled to 4096×2048 with the
+colour deepened (saturation +35%, brightness −8%, contrast +8%).
 
-- Name: Autumn Field (Pure Sky)
-- Authors: Sergej Majboroda (original), Jarod Guest (sky edit)
-- Source: https://polyhaven.com/a/autumn_field_puresky
+- Name: Kloofendal 48d Partly Cloudy (Pure Sky)
+- Authors: Greg Zaal (original), Jarod Guest (sky edits)
+- Source: https://polyhaven.com/a/kloofendal_48d_partly_cloudy_puresky
 - Licence: Creative Commons Zero (CC0 1.0), https://creativecommons.org/publicdomain/zero/1.0/
   (Poly Haven's entire library is CC0)
 
 | File | Size |
 | --- | --- |
-| `sky/autumn_field_puresky_1k.hdr` | 1.04 MB |
+| `sky/kloofendal_48d_partly_cloudy_puresky_1k.hdr` | 1.37 MB |
+| `sky/campus_sky.jpg` | 0.37 MB |
 
 ## Nature (`nature/`, Quaternius Stylized Nature MegaKit, CC0)
 
