@@ -132,3 +132,6 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`c868ed3`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c868ed3): a new, deeper sky backdrop made from the user's Gemini image (clouds and sky only; the buildings along its bottom are cropped out).
 - [`c9a9159`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c9a9159): the user's Gemini textures for 154's facade, the paving, grass, classroom carpet and Hub floorboards replace the old ones.
 - [`5091344`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/5091344): your own chat lines are left-aligned like everyone else's.
+- [`f120cbf`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f120cbf): the lawn, its bushes and benches move 3 m west so the lawn no longer covers the path's paving.
+- [`b8da036`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b8da036): female figures speak emotes in a woman's voice (and a higher pitch), male figures in a man's.
+- [`32f084d`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/32f084d): indoors the sun and reflected light are softer, so the pale Hub and classroom no longer glare.
