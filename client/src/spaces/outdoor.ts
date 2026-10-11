@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
-import { block, doorway, floor, mat, pavingMat, scatter, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
+import { block, doorway, floor, mat, scatter, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
 import { HIGH } from "../settings.ts";
 import { building } from "./buildings.ts";
 
@@ -18,10 +18,11 @@ export function buildOutdoor(): SpaceDef {
 
   // Grass out to the horizon (the fog hides where it ends), the paved campus
   // on top of it, a lighter path between the buildings, and the lawn.
-  floor(g, 700, 700, 0, 0, texMat("grass.jpg", 180, 180, 0x9fb38a), -0.02);
-  floor(g, OUTDOOR.halfX * 2 + 6, OUTDOOR.halfZ * 2 + 6, 0, 0, pavingMat(18, 26));
-  floor(g, 14, OUTDOOR.halfZ * 2 + 6, -2, 0, pavingMat(4, 28, 0xf3efe6), 0.01);
-  floor(g, 20, 16, -16, -14, texMat("grass.jpg", 14, 11, 0xa9bd8f), 0.02);
+  // One paving tile is about 2 m (40 x 20 cm pavers); one grass tile 2.5-4 m.
+  floor(g, 700, 700, 0, 0, texMat("ai/grass.jpg", 180, 180, 0xb4c49c), -0.02);
+  floor(g, OUTDOOR.halfX * 2 + 6, OUTDOOR.halfZ * 2 + 6, 0, 0, texMat("ai/paving.jpg", 35, 27, 0xd6d2ca));
+  floor(g, 14, OUTDOOR.halfZ * 2 + 6, -2, 0, texMat("ai/paving.jpg", 7, 27), 0.01);
+  floor(g, 20, 16, -16, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
   // Trees, bushes and flowers (Quaternius, CC0), laid out evenly: trees in
   // a row round the edge of the map (leaving the path open north and south),
   // flowers in a grid on the lawn, and bushes round each building's foot,
@@ -140,6 +141,7 @@ export function buildOutdoor(): SpaceDef {
     floors: 4,
     frame: 0xf4f3ef,
     solidBody: 0xf6f5f1,
+    bodyTex: "ai/facade_154.jpg",
     colonnade: 0x6f7378,
     glass: 0x9fbfd2,
     roofOverhang: 0.5,

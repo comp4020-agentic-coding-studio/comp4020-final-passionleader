@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { glassMat, mat, type Box } from "../world.ts";
+import { glassMat, mat, texMat, type Box } from "../world.ts";
 import { markOccluderGroup } from "./occluders.ts";
 
 // A procedural modern campus building: a glass curtain wall between floor
@@ -29,6 +29,12 @@ export interface BuildingSpec {
   slabEdge?: number;
   /** A white block with ribbon windows instead of a full curtain wall. */
   solidBody?: number;
+  /**
+   * A facade image for the solid body (in assets/tex): one tile is one bay
+   * wide and one floor high, ribbon window included, so it replaces the
+   * modelled ribbon windows.
+   */
+  bodyTex?: string;
   /** Ground floor set back behind a row of slender columns. */
   colonnade?: number;
   /** A taller top floor under exposed roof trusses. */
@@ -51,7 +57,18 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
 
   // The body: glass set back behind the slab edges, or (for a solid block)
   // white cladding with a ribbon window on every floor.
-  if (s.solidBody !== undefined) {
+  if (s.solidBody !== undefined && s.bodyTex) {
+    // Clad from the first floor up when the ground floor is a recessed colonnade.
+    const from = s.colonnade !== undefined ? floorH : 0;
+    const h = H - from;
+    const face = (len: number): THREE.MeshStandardMaterial => texMat(s.bodyTex!, Math.max(1, Math.round(len / floorH)), h / floorH);
+    const plain = mat(s.solidBody);
+    const ew = face(s.d - 0.3);
+    const ns = face(s.w - 0.3);
+    const shell = new THREE.Mesh(new THREE.BoxGeometry(s.w - 0.3, h, s.d - 0.3), [ew, ew, plain, plain, ns, ns]);
+    shell.position.set(s.cx, from + h / 2, s.cz);
+    b.add(shell);
+  } else if (s.solidBody !== undefined) {
     const shell = new THREE.Mesh(new THREE.BoxGeometry(s.w - 0.3, H, s.d - 0.3), mat(s.solidBody));
     shell.position.set(s.cx, H / 2, s.cz);
     b.add(shell);

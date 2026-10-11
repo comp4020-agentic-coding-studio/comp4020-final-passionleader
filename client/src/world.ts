@@ -129,8 +129,8 @@ export const glassMat = (tint = 0xb7d0e0): THREE.MeshStandardMaterial =>
     ? new THREE.MeshStandardMaterial({ color: tint, roughness: 0.15, metalness: 0.2 })
     : new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
 
-// CC0 textures from assets/tex (credited in assets/CREDITS.md), tiled by
-// world size so a brick is the same size on every wall.
+// Textures from assets/tex (credited in assets/CREDITS.md), tiled by
+// world size so a paver or a floorboard is the same size everywhere.
 // Each material gets its own clone (its own repeat) of one shared image,
 // attached only once the image has arrived: cloning flags a texture for
 // upload, and uploading one with no image yet makes three.js warn.
@@ -146,6 +146,8 @@ export function texMat(file: string, repeatX: number, repeatY: number, tint = 0x
     loaderTex.load(`${import.meta.env.BASE_URL}assets/tex/${file}`, (tex) => {
       tex.colorSpace = THREE.SRGBColorSpace;
       tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+      // Floors are seen at a low angle: keep them sharp into the distance.
+      tex.anisotropy = 4;
       e.image = tex;
       for (const attach of e.waiting.splice(0)) attach();
     });
@@ -161,49 +163,6 @@ export function texMat(file: string, repeatX: number, repeatY: number, tint = 0x
   if (e.image) attach();
   else e.waiting.push(attach);
   return material;
-}
-
-/**
- * Light concrete paving drawn on a canvas: large pale slabs with thin joints
- * and a little speckle, like the paving around Kambri. Generated, so there's
- * no asset to credit.
- */
-let paving: THREE.CanvasTexture | null = null;
-export function pavingMat(repeatX: number, repeatY: number, tint = 0xffffff): THREE.MeshStandardMaterial {
-  if (!paving) {
-    const c = document.createElement("canvas");
-    c.width = c.height = 256;
-    const ctx = c.getContext("2d")!;
-    ctx.fillStyle = "#d9d5cd";
-    ctx.fillRect(0, 0, 256, 256);
-    for (let i = 0; i < 2600; i++) {
-      const v = 200 + Math.floor(Math.random() * 30);
-      ctx.fillStyle = `rgb(${v},${v - 3},${v - 8})`;
-      ctx.fillRect(Math.random() * 256, Math.random() * 256, 2, 2);
-    }
-    ctx.strokeStyle = "#b9b4aa";
-    ctx.lineWidth = 3;
-    // Two rows of long slabs, offset like a running bond.
-    ctx.strokeRect(0, 0, 256, 128);
-    ctx.strokeRect(0, 128, 256, 128);
-    ctx.beginPath();
-    ctx.moveTo(128, 0);
-    ctx.lineTo(128, 128);
-    ctx.moveTo(0, 128);
-    ctx.lineTo(0, 256);
-    ctx.moveTo(256, 128);
-    ctx.lineTo(256, 256);
-    ctx.stroke();
-    paving = new THREE.CanvasTexture(c);
-    paving.colorSpace = THREE.SRGBColorSpace;
-    paving.wrapS = paving.wrapT = THREE.RepeatWrapping;
-    paving.anisotropy = 4;
-  }
-  const map = paving.clone();
-  map.repeat.set(repeatX, repeatY);
-  const m = new THREE.MeshStandardMaterial({ map, color: tint, roughness: 0.92 });
-  m.userData.unique = true;
-  return m;
 }
 
 /** A collision footprint with nothing drawn, for furniture drawn by a model. */

@@ -97,21 +97,19 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 | `kitchenBar.glb` | coffee bar counter |
 | `kitchenCoffeeMachine.glb` | coffee machine |
 
-## Textures (`tex/`, ambientCG, CC0)
+## Textures (`tex/ai/`, generated with Google Gemini)
 
-512×512 JPG, colour map only (no normal/roughness/etc. maps kept). Each
-resized down from the source's 1K colour map.
+Generated with Google AI (Gemini) for this project and resized to 1024×1024
+JPG (colour map only). Each one tiles: one tile is about 2 m of floor (or one
+storey of facade).
 
-- Author: ambientCG contributors (https://ambientcg.com)
-- Licence: Creative Commons Zero (CC0 1.0), https://creativecommons.org/publicdomain/zero/1.0/
-
-| File | Source asset | URL |
-| --- | --- | --- |
-| `tex/grass.jpg` | Grass005 | https://ambientcg.com/a/Grass005 |
-| `tex/pavement.jpg` | PavingStones151 | https://ambientcg.com/a/PavingStones151 |
-| `tex/brick.jpg` | Bricks097 | https://ambientcg.com/a/Bricks097 |
-| `tex/carpet.jpg` | Carpet016 | https://ambientcg.com/a/Carpet016 |
-| `tex/woodfloor.jpg` | WoodFloor051 | https://ambientcg.com/a/WoodFloor051 |
+| File | Used as |
+| --- | --- |
+| `tex/ai/facade_154.jpg` | building 154's white cladding with a ribbon window |
+| `tex/ai/paving.jpg` | outdoor paving and the path |
+| `tex/ai/grass.jpg` | the lawn and the grass round the campus |
+| `tex/ai/carpet.jpg` | classroom carpet tiles |
+| `tex/ai/wood_floor.jpg` | Student Hub floorboards |
 
 ## Music
 

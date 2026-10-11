@@ -13,7 +13,7 @@ const HALF = { halfX: 20, halfZ: 13 };
 export function buildHub(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
-  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("woodfloor.jpg", 10, 7), 0xe8e4da);
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 16, 10.4), 0xe8e4da);
   const back = -HALF.halfZ + 0.01;
 
   // The desk at the back, with the sign above it, and the noticeboard.

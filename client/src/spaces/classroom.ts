@@ -11,7 +11,7 @@ const HALF = { halfX: 10, halfZ: 8 };
 export function buildClassroom(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
-  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("carpet.jpg", 6, 5, 0xc9d3e0), 0xefeae0);
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/carpet.jpg", 10, 8), 0xefeae0);
 
   const board = textPlane(["COMP8020", "press E here for the course page"], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
   board.position.set(0, 2.2, -HALF.halfZ + 0.01);
