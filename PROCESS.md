@@ -135,3 +135,4 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`f120cbf`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f120cbf): the lawn, its bushes and benches move 3 m west so the lawn no longer covers the path's paving.
 - [`b8da036`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b8da036): female figures speak emotes in a woman's voice (and a higher pitch), male figures in a man's.
 - [`32f084d`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/32f084d): indoors the sun and reflected light are softer, so the pale Hub and classroom no longer glare.
+- [`3f19511`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/3f19511): a diagram of the real-time layer (browser, server and SQLite in one Fly machine) in `diagrams/5-crit9-realtime`.
