@@ -144,9 +144,9 @@ export function buildOutdoor(): SpaceDef {
     glass: 0x9fbfd2,
     roofOverhang: 0.5,
     apex: { color: 0xb07a48 },
-    entrance: { side: "west", at: 3, color: 0xf4f3ef },
+    entrance: { side: "west", at: 6, color: 0xf4f3ef }, // z = 3, over the door
   });
-  sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 4.6, -3, -Math.PI / 2);
+  sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 4.6, 3, -Math.PI / 2);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
 
   // A signpost south, toward the library just off this map.
