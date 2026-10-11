@@ -14,7 +14,7 @@ export interface Space {
 
 export const SPACES: Record<SpaceId, Space> = {
   outdoor: { label: "ANU campus", halfX: 32, halfZ: 24, spawn: { x: -6, z: 10 } },
-  hub: { label: "Student Hub", halfX: 12, halfZ: 9, spawn: { x: 0, z: 6.5 } },
+  hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   comp8020: { label: "COMP8020 classroom", halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } },
 };
 

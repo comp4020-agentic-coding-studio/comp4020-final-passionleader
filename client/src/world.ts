@@ -325,12 +325,15 @@ export function doorway(g: THREE.Group, x: number, z: number, facing: number, la
   const panel = new THREE.Mesh(new THREE.PlaneGeometry(1.4, 2.3), new THREE.MeshBasicMaterial({ color: 0xbfe3ff }));
   panel.position.set(0, 1.2, 0.07);
   d.add(frame, panel);
-  const el = document.createElement("div");
-  el.className = "door-label";
-  el.textContent = label;
-  const tag = new CSS2DObject(el);
-  tag.position.set(0, 3.1, 0.2);
-  d.add(tag);
+  // An empty label means the door is signed some other way.
+  if (label) {
+    const el = document.createElement("div");
+    el.className = "door-label";
+    el.textContent = label;
+    const tag = new CSS2DObject(el);
+    tag.position.set(0, 3.1, 0.2);
+    d.add(tag);
+  }
   d.position.set(x, 0, z);
   d.rotation.y = facing;
   g.add(d);

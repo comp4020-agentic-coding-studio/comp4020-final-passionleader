@@ -64,7 +64,7 @@ describe("sticky notes", () => {
   it("stays inside the space", async () => {
     const { token } = await visitor();
     const { note } = await (await api("/api/notes", "POST", { token, space: "hub", x: 999, z: -999, text: "edge" })).json();
-    expect(note).toMatchObject({ x: 12, z: -9 });
+    expect(note).toMatchObject({ x: 20, z: -13 });
   });
 
   it("can be removed by its author but not by someone else", async () => {
