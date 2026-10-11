@@ -126,3 +126,6 @@ Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agenti
 - [`4126b9b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/4126b9b): pressing E where notes overlap lists them to pick from, so the one underneath can be read.
 - [`1ba3c0f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1ba3c0f): the join screen asks for your student number.
 - [`865dc15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/865dc15): the Student Hub is bigger, with six counselling room doors (not open yet).
+- [`ced558a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ced558a): the Student Hub becomes an office (desk pods, monitors, coffee bar) and a lounge (sofas facing each other on rugs) instead of rows of tables.
+- [`2390eb1`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2390eb1): sticky notes in vivid colours, unlit so they stay bright, with a thinner rim.
+- [`82dd867`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/82dd867): on 154 the sign, canopy and door now line up over each other, as on 155.
