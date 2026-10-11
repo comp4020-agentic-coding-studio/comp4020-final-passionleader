@@ -408,15 +408,20 @@ export function buildPlayer(): THREE.Group {
   return g;
 }
 
-const NOTE_COLORS = [0xfff07a, 0xffc6e0, 0xb9f0c8, 0xbfe1ff, 0xffd6a5];
+const NOTE_COLORS = [0xffe100, 0xff2f8e, 0x22c55e, 0x1e90ff, 0xff7a00];
+const noteMats = new Map<number, THREE.MeshBasicMaterial>();
 
 /** A sticky note lying on the floor, its colour picked from the note id. */
 export function buildNote(id: number): THREE.Group {
   const g = new THREE.Group();
-  const paper = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.7), mat(NOTE_COLORS[id % NOTE_COLORS.length]!));
+  // Unlit and outside tone mapping, so the colours stay vivid in any light.
+  const color = NOTE_COLORS[id % NOTE_COLORS.length]!;
+  let paperMat = noteMats.get(color);
+  if (!paperMat) noteMats.set(color, (paperMat = new THREE.MeshBasicMaterial({ color, toneMapped: false })));
+  const paper = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.7), paperMat);
   paper.position.y = 0.02;
   // A dark rim just below the paper, so a note stands out on pale paving.
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.78, 0.016, 0.78), mat(0x3a3530));
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.016, 0.74), mat(0x3a3530));
   rim.position.y = 0.012;
   g.add(rim);
   // A slight curl at one corner so it reads as paper, not a tile.
