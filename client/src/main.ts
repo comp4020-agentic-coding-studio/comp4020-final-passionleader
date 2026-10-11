@@ -29,6 +29,7 @@ import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer } from "./net.ts";
 import { mountNoteComposer } from "./notecompose.ts";
 import { mountNotePanel, type CommentView } from "./notepanel.ts";
+import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -408,7 +409,8 @@ const radial = mountRadial(
   },
 );
 
-const busy = (): boolean => chat.isTyping() || panel.isOpen() || composer.isOpen() || settingsOpen();
+const chooser = mountNoteChooser((id) => void openNote(id));
+const busy = (): boolean => chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -712,7 +714,7 @@ function jump(): void {
 type Target =
   | { kind: "door"; door: Door }
   | { kind: "link"; label: string; url: string }
-  | { kind: "note"; id: number; author: string };
+  | { kind: "note"; id: number; author: string; here: NoteChoice[] };
 
 /** The door or note within reach, nearest first. */
 function nearestTarget(): Target | null {
@@ -727,9 +729,18 @@ function nearestTarget(): Target | null {
     const d = Math.hypot(player.position.x - link.x, player.position.z - link.z);
     if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "link", label: link.label, url: link.url }, d];
   }
+  // Every note in reach comes along, so stacked ones can all be picked.
+  const here: NoteChoice[] = [];
+  let nearest: { id: number; author: string; d: number } | null = null;
   for (const [id, view] of notes) {
     const d = Math.hypot(player.position.x - view.note.x, player.position.z - view.note.z);
-    if (d < NOTE_RANGE && d < bestD) [best, bestD] = [{ kind: "note", id, author: view.note.author }, d];
+    if (d >= NOTE_RANGE) continue;
+    here.push({ id, author: view.note.author, text: view.note.text });
+    if (!nearest || d < nearest.d) nearest = { id, author: view.note.author, d };
+  }
+  if (nearest && nearest.d < bestD) {
+    here.sort((a, b) => b.id - a.id); // newest first
+    best = { kind: "note", id: nearest.id, author: nearest.author, here };
   }
   return best;
 }
@@ -742,6 +753,9 @@ function interact(): void {
     stopMoving();
     // A new tab, so the campus stays open behind it.
     window.open(target.url, "_blank", "noopener");
+  } else if (target.here.length > 1) {
+    stopMoving();
+    chooser.open(target.here);
   } else void openNote(target.id);
 }
 
@@ -787,7 +801,9 @@ function update(dt: number, now: number): void {
           ? `${key} · ${target.door.label}`
           : target.kind === "link"
             ? `${key} · ${target.label}`
-            : `${key} · Read ${target.author}'s note`;
+            : target.here.length > 1
+              ? `${key} · Pick one of ${target.here.length} notes here`
+              : `${key} · Read ${target.author}'s note`;
     }
   }
 
