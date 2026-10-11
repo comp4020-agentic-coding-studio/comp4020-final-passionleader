@@ -22,7 +22,7 @@ export function buildOutdoor(): SpaceDef {
   floor(g, 700, 700, 0, 0, texMat("ai/grass.jpg", 180, 180, 0xb4c49c), -0.02);
   floor(g, OUTDOOR.halfX * 2 + 6, OUTDOOR.halfZ * 2 + 6, 0, 0, texMat("ai/paving.jpg", 35, 27, 0xd6d2ca));
   floor(g, 14, OUTDOOR.halfZ * 2 + 6, -2, 0, texMat("ai/paving.jpg", 7, 27), 0.01);
-  floor(g, 20, 16, -16, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
+  floor(g, 20, 16, -19, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
   // Trees, bushes and flowers (Quaternius, CC0), laid out evenly: trees in
   // a row round the edge of the map (leaving the path open north and south),
   // flowers in a grid on the lawn, and bushes round each building's foot,
@@ -56,14 +56,14 @@ export function buildOutdoor(): SpaceDef {
     scatter(g, `nature/${trees[1]}`, 8, belt, false);
   }
 
-  // The lawn (x -26..-6, z -22..-6): flowering bushes on a grid, grass and
-  // flower clumps between them on High.
+  // The lawn (x -29..-9, z -22..-6, stopping where the path's paving
+  // starts): flowering bushes on a grid, flower clumps between them on High.
   const lawnBushes: Spot[] = [];
   const clumps: Spot[] = [];
-  for (let x = -23; x <= -9; x += 4.6) {
+  for (let x = -26; x <= -12; x += 4.6) {
     for (let z = -19.5; z <= -8.5; z += 5.5) {
       lawnBushes.push({ x, z, rotY: x + z });
-      if (x + 2.3 < -7 && z + 2.75 < -7) clumps.push({ x: x + 2.3, z: z + 2.75, rotY: x });
+      if (x + 2.3 < -10 && z + 2.75 < -7) clumps.push({ x: x + 2.3, z: z + 2.75, rotY: x });
     }
   }
   scatter(g, "nature/Bush_Common_Flowers.glb", 1.1, lawnBushes);
@@ -90,10 +90,10 @@ export function buildOutdoor(): SpaceDef {
   scatter(g, "nature/Bush_Hedge.glb", 0.9, hedge);
 
   // Benches round the lawn, facing the path and the paving.
-  bench(g, colliders, -20, -5.2, 0);
-  bench(g, colliders, -13, -5.2, 0);
-  bench(g, colliders, -5.2, -17, Math.PI / 2);
-  bench(g, colliders, -5.2, -11, Math.PI / 2);
+  bench(g, colliders, -23, -5.2, 0);
+  bench(g, colliders, -16, -5.2, 0);
+  bench(g, colliders, -8.2, -17, Math.PI / 2);
+  bench(g, colliders, -8.2, -11, Math.PI / 2);
 
   // Building 155: Marie Reay Teaching Centre. Six storeys of glass with the
   // timber structure showing through (warm mullions and floor edges), as
