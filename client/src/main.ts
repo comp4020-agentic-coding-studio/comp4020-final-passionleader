@@ -7,7 +7,7 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import { playTrack } from "./audio.ts";
 import { say } from "./voice.ts";
 import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
-import { Avatar, motionFor, preloadCharacters, variantFor } from "./character.ts";
+import { Avatar, motionFor, preloadCharacters, variantFor, type Variant } from "./character.ts";
 import {
   ApiError,
   RESERVED_RE,
@@ -210,6 +210,8 @@ function speak(group: THREE.Object3D, text: string, ms: number): void {
 // latest one, so movement looks continuous rather than stepping.
 interface OtherView {
   avatar: Avatar;
+  /** Which figure they have (and so which voice). */
+  variant: Variant;
   group: THREE.Group;
   target: THREE.Vector3;
   rot: number;
@@ -224,12 +226,13 @@ function upsertOther(p: RemotePlayer): void {
   if (p.id === selfId || p.space !== space?.id) return;
   let view = others.get(p.id);
   if (!view) {
-    const avatar = new Avatar(variantFor(p.name));
+    const variant = variantFor(p.name);
+    const avatar = new Avatar(variant);
     const group = avatar.group;
     tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { avatar, group, target: new THREE.Vector3(), rot: p.rot, speed: 0 };
+    view = { avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0 };
     others.set(p.id, view);
   }
   view.target.set(p.x, p.y, p.z);
@@ -271,11 +274,13 @@ function showEmote(id: string, kind: Emote): void {
   if (kind === "yes" || kind === "no") avatar?.gesture(kind);
   if (kind === "wave" || kind === "dance") avatar?.perform(kind);
   const line = EMOTE_VOICE[kind];
-  if (line) {
+  const variant = id === selfId ? (session ? variantFor(session.name) : undefined) : others.get(id)?.variant;
+  if (line && variant) {
     const d = id === selfId ? 0 : Math.hypot(figure.position.x - player.position.x, figure.position.z - player.position.z);
-    // A stable pitch per person, so two people saying "Hello" sound different.
-    const pitch = 0.85 + (Math.abs([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)) % 30) / 100;
-    say(line, d, pitch);
+    // A voice to match the figure, and a stable pitch per person within it,
+    // so two people saying "Hello" sound different.
+    const spread = (Math.abs([...id].reduce((h, c) => (h * 31 + c.charCodeAt(0)) | 0, 0)) % 20) / 100;
+    say(line, d, variant === "female-a" ? "female" : "male", spread);
   }
 }
 
