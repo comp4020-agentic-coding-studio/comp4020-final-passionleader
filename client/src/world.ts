@@ -211,12 +211,12 @@ export function solid(colliders: Box[], w: number, d: number, x: number, z: numb
   colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
 }
 
-/** Places a model once it loads (it's drawn a moment later than the room). */
-export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0, shadow = true): void {
+/** Places a model once it loads (it's drawn a moment later than the room); `y` lifts it onto a table. */
+export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0, shadow = true, y = 0): void {
   void loadModel(file, height).then((model) => {
     if (!model) return;
     const m = model.clone(true);
-    m.position.set(x, 0, z);
+    m.position.set(x, y, z);
     m.rotation.y = rotY;
     if (shadow) enableShadows(m);
     else m.traverse((o) => void (o.userData.noShadow = true));

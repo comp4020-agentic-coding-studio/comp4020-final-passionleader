@@ -79,14 +79,17 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 
 | File | Used as |
 | --- | --- |
-| `loungeSofa.glb` | sofa |
-| `tableCoffee.glb` | coffee table |
-| `table.glb` | table |
-| `chair.glb` | chair |
 | `chairDesk.glb` | desk chair |
 | `desk.glb` | desk |
+| `computerScreen.glb` | monitor |
 | `pottedPlant.glb` | potted plant |
-| `bookcaseOpen.glb` | bookcase |
+| `plantSmall1.glb` | small plant on a coffee table |
+| `bookcaseClosedWide.glb` | bookcase |
+| `loungeDesignSofa.glb` | sofa |
+| `tableCoffeeGlass.glb` | coffee table |
+| `lampRoundFloor.glb` | floor lamp |
+| `kitchenBar.glb` | coffee bar counter |
+| `kitchenCoffeeMachine.glb` | coffee machine |
 
 ## Textures (`tex/`, ambientCG, CC0)
 

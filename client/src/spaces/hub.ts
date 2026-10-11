@@ -1,9 +1,10 @@
 import * as THREE from "three";
-import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { roomShell } from "./room.ts";
 
-// The Student Hub, inside building 154: a lounge to run into people in. Not
-// a copy of the real one, and not an official ANU service. Along the east
+// The Student Hub, inside building 154: an office at the back and a lounge
+// at the front, to run into people in. Not a copy of the real one, and not
+// an official ANU service. Along the east
 // wall, six doors for the counselling rooms (invite-only group chats, a
 // later step); only the doors exist for now.
 
@@ -24,32 +25,45 @@ export function buildHub(): SpaceDef {
   board.position.set(-10, 2.2, back);
   g.add(board);
 
-  // Two lounge corners: sofas facing a coffee table (Kenney models, CC0).
-  for (const [x, z] of [
-    [-13, -3],
-    [-6, 6],
-  ] as const) {
-    place(g, "loungeSofa.glb", 0.9, x, z - 1.8, 0);
-    place(g, "loungeSofa.glb", 0.9, x, z + 1.8, Math.PI);
-    place(g, "tableCoffee.glb", 0.45, x, z);
-    solid(colliders, 3, 1, x, z - 1.8);
-    solid(colliders, 3, 1, x, z + 1.8);
-    solid(colliders, 1.6, 0.9, x, z);
-  }
-
-  // Study tables with chairs, in a grid on the east side.
-  for (const x of [3, 7.5, 12]) {
-    for (const z of [-6, -1, 4]) {
-      place(g, "table.glb", 0.75, x, z);
-      place(g, "chair.glb", 0.9, x - 0.6, z + 0.9, Math.PI);
-      place(g, "chair.glb", 0.9, x + 0.6, z + 0.9, Math.PI);
-      solid(colliders, 1.6, 1, x, z);
+  // The office half, at the back: two pods of three desks facing each
+  // other, each with a monitor and a chair, and closed bookcases on the wall
+  // (Kenney models, CC0).
+  for (const cx of [-12, 8.5]) {
+    for (const dx of [-1.5, 0, 1.5]) {
+      const x = cx + dx;
+      place(g, "desk.glb", 0.75, x, -7, Math.PI);
+      place(g, "chairDesk.glb", 1, x, -6.1, Math.PI);
+      place(g, "computerScreen.glb", 0.45, x, -7.25, 0, true, 0.75);
+      place(g, "desk.glb", 0.75, x, -8.1);
+      place(g, "chairDesk.glb", 1, x, -9, 0);
+      place(g, "computerScreen.glb", 0.45, x, -7.85, Math.PI, true, 0.75);
     }
+    solid(colliders, 4.6, 2.3, cx, -7.55);
   }
-  for (const x of [9, 12]) {
-    place(g, "bookcaseOpen.glb", 2, x, -HALF.halfZ + 0.6);
-    solid(colliders, 2, 1, x, -HALF.halfZ + 0.6);
+  for (const x of [12.5, 15]) {
+    place(g, "bookcaseClosedWide.glb", 1.9, x, -HALF.halfZ + 0.4);
+    solid(colliders, 2, 0.7, x, -HALF.halfZ + 0.4);
   }
+  // A coffee bar in the back corner.
+  for (const x of [-18, -17]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
+  place(g, "kitchenCoffeeMachine.glb", 0.4, -18, -HALF.halfZ + 0.5, 0, true, 0.95);
+  solid(colliders, 2.2, 0.8, -17.5, -HALF.halfZ + 0.5);
+
+  // The lounge half, at the front: three corners of two sofas facing each
+  // other across a glass coffee table, on a rug, with a floor lamp.
+  const rugs = [0x3f6f73, 0xb5654a, 0xc9a13b];
+  [-11, -2, 7].forEach((x, i) => {
+    const z = 5;
+    floor(g, 3.4, 4.8, x, z, rugs[i]!, 0.015);
+    place(g, "loungeDesignSofa.glb", 0.8, x, z - 1.7, 0);
+    place(g, "loungeDesignSofa.glb", 0.8, x, z + 1.7, Math.PI);
+    place(g, "tableCoffeeGlass.glb", 0.45, x, z);
+    place(g, "plantSmall1.glb", 0.4, x + 0.3, z, 0, true, 0.45);
+    place(g, "lampRoundFloor.glb", 1.7, x + 1.9, z - 1.9);
+    solid(colliders, 2.4, 0.9, x, z - 1.7);
+    solid(colliders, 2.4, 0.9, x, z + 1.7);
+    solid(colliders, 1.4, 0.9, x, z);
+  });
 
   // The counselling rooms' doors, 4 m apart down the east wall, signed on
   // the wall itself: six floating labels would pile up seen end-on.
