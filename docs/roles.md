@@ -18,7 +18,7 @@ overlap (a big QA sweep, an asset hunt), and close it when it reports.
 | Frontend core | `client/src/main.ts`, `net.ts`, `api.ts`, `world.ts`, `index.html`, `style.css` |
 | DevOps | Dockerfile, deploys (CI once public), database resets and backups, checking the live site after each deploy |
 | Observability | Server-side logging and any live activity view (crit 10) |
-| Docs and harness | Keeps README facts, `CLAUDE.md`, `docs/`, decision records and the `PROCESS.md` history current; translates my drafts. The arguments in README, PROCESS and reflections are mine |
+| Docs and harness | Keeps README facts, `CLAUDE.md`, `docs/`, decision records and `PROCESS.md` current; translates my drafts. The arguments in README, PROCESS and reflections are mine |
 | Reviewer | Reads every slice the helper hands over before it is committed |
 | **Committer** | **The only session that runs `git add`, `commit`, `push` or tags** |
 
@@ -50,8 +50,7 @@ Hard limits for the helper:
 One session commits (the main one), so the history reads as one story and two
 sessions never race on the index. The helper hands over a finished slice with
 the list of files it touched; the main session reviews it, commits it with a
-message that says it came from the helper session, and adds the
-`PROCESS.md` history line.
+message that says it came from the helper session.
 
 ## Handoffs
 

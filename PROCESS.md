@@ -2,137 +2,109 @@
 
 ## Crit 9: everyone at once
 
-Crit 8 was a toilet you could leave one poop in. This week it became live:
-everyone in the room sees everyone else walk, jump and poop, within a tenth
-of a second. Halfway through the week the project also changed direction,
-from a joke toilet to a small ANU virtual campus. The real-time layer is what
-made that change cheap.
+Crit 8 was a toilet you could leave one poop in. This week it became live and
+turned into a small ANU campus: a stretch of campus between buildings 155 and
+154, the Student Hub and a COMP8020 classroom, joined by doors. Everyone in a
+space sees everyone else walk, chat, wave, dance and stick notes within a
+tenth of a second. The real-time layer, built first, is what made the change
+of direction cheap. Free assets and Gemini (sky, textures, music) did the rest.
 
 ## Why it changed direction
 
-The poop was always a stand-in. The idea underneath, a place where people who
-don't know each other have an excuse to meet, has a much sharper version at
-ANU: students and academics almost never meet informally, so finding a
-supervisor or a student for a lab depends on luck. A shared space with the
-Student Hub, a stretch of campus and course classrooms gives them somewhere to
-bump into each other. Before committing to it, I had the agent read the README
-of every other public final-project repo in the course (108 of them) and tell
-me only whether anyone was doing the same thing. One project is close, a few
-partly overlap, so I'm keeping my angle on staff and students meeting rather
-than campus places as such.
+Poop is a good excuse for strangers to get close, but I wanted something with
+real use: a place people can actually interact in, worth using at a real
+university. Students and academics almost never meet informally at ANU, so
+finding a supervisor or a student for a lab depends on luck. A shared space
+with the Student Hub, a stretch of campus and course classrooms gives them
+somewhere to bump into each other. I wanted it to be original, so before
+committing I had the agent read the README of every other public
+final-project repo in the course (108 of them) and tell me only whether anyone
+was doing the same thing. One is close and a few partly overlap, so I kept my
+angle on staff and students meeting rather than campus places as such.
 
-I also cut parts of my own plan once I knew what wasn't possible: Echo360 in
-a classroom needs ANU login and can't be re-broadcast; real ANU sign-in isn't
+I also cut parts of my own plan once I knew what wasn't possible: Echo360 in a
+classroom needs ANU login and can't be re-broadcast; real ANU sign-in isn't
 available to a student app; chat translation needs a paid service. The full
 order, and what this week takes from it, is in [`docs/plan.md`](docs/plan.md).
 
+## How I plan: one hand-written note
+
+I keep plan, spec and sprint in one Markdown file outside the repo, written
+almost entirely by hand in Korean: really an idea notebook and developer's
+log. Ideas, specs, reflections, harness rules and each session's role go in
+there first; then I ask the agent to carry them into `docs/plan.md`,
+`CLAUDE.md` and the rest. Whenever a new idea comes up mid-build, it goes into
+that note before it goes into code. The note is mine and is never committed.
+The agent's job on it is review: what's impossible or risky. This week that
+review turned "Echo360 in a classroom" into a question board, and a long
+wish list into this week's steps 1–9 and next week's rest.
+
 ## Why WebSockets
 
-![From crit 8 to the final project: REST writes now, WebSockets and in-memory positions next](diagrams/3-crit8-to-final.png)
+![How the real-time layer talks: browsers, and the server and SQLite in one Fly machine](diagrams/5-crit9-realtime.png)
 
-Every open tab keeps one WebSocket to the one server. Positions live only in
-the server's memory and go out ten times a second, and only when someone has
-moved. A poop is still saved over HTTP, then broadcast to everyone the moment
-it lands. A visitor's last spot reaches SQLite once, when they leave, so they
-walk back in where they were.
+A board or an arcade game can pass a fixed state around synchronously; here I
+need other people's positions on screen live, and to interact with them. So I
+chose an event-driven, asynchronous WebSocket: each tab sends its position
+only when the character has moved, at most ten times a second, and never waits
+for an acknowledgement. The server keeps positions in memory and pushes them to
+everyone in the same space every 100 ms. Sockets are what online RPGs usually
+use, and coming from DevOps at a game company, this was the case I wanted to
+apply. The database side is synchronous (SQLite through `node:sqlite`), but it
+is only written for notes, comments and a visitor's last spot when they leave,
+never for each move.
 
 I considered three alternatives:
 
 - **WebRTC** (browser to browser) is built for voice and video. With no server
   in the path, the server can't log actions (crit 10 asks for exactly that),
-  can't enforce rules like the poop cooldown, and can't save anything. It also
-  needs a relay server on locked-down networks like campus Wi-Fi, and every
-  person connects to every other. It may come back later for voice only, with
-  the WebSocket doing its signalling.
+  enforce rules like the note limits, or save anything, and it needs a relay
+  on locked-down networks like campus Wi-Fi. It may come back for voice only.
 - **Server-sent events** only go one way; every move would still need its own
   HTTP request back.
 - **Polling** can't reach "within a second" for ten people moving at once
   without hammering one small machine.
 
-I also kept the protocol generic: the server only knows "move" and "action",
-not "poop", because the spaces and what people do in them are going to keep
-changing.
+The protocol stays generic: the server knows "move", "enter", "chat", "emote"
+and "action", not "poop" or "note", because the spaces and what people do in
+them keep changing. That is why sticky notes replaced poops as just another
+kind of "action", with no new message type. What lasts and who sees it is decided in
+[`docs/decisions/001`](docs/decisions/001-what-lasts-and-who-sees-it.md).
 
 ## How I worked with the agent
 
 ![Crit 8 work split between the Opus session (server, deploy, docs) and the Sonnet session (client, assets, QA)](diagrams/4-work-split.png)
 
-**I plan in my own words first.** I keep a Korean planning document outside
-the repo and update it before each step. The agent reviews it for what's
-impossible or risky, and I decide. This week that review is what turned
-"Echo360 in a classroom" into a question board.
-
-**Two sessions, written down.** In crit 8 I split the work between two
-sessions by instinct. This week I wrote the split into
-[`docs/roles.md`](docs/roles.md), linked from `CLAUDE.md` so every session
-reads it: an Opus main session owns the server, shared client files, deploys
-and every commit; a Sonnet helper builds self-contained modules (this week the
-keyboard key guide) and does local QA with several browsers. One committer
-keeps the history readable.
+**Two sessions, written down.** In crit 8 I split the work by instinct. This
+week I wrote it into [`docs/roles.md`](docs/roles.md), linked from `CLAUDE.md`
+so every session reads it: an Opus main session at high effort owns the
+server, shared client files, deploys and every commit; a Sonnet helper at
+medium effort builds self-contained modules and does local QA. One committer
+keeps the history readable, and the split saved credits as well as time.
 
 **Corrections that became rules.**
 
 - Poops kept vanishing. The final-project template's `fly.toml` doesn't set
   the database path that crit 7's did, so the database sat on the machine's
-  wiped disk and reset on every deploy and every auto-stop. The image now sets
-  it, and I checked by restarting the machine with a poop in place.
-- Resetting the live database took several tries: a one-line command quoted
-  through `flyctl ssh` was mangled, then a script path resolved from the wrong
-  folder, and finally the real blocker: the machine had auto-stopped, so
-  there was nothing to ssh into, and the error never reached my screen. It's
-  now a script with an absolute path, `scripts/reset-db.ts`, run after
+  wiped disk and reset on every deploy and auto-stop. The image now sets it,
+  and I checked by restarting the machine with a poop in place.
+- Resetting the live database took several tries (a mangled one-liner through
+  `flyctl ssh`, a wrong working folder, and a stopped machine whose error never
+  reached my screen). It's now `scripts/reset-db.ts`, run after
   `flyctl machine start`.
-- Live testing goes through named test accounts only, never the spec suite,
-  so the rooms people see aren't full of random names.
+- Live testing goes through named test accounts only, never the spec suite, so
+  the rooms people see aren't full of random names.
+- The rule that photos of real buildings are references only did its job: the
+  Gemini sky I generated had buildings that looked like a real campus along
+  the bottom, so only its clouds and sky were kept.
 
 ## Stack
 
 ![Database choice: SQLite on the volume (chosen) vs. managed Postgres and Redis (given up)](diagrams/2-database-choice.png)
 
 Three.js for 3D in the browser; Hono on Node 24 serving the client, the API
-and the WebSocket from one process; SQLite (Node's built-in `node:sqlite`) on
-the Fly volume. I ruled out managed Postgres and Redis: they cost money, add
-processes to one small machine, and with a single server there's nothing for
-Redis to share. Colyseus would give me rooms out of the box, but my rooms are
-simple enough that plain `ws` with one channel per space keeps the protocol in
-my hands.
-
-## History
-
-Crit 9 (crit 8's history is in the [`crit-8`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/tree/crit-8) tag).
-
-- [`1cb36a4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1cb36a4): WebSocket layer on the server: live positions in memory, poops broadcast the moment they land, last spot saved on leaving.
-- [`a83202c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a83202c): the client shows everyone live; WASD + E to poop + Space to jump; keyboard key guide; centred cooldown notice.
-- [`238efdf`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/238efdf): `docs/roles.md`, the role split between the two parallel sessions, linked from `CLAUDE.md`.
-- [`d25f697`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d25f697), [`aeb95ba`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/aeb95ba): `scripts/reset-db.ts`, a file-based reset for the live database after quoted one-liners failed, then fixed to use an absolute path.
-- [`e8e2ab4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/e8e2ab4): docs for the ANU virtual campus direction: `docs/plan.md`, updated `CLAUDE.md` and `docs/roles.md`, this file rewritten for crit 9.
-- [`d4d4645`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d4d4645): server for the campus: spaces, chat, emotes, sticky notes and comments with limits and cooldowns, password test/admin accounts; poops removed.
-- [`70b03b9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/70b03b9): client for the campus: three spaces joined by doors, chat, the Q menu, sticky notes; radial, chat and note dialogs built by the helper session.
-- [`5240e76`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/5240e76): per-space music (made with Google AI), CC0 textures and furniture models.
-- [`6a4b122`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/6a4b122): README facts, CLAUDE.md rules and the plan brought up to date.
-- [`c822dd4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c822dd4): texture warnings fixed (found in the helper session's QA); key guide captions readable outdoors.
-- [`c2d8e9c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c2d8e9c): graphics pass after the user called it clay: PBR materials, sun shadows, a real sky, glass curtain-wall buildings, light concrete paving.
-- [`149ebbe`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/149ebbe): COMP8020 (not COMP8280) everywhere, numbered Q menu, the classroom whiteboard opens the course page; spots for the classmates' projects board and guestbook.
-- [`fcfc418`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/fcfc418): animated characters (idle, walk, run, nod, head shake) replace the clay figures.
-- [`8e32f38`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8e32f38): a photographed sky and real trees, bushes and flowers outdoors.
-- [`12f9cac`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/12f9cac): buildings 155 and 154 reshaped after the real ones; occluders handle multi-material meshes and hide a building the camera is inside.
-- [`c8ae34e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c8ae34e): a settings dialog (gear beside mute) with Low/High graphics, Low by default, after the user reported frame drops.
-- [`88a384a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/88a384a): wave and dance move the body; wave, yes, no and "mate" are spoken aloud to people nearby in the same space.
-- [`93c09a7`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/93c09a7): Low quality loads the photographed sky too; without it the scene washed out white.
-- [`7182068`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/7182068): trees in an even row round the map's edge, bushes and flowers evenly spaced on the lawn and round both buildings, new benches; plants are instanced so they stay cheap on Low.
-- [`a4bf4a9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a4bf4a9): a cloudy CC0 sky with a deeper blue, drawn on a dome that follows the camera.
-- [`344402a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/344402a): both character variants preload, so your figure isn't clay while it loads.
-- [`a08a08e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a08a08e): sign text shrinks to fit (the COMP8020 whiteboard was clipped); sticky notes get a dark rim.
-- [`4126b9b`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/4126b9b): pressing E where notes overlap lists them to pick from, so the one underneath can be read.
-- [`1ba3c0f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1ba3c0f): the join screen asks for your student number.
-- [`865dc15`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/865dc15): the Student Hub is bigger, with six counselling room doors (not open yet).
-- [`ced558a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ced558a): the Student Hub becomes an office (desk pods, monitors, coffee bar) and a lounge (sofas facing each other on rugs) instead of rows of tables.
-- [`2390eb1`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2390eb1): sticky notes in vivid colours, unlit so they stay bright, with a thinner rim.
-- [`82dd867`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/82dd867): on 154 the sign, canopy and door now line up over each other, as on 155.
-- [`c868ed3`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c868ed3): a new, deeper sky backdrop made from the user's Gemini image (clouds and sky only; the buildings along its bottom are cropped out).
-- [`c9a9159`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c9a9159): the user's Gemini textures for 154's facade, the paving, grass, classroom carpet and Hub floorboards replace the old ones.
-- [`5091344`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/5091344): your own chat lines are left-aligned like everyone else's.
-- [`f120cbf`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f120cbf): the lawn, its bushes and benches move 3 m west so the lawn no longer covers the path's paving.
-- [`b8da036`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b8da036): female figures speak emotes in a woman's voice (and a higher pitch), male figures in a man's.
-- [`32f084d`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/32f084d): indoors the sun and reflected light are softer, so the pale Hub and classroom no longer glare.
-- [`3f19511`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/3f19511): a diagram of the real-time layer (browser, server and SQLite in one Fly machine) in `diagrams/5-crit9-realtime`.
+and the WebSocket from one process; SQLite on the Fly volume. I ruled out
+managed Postgres and Redis: they cost money, add processes to one small
+machine, and with a single server there's nothing for Redis to share.
+Colyseus would give me rooms out of the box, but my rooms are simple enough
+that plain `ws` with one channel per space keeps the protocol in my hands.

@@ -18,11 +18,9 @@ Read before planning or building: `README.md` (what good means for this app),
   @docs/roles.md. Only the main session commits.
 - Commit one feature at a time, small, with a message that says why.
 - Write every file in this repo in English (docs, comments, commit messages).
-- After each task I give you, add a line to the **History** section at the
-  bottom of `PROCESS.md`: the commit hash (as a link) and one sentence on what
-  changed. History belongs to the current crit only: when a new crit week
-  starts, clear it and start again (crit 8's history is removed when crit 9
-  work begins).
+- `PROCESS.md` has no History section: it must stay within 900–1100 words,
+  and the commit messages and the `crit-*` tags already carry the history.
+  Rewrite `PROCESS.md` at each crit so it describes the project as it stands.
 - Stay inside the current crit's scope. Crit 9 is steps 1–9 of
   `docs/plan.md` (accounts, spaces, doors, three maps, chat, the Q emote menu,
   sticky notes); step 10 (server logging) only if there's time. Everything
