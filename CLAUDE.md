@@ -24,7 +24,8 @@ Read before planning or building: `README.md` (what good means for this app),
 - Stay inside the current crit's scope. Crit 10 is the "Crit 10" section of
   `docs/plan.md`: the server log, classrooms the admin opens, links in an
   in-app window, then (pulled forward while there's budget) the east road,
-  the dog, the classroom board, the Sketch & Guess game and the library.
+  the dog, the classroom board, the Sketch & Guess game, the library and
+  the meeting rooms (chat only: no files, no voice).
   Everything else in the plan is out until its crit.
 - Keep the real-time layer generic ("move", "action", "chat", per space), never
   tied to one room or one verb: the spaces and what people do in them will
@@ -53,6 +54,12 @@ Read before planning or building: `README.md` (what good means for this app),
   remove; closing a classroom removes its board.
 - Chat is never stored: 200 characters, the space only, gone from screens
   after a minute.
+- Meeting rooms (counselling rooms off the Hub, team rooms off classrooms
+  and the library) hold six people at most. Team rooms are open; a
+  counselling room lets in only those someone inside has invited. Both are
+  checked on the server and refusals are logged. A room's chat lives in
+  server memory only while someone is inside; when the room empties, its
+  chat, host and invites go. No notes in meeting rooms.
 - Everything a person does reaches only the people in the same space.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,

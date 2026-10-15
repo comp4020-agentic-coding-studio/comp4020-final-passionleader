@@ -1,12 +1,13 @@
 import * as THREE from "three";
 import { block, doorway, floor, mat, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
 // The Student Hub, inside building 154: an office at the back and a lounge
 // at the front, to run into people in. Not a copy of the real one, and not
 // an official ANU service. Along the east
-// wall, six doors for the counselling rooms (invite-only group chats, a
-// later step); only the doors exist for now.
+// wall, six doors to the counselling rooms (meeting.ts): invite-only group
+// chats, six people at most.
 
 const HALF = { halfX: 20, halfZ: 13 };
 
@@ -75,7 +76,7 @@ export function buildHub(): SpaceDef {
     num.rotation.y = -Math.PI / 2;
     g.add(num);
   });
-  const rooms = textPlane(["Counselling rooms · coming soon"], 14, 0.6, { bg: "#e8e4da", fg: "#2f5d8a", font: 0.4 });
+  const rooms = textPlane(["Counselling rooms · invite only"], 14, 0.6, { bg: "#e8e4da", fg: "#2f5d8a", font: 0.4 });
   rooms.position.set(wallX, 3.55, 0);
   rooms.rotation.y = -Math.PI / 2;
   g.add(rooms);
@@ -99,7 +100,10 @@ export function buildHub(): SpaceDef {
     title: "Student Hub",
     group: g,
     colliders,
-    doors: [{ x: -HALF.halfX + 1.1, z: 6, label: "Go outside", to: "outdoor", arrive: { x: 4.1, z: 3 } }],
+    doors: [
+      { x: -HALF.halfX + 1.1, z: 6, label: "Go outside", to: "outdoor", arrive: { x: 4.1, z: 3 } },
+      ...roomDoors("counsel", COUNSEL_DOORS, (n) => `Enter counselling room ${n}`),
+    ],
     ...HALF,
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 6.5, 7.5),

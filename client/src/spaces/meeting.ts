@@ -1,0 +1,109 @@
+import * as THREE from "three";
+import { block, doorway, place, solid, texMat, textPlane, type Box, type Door, type SpaceDef, type SpaceId } from "../world.ts";
+import { roomShell } from "./room.ts";
+
+// The small meeting rooms: six counselling rooms off the Student Hub
+// (invite-only) and team rooms off every classroom (three) and the library
+// (five), open to anyone. Each is a space of its own, so its people and its
+// chat stay inside; six at most. The server decides who gets in
+// (server/realtime.ts) and knows the same door spots (server/spaces.ts
+// roomOf). Inside: one table with six chairs, a screen on the wall, the way
+// out on the north wall.
+
+const HALF = { halfX: 5, halfZ: 4 };
+export const ROOM_CAP = 6;
+
+export type RoomKind = "counselling" | "team";
+
+/** Where you stand to open each room's door, in the space it opens off. Same spots as server/spaces.ts. */
+export const COUNSEL_DOORS = [-10, -6, -2, 2, 6, 10].map((z) => ({ x: 18.9, z }));
+export const CLASSROOM_TEAM_DOORS = [-3, 0.5, 4].map((z) => ({ x: -8.9, z }));
+export const LIBRARY_TEAM_DOORS = [
+  { x: -14.9, z: -1.5 },
+  { x: -14.9, z: 2.5 },
+  { x: -14.9, z: 6.5 },
+  { x: 14.9, z: -1.5 },
+  { x: 14.9, z: 2.5 },
+];
+
+export interface RoomRef {
+  kind: RoomKind;
+  /** What the window and the HUD call it. */
+  title: string;
+  parent: SpaceId;
+  door: { x: number; z: number };
+}
+
+/** The meeting room behind a space id, if it is one; `classroomCode` names a classroom's code. */
+export function roomRef(id: SpaceId, classroomCode: (space: SpaceId) => string | undefined): RoomRef | undefined {
+  const counsel = /^counsel-([1-9])$/.exec(id);
+  if (counsel) {
+    const n = Number(counsel[1]);
+    const door = COUNSEL_DOORS[n - 1];
+    return door && { kind: "counselling", title: `Counselling room ${n}`, parent: "hub", door };
+  }
+  const team = /^team-([a-z0-9]+)-([1-9])$/.exec(id);
+  if (!team) return undefined;
+  const parent = team[1]!;
+  const n = Number(team[2]);
+  const code = parent === "library" ? "Library" : classroomCode(parent);
+  const doors = parent === "library" ? LIBRARY_TEAM_DOORS : code ? CLASSROOM_TEAM_DOORS : [];
+  const door = doors[n - 1];
+  return door && code ? { kind: "team", title: `${code} · Team room ${n}`, parent, door } : undefined;
+}
+
+/** The doors into a space's rooms, for that space's `doors`. */
+export function roomDoors(prefix: string, doors: { x: number; z: number }[], label: (n: number) => string): Door[] {
+  return doors.map((d, i) => ({
+    ...d,
+    label: label(i + 1),
+    to: `${prefix}-${i + 1}`,
+    // Out of the door's reach, so a second E doesn't walk you straight back out.
+    arrive: { x: 0, z: -HALF.halfZ + 2.9 },
+  }));
+}
+
+export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
+  const g = new THREE.Group();
+  const colliders: Box[] = [];
+  const counselling = ref.kind === "counselling";
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 4, 3.2), counselling ? 0xe3e8ee : 0xeee9df);
+
+  const sign = textPlane([ref.title, counselling ? "invite only · up to 6" : "open to all · up to 6"], 4.4, 0.9, {
+    bg: counselling ? "#2f5d8a" : "#5b3a24",
+    fg: "#ffffff",
+    font: 0.3,
+  });
+  sign.position.set(-2.6, 3.1, -HALF.halfZ + 0.01);
+  g.add(sign);
+  doorway(g, 0, -HALF.halfZ + 0.05, 0, "Leave the room");
+
+  // The table and six chairs, three a side.
+  block(g, colliders, [3.6, 0.75, 1.4], [0, 1], 0x8a6a50);
+  for (const x of [-1.2, 0, 1.2]) {
+    place(g, "chairDesk.glb", 1, x, 1 - 1.15, 0);
+    place(g, "chairDesk.glb", 1, x, 1 + 1.15, Math.PI);
+  }
+  solid(colliders, 3.8, 3.4, 0, 1);
+  // A screen on the east wall, for the team's work later.
+  const screen = textPlane(["Shared screen", "(coming later)"], 2.6, 1.5, { bg: "#1f2d3d", fg: "#c9d6e3", font: 0.24 });
+  screen.position.set(HALF.halfX - 0.01, 1.9, 0.6);
+  screen.rotation.y = -Math.PI / 2;
+  g.add(screen);
+  place(g, "pottedPlant.glb", 1.3, -HALF.halfX + 0.6, HALF.halfZ - 0.6);
+  solid(colliders, 0.7, 0.7, -HALF.halfX + 0.6, HALF.halfZ - 0.6);
+
+  return {
+    id,
+    title: ref.title,
+    group: g,
+    colliders,
+    doors: [{ x: 0, z: -HALF.halfZ + 1.1, label: "Leave the room", to: ref.parent, arrive: { x: ref.door.x + (ref.door.x > 0 ? -1.8 : 1.8), z: ref.door.z } }],
+    ...HALF,
+    background: 0xd9d4c6,
+    camera: new THREE.Vector3(0, 5.5, 6.5),
+    // No tracks of its own: the music of the space outside carries on.
+    bgm: [],
+    noNotes: true,
+  };
+}

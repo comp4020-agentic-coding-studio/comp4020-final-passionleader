@@ -31,6 +31,8 @@ export type Event =
   | "game-join"
   | "classroom-created"
   | "classroom-removed"
+  | "room-invite"
+  | "room-closed"
   | "refused";
 
 /** Who did it: a name, and which browser (a hash of the token, not the token). */

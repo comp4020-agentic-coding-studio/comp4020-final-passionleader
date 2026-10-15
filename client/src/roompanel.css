@@ -1,0 +1,302 @@
+/* The group-chat window for a counselling room or a team room: a panel over
+   the game on the right (below the music box and the gear), a sheet at the
+   top under the HUD on phones. Lines don't fade; the log scrolls. */
+
+#room-panel {
+  position: fixed;
+  top: 70px; /* below the music box and the gear */
+  right: 12px;
+  bottom: 12px;
+  z-index: 17;
+  box-sizing: border-box;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  font-family: system-ui, sans-serif;
+}
+
+#room-panel[hidden],
+#room-panel [hidden] {
+  display: none !important;
+}
+
+#room-panel button {
+  font: inherit;
+  cursor: pointer;
+}
+
+#room-panel button:focus-visible,
+#room-panel input:focus-visible {
+  outline: 3px solid var(--accent, #6b3f1d);
+  outline-offset: 2px;
+}
+
+.room-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 10px 10px 6px 14px;
+}
+
+.room-toggle {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: inherit;
+  text-align: left;
+  cursor: default;
+}
+
+/* Up to two lines, so "COMP8020 · Team room 2" isn't cut off beside the
+   Leave button. */
+.room-title {
+  margin: 0;
+  min-width: 0;
+  overflow: hidden;
+  font-size: 1.05rem;
+  font-weight: 700;
+  line-height: 1.2;
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  overflow-wrap: anywhere;
+}
+
+.room-count {
+  flex: none;
+  padding: 0 8px;
+  border-radius: 999px;
+  background: rgba(107, 63, 29, 0.15);
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.room-chevron {
+  display: none;
+  flex: none;
+  margin-left: auto;
+  font-size: 0.8rem;
+}
+
+.room-leave {
+  flex: none;
+  min-height: 44px;
+  padding: 6px 10px;
+  font-size: 0.9rem;
+  border: 0;
+  border-radius: 8px;
+  background: #e6dcc0;
+  color: var(--ink, #3b2a12);
+  font-weight: 700;
+}
+
+.room-members {
+  flex: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0;
+  padding: 0 14px 6px;
+  list-style: none;
+}
+
+.room-chip {
+  padding: 2px 8px;
+  border-radius: 999px;
+  background: #fffbe0;
+  border: 1px solid rgba(107, 63, 29, 0.35);
+  font-size: 0.8rem;
+  overflow-wrap: anywhere;
+}
+
+.room-chip.is-host {
+  border-color: var(--accent, #6b3f1d);
+  font-weight: 700;
+}
+
+.room-chip small {
+  margin-left: 4px;
+  color: var(--accent, #6b3f1d);
+  font-weight: 700;
+}
+
+.room-invite {
+  flex: none;
+  padding: 0 14px 8px;
+}
+
+.room-invite-row {
+  display: flex;
+  gap: 6px;
+}
+
+.room-invite-row input,
+.room-send-row input {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 6px 10px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 8px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+}
+
+.room-primary {
+  flex: none;
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+  font-weight: 700;
+}
+
+.room-primary:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.room-note {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  opacity: 0.8;
+  overflow-wrap: anywhere;
+}
+
+.room-error {
+  margin: 4px 0 0;
+  min-height: 1.1em;
+  color: #9a2a1a;
+  font-size: 0.8rem;
+}
+
+.room-log {
+  flex: 1;
+  min-height: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0 10px;
+  padding: 8px;
+  overflow-y: auto;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.45);
+}
+
+.room-line {
+  max-width: 88%;
+  padding: 4px 10px;
+  border-radius: 12px;
+  background: #fffbe0;
+  font-size: 0.85rem;
+  line-height: 1.35;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+}
+
+.room-line b {
+  display: block;
+  font-size: 0.72rem;
+  opacity: 0.75;
+}
+
+.room-line.self {
+  align-self: flex-end;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+}
+
+.room-line.system {
+  align-self: center;
+  max-width: 100%;
+  background: none;
+  font-style: italic;
+  opacity: 0.75;
+  text-align: center;
+  padding: 0 4px;
+}
+
+.room-send-row {
+  flex: none;
+  display: flex;
+  gap: 6px;
+  padding: 8px 10px 10px;
+}
+
+@media (max-width: 600px), (pointer: coarse) {
+  #room-panel {
+    top: 96px; /* under the HUD, as the chat log is on phones */
+    right: 12px;
+    left: 12px;
+    bottom: auto;
+    width: auto;
+    max-width: none;
+    height: 42vh;
+  }
+
+  .room-toggle {
+    cursor: pointer;
+    min-height: 44px;
+  }
+
+  /* The sheet is short, so keep the top part tight and leave the log room. */
+  .room-head {
+    padding-top: 6px;
+    padding-bottom: 2px;
+  }
+
+  .room-members {
+    padding-bottom: 4px;
+  }
+
+  .room-invite {
+    padding-bottom: 4px;
+  }
+
+  .room-error {
+    min-height: 0;
+    margin-top: 2px;
+  }
+
+  .room-note {
+    margin-top: 2px;
+  }
+
+  .room-log {
+    min-height: 90px;
+  }
+
+  .room-send-row {
+    padding-top: 6px;
+    padding-bottom: 8px;
+  }
+
+  .room-chevron {
+    display: inline;
+  }
+
+  #room-panel.is-collapsed {
+    height: auto;
+  }
+
+  #room-panel.is-collapsed > :not(.room-head) {
+    display: none !important;
+  }
+}

@@ -18,6 +18,20 @@ export interface RemotePlayer {
 
 export type Emote = "wave" | "yes" | "no" | "mate" | "dance";
 
+/** A meeting room as the server sees it (server/realtime.ts roomView). */
+export interface RoomState {
+  kind: "counselling" | "team";
+  cap: number;
+  members: string[];
+  host?: string;
+  invited?: string[];
+}
+export interface RoomLine {
+  name: string;
+  text: string;
+  system?: boolean;
+}
+
 export interface NetHandlers {
   welcome(selfId: string, space: SpaceId, players: RemotePlayer[]): void;
   players(players: RemotePlayer[]): void;
@@ -34,6 +48,14 @@ export interface NetHandlers {
   board(): void;
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
+  /** The server let us into a meeting room: what's in it and what's been said. */
+  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[]): void;
+  /** Who's in the room, or who's invited, changed. */
+  room(room: RoomState): void;
+  /** A line for the room's window from the room itself ("… joined"). */
+  roomLine(line: RoomLine): void;
+  /** The server said no: the room is full, invite-only, or the invite failed. */
+  roomRefused(space: SpaceId, reason: string): void;
   status(online: boolean): void;
 }
 
@@ -45,6 +67,8 @@ export interface Net {
   enter(space: SpaceId, x: number, z: number): void;
   chat(text: string): void;
   emote(kind: Emote): void;
+  /** Invites someone into the counselling room we're in. */
+  invite(name: string): void;
   close(): void;
 }
 
@@ -97,6 +121,11 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "note-removed") return on.noteRemoved(m.id as number);
           if (m.kind === "comment") return on.comment(m.comment as Comment);
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
+          if (m.kind === "room-open")
+            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[]);
+          if (m.kind === "room") return on.room(m.room as RoomState);
+          if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
+          if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
       }
     };
     ws.onclose = () => {
@@ -131,6 +160,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     emote(kind) {
       sendNow({ t: "emote", kind });
+    },
+    invite(name) {
+      sendNow({ t: "invite", name });
     },
     close() {
       closed = true;

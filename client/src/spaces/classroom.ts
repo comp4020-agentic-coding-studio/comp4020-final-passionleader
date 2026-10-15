@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
+import { CLASSROOM_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
 // A classroom inside building 155: rows of desks facing a whiteboard, a
@@ -51,13 +52,18 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
 
   // The way out is on the right-hand wall, at the back.
   doorway(g, HALF.halfX - 0.05, 6, -Math.PI / 2, "Exit to campus");
+  // Team rooms down the left-hand wall: anyone may go in, six at most.
+  CLASSROOM_TEAM_DOORS.forEach((d, i) => doorway(g, -HALF.halfX + 0.05, d.z, Math.PI / 2, `Team room ${i + 1}`));
 
   return {
     id,
     title: `${code} classroom`,
     group: g,
     colliders,
-    doors: [{ x: 8.9, z: 6, label: "Go outside", to: "outdoor", arrive: { x: -8.4, z: 7 } }],
+    doors: [
+      { x: 8.9, z: 6, label: "Go outside", to: "outdoor", arrive: { x: -8.4, z: 7 } },
+      ...roomDoors(`team-${id}`, CLASSROOM_TEAM_DOORS, (n) => `Enter team room ${n}`),
+    ],
     ...HALF,
     background: 0xe6e1d4,
     camera: new THREE.Vector3(0, 6.5, 7.5),

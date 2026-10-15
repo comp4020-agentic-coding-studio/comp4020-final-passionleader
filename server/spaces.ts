@@ -3,10 +3,11 @@
 // can refuse a space that doesn't exist and clamp a position that wanders
 // outside one. Doors between spaces are the client's business.
 //
-// Two kinds: the fixed spaces (the campus outside and the Student Hub), and
-// classrooms in building 155, which the admin adds and removes (db.ts keeps
-// the list). Every classroom is the same room; its space id is its course
-// code in lower case ("comp8020"), so notes and last spots key on that.
+// Three kinds: the fixed spaces (the campus outside, the Student Hub, the
+// library), classrooms in building 155, which the admin adds and removes
+// (db.ts keeps the list), and meeting rooms off some of those (below). Every
+// classroom is the same room; its space id is its course code in lower case
+// ("comp8020"), so notes and last spots key on that.
 
 export type SpaceId = string;
 
@@ -65,8 +66,55 @@ export const FIRST_SPACE: SpaceId = "outdoor";
 export function spaceInfo(id: SpaceId): Space | undefined {
   if (Object.hasOwn(SPACES, id)) return SPACES[id];
   const code = classrooms.get(id);
-  return code ? { label: `${code} classroom`, ...CLASSROOM } : undefined;
+  if (code) return { label: `${code} classroom`, ...CLASSROOM };
+  return roomOf(id) ? { label: "meeting room", ...ROOM } : undefined;
 }
+
+// --- meeting rooms -----------------------------------------------------------
+// Small rooms off a bigger space, each a space of its own so its people and
+// its chat stay in it: six counselling rooms off the Student Hub (invite-only),
+// three team rooms off every classroom and five off the library (open to
+// anyone). Six people at most. realtime.ts decides who gets in. The door
+// spots are the client's too (client/src/spaces/meeting.ts).
+
+export const ROOM_CAP = 6;
+export const ROOM: Omit<Space, "label"> = { halfX: 5, halfZ: 4, spawn: { x: 0, z: -2 } };
+const COUNSEL_DOORS = [-10, -6, -2, 2, 6, 10].map((z) => ({ x: 18.9, z }));
+const CLASSROOM_TEAM_DOORS = [-3, 0.5, 4].map((z) => ({ x: -8.9, z }));
+const LIBRARY_TEAM_DOORS = [
+  { x: -14.9, z: -1.5 },
+  { x: -14.9, z: 2.5 },
+  { x: -14.9, z: 6.5 },
+  { x: 14.9, z: -1.5 },
+  { x: 14.9, z: 2.5 },
+];
+
+export interface Room {
+  kind: "counselling" | "team";
+  /** The space its door is in, where you go when you leave. */
+  parent: SpaceId;
+  /** Where its door is, in the parent space. */
+  door: { x: number; z: number };
+}
+
+/** The meeting room behind a space id ("counsel-3", "team-comp8020-1", "team-library-5"), if it is one. */
+export function roomOf(id: unknown): Room | undefined {
+  if (typeof id !== "string") return undefined;
+  const counsel = /^counsel-([1-9])$/.exec(id);
+  if (counsel) {
+    const door = COUNSEL_DOORS[Number(counsel[1]) - 1];
+    return door && { kind: "counselling", parent: "hub", door };
+  }
+  const team = /^team-([a-z0-9]+)-([1-9])$/.exec(id);
+  if (!team) return undefined;
+  const parent = team[1]!;
+  const doors = parent === "library" ? LIBRARY_TEAM_DOORS : classrooms.has(parent) ? CLASSROOM_TEAM_DOORS : [];
+  const door = doors[Number(team[2]) - 1];
+  return door && { kind: "team", parent, door };
+}
+
+/** The team rooms off a classroom, so closing it can empty them too. */
+export const teamRoomsOf = (classroom: SpaceId): SpaceId[] => CLASSROOM_TEAM_DOORS.map((_, i) => `team-${classroom}-${i + 1}`);
 
 export const isSpace = (s: unknown): s is SpaceId => typeof s === "string" && spaceInfo(s) !== undefined;
 export const isClassroom = (s: unknown): s is SpaceId => typeof s === "string" && classrooms.has(s);
@@ -118,16 +166,19 @@ const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 2, z: -1.2 },
   { x: 4, z: -1.2 },
   { x: 6, z: -1.2 },
+  ...LIBRARY_TEAM_DOORS,
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
   { x: 0, z: -6.7 }, // the whiteboard
   { x: -6.4, z: -6.7 }, // the board
+  ...CLASSROOM_TEAM_DOORS,
 ];
 
 /** Why a note can't go here, or null if it can. */
 export function noteSpotError(space: SpaceId, x: number, z: number): string | null {
   if (NO_NOTE_SPACES.has(space)) return "No sticky notes in the Student Hub.";
+  if (roomOf(space)) return "No sticky notes in meeting rooms.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
   const clear = outside ? OUTDOOR_KEEP_CLEAR : space === "library" ? LIBRARY_KEEP_CLEAR : CLASSROOM_KEEP_CLEAR;

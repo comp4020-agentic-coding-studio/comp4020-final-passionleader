@@ -37,7 +37,7 @@ import {
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
 import { mountKeyGuide } from "./keyguide.ts";
-import { connect, type Emote, type Net, type RemotePlayer } from "./net.ts";
+import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
 import { mountNoteComposer } from "./notecompose.ts";
 import { mountNotePanel, type CommentView } from "./notepanel.ts";
 import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
@@ -45,8 +45,9 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountBoard } from "./board.ts";
+import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountRadial } from "./radial.ts";
-import { getSpace, isSpaceId, setClassrooms } from "./spaces/index.ts";
+import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
@@ -413,6 +414,18 @@ const composer = mountNoteComposer(async (text) => {
 let net: Net | null = null;
 const chat = mountChat({ onSend: (text) => net?.chat(text), maxLength: 200 });
 
+// In a meeting room, its group-chat window takes the place of the corner chat.
+const roomPanel = mountRoomPanel({
+  onSend: (text) => net?.chat(text),
+  onInvite: (name) => net?.invite(name),
+  onLeave: () => {
+    const out = space?.doors[0];
+    if (out) setSpace(out.to, out.arrive, true);
+  },
+  maxLength: 200,
+});
+const roomInfo = (id: SpaceId, room: RoomState): RoomInfo => ({ title: meetingRoom(id)?.title ?? "Room", ...room });
+
 const radial = mountRadial(
   [
     // Numbered, because keys 1–6 pick them while Q is held.
@@ -532,7 +545,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -550,6 +563,10 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   for (const nid of [...notes.keys()]) removeNote(nid);
   for (const oid of [...others.keys()]) removeOther(oid);
   noteRequest++;
+  if (roomPanel.isOpen() && !meetingRoom(id)) {
+    roomPanel.close();
+    if (playing) chat.show();
+  }
 
   space = getSpace(id);
   if (!space.group.userData.shadowsOn) {
@@ -594,6 +611,7 @@ async function openNote(id: number): Promise<void> {
 
 /** Why a note can't go where the player stands, or null (server/spaces.ts noteSpotError). */
 function noteSpotError(): string | null {
+  if (space && meetingRoom(space.id)) return "No sticky notes in meeting rooms.";
   if (!space || space.noNotes) return "No sticky notes in the Student Hub.";
   const { x, z } = player.position;
   if ((space.noteBuildings ?? []).some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
@@ -645,6 +663,7 @@ function showJoin(message = ""): void {
   playing = false;
   keyGuide.hide();
   chat.hide();
+  roomPanel.close();
   net?.close();
   net = null;
   for (const id of [...others.keys()]) removeOther(id);
@@ -722,7 +741,8 @@ function goOnline(token: string): void {
     },
     leave: removeOther,
     chat(id, name, text) {
-      chat.add({ name, text, self: id === selfId });
+      if (roomPanel.isOpen()) roomPanel.add({ name, text, self: id === selfId });
+      else chat.add({ name, text, self: id === selfId });
       const figure = figureOf(id);
       if (figure) speak(figure, text, 5000);
     },
@@ -753,6 +773,35 @@ function goOnline(token: string): void {
       toast("That classroom was closed. You're back outside.");
       setSpace(to, { x, z }, false);
       players.forEach(upsertOther);
+    },
+    roomOpen(id, x, z, room, lines, players) {
+      if (space?.id !== id) setSpace(id, { x, z }, false);
+      players.forEach(upsertOther);
+      chat.hide();
+      roomPanel.open(
+        roomInfo(id, room),
+        lines.map((l) => ({ ...l, self: !l.system && l.name === session?.name })),
+      );
+    },
+    room(room) {
+      if (space && roomPanel.isOpen()) roomPanel.update(roomInfo(space.id, room));
+    },
+    roomLine(line) {
+      if (roomPanel.isOpen()) roomPanel.add(line);
+    },
+    roomRefused(id, reason) {
+      toast(
+        reason === "full"
+          ? "That room is full (6 people)."
+          : reason === "not invited"
+            ? "That room is invite-only. Ask someone inside to invite you."
+            : reason === "no such user"
+              ? "There's nobody with that name."
+              : "You can't do that here.",
+      );
+      // Back from a reconnect into a room that won't have us: step outside it.
+      const out = meetingRoom(id);
+      if (out && space?.id === id) setSpace(out.parent, { x: out.door.x + (out.door.x > 0 ? -1.8 : 1.8), z: out.door.z }, true);
     },
     status(online) {
       if (session && space) {
@@ -812,7 +861,8 @@ window.addEventListener("keydown", (e) => {
     case "Enter":
       e.preventDefault();
       stopMoving();
-      chat.openInput();
+      if (roomPanel.isOpen()) roomPanel.focusInput();
+      else chat.openInput();
       return;
   }
   const dir = KEY_MAP[e.code];
@@ -926,6 +976,11 @@ function interact(): void {
       stopMoving();
       if (classroomList.length === 0) void loadClassrooms();
       picker.open(classroomList, session?.role === "admin");
+    } else if (meetingRoom(target.door.to)) {
+      // The server decides whether there's room and whether we're invited;
+      // we walk in when it says yes (roomOpen below).
+      stopMoving();
+      net?.enter(target.door.to, target.door.arrive.x, target.door.arrive.z);
     } else setSpace(target.door.to, target.door.arrive, true);
   } else if (target.kind === "spot") {
     stopMoving();

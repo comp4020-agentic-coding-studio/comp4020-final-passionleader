@@ -37,7 +37,13 @@ should feel at home in a virtual space shaped like the real campus they know.
 6. Say hello to the dog in front of 154. In the Hub, the arcade machine plays
    Sketch & Guess, a drawing game for everyone there. In Chifley Library the
    catalogue desk opens room booking, the catalogue and research ethics.
-7. The gear (top right) sets the music and sound-effect volumes and switches
+7. Meeting rooms: six counselling rooms off the Student Hub, three team rooms
+   off every classroom and five off the library. Up to six people each. Team
+   rooms are open to anyone; a counselling room lets in only whoever someone
+   inside has invited by name. Inside, a group chat shows what's been said
+   since the room last emptied; when the last person leaves it's gone, and so
+   are the invites.
+8. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
    track playing, with pause and next.
 
@@ -65,14 +71,15 @@ Enforced by `spec/`: name rules (`campus.test.ts`); notes and comments
 persist, stay in their space, keep their limits, and only their author or an
 admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
 and new notes reach the same space within a second, and no other
-(`realtime.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
+(`realtime.test.ts`); a meeting room holds six and a counselling room only
+the invited (`rooms.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
 Judged by people: whether it feels familiar and restful, and whether talking
 gets easier.
 
 ## What I chose not to build (yet)
 
-Counselling and group-chat rooms, team rooms, sitting on chairs, the Hub's
-boards, mail, one-to-one chat, voice, and character colours. "Staff" is only
+Files and voice in the meeting rooms, sitting on chairs, the Hub's boards,
+mail, one-to-one chat, voice, and character colours. "Staff" is only
 the admin account for now: nothing yet tells a lecturer from a student. The buildings are
 simplified, not surveyed.
 

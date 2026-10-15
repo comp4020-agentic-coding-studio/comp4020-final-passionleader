@@ -1,11 +1,13 @@
 import * as THREE from "three";
 import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
 // Inside Chifley Library. You come in through the north wall (the front
 // door at the end of the bridge). In the middle, the reception desk with
 // the search computers beside it; bookcases to the north on either side of
-// the door; study desks across the south half (Kenney furniture, CC0).
+// the door; study desks across the south half (Kenney furniture, CC0); team
+// rooms off the side walls (meeting.ts), open to anyone, six at most.
 // Simplified, not surveyed. The computers open the library's own sites:
 // room booking and the catalogue in a window over the game (the window's
 // "open in new tab" button is there if a site won't show inside it), the
@@ -54,6 +56,8 @@ export function buildLibrary(): SpaceDef {
       solid(colliders, 2, 0.8, x, z);
     }
   }
+  LIBRARY_TEAM_DOORS.forEach((d, i) => doorway(g, d.x + Math.sign(d.x) * 1.05, d.z, -Math.sign(d.x) * (Math.PI / 2), `Team room ${i + 1}`));
+
   for (const [x, z] of [
     [-15, -10],
     [15, -10],
@@ -67,7 +71,10 @@ export function buildLibrary(): SpaceDef {
     title: "Chifley Library",
     group: g,
     colliders,
-    doors: [{ ...DOOR, label: "Go outside", to: "outdoor", arrive: { x: -2, z: 22.4 } }],
+    doors: [
+      { ...DOOR, label: "Go outside", to: "outdoor", arrive: { x: -2, z: 22.4 } },
+      ...roomDoors("team-library", LIBRARY_TEAM_DOORS, (n) => `Enter team room ${n}`),
+    ],
     ...HALF,
     background: 0xe2dccf,
     camera: new THREE.Vector3(0, 7, 8.5),

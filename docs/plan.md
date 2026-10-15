@@ -138,6 +138,10 @@ Pulled forward once those were done (budget left over), in this order:
 - **28**: the Sketch & Guess drawing game on an arcade machine in the Hub,
   in the in-app window, moved onto this server
 - **26** (if time): Chifley Library's interior behind its front door
+- **21, 6a, 26a, 30** (if time): meeting rooms, each a small room with a
+  group-chat window: six invite-only counselling rooms off the Hub, three team
+  rooms per classroom and five in the library; six people at most, checked on
+  the server; the chat lasts while someone is inside. No files or voice yet
 
 Already done ahead of this crit: the backdrop buildings and walkable areas
 (4a), and the music player and volume sliders (part of 13).

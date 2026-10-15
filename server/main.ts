@@ -40,7 +40,7 @@ import {
 import { log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
-import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError } from "./spaces.ts";
+import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError, teamRoomsOf } from "./spaces.ts";
 
 const app = new Hono();
 
@@ -243,7 +243,8 @@ app.delete("/api/classrooms/:code", async (c) => {
   if (code === COMMON) return c.json({ error: "COMMON stays open." }, 400);
   const space = classroomSpace(code);
   // Anyone inside is sent back out first, so nobody is left in a room that's gone.
-  const moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
+  let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
+  for (const room of teamRoomsOf(space)) moved += evictSpace(room, FIRST_SPACE, { x: -8.4, z: 7 });
   if (!removeClassroom(code)) return c.json({ error: `${code} isn't open.` }, 404);
   log("classroom-removed", v, { code, space, moved });
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
