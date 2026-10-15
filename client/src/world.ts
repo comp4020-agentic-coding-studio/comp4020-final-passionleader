@@ -37,6 +37,8 @@ export interface SpaceDef {
   doors: Door[];
   halfX: number;
   halfZ: number;
+  /** Where you can walk, if not the whole halfX x halfZ rectangle. */
+  areas?: Box[];
   background: number;
   /** Camera offset from the player: further back outside, closer indoors. */
   camera: THREE.Vector3;
@@ -45,6 +47,21 @@ export interface SpaceDef {
   outdoor?: boolean;
   /** Spots where E opens a web page in a new tab (e.g. the classroom whiteboard). */
   links?: { x: number; z: number; label: string; url: string }[];
+}
+
+/** The nearest point that lies in one of `areas`, written back into `pos`. */
+export function keepIn(pos: THREE.Vector3, areas: Box[]): void {
+  let bx = pos.x;
+  let bz = pos.z;
+  let bestD = Infinity;
+  for (const a of areas) {
+    const x = THREE.MathUtils.clamp(pos.x, a.minX, a.maxX);
+    const z = THREE.MathUtils.clamp(pos.z, a.minZ, a.maxZ);
+    const d = (x - pos.x) ** 2 + (z - pos.z) ** 2;
+    if (d < bestD) [bx, bz, bestD] = [x, z, d];
+  }
+  pos.x = bx;
+  pos.z = bz;
 }
 
 /** Pushes a circle (the player) out of every collider. Two passes settle corners. */

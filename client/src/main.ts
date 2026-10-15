@@ -33,7 +33,7 @@ import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
 const SPEED = 4.2; // walking, world units per second
 const RUN_SPEED = 8; // with Shift held
@@ -797,8 +797,7 @@ function update(dt: number, now: number): void {
     player.position.y = Math.max(0, player.position.y + vy * dt);
     if (player.position.y === 0) vy = 0;
     pushOut(player.position, PLAYER_RADIUS, space.colliders);
-    player.position.x = THREE.MathUtils.clamp(player.position.x, -space.halfX, space.halfX);
-    player.position.z = THREE.MathUtils.clamp(player.position.z, -space.halfZ, space.halfZ);
+    keepIn(player.position, space.areas ?? [{ minX: -space.halfX, maxX: space.halfX, minZ: -space.halfZ, maxZ: space.halfZ }]);
     net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
 
     const target = busy() ? null : nearestTarget();
