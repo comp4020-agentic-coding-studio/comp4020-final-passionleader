@@ -38,7 +38,7 @@ const OUTDOOR_AREAS: Area[] = [
 export const SPACES: Record<string, Space> = {
   outdoor: { label: "ANU campus", halfX: 30, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
-  library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: -14, z: 8 } },
+  library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
@@ -111,10 +111,13 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -2, z: 23.6 }, // Chifley Library's front door
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
-  { x: -14.9, z: 8 }, // the way out
-  { x: 6, z: -7.6 }, // the catalogue desk's three screens
-  { x: 8, z: -7.6 },
-  { x: 10, z: -7.6 },
+  { x: 0, z: -9.9 }, // the way out, on the north wall
+  { x: 2, z: 1.2 }, // the search computers by reception, used from either side
+  { x: 4, z: 1.2 },
+  { x: 6, z: 1.2 },
+  { x: 2, z: -1.2 },
+  { x: 4, z: -1.2 },
+  { x: 6, z: -1.2 },
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
