@@ -177,6 +177,7 @@ export function buildOutdoor(): SpaceDef {
     doors: [
       { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
+      { x: -2, z: 23.6, label: "Enter Chifley Library", to: "library", arrive: { x: -14, z: 8 } },
     ],
     halfX: 30,
     halfZ: 40,

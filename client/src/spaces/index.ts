@@ -1,6 +1,7 @@
 import type { SpaceDef, SpaceId } from "../world.ts";
 import { buildClassroom } from "./classroom.ts";
 import { buildHub } from "./hub.ts";
+import { buildLibrary } from "./library.ts";
 import { buildOutdoor } from "./outdoor.ts";
 
 // Every space is built once, on first visit, and reused after that.
@@ -12,6 +13,7 @@ import { buildOutdoor } from "./outdoor.ts";
 const fixed: Record<string, () => SpaceDef> = {
   outdoor: buildOutdoor,
   hub: buildHub,
+  library: buildLibrary,
 };
 const built = new Map<SpaceId, SpaceDef>();
 /** Space id -> course code, for the classrooms open right now. */

@@ -38,6 +38,7 @@ const OUTDOOR_AREAS: Area[] = [
 export const SPACES: Record<string, Space> = {
   outdoor: { label: "ANU campus", halfX: 30, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
+  library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: -14, z: 8 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
@@ -107,6 +108,13 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door
   { x: 4.6, z: 3 }, // 154's door
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
+  { x: -2, z: 23.6 }, // Chifley Library's front door
+];
+const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
+  { x: -14.9, z: 8 }, // the way out
+  { x: 6, z: -7.6 }, // the catalogue desk's three screens
+  { x: 8, z: -7.6 },
+  { x: 10, z: -7.6 },
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
@@ -119,7 +127,7 @@ export function noteSpotError(space: SpaceId, x: number, z: number): string | nu
   if (NO_NOTE_SPACES.has(space)) return "No sticky notes in the Student Hub.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
-  const clear = outside ? OUTDOOR_KEEP_CLEAR : CLASSROOM_KEEP_CLEAR;
+  const clear = outside ? OUTDOOR_KEEP_CLEAR : space === "library" ? LIBRARY_KEEP_CLEAR : CLASSROOM_KEEP_CLEAR;
   if (clear.some((p) => Math.hypot(p.x - x, p.z - z) < NOTE_CLEARANCE)) return "Too close to a door or something you can use. Step away a little.";
   return null;
 }
