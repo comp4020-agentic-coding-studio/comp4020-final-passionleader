@@ -37,6 +37,7 @@ import { mountNotePanel, type CommentView } from "./notepanel.ts";
 import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
+import { mountDogPrompt } from "./dogprompt.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -465,15 +466,17 @@ async function loadClassrooms(): Promise<void> {
 // Web pages from the classroom board (and later the library desks) open over
 // the game when the site allows it, or in a new tab when it doesn't.
 const webview = mountWebView();
+// The dog in front of 154 asks for a feed: a link to my Buy Me a Coffee page.
+const dogPrompt = mountDogPrompt();
 
 // When a dialog closes, hand focus back to the game view.
-for (const id of ["class-picker", "webview"]) {
+for (const id of ["class-picker", "webview", "dog-prompt"]) {
   const el = document.getElementById(id);
   if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen();
+  chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -538,7 +541,7 @@ function noteSpotError(): string | null {
   if (!space || space.noNotes) return "No sticky notes in the Student Hub.";
   const { x, z } = player.position;
   if ((space.noteBuildings ?? []).some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
-  const spots = [...(space.noteKeepClear ?? []), ...space.doors, ...(space.links ?? [])];
+  const spots = [...(space.noteKeepClear ?? []), ...space.doors, ...(space.links ?? []), ...(space.spots ?? [])];
   if (spots.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) return "Too close to a door or something you can use. Step away a little.";
   return null;
 }
@@ -820,6 +823,7 @@ function jump(): void {
 type Target =
   | { kind: "door"; door: Door }
   | { kind: "link"; label: string; url: string; embeddable: boolean }
+  | { kind: "spot"; id: string; label: string }
   | { kind: "note"; id: number; author: string; here: NoteChoice[] };
 
 /** The door or note within reach, nearest first. */
@@ -834,6 +838,10 @@ function nearestTarget(): Target | null {
   for (const link of space.links ?? []) {
     const d = Math.hypot(player.position.x - link.x, player.position.z - link.z);
     if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "link", label: link.label, url: link.url, embeddable: link.embeddable }, d];
+  }
+  for (const spot of space.spots ?? []) {
+    const d = Math.hypot(player.position.x - spot.x, player.position.z - spot.z);
+    if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "spot", id: spot.id, label: spot.label }, d];
   }
   // Every note in reach comes along, so stacked ones can all be picked.
   const here: NoteChoice[] = [];
@@ -860,6 +868,9 @@ function interact(): void {
       if (classroomList.length === 0) void loadClassrooms();
       picker.open(classroomList, session?.role === "admin");
     } else setSpace(target.door.to, target.door.arrive, true);
+  } else if (target.kind === "spot") {
+    stopMoving();
+    if (target.id === "dog") dogPrompt.open();
   } else if (target.kind === "link") {
     stopMoving();
     // Over the game if the site allows framing, else a new tab; either way
@@ -881,6 +892,7 @@ const hit = new THREE.Vector3();
 
 function update(dt: number, now: number): void {
   if (!space) return;
+  space.tick?.(dt);
   if (playing) {
     let moving = false;
     if (!busy()) {
@@ -910,7 +922,7 @@ function update(dt: number, now: number): void {
       hintEl.textContent =
         target.kind === "door"
           ? `${key} · ${target.door.label}`
-          : target.kind === "link"
+          : target.kind === "link" || target.kind === "spot"
             ? `${key} · ${target.label}`
             : target.here.length > 1
               ? `${key} · Pick one of ${target.here.length} notes here`

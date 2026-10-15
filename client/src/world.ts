@@ -54,6 +54,10 @@ export interface SpaceDef {
    * `noteKeepClear` spot. The server checks the same (server/spaces.ts).
    */
   noNotes?: boolean;
+  /** Called every frame while this space is shown (animated scenery, like the dog). */
+  tick?: (dt: number) => void;
+  /** Spots where E does something particular to this space (the dog), by name. */
+  spots?: { x: number; z: number; id: string; label: string }[];
   noteBuildings?: Box[];
   noteKeepClear?: { x: number; z: number }[];
   /** Spots where E opens a web page in a new tab (e.g. the classroom whiteboard). */

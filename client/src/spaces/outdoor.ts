@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { doorway, floor, mat, scatter, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
 import { HIGH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
+import { DOG_SPOT, addDog } from "./dog.ts";
 import { building } from "./buildings.ts";
 import { buildStreetscape } from "./streetscape.ts";
 
@@ -110,6 +111,7 @@ export function buildOutdoor(): SpaceDef {
   bench(g, colliders, -23, -5.2, 0);
   bench(g, colliders, -16, -5.2, 0);
   buildStreetscape(g, colliders);
+  const dog = addDog(g, colliders);
 
   // Building 155: Marie Reay Teaching Centre. Six storeys of glass with the
   // timber structure showing through (warm mullions and floor edges), as
@@ -184,7 +186,9 @@ export function buildOutdoor(): SpaceDef {
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
     ],
-    noteKeepClear: [{ x: 4.6, z: -9 }],
+    noteKeepClear: [DOG_SPOT],
+    tick: dog,
+    spots: [{ ...DOG_SPOT, id: "dog", label: "Pat the dog" }],
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),

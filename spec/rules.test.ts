@@ -110,7 +110,7 @@ describe("where a note may go", () => {
     const { noteSpotError } = await import("../server/spaces.ts");
     expect(noteSpotError("outdoor", -3, -14)).toBeNull();
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
-    expect(noteSpotError("outdoor", 4.6, -8)).not.toBeNull(); // on the dog
+    expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
     expect(noteSpotError("comp8020", 0, 2)).toBeNull();
     expect(noteSpotError("hub", 0, 0)).not.toBeNull();
   });

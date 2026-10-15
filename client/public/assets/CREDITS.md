@@ -73,6 +73,21 @@ have no tool here to simplify further, e.g. Blender). If that's a hard
 limit, `CommonTree_5` (277 KB) is the one that fits cleanly, and I can drop
 to two tree variants instead of three.
 
+## Animals (`animals/`, Quaternius Low Poly Animals, CC0)
+
+Used as downloaded (a self-contained `.glb`, no edits): one skinned mesh, 3,604
+triangles, one 512x512 colour palette texture (6 KB), rigged with eight clips
+(Idle, Idle_Eating, Walk, Run, Jump_Start, Jump_Loop, Headbutt, Death).
+
+- Author: Quaternius (https://quaternius.com)
+- Source: https://poly.pizza/m/2kUk0QqpCg (the "Dog" model, uploaded 15 Nov 2023;
+  part of Quaternius's Low Poly / Animated Animal packs)
+- Licence: Creative Commons Zero (CC0 1.0 / Public Domain), https://creativecommons.org/publicdomain/zero/1.0/
+
+| File | Used as | Size |
+| --- | --- | --- |
+| `animals/dog.glb` | the dog in front of building 154 | 290 KB |
+
 ## Furniture (Kenney Furniture Kit)
 
 All from the Furniture Kit, `Models/GLTF format/`, unmodified.

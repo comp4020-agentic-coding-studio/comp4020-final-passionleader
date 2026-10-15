@@ -105,7 +105,7 @@ const BUILDINGS: Area[] = [
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door
   { x: 4.6, z: 3 }, // 154's door
-  { x: 4.6, z: -9 }, // the dog in front of 154
+  { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
