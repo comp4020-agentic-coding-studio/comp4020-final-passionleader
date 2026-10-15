@@ -112,3 +112,35 @@ Roles are in [`roles.md`](roles.md). This week:
   finding CC0 textures and furniture with credits, the radial menu and chat
   panel UI as self-contained modules, local QA of doors, chat and emotes with
   several browsers
+
+## Crit 10 (due Wednesday 21 October, 07:00)
+
+Two people in their own browsers, told apart in the server log; what each
+may see and change checked on the server and written down. Steps, in order:
+
+- **10**: one JSON line per action on the server (who, which space, what,
+  when), readable with `flyctl logs`; decision record 002 on permissions
+- **11a**: a classroom picker at 155's door; only `qa_master` adds
+  classrooms, checked on the server (002's main example)
+- **25**: links open in an in-app window where the site allows it, otherwise
+  in a new tab, on desktop and phone
+- **15** (small): recheck the name tag against the top-right buttons at 390 px
+- if time: the classroom's exit door moves to the right-hand wall
+
+Already done ahead of this crit: the backdrop buildings and walkable areas
+(4a), and the music player and volume sliders (part of 13).
+
+Owed to the crit: `docs/decisions/002-*.md`, `reflections/crit-10.md`,
+`PROCESS.md` rewritten, README facts updated, a rehearsal with two Chrome
+profiles narrated from the log alone.
+
+### Who does what this week
+
+Roles are in [`roles.md`](roles.md). This week:
+
+- **Main (Opus):** the server log, permission checks and classrooms (10, 11a),
+  wiring the in-app window into `main.ts`, the decision record, specs, docs,
+  commits, the push and the live check
+- **Helper (Sonnet):** the in-app web window as a self-contained module
+  (`webview.ts`/`.css`, 25), the 390 px check (15), local QA with two browsers
+  side by side once 10 and 11a land, and the log-only rehearsal dry run
