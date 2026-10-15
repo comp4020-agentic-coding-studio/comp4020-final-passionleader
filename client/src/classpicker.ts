@@ -1,5 +1,8 @@
 // Choosing a classroom: the door in building 155 opens this list instead of
-// one fixed room. Every classroom is the same room (COMMON and the course
+// one fixed room. Entering is two steps: a click or tap on a row only selects
+// it (COMMON is selected to begin with), and the "Enter classroom" button, the
+// Enter key or a double click goes in, so a stray tap can't send you anywhere.
+// Every classroom is the same room (COMMON and the course
 // codes only differ in name, and in whose notes they hold). An admin also sees
 // a form to open a new classroom and a Close button beside each one. That is
 // only a convenience: the server checks who is an admin on every create and
@@ -37,6 +40,12 @@ export function mountClassPicker(h: {
   const list = document.createElement("ul");
   list.className = "class-list";
 
+  const enter = document.createElement("button");
+  enter.type = "button";
+  enter.className = "class-enter";
+  enter.textContent = "Enter classroom";
+  enter.disabled = true;
+
   const form = document.createElement("form");
   form.className = "class-form";
   form.hidden = true;
@@ -63,7 +72,7 @@ export function mountClassPicker(h: {
   closeBtn.textContent = "Close";
   actions.append(closeBtn);
 
-  card.append(title, list, form, error, actions);
+  card.append(title, list, enter, form, error, actions);
   root.append(card);
   document.body.append(root);
 
@@ -74,13 +83,39 @@ export function mountClassPicker(h: {
   // request in flight, so a double click can't send two.
   let confirming: string | null = null;
   let busy = false;
+  // The code of the highlighted row; "Enter classroom" goes into this one.
+  let selected: string | null = null;
 
   const pickButtons = (): HTMLButtonElement[] => [...list.querySelectorAll<HTMLButtonElement>(".class-pick")];
+
+  /** Keeps the selection if its classroom still exists, otherwise falls back to the first. */
+  function settleSelection(): void {
+    if (!items.some((c) => c.code === selected)) selected = items[0]?.code ?? null;
+    enter.disabled = selected === null;
+  }
+
+  function select(code: string): void {
+    selected = code;
+    enter.disabled = false;
+    for (const b of pickButtons()) {
+      const on = b.closest<HTMLElement>("[data-code]")?.dataset.code === code;
+      b.classList.toggle("is-selected", on);
+      b.setAttribute("aria-pressed", String(on));
+    }
+  }
+
+  function enterSelected(): void {
+    const item = items.find((c) => c.code === selected);
+    if (!item) return;
+    hide();
+    h.pick(item);
+  }
 
   function render(): void {
     const focusedEl = document.activeElement as HTMLElement | null;
     const focusedCode = focusedEl?.classList.contains("class-pick") ? focusedEl.closest<HTMLElement>("[data-code]")?.dataset.code : undefined;
     if (confirming && !items.some((c) => c.code === confirming)) confirming = null;
+    settleSelection();
     list.replaceChildren(
       ...items.map((item) => {
         const li = document.createElement("li");
@@ -90,9 +125,13 @@ export function mountClassPicker(h: {
         pick.type = "button";
         pick.className = "class-pick";
         pick.textContent = item.code;
-        pick.addEventListener("click", () => {
-          hide();
-          h.pick(item);
+        const on = item.code === selected;
+        pick.classList.toggle("is-selected", on);
+        pick.setAttribute("aria-pressed", String(on));
+        pick.addEventListener("click", () => select(item.code));
+        pick.addEventListener("dblclick", () => {
+          select(item.code);
+          enterSelected();
         });
         li.append(pick);
 
@@ -200,15 +239,29 @@ export function mountClassPicker(h: {
       if (at === -1 || document.activeElement === input) return;
       e.preventDefault();
       const next = (at + (e.key === "ArrowDown" ? 1 : -1) + buttons.length) % buttons.length;
+      const code = buttons[next]!.closest<HTMLElement>("[data-code]")?.dataset.code;
+      if (code) select(code);
       buttons[next]!.focus();
+      return;
+    }
+    // Enter on a row goes straight in (the button's own Enter does the same
+    // through its click, so only rows are handled here).
+    if (e.key === "Enter" && !e.repeat && (document.activeElement as HTMLElement | null)?.classList.contains("class-pick")) {
+      e.preventDefault();
+      const code = (document.activeElement as HTMLElement).closest<HTMLElement>("[data-code]")?.dataset.code;
+      if (code) select(code);
+      enterSelected();
     }
   });
+  enter.addEventListener("click", enterSelected);
 
   return {
     open(next, isAdmin) {
       items = next;
       admin = isAdmin;
       confirming = null;
+      // COMMON (the server sends it first) is selected to begin with.
+      selected = items[0]?.code ?? null;
       form.hidden = !isAdmin;
       error.textContent = "";
       input.value = "";

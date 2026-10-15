@@ -64,6 +64,39 @@
   background: #fff3b0;
 }
 
+/* The highlighted row: a thicker brown border, a warmer fill and a tick, so it
+   isn't told apart by colour alone. */
+.class-row .class-pick.is-selected {
+  border-color: var(--accent, #6b3f1d);
+  box-shadow: inset 0 0 0 2px var(--accent, #6b3f1d);
+  background: #ffeea0;
+}
+
+.class-row .class-pick.is-selected::before {
+  content: "\2713\00a0";
+}
+
+/* "Enter classroom": the same brown button as "Open classroom". */
+.class-enter {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  margin: 12px 0 0;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.class-enter:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
 .class-card button:focus-visible,
 .class-card input:focus-visible {
   outline: 3px solid var(--accent, #6b3f1d);
@@ -130,6 +163,19 @@
   font: inherit;
   font-weight: 700;
   cursor: pointer;
+}
+
+.class-enter:focus-visible {
+  outline: 3px solid var(--accent, #6b3f1d);
+  outline-offset: 2px;
+}
+
+/* Phones: rows and the Enter button at least 44 px tall. */
+@media (pointer: coarse), (max-width: 700px) {
+  .class-row .class-pick,
+  .class-enter {
+    min-height: 44px;
+  }
 }
 
 .class-form button:disabled,
