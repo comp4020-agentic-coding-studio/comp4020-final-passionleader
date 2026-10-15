@@ -21,10 +21,11 @@ Read before planning or building: `README.md` (what good means for this app),
 - `PROCESS.md` has no History section: it must stay within 900–1100 words,
   and the commit messages and the `crit-*` tags already carry the history.
   Rewrite `PROCESS.md` at each crit so it describes the project as it stands.
-- Stay inside the current crit's scope. Crit 9 is steps 1–9 of
-  `docs/plan.md` (accounts, spaces, doors, three maps, chat, the Q emote menu,
-  sticky notes); step 10 (server logging) only if there's time. Everything
-  later in the plan is out until its crit.
+- Stay inside the current crit's scope. Crit 10 is the "Crit 10" section of
+  `docs/plan.md`: the server log, classrooms the admin opens, links in an
+  in-app window, then (pulled forward while there's budget) the east road,
+  the dog, the classroom board, the Sketch & Guess game and the library.
+  Everything else in the plan is out until its crit.
 - Keep the real-time layer generic ("move", "action", "chat", per space), never
   tied to one room or one verb: the spaces and what people do in them will
   keep changing.

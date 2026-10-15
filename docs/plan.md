@@ -127,6 +127,18 @@ may see and change checked on the server and written down. Steps, in order:
 - **15** (small): recheck the name tag against the top-right buttons at 390 px
 - if time: the classroom's exit door moves to the right-hand wall
 
+Pulled forward once those were done (budget left over), in this order:
+
+- **4b**: the road east of 154 carries on north between the O'Donoghue
+  centre and the red-brick buildings, as asphalt
+- **29**: a dog in front of 154; E asks whether to buy it some food, and yes
+  shows a "Buy me a feed" button that opens my Buy Me a Coffee page
+- **11c**: a board left of each classroom's whiteboard with three tabs
+  (Q&A, Notices, Board); only the admin posts notices, checked on the server
+- **28**: the Sketch & Guess drawing game on an arcade machine in the Hub,
+  in the in-app window, moved onto this server
+- **26** (if time): Chifley Library's interior behind its front door
+
 Already done ahead of this crit: the backdrop buildings and walkable areas
 (4a), and the music player and volume sliders (part of 13).
 

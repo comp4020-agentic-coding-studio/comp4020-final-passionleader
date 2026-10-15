@@ -770,10 +770,28 @@ for (const btn of touch.querySelectorAll<HTMLButtonElement>("[data-dir]")) {
   btn.addEventListener("pointercancel", release);
   btn.addEventListener("pointerleave", release);
 }
+// A button acts on pointerdown, so it feels instant. If that opens a dialog,
+// the finger lifts over the dialog's backdrop, and the click the browser
+// sends after the tap would close it again ("click outside"). So the click
+// that follows a tap is swallowed before anything sees it.
+let swallowClickUntil = 0;
+window.addEventListener(
+  "click",
+  (e) => {
+    if (performance.now() < swallowClickUntil) {
+      e.stopPropagation();
+      e.preventDefault();
+      swallowClickUntil = 0;
+    }
+  },
+  true,
+);
 const tap = (id: string, fn: () => void): void =>
   $(id).addEventListener("pointerdown", (e) => {
     e.preventDefault();
-    if (playing && !busy()) fn();
+    if (!playing || busy()) return;
+    fn();
+    if (busy()) swallowClickUntil = performance.now() + 700;
   });
 tap("jump-btn", () => jump());
 tap("use-btn", () => interact());
