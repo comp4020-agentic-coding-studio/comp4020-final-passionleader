@@ -1,4 +1,4 @@
-import type { Comment, Note } from "./api.ts";
+import type { Classroom, Comment, Note } from "./api.ts";
 import type { SpaceId } from "./world.ts";
 
 // The client side of the real-time layer (server/realtime.ts): one socket,
@@ -28,6 +28,10 @@ export interface NetHandlers {
   noteRemoved(id: number): void;
   comment(comment: Comment): void;
   commentRemoved(id: number, noteId: number): void;
+  /** The admin opened or closed a classroom. */
+  classrooms(list: Classroom[]): void;
+  /** The server moved us (the classroom we were in was closed). */
+  moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   status(online: boolean): void;
 }
 
@@ -82,7 +86,10 @@ export function connect(token: string, on: NetHandlers): Net {
           return on.chat(m.id as string, m.name as string, m.text as string);
         case "emote":
           return on.emote(m.id as string, m.kind as Emote);
+        case "moved":
+          return on.moved(m.space as SpaceId, m.x as number, m.z as number, m.players as RemotePlayer[]);
         case "action":
+          if (m.kind === "classrooms") return on.classrooms(m.classrooms as Classroom[]);
           if (m.kind === "note") return on.note(m.note as Note);
           if (m.kind === "note-removed") return on.noteRemoved(m.id as number);
           if (m.kind === "comment") return on.comment(m.comment as Comment);

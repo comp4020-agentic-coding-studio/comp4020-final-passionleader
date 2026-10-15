@@ -88,3 +88,16 @@ export const postComment = (token: string, noteId: number, text: string): Promis
   request<Comment>(`/api/notes/${noteId}/comments`, "POST", { token, text });
 
 export const deleteComment = (token: string, id: number): Promise<unknown> => request(`/api/comments/${id}`, "DELETE", { token });
+
+export interface Classroom {
+  code: string;
+  space: SpaceId;
+}
+
+export const getClassrooms = (): Promise<Classroom[]> => request<Classroom[]>("/api/classrooms");
+
+export const createClassroom = (token: string, code: string): Promise<Classroom> =>
+  request<Classroom>("/api/classrooms", "POST", { token, code });
+
+export const removeClassroom = (token: string, code: string): Promise<unknown> =>
+  request(`/api/classrooms/${encodeURIComponent(code)}`, "DELETE", { token });

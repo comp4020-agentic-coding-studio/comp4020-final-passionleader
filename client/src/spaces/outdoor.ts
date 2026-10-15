@@ -144,7 +144,7 @@ export function buildOutdoor(): SpaceDef {
     apex: { color: TIMBER },
   });
   sign(g, ["155", "Marie Reay Teaching Centre"], -9.7, 4.2, 7, Math.PI / 2);
-  doorway(g, -9.7, 7, Math.PI / 2, "155 · COMP8020 classroom");
+  doorway(g, -9.7, 7, Math.PI / 2, "155 · Classrooms");
 
   // Building 154: Di Riddell Student Centre (Brian Kenyon Student Space). A
   // sleek white block on a slender steel colonnade, ribbon windows, and a
@@ -173,7 +173,7 @@ export function buildOutdoor(): SpaceDef {
     group: g,
     colliders,
     doors: [
-      { x: -8.6, z: 7, label: "Enter 155 (COMP8020 classroom)", to: "comp8020", arrive: { x: -8.4, z: 6 } },
+      { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
     ],
     halfX: 30,

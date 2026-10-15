@@ -2,7 +2,8 @@
 
 A small 3D, real-time space for the ANU community: a stretch of campus between
 building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
-Centre), the Student Hub inside 154, and a COMP8020 classroom inside 155.
+Centre), the Student Hub inside 154, and classrooms inside 155 (COMMON for
+anyone, COMP8020, and any course the admin opens).
 Everyone in a space sees everyone else walk, chat, wave, dance and leave sticky
 notes, live. It is not an official ANU service.
 
@@ -19,8 +20,9 @@ should feel at home in a virtual space shaped like the real campus they know.
 1. Type your student number (e.g. `u1234567`); staff and visitors use any name
    of up to 8 letters, digits and underscores. Nothing checks a number is real.
    Your browser remembers you, and you come back where you left.
-2. **WASD** to walk, **Space** to jump, **E** at a door to go in or out. On a
-   phone: the pad and the Menu, Jump and Use buttons.
+2. **WASD** to walk, **Space** to jump, **E** at a door to go in or out
+   (building 155's door asks which classroom). On a phone: the pad and the
+   Menu, Jump and Use buttons.
 3. **Enter** to chat (gone after a minute). Hold **Q** to wave, say yes or no,
    "How ya doing, mate?", dance, or stick a note.
 4. A note stays where you stood until you or the admin remove it. Walk onto one
@@ -59,7 +61,7 @@ gets easier.
 
 ## What I chose not to build (yet)
 
-Counselling and group-chat rooms, a classroom picker, sitting on chairs,
+Counselling and group-chat rooms, team rooms, sitting on chairs,
 boards, mail, one-to-one chat, voice, and character colours. The buildings are
 simplified, not surveyed.
 

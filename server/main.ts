@@ -8,8 +8,10 @@ import { marked } from "marked";
 import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayRemove, textError } from "./accounts.ts";
 import {
   NOTES_PER_SPACE,
+  addClassroom,
   addComment,
   addNote,
+  classroomList,
   commentsOn,
   createVisitor,
   deleteComment,
@@ -21,11 +23,12 @@ import {
   lastSpot,
   noteCount,
   notesIn,
+  removeClassroom,
   type Visitor,
 } from "./db.ts";
 import { log } from "./log.ts";
-import { attachRealtime, broadcastSpace } from "./realtime.ts";
-import { FIRST_SPACE, SPACES, clampTo, isSpace } from "./spaces.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
+import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace } from "./spaces.ts";
 
 const app = new Hono();
 
@@ -82,7 +85,7 @@ app.post("/api/join", async (c) => {
   const fresh = randomUUID();
   createVisitor(name, fresh);
   log("join", { name, token: fresh }, { how: "new" });
-  return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE].spawn } });
+  return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn } });
 });
 
 // --- sticky notes ----------------------------------------------------------
@@ -180,6 +183,47 @@ app.delete("/api/comments/:id", async (c) => {
   deleteComment(comment.id);
   log("comment-removed", v, { space: note?.space, comment: comment.id, owner: comment.author });
   if (note) broadcastSpace(note.space, { t: "action", kind: "comment-removed", id: comment.id, noteId: note.id });
+  return c.json({ ok: true });
+});
+
+// --- classrooms -------------------------------------------------------------
+// Anyone may list them (the picker at 155's door); only the admin opens or
+// closes one. The check is here on the server, so a request crafted outside
+// the app gets the same answer as a click in it.
+
+app.get("/api/classrooms", (c) => c.json(classroomList()));
+
+app.post("/api/classrooms", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const code = typeof b.code === "string" ? b.code.trim().toUpperCase() : "";
+  if (v.role !== "admin") {
+    log("refused", v, { action: "create classroom", code, reason: "not admin" });
+    return c.json({ error: "Only the admin can open a classroom." }, 403);
+  }
+  if (!CLASSROOM_CODE.test(code)) return c.json({ error: "Use a course code like COMP6300." }, 400);
+  if (!addClassroom(code, v.name)) return c.json({ error: `${code} is already open.` }, 409);
+  log("classroom-created", v, { code, space: classroomSpace(code) });
+  broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
+  return c.json({ code, space: classroomSpace(code) }, 201);
+});
+
+app.delete("/api/classrooms/:code", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const code = c.req.param("code").toUpperCase();
+  if (v.role !== "admin") {
+    log("refused", v, { action: "remove classroom", code, reason: "not admin" });
+    return c.json({ error: "Only the admin can close a classroom." }, 403);
+  }
+  if (code === COMMON) return c.json({ error: "COMMON stays open." }, 400);
+  const space = classroomSpace(code);
+  // Anyone inside is sent back out first, so nobody is left in a room that's gone.
+  const moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
+  if (!removeClassroom(code)) return c.json({ error: `${code} isn't open.` }, 404);
+  log("classroom-removed", v, { code, space, moved });
+  broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ ok: true });
 });
 

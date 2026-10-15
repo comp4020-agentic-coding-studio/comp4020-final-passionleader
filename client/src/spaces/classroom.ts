@@ -1,19 +1,25 @@
 import * as THREE from "three";
-import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
 import { roomShell } from "./room.ts";
 
-// The COMP8020 classroom, inside building 155: rows of desks facing a
-// whiteboard, a centre aisle, and a lectern. Course classrooms will be
-// created by the admin later; this one is fixed for crit 9.
+// A classroom inside building 155: rows of desks facing a whiteboard, a
+// centre aisle, and a lectern. Every classroom the admin opens (COMP8020,
+// COMMON, ...) is this same room with its own code on the board; only
+// COMP8020's board links to its course page.
 
 const HALF = { halfX: 10, halfZ: 8 };
 
-export function buildClassroom(): SpaceDef {
+const COURSE_PAGES: Record<string, string> = {
+  COMP8020: "https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/",
+};
+
+export function buildClassroom(id: SpaceId, code: string): SpaceDef {
+  const page = COURSE_PAGES[code];
   const g = new THREE.Group();
   const colliders: Box[] = [];
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/carpet.jpg", 10, 8), 0xefeae0);
 
-  const board = textPlane(["COMP8020", "press E here for the course page"], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
+  const board = textPlane([code, page ? "press E here for the course page" : code === "COMMON" ? "open to everyone" : ""], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
   board.position.set(0, 2.2, -HALF.halfZ + 0.01);
   g.add(board);
 
@@ -36,28 +42,24 @@ export function buildClassroom(): SpaceDef {
       solid(colliders, 2, 0.8, x, z);
     }
   }
-  place(g, "pottedPlant.glb", 1.3, 9.2, 6.8);
-  solid(colliders, 0.7, 0.7, 9.2, 6.8);
+  place(g, "pottedPlant.glb", 1.3, -9.2, 6.8);
+  solid(colliders, 0.7, 0.7, -9.2, 6.8);
 
-  doorway(g, -HALF.halfX + 0.05, 6, Math.PI / 2, "Exit to campus");
+  // The way out is on the right-hand wall, at the back.
+  doorway(g, HALF.halfX - 0.05, 6, -Math.PI / 2, "Exit to campus");
 
   return {
-    id: "comp8020",
-    title: "COMP8020 classroom",
+    id,
+    title: `${code} classroom`,
     group: g,
     colliders,
-    doors: [{ x: -8.9, z: 6, label: "Go outside", to: "outdoor", arrive: { x: -8.4, z: 7 } }],
+    doors: [{ x: 8.9, z: 6, label: "Go outside", to: "outdoor", arrive: { x: -8.4, z: 7 } }],
     ...HALF,
     background: 0xe6e1d4,
     camera: new THREE.Vector3(0, 6.5, 7.5),
     bgm: ["The_Library_Window.mp3"],
-    links: [
-      {
-        x: 0,
-        z: -6.7,
-        label: "Open the COMP4020/8020 course page",
-        url: "https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/",
-      },
-    ],
+    links: page
+      ? [{ x: 0, z: -6.7, label: `Open the ${code} course page`, url: page, embeddable: true }]
+      : [],
   };
 }

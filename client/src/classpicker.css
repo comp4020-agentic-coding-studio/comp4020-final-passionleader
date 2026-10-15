@@ -1,0 +1,163 @@
+/* The classroom picker: a modal in the same style as the settings dialog and
+   the note chooser. */
+
+#class-picker {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 20, 20, 0.45);
+}
+
+#class-picker[hidden] {
+  display: none;
+}
+
+.class-card {
+  box-sizing: border-box;
+  width: min(380px, 100%);
+  max-height: calc(100vh - 32px);
+  overflow-y: auto;
+  padding: 20px;
+  border-radius: 14px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.class-card h2 {
+  margin: 0 0 12px;
+  font-size: 1.3rem;
+}
+
+.class-list {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.class-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.class-row .class-pick {
+  flex: 1;
+  min-width: 0;
+  padding: 10px 14px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 10px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  font-weight: 700;
+  text-align: left;
+  cursor: pointer;
+}
+
+.class-row .class-pick:hover {
+  background: #fff3b0;
+}
+
+.class-card button:focus-visible,
+.class-card input:focus-visible {
+  outline: 3px solid var(--accent, #6b3f1d);
+  outline-offset: 2px;
+}
+
+.class-small {
+  flex: none;
+  padding: 6px 10px;
+  border: 0;
+  border-radius: 8px;
+  background: #e6dcc0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.class-small.is-danger {
+  background: #b3412e;
+  color: #fff;
+}
+
+.class-confirm {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+}
+
+.class-confirm span {
+  flex: 1;
+  min-width: 0;
+}
+
+.class-form {
+  display: flex;
+  gap: 8px;
+  margin: 16px 0 0;
+}
+
+.class-form input {
+  flex: 1;
+  min-width: 0;
+  padding: 8px 10px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 8px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  text-transform: uppercase;
+}
+
+.class-form button {
+  flex: none;
+  padding: 8px 14px;
+  border: 0;
+  border-radius: 8px;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.class-form button:disabled,
+.class-small:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.class-error {
+  min-height: 1.2em;
+  margin: 8px 0 0;
+  color: #9a2a1a;
+  font-size: 0.85rem;
+}
+
+.class-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.class-actions button {
+  padding: 8px 16px;
+  border: 0;
+  border-radius: 8px;
+  background: #e6dcc0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  font-weight: 700;
+  cursor: pointer;
+}

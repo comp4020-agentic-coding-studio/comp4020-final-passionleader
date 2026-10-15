@@ -8,7 +8,8 @@ import { HIGH } from "./settings.ts";
 // A space is a group of meshes plus the boxes you can't walk through and the
 // doors you can walk through.
 
-export type SpaceId = "outdoor" | "hub" | "comp8020";
+/** "outdoor", "hub", or a classroom's course code in lower case ("comp8020"). */
+export type SpaceId = string;
 
 /** Axis-aligned footprint on the floor plane, used for simple player collision. */
 export interface Box {
@@ -24,6 +25,7 @@ export interface Door {
   z: number;
   /** What the E hint says, e.g. "Enter the Student Hub". */
   label: string;
+  /** The space it leads to, or "classroom" for 155's door, which asks which classroom. */
   to: SpaceId;
   /** Where you appear on the other side. */
   arrive: { x: number; z: number };
@@ -47,7 +49,11 @@ export interface SpaceDef {
   /** Outdoors: a real sky and haze toward the horizon. Indoors: neither. */
   outdoor?: boolean;
   /** Spots where E opens a web page in a new tab (e.g. the classroom whiteboard). */
-  links?: { x: number; z: number; label: string; url: string }[];
+  /**
+   * Spots where E opens a web page: in a window over the game when the site
+   * allows being framed (`embeddable`), otherwise in a new tab.
+   */
+  links?: { x: number; z: number; label: string; url: string; embeddable: boolean }[];
 }
 
 /** The nearest point that lies in one of `areas`, written back into `pos`. */

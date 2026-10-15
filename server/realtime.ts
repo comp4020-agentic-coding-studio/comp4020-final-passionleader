@@ -44,6 +44,28 @@ export function broadcastSpace(space: SpaceId, msg: unknown): void {
   for (const [ws, p] of players) if (p.space === space && ws.readyState === ws.OPEN) ws.send(data);
 }
 
+/** Sends to everyone online, wherever they are (e.g. the list of classrooms changed). */
+export function broadcastAll(msg: unknown): void {
+  const data = JSON.stringify(msg);
+  for (const ws of players.keys()) if (ws.readyState === ws.OPEN) ws.send(data);
+}
+
+/**
+ * Moves everyone in `space` to `to` (a classroom being closed), telling each
+ * of them where they now are. Returns how many were moved.
+ */
+export function evictSpace(space: SpaceId, to: SpaceId, at: { x: number; z: number }): number {
+  let moved = 0;
+  for (const [ws, p] of players) {
+    if (p.space !== space) continue;
+    Object.assign(p, { space: to, ...clampTo(to, at.x, at.z), y: 0 });
+    send(ws, { t: "moved", space: to, x: p.x, z: p.z, players: inSpace(to) });
+    moved++;
+  }
+  if (moved) dirty.add(to);
+  return moved;
+}
+
 const num = (v: unknown): v is number => typeof v === "number" && Number.isFinite(v);
 
 function onMessage(ws: WebSocket, raw: string): void {

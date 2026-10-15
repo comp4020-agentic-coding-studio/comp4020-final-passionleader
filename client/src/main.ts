@@ -12,8 +12,10 @@ import { Avatar, motionFor, preloadCharacters, variantFor, type Variant } from "
 import {
   ApiError,
   RESERVED_RE,
+  createClassroom,
   deleteComment,
   deleteNote,
+  getClassrooms,
   getComments,
   getNotes,
   isValidName,
@@ -21,6 +23,8 @@ import {
   myNoteCount,
   postComment,
   postNote,
+  removeClassroom,
+  type Classroom,
   type Comment,
   type Note,
   type Session,
@@ -31,8 +35,10 @@ import { connect, type Emote, type Net, type RemotePlayer } from "./net.ts";
 import { mountNoteComposer } from "./notecompose.ts";
 import { mountNotePanel, type CommentView } from "./notepanel.ts";
 import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
+import { mountClassPicker } from "./classpicker.ts";
+import { mountWebView } from "./webview.ts";
 import { mountRadial } from "./radial.ts";
-import { getSpace, isSpaceId } from "./spaces/index.ts";
+import { getSpace, isSpaceId, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
 
@@ -417,7 +423,57 @@ const radial = mountRadial(
 );
 
 const chooser = mountNoteChooser((id) => void openNote(id));
-const busy = (): boolean => chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen();
+// Building 155's door asks which classroom; the admin can open and close
+// them from the same dialog (the server checks it's the admin).
+let classroomList: Classroom[] = [];
+const picker = mountClassPicker({
+  pick(item) {
+    setSpace(item.space, { x: 8.4, z: 6 }, true);
+  },
+  async create(code) {
+    if (!session) return "Join first.";
+    try {
+      await createClassroom(session.token, code);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not open it.";
+    }
+  },
+  async remove(code) {
+    if (!session) return "Join first.";
+    try {
+      await removeClassroom(session.token, code);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not close it.";
+    }
+  },
+});
+function useClassrooms(list: Classroom[]): void {
+  classroomList = list;
+  setClassrooms(list);
+  picker.update(list);
+}
+async function loadClassrooms(): Promise<void> {
+  try {
+    useClassrooms(await getClassrooms());
+  } catch {
+    // Offline for a moment: the door says so when it's used.
+  }
+}
+
+// Web pages from the classroom board (and later the library desks) open over
+// the game when the site allows it, or in a new tab when it doesn't.
+const webview = mountWebView();
+
+// When a dialog closes, hand focus back to the game view.
+for (const id of ["class-picker", "webview"]) {
+  const el = document.getElementById(id);
+  if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
+}
+
+const busy = (): boolean =>
+  chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -551,7 +607,8 @@ joinForm.addEventListener("submit", (e) => {
       passwordInput.value = "";
       storage.set("campus.name", s.name);
       storage.set("campus.token", s.token);
-      enterWorld();
+      // Classrooms first, so a visitor who left one comes back into it.
+      return loadClassrooms().then(enterWorld);
     })
     .catch((err: unknown) => {
       joinError.textContent = err instanceof ApiError ? err.message : "Something went wrong.";
@@ -614,6 +671,14 @@ function goOnline(token: string): void {
         const view = notes.get(noteId);
         if (view) upsertNote({ ...view.note, comments: Math.max(0, view.note.comments - 1) });
       }
+    },
+    classrooms(list) {
+      useClassrooms(list);
+    },
+    moved(to, x, z, players) {
+      toast("That classroom was closed. You're back outside.");
+      setSpace(to, { x, z }, false);
+      players.forEach(upsertOther);
     },
     status(online) {
       if (session && space) {
@@ -724,7 +789,7 @@ function jump(): void {
 
 type Target =
   | { kind: "door"; door: Door }
-  | { kind: "link"; label: string; url: string }
+  | { kind: "link"; label: string; url: string; embeddable: boolean }
   | { kind: "note"; id: number; author: string; here: NoteChoice[] };
 
 /** The door or note within reach, nearest first. */
@@ -738,7 +803,7 @@ function nearestTarget(): Target | null {
   }
   for (const link of space.links ?? []) {
     const d = Math.hypot(player.position.x - link.x, player.position.z - link.z);
-    if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "link", label: link.label, url: link.url }, d];
+    if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "link", label: link.label, url: link.url, embeddable: link.embeddable }, d];
   }
   // Every note in reach comes along, so stacked ones can all be picked.
   const here: NoteChoice[] = [];
@@ -759,11 +824,17 @@ function nearestTarget(): Target | null {
 function interact(): void {
   const target = nearestTarget();
   if (!target) return;
-  if (target.kind === "door") setSpace(target.door.to, target.door.arrive, true);
-  else if (target.kind === "link") {
+  if (target.kind === "door") {
+    if (target.door.to === "classroom") {
+      stopMoving();
+      if (classroomList.length === 0) void loadClassrooms();
+      picker.open(classroomList, session?.role === "admin");
+    } else setSpace(target.door.to, target.door.arrive, true);
+  } else if (target.kind === "link") {
     stopMoving();
-    // A new tab, so the campus stays open behind it.
-    window.open(target.url, "_blank", "noopener");
+    // Over the game if the site allows framing, else a new tab; either way
+    // straight from the key press or tap, which phones require for a tab.
+    webview.open({ label: target.label, url: target.url, embeddable: target.embeddable });
   } else if (target.here.length > 1) {
     stopMoving();
     chooser.open(target.here);

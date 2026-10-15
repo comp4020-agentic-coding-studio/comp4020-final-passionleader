@@ -2,8 +2,13 @@
 // (client/src/spaces/); the server only needs their names and bounds, so it
 // can refuse a space that doesn't exist and clamp a position that wanders
 // outside one. Doors between spaces are the client's business.
+//
+// Two kinds: the fixed spaces (the campus outside and the Student Hub), and
+// classrooms in building 155, which the admin adds and removes (db.ts keeps
+// the list). Every classroom is the same room; its space id is its course
+// code in lower case ("comp8020"), so notes and last spots key on that.
 
-export type SpaceId = "outdoor" | "hub" | "comp8020";
+export type SpaceId = string;
 
 export interface Area {
   minX: number;
@@ -30,21 +35,45 @@ const OUTDOOR_AREAS: Area[] = [
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 24.4 },
 ];
 
-export const SPACES: Record<SpaceId, Space> = {
+export const SPACES: Record<string, Space> = {
   outdoor: { label: "ANU campus", halfX: 30, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
-  comp8020: { label: "COMP8020 classroom", halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } },
 };
+
+/** Every classroom's bounds (client/src/spaces/classroom.ts). */
+export const CLASSROOM: Omit<Space, "label"> = { halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } };
+
+// Course codes like COMP6300 or MGMP2222 (four letters, four digits), and
+// COMMON, the room for anyone, which can't be removed.
+export const CLASSROOM_CODE = /^([A-Z]{4}[0-9]{4}|COMMON)$/;
+export const COMMON = "COMMON";
+
+const classrooms = new Map<SpaceId, string>(); // space id -> course code
+
+/** db.ts tells this module which classrooms exist, at start and on each change. */
+export function setClassrooms(codes: string[]): void {
+  classrooms.clear();
+  for (const code of codes) classrooms.set(classroomSpace(code), code);
+}
+
+export const classroomSpace = (code: string): SpaceId => code.toLowerCase();
 
 // First-timers start outside, on the path between the two buildings.
 export const FIRST_SPACE: SpaceId = "outdoor";
 
-export const isSpace = (s: unknown): s is SpaceId => typeof s === "string" && Object.hasOwn(SPACES, s);
+export function spaceInfo(id: SpaceId): Space | undefined {
+  if (Object.hasOwn(SPACES, id)) return SPACES[id];
+  const code = classrooms.get(id);
+  return code ? { label: `${code} classroom`, ...CLASSROOM } : undefined;
+}
+
+export const isSpace = (s: unknown): s is SpaceId => typeof s === "string" && spaceInfo(s) !== undefined;
 
 const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, n));
 
 export function clampTo(space: SpaceId, x: number, z: number): { x: number; z: number } {
-  const { halfX, halfZ, areas } = SPACES[space];
+  const info = spaceInfo(space) ?? SPACES[FIRST_SPACE]!;
+  const { halfX, halfZ, areas } = info;
   return clampToAreas(areas ?? [{ minX: -halfX, maxX: halfX, minZ: -halfZ, maxZ: halfZ }], x, z);
 }
 

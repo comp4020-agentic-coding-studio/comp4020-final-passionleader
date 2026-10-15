@@ -1,11 +1,12 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { FIRST_SPACE, SPACES, isSpace, type SpaceId } from "./spaces.ts";
+import { COMMON, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
 
-// Three tables. Visitors: a name, the secret that reclaims it, a role, and
+// Four tables. Visitors: a name, the secret that reclaims it, a role, and
 // where they last stood. Notes: sticky notes on a space's floor, kept until
 // their author or an admin removes them. Comments: replies on a note.
+// Classrooms: the course codes the admin has opened in building 155.
 // Live positions never come here; they stay in server memory.
 
 export type Role = "user" | "admin";
@@ -61,6 +62,11 @@ db.exec(`
     text       TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS classrooms (
+    code       TEXT PRIMARY KEY,
+    created_by TEXT,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 
 // Columns added after crit 8, and crit 8's poop columns removed: the poop is
@@ -86,6 +92,8 @@ for (const col of ["poop_x", "poop_z", "pooped_at"]) {
 // it's COMP8020. Move anything saved under the old id.
 db.exec("UPDATE notes SET space = 'comp8020' WHERE space = 'comp8280'");
 db.exec("UPDATE visitors SET last_space = 'comp8020' WHERE last_space = 'comp8280'");
+// The first two classrooms: the one there's always been, and COMMON for anyone.
+db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
 
 // --- visitors --------------------------------------------------------------
 
@@ -116,7 +124,7 @@ export function lastSpot(name: string): { space: SpaceId; x: number; z: number }
     | { space: string | null; x: number | null; z: number | null }
     | undefined;
   if (row && isSpace(row.space) && row.x !== null && row.z !== null) return { space: row.space, x: row.x, z: row.z };
-  return { space: FIRST_SPACE, ...SPACES[FIRST_SPACE].spawn };
+  return { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn };
 }
 
 export function saveLastSpot(name: string, space: SpaceId, x: number, z: number): void {
@@ -212,4 +220,47 @@ export function addComment(author: string, noteId: number, text: string): AddCom
 
 export function deleteComment(id: number): void {
   db.prepare("DELETE FROM comments WHERE id = ?").run(id);
+}
+
+// --- classrooms ------------------------------------------------------------
+
+export interface Classroom {
+  code: string;
+  space: SpaceId;
+  createdAt: string;
+}
+
+export function classroomList(): Classroom[] {
+  const rows = db.prepare("SELECT code, created_at AS createdAt FROM classrooms ORDER BY code = 'COMMON' DESC, code").all() as unknown as {
+    code: string;
+    createdAt: string;
+  }[];
+  return rows.map((r) => ({ ...r, space: classroomSpace(r.code) }));
+}
+
+const syncClassrooms = (): void => setClassrooms(classroomList().map((c) => c.code));
+syncClassrooms();
+
+/** False if it already exists. */
+export function addClassroom(code: string, by: string): boolean {
+  const { changes } = db.prepare("INSERT OR IGNORE INTO classrooms (code, created_by) VALUES (?, ?)").run(code, by);
+  syncClassrooms();
+  return changes > 0;
+}
+
+/** Removes a classroom and the notes left in it; anyone saved there starts outside next time. */
+export function removeClassroom(code: string): boolean {
+  const space = classroomSpace(code);
+  db.exec("BEGIN");
+  try {
+    const { changes } = db.prepare("DELETE FROM classrooms WHERE code = ?").run(code);
+    db.prepare("DELETE FROM notes WHERE space = ?").run(space);
+    db.prepare("UPDATE visitors SET last_space = NULL, last_x = NULL, last_z = NULL WHERE last_space = ?").run(space);
+    db.exec("COMMIT");
+    syncClassrooms();
+    return changes > 0;
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
 }
