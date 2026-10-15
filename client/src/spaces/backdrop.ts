@@ -55,6 +55,41 @@ function facadeTexture(wall: string, joint: string, glass: string, frame: string
   return t;
 }
 
+/**
+ * Asphalt, drawn on a canvas: dark grey grain with a dashed white centre line
+ * down the tile's middle (along v). One tile is 8 m of road.
+ */
+let asphaltTex: THREE.CanvasTexture | null = null;
+function asphaltMat(w: number, d: number): THREE.MeshStandardMaterial {
+  if (!asphaltTex) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 256;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#4a4c4f";
+    ctx.fillRect(0, 0, 256, 256);
+    // Grain: a few thousand specks a shade lighter or darker.
+    let seed = 7;
+    const rnd = (): number => ((seed = (seed * 16807) % 2147483647) / 2147483647);
+    for (let i = 0; i < 4000; i++) {
+      const v = 60 + Math.floor(rnd() * 30);
+      ctx.fillStyle = `rgb(${v},${v + 1},${v + 3})`;
+      ctx.fillRect(rnd() * 256, rnd() * 256, 1 + rnd() * 2, 1 + rnd() * 2);
+    }
+    ctx.fillStyle = "#e8e6df";
+    ctx.fillRect(125, 20, 6, 96);
+    ctx.fillRect(125, 148, 6, 96);
+    asphaltTex = new THREE.CanvasTexture(c);
+    asphaltTex.colorSpace = THREE.SRGBColorSpace;
+    asphaltTex.wrapS = asphaltTex.wrapT = THREE.RepeatWrapping;
+    asphaltTex.anisotropy = 4;
+  }
+  const map = asphaltTex.clone();
+  map.needsUpdate = true;
+  // The centre line runs along the road, so the tile spans the road's width once.
+  map.repeat.set(1, d / 8);
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.95, metalness: 0 });
+}
+
 function facadeMat(tex: THREE.CanvasTexture, len: number, storeys: number): THREE.MeshStandardMaterial {
   const map = tex.clone();
   map.needsUpdate = true;
@@ -91,9 +126,12 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
 
   // The east-west road north of the lawn and 154 (z -40..-22: a narrow path
   // along the buildings, a row of flower beds, then the main road, 1:1:3; the
-  // beds are in streetscape.ts), and the road east of 154.
-  road(78, 18, -1, -31);
-  road(11, 64, 32, -8);
+  // beds are in streetscape.ts). Its east end stops at the asphalt road that
+  // runs north past 154's east side, between the O'Donoghue centre and the
+  // red-brick buildings, with a pale footpath along its west edge.
+  road(68.5, 18, -5.75, -31); // x -40..28.5
+  road(3, 91, 30, -29.5); // footpath x 28.5..31.5, z -75..16
+  floor(backdrop, 9, 142, 36, -55, asphaltMat(9, 142), 0.008); // x 31.5..40.5, z -126..16
 
   // The row of pale-brick buildings along the road's north side, with a
   // two-storey passage under it in line with 154's west side.
