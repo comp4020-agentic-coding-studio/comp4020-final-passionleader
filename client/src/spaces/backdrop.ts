@@ -55,10 +55,7 @@ function facadeTexture(wall: string, joint: string, glass: string, frame: string
   return t;
 }
 
-/**
- * Asphalt, drawn on a canvas: dark grey grain with a dashed white centre line
- * down the tile's middle (along v). One tile is 8 m of road.
- */
+/** Asphalt, drawn on a canvas: dark grey grain, no markings (a one-lane road). */
 let asphaltTex: THREE.CanvasTexture | null = null;
 function asphaltMat(w: number, d: number): THREE.MeshStandardMaterial {
   if (!asphaltTex) {
@@ -75,9 +72,6 @@ function asphaltMat(w: number, d: number): THREE.MeshStandardMaterial {
       ctx.fillStyle = `rgb(${v},${v + 1},${v + 3})`;
       ctx.fillRect(rnd() * 256, rnd() * 256, 1 + rnd() * 2, 1 + rnd() * 2);
     }
-    ctx.fillStyle = "#e8e6df";
-    ctx.fillRect(125, 20, 6, 96);
-    ctx.fillRect(125, 148, 6, 96);
     asphaltTex = new THREE.CanvasTexture(c);
     asphaltTex.colorSpace = THREE.SRGBColorSpace;
     asphaltTex.wrapS = asphaltTex.wrapT = THREE.RepeatWrapping;
@@ -85,8 +79,8 @@ function asphaltMat(w: number, d: number): THREE.MeshStandardMaterial {
   }
   const map = asphaltTex.clone();
   map.needsUpdate = true;
-  // The centre line runs along the road, so the tile spans the road's width once.
-  map.repeat.set(1, d / 8);
+  // One tile is about 8 m of road.
+  map.repeat.set(w / 8, d / 8);
   return new THREE.MeshStandardMaterial({ map, roughness: 0.95, metalness: 0 });
 }
 
@@ -118,6 +112,51 @@ function block(
   g.add(m);
 }
 
+/**
+ * A ground floor of shopfronts facing the road (+z), from x0 to x1 with its
+ * glass at z: each shop a glazed front with a dark frame, a coloured awning,
+ * and a plain painted name board. Names only, in plain type: no brand logos.
+ */
+function shopfronts(g: THREE.Group, x0: number, x1: number, z: number): void {
+  const shops = [
+    { name: "Cafe", w: 6, board: "#5b3a24", fg: "#f3e2c4", awning: 0x7a4e2e },
+    { name: "Subway", w: 7, board: "#00843d", fg: "#ffcc00", awning: 0x00843d },
+    { name: "Sushi", w: 6, board: "#b3261e", fg: "#ffffff", awning: 0xb3261e },
+    { name: "Noodle bar", w: 7, board: "#f2a900", fg: "#2b1a00", awning: 0xd98e04 },
+    { name: "Pharmacy", w: 6, board: "#ffffff", fg: "#1a5fa8", awning: 0x1a5fa8 },
+    { name: "Bookshop", w: 7, board: "#2f4a6b", fg: "#f3e7a6", awning: 0x2f4a6b },
+  ];
+  const h = FLOOR_H;
+  const wall = mat(0xd9c8a9);
+  const frame = mat(0x2a2a2a);
+  const glass = new THREE.MeshStandardMaterial({ color: 0x6f8796, emissive: 0x2a2416, roughness: 0.2, metalness: 0.3 });
+  // The storey behind the fronts, so there's no gap above the awnings.
+  const base = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, h, 14), wall);
+  base.position.set((x0 + x1) / 2, h / 2, z - 7);
+  g.add(base);
+  let x = x0 + 1;
+  for (const s of shops) {
+    if (x + s.w > x1 - 0.5) break;
+    const cx = x + s.w / 2;
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(s.w - 0.6, 2.4), glass);
+    pane.position.set(cx, 1.3, z + 0.02);
+    g.add(pane);
+    for (const fx of [x + 0.3, x + s.w - 0.3, cx]) {
+      const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.5, 0.08), frame);
+      mullion.position.set(fx, 1.3, z + 0.05);
+      g.add(mullion);
+    }
+    const awning = new THREE.Mesh(new THREE.BoxGeometry(s.w - 0.3, 0.08, 1.3), mat(s.awning));
+    awning.position.set(cx, 2.72, z + 0.6);
+    awning.rotation.x = 0.18;
+    g.add(awning);
+    const sign = textPlane([s.name], s.w - 1, 0.55, { bg: s.board, fg: s.fg, font: 0.36 });
+    sign.position.set(cx, 3.05, z + 0.03);
+    g.add(sign);
+    x += s.w + 0.5;
+  }
+}
+
 export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   const backdrop = new THREE.Group();
   const road = (w: number, d: number, x: number, z: number): void => {
@@ -136,7 +175,9 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // The row of pale-brick buildings along the road's north side, with a
   // two-storey passage under it in line with 154's west side.
   const beige = facadeTexture("#d9c8a9", "#cbb995", "#3d4a55", "#ece2cf");
-  block(backdrop, beige, -18, -47, 44, 14, 7);
+  // Its ground floor along the road is shops and cafes, not windows.
+  block(backdrop, beige, -18, -47, 44, 14, 6, 1);
+  shopfronts(backdrop, -40, 4, -40);
   block(backdrop, beige, 7, -47, 6, 14, 5, 2);
   road(6, 22, 7, -51);
   block(backdrop, beige, 7, -68, 18, 12, 5); // seen through the passage
