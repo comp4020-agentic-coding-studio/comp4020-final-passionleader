@@ -5,6 +5,9 @@
   color-scheme: light;
 }
 * { box-sizing: border-box; }
+/* The hidden attribute always hides, even where a rule sets display (flex,
+   grid): otherwise "hidden" controls, like the admin's classroom form, show. */
+[hidden] { display: none !important; }
 html, body {
   margin: 0;
   height: 100%;
