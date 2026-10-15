@@ -4,6 +4,7 @@ import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
 import { findByToken, lastSpot, saveLastSpot } from "./db.ts";
+import { log } from "./log.ts";
 import { clampTo, isSpace, type SpaceId } from "./spaces.ts";
 
 // The real-time layer: one WebSocket per open tab, all to this one server.
@@ -14,6 +15,8 @@ import { clampTo, isSpace, type SpaceId } from "./spaces.ts";
 // the spaces and what people do in them can keep changing.
 
 export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number };
+/** Who's behind a socket, for the activity log only: never sent to anyone. */
+const owners = new WeakMap<WebSocket, { name: string; token: string; role: string }>();
 
 const EMOTES = new Set(["wave", "yes", "no", "mate", "dance"]);
 const MAX_JUMP = 3;
@@ -63,7 +66,10 @@ function onMessage(ws: WebSocket, raw: string): void {
     const from = player.space;
     player.space = msg.space;
     Object.assign(player, clampTo(msg.space, msg.x, msg.z), { y: 0 });
-    if (from !== player.space) broadcastSpace(from, { t: "leave", id: player.id });
+    if (from !== player.space) {
+      broadcastSpace(from, { t: "leave", id: player.id });
+      log("enter", owners.get(ws) ?? null, { from, space: player.space });
+    }
     send(ws, { t: "players", players: inSpace(player.space) });
     dirty.add(player.space);
   } else if (msg.t === "chat" && typeof msg.text === "string") {
@@ -72,25 +78,32 @@ function onMessage(ws: WebSocket, raw: string): void {
     if (!text || now - (lastChat.get(ws) ?? 0) < CHAT_GAP_MS) return;
     lastChat.set(ws, now);
     // Chat is never stored: it exists only for the people in the space now.
+    // The log notes that someone spoke, and how much, not what they said.
+    log("chat", owners.get(ws) ?? null, { space: player.space, chars: text.length });
     broadcastSpace(player.space, { t: "chat", id: player.id, name: player.name, text });
   } else if (msg.t === "emote" && typeof msg.kind === "string" && EMOTES.has(msg.kind)) {
     broadcastSpace(player.space, { t: "emote", id: player.id, kind: msg.kind });
+    log("emote", owners.get(ws) ?? null, { space: player.space, kind: msg.kind });
   }
 }
 
-function onConnect(ws: WebSocket, name: string): void {
+function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: string }): void {
+  const name = visitor.name;
+  owners.set(ws, visitor);
   const spot = lastSpot(name);
   const player: Player = { id: randomUUID(), name, space: spot.space, x: spot.x, y: 0, z: spot.z, rot: 0 };
   players.set(ws, player);
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
   dirty.add(player.space);
+  log("connect", visitor, { space: player.space, online: players.size });
 
   ws.on("pong", () => alive.add(ws));
   ws.on("message", (data) => onMessage(ws, data.toString()));
   ws.on("close", () => {
     players.delete(ws);
     saveLastSpot(player.name, player.space, player.x, player.z);
+    log("disconnect", visitor, { space: player.space, online: players.size });
     broadcastSpace(player.space, { t: "leave", id: player.id });
   });
 }
@@ -103,10 +116,11 @@ export function attachRealtime(server: Server): void {
     const url = new URL(req.url ?? "/", "http://localhost");
     const visitor = url.pathname === "/ws" ? findByToken(url.searchParams.get("token") ?? "") : undefined;
     if (!visitor) {
+      if (url.pathname === "/ws") log("refused", null, { action: "connect", reason: "unknown token" });
       socket.end("HTTP/1.1 401 Unauthorized\r\n\r\n");
       return;
     }
-    wss.handleUpgrade(req, socket, head, (ws) => onConnect(ws, visitor.name));
+    wss.handleUpgrade(req, socket, head, (ws) => onConnect(ws, visitor));
   });
 
   setInterval(() => {

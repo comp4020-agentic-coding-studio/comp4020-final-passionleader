@@ -23,6 +23,7 @@ import {
   notesIn,
   type Visitor,
 } from "./db.ts";
+import { log } from "./log.ts";
 import { attachRealtime, broadcastSpace } from "./realtime.ts";
 import { FIRST_SPACE, SPACES, clampTo, isSpace } from "./spaces.ts";
 
@@ -40,6 +41,7 @@ app.get("/readme/", (c) => {
 });
 
 type Body = Record<string, unknown>;
+const wordCount = (s: string): number => s.trim().split(/\s+/).filter(Boolean).length;
 const body = (c: Context): Promise<Body> => c.req.json<Body>().catch(() => ({}));
 
 /** The visitor behind a request's token, or null. */
@@ -54,10 +56,15 @@ app.post("/api/join", async (c) => {
   // Test and admin accounts sign in with a password, from any browser.
   if (RESERVED.test(name)) {
     const account = RESERVED_RULE.test(name) ? findByName(name) : undefined;
-    if (!account?.passwordHash) return c.json({ error: "Names starting with qa_ are reserved." }, 403);
+    if (!account?.passwordHash) {
+      log("join-refused", { name }, { reason: "reserved name" });
+      return c.json({ error: "Names starting with qa_ are reserved." }, 403);
+    }
     if (typeof password !== "string" || !checkPassword(password, account.passwordHash)) {
+      log("join-refused", { name: account.name }, { reason: "wrong password" });
       return c.json({ error: "Wrong password." }, 401);
     }
+    log("join", account, { how: "password" });
     return c.json({ name: account.name, token: account.token, role: account.role, spawn: lastSpot(account.name) });
   }
 
@@ -66,12 +73,15 @@ app.post("/api/join", async (c) => {
   if (existing) {
     // A name belongs to whoever first took it; only their browser's token gets it back.
     if (existing.token === token) {
+      log("join", existing, { how: "returning" });
       return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name) });
     }
+    log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: "name taken" });
     return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
   }
   const fresh = randomUUID();
   createVisitor(name, fresh);
+  log("join", { name, token: fresh }, { how: "new" });
   return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE].spawn } });
 });
 
@@ -95,7 +105,12 @@ app.post("/api/notes", async (c) => {
   if (bad) return c.json({ error: bad }, 400);
   const { x, z } = clampTo(b.space, b.x, b.z);
   const result = addNote(v.name, b.space, x, z, (b.text as string).trim());
-  if (!result.ok) return c.json({ error: `One note every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
+  if (!result.ok) {
+    log("refused", v, { action: "note", space: b.space, reason: "too soon", wait: result.wait });
+    return c.json({ error: `One note every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
+  }
+  log("note", v, { space: b.space, note: result.note.id, words: wordCount(result.note.text) });
+  if (result.replaced !== null) log("note-replaced", v, { space: b.space, note: result.replaced, by: result.note.id });
   // Everyone in the space sees it land (and the replaced one go) right away.
   if (result.replaced !== null) broadcastSpace(b.space, { t: "action", kind: "note-removed", id: result.replaced });
   broadcastSpace(b.space, { t: "action", kind: "note", note: result.note });
@@ -116,8 +131,12 @@ app.delete("/api/notes/:id", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const note = findNote(Number(c.req.param("id")));
   if (!note) return c.json({ error: "That note is gone." }, 404);
-  if (!mayRemove(v, note.author)) return c.json({ error: "Only its author can remove this note." }, 403);
+  if (!mayRemove(v, note.author)) {
+    log("refused", v, { action: "remove note", space: note.space, note: note.id, owner: note.author, reason: "not the author" });
+    return c.json({ error: "Only its author can remove this note." }, 403);
+  }
   deleteNote(note.id);
+  log("note-removed", v, { space: note.space, note: note.id, owner: note.author });
   broadcastSpace(note.space, { t: "action", kind: "note-removed", id: note.id });
   return c.json({ ok: true });
 });
@@ -139,7 +158,11 @@ app.post("/api/notes/:id/comments", async (c) => {
   const bad = textError(b.text);
   if (bad) return c.json({ error: bad }, 400);
   const result = addComment(v.name, note.id, (b.text as string).trim());
-  if (!result.ok) return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
+  if (!result.ok) {
+    log("refused", v, { action: "comment", space: note.space, note: note.id, reason: "too soon", wait: result.wait });
+    return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
+  }
+  log("comment", v, { space: note.space, note: note.id, comment: result.comment.id, words: wordCount(result.comment.text) });
   broadcastSpace(note.space, { t: "action", kind: "comment", comment: result.comment });
   return c.json(result.comment, 201);
 });
@@ -149,9 +172,13 @@ app.delete("/api/comments/:id", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const comment = findComment(Number(c.req.param("id")));
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
-  if (!mayRemove(v, comment.author)) return c.json({ error: "Only its author can remove this comment." }, 403);
   const note = findNote(comment.noteId);
+  if (!mayRemove(v, comment.author)) {
+    log("refused", v, { action: "remove comment", space: note?.space, comment: comment.id, owner: comment.author, reason: "not the author" });
+    return c.json({ error: "Only its author can remove this comment." }, 403);
+  }
   deleteComment(comment.id);
+  log("comment-removed", v, { space: note?.space, comment: comment.id, owner: comment.author });
   if (note) broadcastSpace(note.space, { t: "action", kind: "comment-removed", id: comment.id, noteId: note.id });
   return c.json({ ok: true });
 });
@@ -166,6 +193,6 @@ if (existsSync(dist)) {
 
 const port = Number(process.env.PORT ?? 8080);
 const server = serve({ fetch: app.fetch, hostname: "0.0.0.0", port }, () => {
-  console.log(`listening on http://0.0.0.0:${port}`);
+  console.log(JSON.stringify({ at: new Date().toISOString(), event: "start", port }));
 });
 attachRealtime(server as Server);
