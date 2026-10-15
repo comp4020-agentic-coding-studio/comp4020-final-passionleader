@@ -114,17 +114,15 @@ function block(
 
 /**
  * A ground floor of shopfronts facing the road (+z), from x0 to x1 with its
- * glass at z: each shop a glazed front with a dark frame, a coloured awning,
+ * glass at z: each shop four tall panes in a dark frame, a coloured awning,
  * and a plain painted name board. Names only, in plain type: no brand logos.
  */
 function shopfronts(g: THREE.Group, x0: number, x1: number, z: number): void {
+  // Left to right as on the real street: a bar, Subway, a burger place.
   const shops = [
-    { name: "Cafe", w: 6, board: "#5b3a24", fg: "#f3e2c4", awning: 0x7a4e2e },
-    { name: "Subway", w: 7, board: "#00843d", fg: "#ffcc00", awning: 0x00843d },
-    { name: "Sushi", w: 6, board: "#b3261e", fg: "#ffffff", awning: 0xb3261e },
-    { name: "Noodle bar", w: 7, board: "#f2a900", fg: "#2b1a00", awning: 0xd98e04 },
-    { name: "Pharmacy", w: 6, board: "#ffffff", fg: "#1a5fa8", awning: 0x1a5fa8 },
-    { name: "Bookshop", w: 7, board: "#2f4a6b", fg: "#f3e7a6", awning: 0x2f4a6b },
+    { name: "Symposium", w: 13, board: "#2b2b30", fg: "#e8c872", awning: 0x2b2b30 },
+    { name: "Subway", w: 13, board: "#00843d", fg: "#ffcc00", awning: 0x00843d },
+    { name: "Broger", w: 13, board: "#c8331e", fg: "#ffffff", awning: 0xc8331e },
   ];
   const h = FLOOR_H;
   const wall = mat(0xd9c8a9);
@@ -141,7 +139,8 @@ function shopfronts(g: THREE.Group, x0: number, x1: number, z: number): void {
     const pane = new THREE.Mesh(new THREE.PlaneGeometry(s.w - 0.6, 2.4), glass);
     pane.position.set(cx, 1.3, z + 0.02);
     g.add(pane);
-    for (const fx of [x + 0.3, x + s.w - 0.3, cx]) {
+    // Four tall panes per shop: a mullion at each edge and every quarter.
+    for (const fx of [0, 0.25, 0.5, 0.75, 1].map((t) => x + 0.3 + t * (s.w - 0.6))) {
       const mullion = new THREE.Mesh(new THREE.BoxGeometry(0.1, 2.5, 0.08), frame);
       mullion.position.set(fx, 1.3, z + 0.05);
       g.add(mullion);
@@ -150,7 +149,7 @@ function shopfronts(g: THREE.Group, x0: number, x1: number, z: number): void {
     awning.position.set(cx, 2.72, z + 0.6);
     awning.rotation.x = 0.18;
     g.add(awning);
-    const sign = textPlane([s.name], s.w - 1, 0.55, { bg: s.board, fg: s.fg, font: 0.36 });
+    const sign = textPlane([s.name], Math.min(s.w - 1, 7), 0.6, { bg: s.board, fg: s.fg, font: 0.4 });
     sign.position.set(cx, 3.05, z + 0.03);
     g.add(sign);
     x += s.w + 0.5;
