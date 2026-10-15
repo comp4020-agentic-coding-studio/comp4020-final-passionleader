@@ -13,17 +13,23 @@ import {
   ApiError,
   RESERVED_RE,
   createClassroom,
+  createPost,
+  createPostComment,
   deleteComment,
   deleteNote,
   getClassrooms,
   getComments,
   getNotes,
+  getPostComments,
+  getPosts,
   isValidName,
   join,
   myNoteCount,
   postComment,
   postNote,
   removeClassroom,
+  removePost,
+  removePostComment,
   type Classroom,
   type Comment,
   type Note,
@@ -38,6 +44,7 @@ import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
+import { mountBoard } from "./board.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -469,14 +476,63 @@ const webview = mountWebView();
 // The dog in front of 154 asks for a feed: a link to my Buy Me a Coffee page.
 const dogPrompt = mountDogPrompt();
 
+// Each classroom's board (Q&A, Notices, Board). The server decides who may
+// post a notice; the dialog only hides the button from everyone else.
+const failed = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
+const board = mountBoard({
+  async list(tab) {
+    if (!space) return [];
+    return (await getPosts(space.id, tab)).map((p) => ({ ...p, canDelete: !p.pinned && mine(p.author) }));
+  },
+  async comments(postId) {
+    return (await getPostComments(postId)).map((c) => ({ ...c, canDelete: mine(c.author) }));
+  },
+  async post(tab, title, text) {
+    if (!session || !space) return "Join first.";
+    try {
+      await createPost(session.token, space.id, tab, title, text);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not post that.");
+    }
+  },
+  async comment(postId, text) {
+    if (!session) return "Join first.";
+    try {
+      await createPostComment(session.token, postId, text);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not add that comment.");
+    }
+  },
+  async removePost(postId) {
+    if (!session) return "Join first.";
+    try {
+      await removePost(session.token, postId);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not remove it.");
+    }
+  },
+  async removeComment(commentId) {
+    if (!session) return "Join first.";
+    try {
+      await removePostComment(session.token, commentId);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not remove it.");
+    }
+  },
+});
+
 // When a dialog closes, hand focus back to the game view.
-for (const id of ["class-picker", "webview", "dog-prompt"]) {
+for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
   const el = document.getElementById(id);
   if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen();
+  chat.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -690,6 +746,9 @@ function goOnline(token: string): void {
     classrooms(list) {
       useClassrooms(list);
     },
+    board() {
+      if (board.isOpen()) board.refresh();
+    },
     moved(to, x, z, players) {
       toast("That classroom was closed. You're back outside.");
       setSpace(to, { x, z }, false);
@@ -871,6 +930,7 @@ function interact(): void {
   } else if (target.kind === "spot") {
     stopMoving();
     if (target.id === "dog") dogPrompt.open();
+    else if (target.id === "board" && space) board.open(space.title.replace(/ classroom$/, ""), session?.role === "admin");
   } else if (target.kind === "link") {
     stopMoving();
     // Over the game if the site allows framing, else a new tab; either way

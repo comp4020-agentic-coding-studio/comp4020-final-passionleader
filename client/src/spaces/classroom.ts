@@ -30,8 +30,12 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   g.add(projects);
   const guestbook = textPlane(["Guestbook", "(coming soon)"], 3.4, 1, { bg: "#e9dcc0", fg: "#3b2a12", font: 0.26 });
   guestbook.position.set(6.4, 1.2, -HALF.halfZ + 0.01);
+  // Left of the whiteboard: this classroom's board (Q&A, Notices, Board).
+  const cork = textPlane([`${code} board`, "Q&A · Notices · Board", "press E to read and post"], 3.4, 2.2, { bg: "#b98a55", fg: "#2c1d0c", font: 0.27 });
+  cork.position.set(-6.4, 2.1, -HALF.halfZ + 0.01);
+  g.add(cork);
   g.add(guestbook);
-  block(g, colliders, [1, 1.2, 0.8], [-5, -6], 0x6b4a2b);
+  block(g, colliders, [1, 1.2, 0.8], [3.8, -6], 0x6b4a2b); // the lectern
 
   // Four rows of desks either side of the centre aisle, a chair behind each,
   // facing the board (Kenney models, CC0).
@@ -61,5 +65,6 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
     links: page
       ? [{ x: 0, z: -6.7, label: `Open the ${code} course page`, url: page, embeddable: true }]
       : [],
+    spots: [{ x: -6.4, z: -6.7, id: "board", label: `Open the ${code} board` }],
   };
 }

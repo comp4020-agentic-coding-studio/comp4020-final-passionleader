@@ -24,6 +24,10 @@ export type Event =
   | "note-expired"
   | "comment"
   | "comment-removed"
+  | "post"
+  | "post-removed"
+  | "post-comment"
+  | "post-comment-removed"
   | "classroom-created"
   | "classroom-removed"
   | "refused";

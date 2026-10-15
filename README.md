@@ -29,7 +29,12 @@ should feel at home in a virtual space shaped like the real campus they know.
    you or the admin remove it first. Notes go up outside and in classrooms,
    not in the Student Hub and not on top of a door. Walk onto one and press
    **E** to read and comment.
-5. The gear (top right) sets the music and sound-effect volumes and switches
+5. In a classroom, **E** at the board left of the whiteboard opens its Q&A,
+   Notices and Board. Anyone asks, posts and comments (posts up to 500
+   words); only lecturers and staff post notices. The whiteboard opens the
+   course page in a window over the campus.
+6. Say hello to the dog in front of 154.
+7. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
    track playing, with pause and next.
 
@@ -63,8 +68,9 @@ gets easier.
 
 ## What I chose not to build (yet)
 
-Counselling and group-chat rooms, team rooms, sitting on chairs,
-boards, mail, one-to-one chat, voice, and character colours. The buildings are
+Counselling and group-chat rooms, team rooms, sitting on chairs, the Hub's
+boards, mail, one-to-one chat, voice, and character colours. "Staff" is only
+the admin account for now: nothing yet tells a lecturer from a student. The buildings are
 simplified, not surveyed.
 
 ## What I read while deciding

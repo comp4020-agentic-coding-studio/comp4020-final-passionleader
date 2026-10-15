@@ -30,6 +30,8 @@ export interface NetHandlers {
   commentRemoved(id: number, noteId: number): void;
   /** The admin opened or closed a classroom. */
   classrooms(list: Classroom[]): void;
+  /** Something on this classroom's board changed. */
+  board(): void;
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   status(online: boolean): void;
@@ -90,6 +92,7 @@ export function connect(token: string, on: NetHandlers): Net {
           return on.moved(m.space as SpaceId, m.x as number, m.z as number, m.players as RemotePlayer[]);
         case "action":
           if (m.kind === "classrooms") return on.classrooms(m.classrooms as Classroom[]);
+          if (m.kind === "board") return on.board();
           if (m.kind === "note") return on.note(m.note as Note);
           if (m.kind === "note-removed") return on.noteRemoved(m.id as number);
           if (m.kind === "comment") return on.comment(m.comment as Comment);

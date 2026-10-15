@@ -34,6 +34,23 @@ export const MAX_WORDS = 100;
 export const MAX_CHARS = 600;
 export const MAX_CHAT = 200;
 
+// Board posts run longer than notes: up to 500 words, with a title.
+export const MAX_POST_WORDS = 500;
+export const MAX_POST_CHARS = 3000;
+export const MAX_TITLE = 80;
+
+export function postError(title: unknown, text: unknown): string | null {
+  if (typeof title !== "string" || title.trim() === "") return "Give it a title.";
+  if (title.trim().length > MAX_TITLE) return `Keep the title under ${MAX_TITLE} characters.`;
+  if (typeof text !== "string" || text.trim() === "") return "Write something first.";
+  if (text.length > MAX_POST_CHARS) return `Keep it under ${MAX_POST_CHARS} characters.`;
+  if (words(text) > MAX_POST_WORDS) return `Keep it to ${MAX_POST_WORDS} words.`;
+  return null;
+}
+
+/** Notices are for lecturers and staff; until there's a staff role, that's the admin. */
+export const mayPostIn = (v: { role: string }, tab: string): boolean => tab !== "notices" || v.role === "admin";
+
 export function textError(text: unknown): string | null {
   if (typeof text !== "string" || text.trim() === "") return "Write something first.";
   if (text.length > MAX_CHARS) return `Keep it under ${MAX_CHARS} characters.`;

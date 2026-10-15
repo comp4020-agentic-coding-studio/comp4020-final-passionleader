@@ -7,6 +7,7 @@ import { COMMON, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, ty
 // where they last stood. Notes: sticky notes on a space's floor, kept until
 // their author or an admin removes them. Comments: replies on a note.
 // Classrooms: the course codes the admin has opened in building 155.
+// Posts and post comments: each classroom's board (Q&A, Notices, Board).
 // Live positions never come here; they stay in server memory.
 
 export type Role = "user" | "admin";
@@ -64,6 +65,23 @@ db.exec(`
     text       TEXT NOT NULL,
     created_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
+  CREATE TABLE IF NOT EXISTS posts (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    space      TEXT NOT NULL,
+    tab        TEXT NOT NULL,
+    author     TEXT NOT NULL REFERENCES visitors(name) ON DELETE CASCADE,
+    title      TEXT NOT NULL,
+    text       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS posts_by_board ON posts (space, tab, created_at);
+  CREATE TABLE IF NOT EXISTS post_comments (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    post_id    INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    author     TEXT NOT NULL REFERENCES visitors(name) ON DELETE CASCADE,
+    text       TEXT NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
   CREATE TABLE IF NOT EXISTS classrooms (
     code       TEXT PRIMARY KEY,
     created_by TEXT,
@@ -83,6 +101,7 @@ const wanted: Record<string, string> = {
   last_z: "REAL",
   last_note_at: "TEXT",
   last_comment_at: "TEXT",
+  last_post_at: "TEXT",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
@@ -163,7 +182,7 @@ export function noteCount(author: string, space: SpaceId): number {
 }
 
 /** Seconds left before this visitor may post again, or 0. */
-function cooldownLeft(name: string, column: "last_note_at" | "last_comment_at", seconds: number): number {
+function cooldownLeft(name: string, column: "last_note_at" | "last_comment_at" | "last_post_at", seconds: number): number {
   const row = db
     .prepare(`SELECT ${seconds} - (unixepoch('now') - unixepoch(${column})) AS left FROM visitors WHERE name = ?`)
     .get(name) as { left: number | null } | undefined;
@@ -267,6 +286,7 @@ export function removeClassroom(code: string): boolean {
   try {
     const { changes } = db.prepare("DELETE FROM classrooms WHERE code = ?").run(code);
     db.prepare("DELETE FROM notes WHERE space = ?").run(space);
+    db.prepare("DELETE FROM posts WHERE space = ?").run(space);
     db.prepare("UPDATE visitors SET last_space = NULL, last_x = NULL, last_z = NULL WHERE last_space = ?").run(space);
     db.exec("COMMIT");
     syncClassrooms();
@@ -275,4 +295,86 @@ export function removeClassroom(code: string): boolean {
     db.exec("ROLLBACK");
     throw err;
   }
+}
+
+// --- classroom boards --------------------------------------------------------
+// Each classroom has a board with three tabs. Anyone may post in Q&A and
+// Board and comment anywhere; only the admin (for now the only "staff") posts
+// in Notices, which main.ts checks. Posts stay until their author or an admin
+// removes them, or the classroom is closed.
+
+export type BoardTab = "qa" | "notices" | "board";
+export const BOARD_TABS: readonly BoardTab[] = ["qa", "notices", "board"];
+export const POST_COOLDOWN_SECONDS = 30;
+
+export interface Post {
+  id: number;
+  space: SpaceId;
+  tab: BoardTab;
+  author: string;
+  title: string;
+  text: string;
+  createdAt: string;
+  comments: number;
+}
+export interface PostComment {
+  id: number;
+  postId: number;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt,
+  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments`;
+
+export function postsIn(space: SpaceId, tab: BoardTab): Post[] {
+  return db
+    .prepare(`SELECT ${postCols} FROM posts p WHERE p.space = ? AND p.tab = ? ORDER BY p.created_at DESC, p.id DESC`)
+    .all(space, tab) as unknown as Post[];
+}
+
+export function findPost(id: number): Post | undefined {
+  return db.prepare(`SELECT ${postCols} FROM posts p WHERE p.id = ?`).get(id) as Post | undefined;
+}
+
+export type AddPostResult = { ok: true; post: Post } | { ok: false; wait: number };
+
+export function addPost(author: string, space: SpaceId, tab: BoardTab, title: string, text: string): AddPostResult {
+  const wait = cooldownLeft(author, "last_post_at", POST_COOLDOWN_SECONDS);
+  if (wait > 0) return { ok: false, wait };
+  const { lastInsertRowid } = db
+    .prepare("INSERT INTO posts (space, tab, author, title, text) VALUES (?, ?, ?, ?, ?)")
+    .run(space, tab, author, title, text);
+  db.prepare("UPDATE visitors SET last_post_at = datetime('now') WHERE name = ?").run(author);
+  return { ok: true, post: findPost(Number(lastInsertRowid))! };
+}
+
+export function deletePost(id: number): void {
+  db.prepare("DELETE FROM posts WHERE id = ?").run(id);
+}
+
+const postCommentCols = "id, post_id AS postId, author, text, created_at AS createdAt";
+
+export function postCommentsOn(postId: number): PostComment[] {
+  return db
+    .prepare(`SELECT ${postCommentCols} FROM post_comments WHERE post_id = ? ORDER BY created_at, id`)
+    .all(postId) as unknown as PostComment[];
+}
+
+export function findPostComment(id: number): PostComment | undefined {
+  return db.prepare(`SELECT ${postCommentCols} FROM post_comments WHERE id = ?`).get(id) as PostComment | undefined;
+}
+
+/** Comments on posts share the note comments' 10-second gap. */
+export function addPostComment(author: string, postId: number, text: string): { ok: true; comment: PostComment } | { ok: false; wait: number } {
+  const wait = cooldownLeft(author, "last_comment_at", COMMENT_COOLDOWN_SECONDS);
+  if (wait > 0) return { ok: false, wait };
+  const { lastInsertRowid } = db.prepare("INSERT INTO post_comments (post_id, author, text) VALUES (?, ?, ?)").run(postId, author, text);
+  db.prepare("UPDATE visitors SET last_comment_at = datetime('now') WHERE name = ?").run(author);
+  return { ok: true, comment: findPostComment(Number(lastInsertRowid))! };
+}
+
+export function deletePostComment(id: number): void {
+  db.prepare("DELETE FROM post_comments WHERE id = ?").run(id);
 }

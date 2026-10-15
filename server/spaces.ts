@@ -68,6 +68,7 @@ export function spaceInfo(id: SpaceId): Space | undefined {
 }
 
 export const isSpace = (s: unknown): s is SpaceId => typeof s === "string" && spaceInfo(s) !== undefined;
+export const isClassroom = (s: unknown): s is SpaceId => typeof s === "string" && classrooms.has(s);
 
 const clamp = (n: number, lo: number, hi: number): number => Math.max(lo, Math.min(hi, n));
 
@@ -110,6 +111,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
   { x: 0, z: -6.7 }, // the whiteboard
+  { x: -6.4, z: -6.7 }, // the board
 ];
 
 /** Why a note can't go here, or null if it can. */

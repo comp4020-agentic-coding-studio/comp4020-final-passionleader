@@ -103,3 +103,32 @@ export const createClassroom = (token: string, code: string): Promise<Classroom>
 
 export const removeClassroom = (token: string, code: string): Promise<unknown> =>
   request(`/api/classrooms/${encodeURIComponent(code)}`, "DELETE", { token });
+
+export type BoardTab = "qa" | "notices" | "board";
+export interface Post {
+  id: number;
+  tab: BoardTab;
+  author: string;
+  title: string;
+  text: string;
+  createdAt: string;
+  comments: number;
+  /** The fixed note at the top of Notices (not a real post: id 0, no comments). */
+  pinned?: boolean;
+}
+export interface PostComment {
+  id: number;
+  postId: number;
+  author: string;
+  text: string;
+  createdAt: string;
+}
+
+export const getPosts = (space: SpaceId, tab: BoardTab): Promise<Post[]> => request<Post[]>(`/api/board?space=${space}&tab=${tab}`);
+export const createPost = (token: string, space: SpaceId, tab: BoardTab, title: string, text: string): Promise<Post> =>
+  request<Post>("/api/board", "POST", { token, space, tab, title, text });
+export const removePost = (token: string, id: number): Promise<unknown> => request(`/api/board/${id}`, "DELETE", { token });
+export const getPostComments = (id: number): Promise<PostComment[]> => request<PostComment[]>(`/api/board/${id}/comments`);
+export const createPostComment = (token: string, id: number, text: string): Promise<PostComment> =>
+  request<PostComment>(`/api/board/${id}/comments`, "POST", { token, text });
+export const removePostComment = (token: string, id: number): Promise<unknown> => request(`/api/board-comments/${id}`, "DELETE", { token });

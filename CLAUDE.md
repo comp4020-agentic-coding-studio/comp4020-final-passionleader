@@ -46,6 +46,11 @@ Read before planning or building: `README.md` (what good means for this app),
   Hub, never inside a building's footprint outside, never within 2 m of a door
   or anything else you press E at; the server checks it.
   Comments: same text limits, one every 10 seconds, same removal rule.
+- Classroom boards (Q&A, Notices, Board): posts up to 500 words (and 3000
+  characters) with a title of up to 80, one every 30 seconds; comments as
+  for notes. Only lecturers and staff post in Notices (for now the admin),
+  checked on the server; anyone reads and comments. Authors or the admin
+  remove; closing a classroom removes its board.
 - Chat is never stored: 200 characters, the space only, gone from screens
   after a minute.
 - Everything a person does reaches only the people in the same space.

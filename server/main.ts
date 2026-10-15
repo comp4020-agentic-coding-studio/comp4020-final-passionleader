@@ -5,31 +5,41 @@ import { serve } from "@hono/node-server";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { marked } from "marked";
-import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayRemove, textError } from "./accounts.ts";
+import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayPostIn, mayRemove, postError, textError } from "./accounts.ts";
 import {
+  BOARD_TABS,
   NOTES_PER_SPACE,
   addClassroom,
   addComment,
   addNote,
+  addPost,
+  addPostComment,
   classroomList,
   commentsOn,
   createVisitor,
   deleteComment,
   deleteNote,
+  deletePost,
+  deletePostComment,
   findByName,
   findByToken,
   findComment,
   findNote,
+  findPost,
+  findPostComment,
   lastSpot,
   noteCount,
   notesIn,
+  postCommentsOn,
+  postsIn,
   purgeExpiredNotes,
   removeClassroom,
+  type BoardTab,
   type Visitor,
 } from "./db.ts";
 import { log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
-import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace, noteSpotError } from "./spaces.ts";
+import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError } from "./spaces.ts";
 
 const app = new Hono();
 
@@ -230,6 +240,111 @@ app.delete("/api/classrooms/:code", async (c) => {
   if (!removeClassroom(code)) return c.json({ error: `${code} isn't open.` }, 404);
   log("classroom-removed", v, { code, space, moved });
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
+  return c.json({ ok: true });
+});
+
+// --- classroom boards --------------------------------------------------------
+// Every classroom has a board with three tabs. Anyone reads everything, posts
+// in Q&A and Board, and comments anywhere. Only lecturers and staff post in
+// Notices (until there's a staff role, the admin): checked here, refused with
+// a 403 and a log line. Authors and the admin remove posts and comments.
+
+const isTab = (t: unknown): t is BoardTab => typeof t === "string" && (BOARD_TABS as readonly string[]).includes(t);
+// Not a row: the first thing in every Notices tab, saying who may post there.
+const PINNED_NOTICE = {
+  id: 0,
+  tab: "notices",
+  author: "ANU campus",
+  title: "Who can post here",
+  text: "Only lecturers and staff can post in Notices, so other users can't post here. Everyone can read and comment.",
+  createdAt: "",
+  comments: 0,
+  pinned: true,
+};
+
+app.get("/api/board", (c) => {
+  const space = c.req.query("space");
+  const tab = c.req.query("tab");
+  if (!isClassroom(space)) return c.json({ error: "No such classroom." }, 404);
+  if (!isTab(tab)) return c.json({ error: "No such tab." }, 400);
+  const posts = postsIn(space, tab);
+  return c.json(tab === "notices" ? [PINNED_NOTICE, ...posts] : posts);
+});
+
+app.post("/api/board", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  if (!isClassroom(b.space)) return c.json({ error: "No such classroom." }, 400);
+  if (!isTab(b.tab)) return c.json({ error: "No such tab." }, 400);
+  if (!mayPostIn(v, b.tab)) {
+    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "notices are for staff" });
+    return c.json({ error: "Only lecturers and staff can post in Notices." }, 403);
+  }
+  const bad = postError(b.title, b.text);
+  if (bad) return c.json({ error: bad }, 400);
+  const result = addPost(v.name, b.space, b.tab, (b.title as string).trim(), (b.text as string).trim());
+  if (!result.ok) {
+    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "too soon", wait: result.wait });
+    return c.json({ error: `One post every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
+  }
+  log("post", v, { space: b.space, tab: b.tab, post: result.post.id, words: wordCount(result.post.text) });
+  broadcastSpace(b.space, { t: "action", kind: "board", tab: b.tab });
+  return c.json(result.post, 201);
+});
+
+app.delete("/api/board/:id", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const post = findPost(Number(c.req.param("id")));
+  if (!post) return c.json({ error: "That post is gone." }, 404);
+  if (!mayRemove(v, post.author)) {
+    log("refused", v, { action: "remove post", space: post.space, post: post.id, owner: post.author, reason: "not the author" });
+    return c.json({ error: "Only its author can remove this post." }, 403);
+  }
+  deletePost(post.id);
+  log("post-removed", v, { space: post.space, tab: post.tab, post: post.id, owner: post.author });
+  broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab });
+  return c.json({ ok: true });
+});
+
+app.get("/api/board/:id/comments", (c) => {
+  const post = findPost(Number(c.req.param("id")));
+  if (!post) return c.json({ error: "That post is gone." }, 404);
+  return c.json(postCommentsOn(post.id));
+});
+
+app.post("/api/board/:id/comments", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const post = findPost(Number(c.req.param("id")));
+  if (!post) return c.json({ error: "That post is gone." }, 404);
+  const bad = textError(b.text);
+  if (bad) return c.json({ error: bad }, 400);
+  const result = addPostComment(v.name, post.id, (b.text as string).trim());
+  if (!result.ok) {
+    log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: "too soon", wait: result.wait });
+    return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
+  }
+  log("post-comment", v, { space: post.space, tab: post.tab, post: post.id, comment: result.comment.id, words: wordCount(result.comment.text) });
+  broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  return c.json(result.comment, 201);
+});
+
+app.delete("/api/board-comments/:id", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const comment = findPostComment(Number(c.req.param("id")));
+  if (!comment) return c.json({ error: "That comment is gone." }, 404);
+  const post = findPost(comment.postId);
+  if (!mayRemove(v, comment.author)) {
+    log("refused", v, { action: "remove post comment", space: post?.space, comment: comment.id, owner: comment.author, reason: "not the author" });
+    return c.json({ error: "Only its author can remove this comment." }, 403);
+  }
+  deletePostComment(comment.id);
+  log("post-comment-removed", v, { space: post?.space, comment: comment.id, owner: comment.author });
+  if (post) broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json({ ok: true });
 });
 
