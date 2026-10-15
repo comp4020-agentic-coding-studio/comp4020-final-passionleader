@@ -1,0 +1,91 @@
+/* Small music box, top right, just left of the gear. Desktop only: phones
+   already have the touch controls in the corners. */
+
+#bgm-player {
+  position: fixed;
+  top: 10px;
+  right: 64px;
+  z-index: 20;
+  box-sizing: border-box;
+  height: 44px;
+  max-width: 320px;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  padding: 0 6px 0 12px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.9);
+  box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
+  color: var(--ink, #3b2a12);
+  font-family: system-ui, sans-serif;
+  font-size: 0.85rem;
+}
+
+#bgm-player[hidden] {
+  display: none;
+}
+
+#bgm-player .bgm-icon {
+  flex: none;
+  font-size: 1.05rem;
+}
+
+#bgm-player .bgm-title {
+  max-width: 220px;
+  margin-right: 4px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+#bgm-player button {
+  flex: none;
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: inherit;
+  font-size: 1rem;
+  line-height: 1;
+  cursor: pointer;
+}
+
+#bgm-player button:hover {
+  background: rgba(107, 63, 29, 0.12);
+}
+
+#bgm-player button:focus-visible {
+  outline: 3px solid #6b3f1d;
+  outline-offset: 1px;
+}
+
+/* The Sound fieldset in the settings dialog (built in settings.ts; kept here
+   because style.css is not part of this slice). */
+.settings-card fieldset + fieldset {
+  margin-top: 14px;
+}
+
+.settings-slider {
+  display: grid;
+  grid-template-columns: 7.5rem 1fr 2.5ch;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-slider input[type="range"] {
+  width: 100%;
+  min-width: 0;
+  cursor: pointer;
+}
+
+.settings-slider output {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+@media (pointer: coarse), (max-width: 700px) {
+  #bgm-player {
+    display: none;
+  }
+}

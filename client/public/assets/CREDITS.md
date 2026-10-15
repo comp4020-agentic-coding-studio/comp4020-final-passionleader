@@ -113,8 +113,10 @@ storey of facade).
 
 ## Music
 
-`StudentHub.mp3`, `Classroom.mp3`, `Outdoor_Map.mp3` — Music generated with
-Google AI (Gemini) for this project.
+`A_Long_Silence_Observed.mp3`, `Morning_at_the_Quad.mp3` (campus),
+`Margin_Notes.mp3` (Student Hub), `The_Library_Window.mp3` (classroom),
+`Sunlight_on_Glass.mp3` (kept for Chifley Library, not used yet) — Music
+generated with Google AI (Gemini) for this project.
 
 Everything else in the scene (room shells, characters, sticky notes, UI) is
 built from Three.js primitives and HTML/CSS in code.

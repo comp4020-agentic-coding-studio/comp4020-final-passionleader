@@ -5,6 +5,7 @@ import { Sky } from "three/examples/jsm/objects/Sky.js";
 import { RGBELoader } from "three/examples/jsm/loaders/RGBELoader.js";
 import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { playTrack } from "./audio.ts";
+import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
 import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
 import { Avatar, motionFor, preloadCharacters, variantFor, type Variant } from "./character.ts";
@@ -70,6 +71,7 @@ const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
 // Low (the default) vs High graphics: see settings.ts.
 const highQuality = HIGH;
 mountSettings();
+mountBgmPlayer();
 
 const scene = new THREE.Scene();
 const sun = addLights(scene, highQuality);

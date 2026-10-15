@@ -25,7 +25,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    "How ya doing, mate?", dance, or stick a note.
 4. A note stays where you stood until you or the admin remove it. Walk onto one
    and press **E** to read and comment.
-5. The gear (top right) switches graphics between Low and High.
+5. The gear (top right) sets the music and sound-effect volumes and switches
+   graphics between Low and High. On a computer, the box beside it shows the
+   track playing, with pause and next.
 
 ## What good means for this app
 

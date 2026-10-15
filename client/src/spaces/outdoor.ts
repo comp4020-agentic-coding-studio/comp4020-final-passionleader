@@ -182,7 +182,7 @@ export function buildOutdoor(): SpaceDef {
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),
-    bgm: "Outdoor_Map.mp3",
+    bgm: ["A_Long_Silence_Observed.mp3", "Morning_at_the_Quad.mp3"],
     outdoor: true,
   };
 }

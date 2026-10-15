@@ -101,6 +101,6 @@ export function buildHub(): SpaceDef {
     ...HALF,
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 6.5, 7.5),
-    bgm: "StudentHub.mp3",
+    bgm: ["Margin_Notes.mp3"],
   };
 }

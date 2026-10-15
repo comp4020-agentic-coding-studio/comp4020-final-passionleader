@@ -50,7 +50,7 @@ export function buildClassroom(): SpaceDef {
     ...HALF,
     background: 0xe6e1d4,
     camera: new THREE.Vector3(0, 6.5, 7.5),
-    bgm: "Classroom.mp3",
+    bgm: ["The_Library_Window.mp3"],
     links: [
       {
         x: 0,

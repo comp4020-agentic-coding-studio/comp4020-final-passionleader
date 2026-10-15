@@ -1,8 +1,12 @@
-// Settings: a gear button beside the mute button opens a small dialog. For
-// now it holds the graphics quality. Low (the default) keeps every device
-// smooth: no shadows, one pixel per screen pixel, simpler glass and fewer far
-// trees. High turns all of that on. The choice is remembered per browser and
-// applies on reload, since some of it is fixed when the renderer is created.
+// Settings: a gear button opens a small dialog. It holds the two volumes
+// (music and sound effects, which live here now that the mute button is gone;
+// they apply at once) and the graphics quality. Low (the default) keeps every
+// device smooth: no shadows, one pixel per screen pixel, simpler glass and
+// fewer far trees. High turns all of that on. Quality is remembered per
+// browser and applies on reload, since some of it is fixed when the renderer
+// is created.
+
+import { getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from "./audio.ts";
 
 export type Quality = "low" | "high";
 const KEY = "campus.quality";
@@ -40,6 +44,38 @@ export function mountSettings(): void {
   title.id = "settings-title";
   title.textContent = "Settings";
 
+  const sound = document.createElement("fieldset");
+  const soundLegend = document.createElement("legend");
+  soundLegend.textContent = "Sound";
+  sound.append(soundLegend);
+  const sliders: [string, string, () => number, (v: number) => void][] = [
+    ["volume-music", "Music", getBgmVolume, setBgmVolume],
+    ["volume-sfx", "Sound effects", getSfxVolume, setSfxVolume],
+  ];
+  for (const [id, text, get, set] of sliders) {
+    const row = document.createElement("div");
+    row.className = "settings-slider";
+    const label = document.createElement("label");
+    label.htmlFor = id;
+    label.textContent = text;
+    const range = document.createElement("input");
+    range.type = "range";
+    range.id = id;
+    range.min = "0";
+    range.max = "100";
+    range.step = "1";
+    range.value = String(get());
+    const value = document.createElement("output");
+    value.htmlFor = id;
+    value.textContent = range.value;
+    range.addEventListener("input", () => {
+      set(Number(range.value));
+      value.textContent = range.value;
+    });
+    row.append(label, range, value);
+    sound.append(row);
+  }
+
   const fieldset = document.createElement("fieldset");
   const legend = document.createElement("legend");
   legend.textContent = "Graphics quality";
@@ -72,7 +108,7 @@ export function mountSettings(): void {
   apply.textContent = "Apply";
   actions.append(close, apply);
 
-  card.append(title, fieldset, note, actions);
+  card.append(title, sound, fieldset, note, actions);
   dialog.append(card);
   document.body.append(dialog);
 

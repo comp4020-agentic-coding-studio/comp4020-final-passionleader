@@ -1,4 +1,4 @@
-import { isMuted } from "./audio.ts";
+import { getSfxVolume } from "./audio.ts";
 
 // Spoken emotes: the browser's own speech synthesis says "Hello", "Yes",
 // "No" or "How ya doing, mate?" out loud. Each listener's browser speaks it
@@ -36,12 +36,12 @@ if (typeof speechSynthesis !== "undefined") {
  * woman's or a man's voice; `spread` (0-0.2) varies the pitch per person.
  */
 export function say(text: string, distance: number, kind: Voice, spread = 0): void {
-  if (typeof speechSynthesis === "undefined" || isMuted() || distance > HEAR_RANGE) return;
+  if (typeof speechSynthesis === "undefined" || getSfxVolume() === 0 || distance > HEAR_RANGE) return;
   const u = new SpeechSynthesisUtterance(text);
   const voice = voices[kind];
   if (voice) u.voice = voice;
   u.lang = voice?.lang ?? "en-AU";
-  u.volume = Math.max(0.15, 1 - distance / HEAR_RANGE);
+  u.volume = Math.max(0.15, 1 - distance / HEAR_RANGE) * (getSfxVolume() / 100);
   u.rate = 1.05;
   // Higher for women, lower for men, so it reads right even with one voice.
   u.pitch = (kind === "female" ? 1.3 : 0.8) + spread;

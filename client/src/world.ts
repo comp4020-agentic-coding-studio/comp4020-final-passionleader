@@ -42,7 +42,8 @@ export interface SpaceDef {
   background: number;
   /** Camera offset from the player: further back outside, closer indoors. */
   camera: THREE.Vector3;
-  bgm: string;
+  /** Background tracks in client/public/assets/, played in turn. */
+  bgm: string[];
   /** Outdoors: a real sky and haze toward the horizon. Indoors: neither. */
   outdoor?: boolean;
   /** Spots where E opens a web page in a new tab (e.g. the classroom whiteboard). */
