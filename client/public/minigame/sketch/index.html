@@ -1,0 +1,855 @@
+<!doctype html>
+<!-- Sketch & Guess on the campus: opened from the Student Hub's arcade machine in the in-app window; the game runs on the campus server (server/sketch/). -->
+<html lang="en-AU">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Sketch &amp; Guess</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <style>
+      :root {
+        --bg: #fff7ec;
+        --bg-2: #ffe9cc;
+        --card: #ffffff;
+        --ink: #1f1d1a;
+        --muted: #5d564c;
+        --border: #eadbc4;
+        --primary: #e2552d;
+        --primary-ink: #ffffff;
+        --primary-hover: #c4431e;
+        --ok: #16794a;
+        --ok-bg: #e3f6ec;
+        --focus: #2b6fd6;
+        --radius: 16px;
+        color-scheme: light;
+      }
+
+      @media (prefers-color-scheme: dark) {
+        :root {
+          --bg: #17151a;
+          --bg-2: #221e27;
+          --card: #24212a;
+          --ink: #f4efe8;
+          --muted: #bdb4a8;
+          --border: #3a3541;
+          --primary: #ff7a4f;
+          --primary-ink: #1a1210;
+          --primary-hover: #ff9670;
+          --ok: #6fe0a6;
+          --ok-bg: #173527;
+          --focus: #8ab4ff;
+          color-scheme: dark;
+        }
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      [hidden] {
+        display: none !important;
+      }
+
+      body {
+        margin: 0;
+        min-height: 100vh;
+        background: radial-gradient(circle at 20% 0%, var(--bg-2), var(--bg) 55%);
+        color: var(--ink);
+        font-family: ui-rounded, "SF Pro Rounded", "Nunito", system-ui, -apple-system, "Segoe UI", sans-serif;
+        line-height: 1.5;
+      }
+
+      main {
+        max-width: 72rem;
+        margin: 0 auto;
+        padding: 0.75rem clamp(0.5rem, 2.5vw, 1.25rem) 1.5rem;
+      }
+
+      a {
+        color: var(--primary-hover);
+      }
+      @media (prefers-color-scheme: dark) {
+        a {
+          color: var(--primary);
+        }
+      }
+
+      :focus-visible {
+        outline: 3px solid var(--focus);
+        outline-offset: 2px;
+      }
+
+      .card {
+        background: var(--card);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        padding: clamp(0.75rem, 2.5vw, 1.25rem);
+        box-shadow: 0 6px 24px rgb(0 0 0 / 0.06);
+      }
+
+      h1 {
+        font-size: clamp(1.5rem, 4.5vw, 2.2rem);
+        margin: 0 0 0.25rem;
+        line-height: 1.15;
+      }
+      h2 {
+        font-size: 1.05rem;
+        margin: 1rem 0 0.5rem;
+      }
+      .lead {
+        color: var(--muted);
+        margin-top: 0;
+        font-size: 1rem;
+      }
+      .muted {
+        color: var(--muted);
+      }
+
+      button {
+        font: inherit;
+        font-weight: 700;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--card);
+        color: var(--ink);
+        padding: 0.6rem 1rem;
+        min-height: 44px;
+        cursor: pointer;
+        display: inline-block;
+      }
+      button.primary {
+        background: var(--primary);
+        border-color: var(--primary);
+        color: var(--primary-ink);
+      }
+      button.primary:hover:not(:disabled) {
+        background: var(--primary-hover);
+      }
+      button.big {
+        width: 100%;
+        font-size: 1.1rem;
+        padding: 0.8rem;
+        margin-top: 0.75rem;
+      }
+      button:disabled {
+        opacity: 0.45;
+        cursor: not-allowed;
+      }
+      button.link {
+        background: none;
+        border: none;
+        padding: 0 0.25rem;
+        min-height: 32px;
+        color: var(--primary-hover);
+        text-decoration: underline;
+      }
+
+      input {
+        font: inherit;
+        padding: 0.6rem 0.9rem;
+        min-height: 44px;
+        border-radius: 12px;
+        border: 1px solid var(--border);
+        background: var(--bg);
+        color: var(--ink);
+        min-width: 0;
+      }
+
+      .row {
+        display: flex;
+        gap: 0.5rem;
+      }
+      .row input {
+        flex: 1;
+      }
+
+      .visually-hidden {
+        position: absolute;
+        width: 1px;
+        height: 1px;
+        overflow: hidden;
+        clip: rect(0 0 0 0);
+        white-space: nowrap;
+      }
+
+      .pill {
+        background: var(--bg-2);
+        border-radius: 999px;
+        padding: 0 0.6rem;
+        font-size: 0.9rem;
+      }
+
+      #lobby,
+      #over {
+        max-width: 34rem;
+        margin: 0.5rem auto;
+      }
+
+      .howto {
+        max-width: 34rem;
+        margin: 0.75rem auto 0;
+        padding: 0.5rem 1rem;
+      }
+      .howto summary {
+        cursor: pointer;
+        font-weight: 700;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+      }
+      .howto ol {
+        margin: 0.25rem 0 0.5rem;
+        padding-left: 1.25rem;
+      }
+      .howto li {
+        margin: 0.3rem 0;
+      }
+
+      .players {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: grid;
+        gap: 0.4rem;
+      }
+      .players li {
+        display: flex;
+        align-items: center;
+        gap: 0.6rem;
+        padding: 0.35rem 0.5rem;
+        border-radius: 10px;
+      }
+      .players li span:not(.avatar) {
+        flex: 1;
+        overflow-wrap: anywhere;
+      }
+      .players li.guessed {
+        background: var(--ok-bg);
+      }
+      .avatar {
+        width: 2rem;
+        height: 2rem;
+        border-radius: 50%;
+        display: inline-grid;
+        place-items: center;
+        color: #fff;
+        font-weight: 800;
+        flex: none;
+      }
+
+      .game {
+        display: grid;
+        gap: 0.75rem;
+      }
+      .topbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 1rem;
+        padding: 0.5rem 1rem;
+      }
+      .word {
+        margin: 0;
+        font-size: clamp(1.1rem, 3.5vw, 1.5rem);
+        overflow-wrap: anywhere;
+      }
+      .hint {
+        letter-spacing: 0.15em;
+        font-weight: 800;
+        font-family: ui-monospace, monospace;
+      }
+      .timer {
+        font-size: 1.6rem;
+        font-weight: 800;
+        min-width: 3.2rem;
+        height: 3.2rem;
+        display: grid;
+        place-items: center;
+        border-radius: 50%;
+        background: var(--bg-2);
+        flex: none;
+      }
+      .timer.urgent {
+        background: var(--primary);
+        color: var(--primary-ink);
+      }
+
+      .board {
+        display: grid;
+        gap: 0.75rem;
+        grid-template-columns: minmax(0, 1fr) 18rem;
+      }
+      @media (max-width: 52rem) {
+        .board {
+          grid-template-columns: 1fr;
+        }
+      }
+      .canvas-card {
+        padding: 0.5rem;
+        min-width: 0;
+      }
+      /* Short windows (the in-app window is about 620 px tall): keep the brush
+         tools and the guess box in view by limiting the drawing board's height
+         to what is left under the top bar, and centre it at its 4:3 width. */
+      canvas {
+        width: 100%;
+        max-width: calc((100vh - 15rem) * 4 / 3);
+        margin: 0 auto;
+        height: auto;
+        aspect-ratio: 4 / 3;
+        border-radius: 10px;
+        border: 1px solid var(--border);
+        background: #fff;
+        display: block;
+        touch-action: none;
+      }
+      canvas.can-draw {
+        cursor: crosshair;
+      }
+      .tools {
+        display: flex;
+        align-items: center;
+        gap: 0.75rem;
+        flex-wrap: wrap;
+        margin-top: 0.5rem;
+      }
+      .colors {
+        display: flex;
+        gap: 0.35rem;
+      }
+      .swatch {
+        width: 2.25rem;
+        height: 2.25rem;
+        min-height: 0;
+        padding: 0;
+        border-radius: 50%;
+        border: 3px solid transparent;
+      }
+      .swatch[aria-checked="true"] {
+        border-color: var(--focus);
+      }
+      .size {
+        display: flex;
+        align-items: center;
+        gap: 0.4rem;
+        font-weight: 600;
+      }
+      .size input {
+        min-height: 0;
+        padding: 0;
+        border: 0;
+        background: none;
+      }
+
+      .side {
+        display: grid;
+        gap: 0.75rem;
+        align-content: start;
+        min-width: 0;
+      }
+      .side h2 {
+        margin-top: 0;
+      }
+      /* Grid items default to min-width: auto, so one long unbroken guess could
+         push the whole side column wider than the window. */
+      .side > .card,
+      .players li {
+        min-width: 0;
+      }
+      .chat {
+        display: flex;
+        flex-direction: column;
+      }
+      .feed {
+        list-style: none;
+        padding: 0;
+        margin: 0 0 0.75rem;
+        height: 10rem;
+        min-width: 0;
+        overflow-y: auto;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr);
+        align-content: start;
+        gap: 0.25rem;
+      }
+      .feed li {
+        padding: 0.2rem 0.4rem;
+        border-radius: 8px;
+        overflow-wrap: anywhere;
+      }
+      .feed .sys {
+        color: var(--muted);
+        font-style: italic;
+      }
+      .feed .ok {
+        background: var(--ok-bg);
+        color: var(--ok);
+        font-weight: 800;
+      }
+
+      .final {
+        font-size: 1.2rem;
+        padding-left: 1.5rem;
+      }
+      .final li {
+        margin: 0.3rem 0;
+      }
+
+      .toast {
+        position: fixed;
+        bottom: 1rem;
+        left: 50%;
+        transform: translateX(-50%);
+        background: var(--ink);
+        color: var(--bg);
+        padding: 0.6rem 1.1rem;
+        border-radius: 12px;
+        font-weight: 600;
+        max-width: calc(100vw - 2rem);
+        z-index: 5;
+      }
+    </style>
+  </head>
+  <body>
+    <main>
+      <div id="app">
+        <noscript>
+          <p class="card">Sketch &amp; Guess is a live game and needs JavaScript to play.</p>
+        </noscript>
+
+        <p id="loading" class="card muted" role="status">Loading the game…</p>
+
+        <!-- Lobby: join + who's here + start -->
+        <section id="lobby" class="card" aria-labelledby="lobby-title" hidden>
+          <h1 id="lobby-title">Draw it. Guess it.</h1>
+          <p class="lead">One person draws a secret word, everyone else races to guess it.</p>
+
+          <div id="join-box">
+            <button id="join" type="button" class="primary big">Join the game</button>
+            <p id="join-hint" class="muted" role="status"></p>
+          </div>
+
+          <div id="joined" hidden>
+            <p>You're in as <strong id="me-name"></strong>. <button id="leave" type="button" class="link">Leave</button></p>
+          </div>
+
+          <h2>Players <span id="player-count" class="pill">0</span></h2>
+          <ul id="lobby-players" class="players"></ul>
+
+          <button id="start" class="primary big" disabled>Start game</button>
+          <p id="start-hint" class="muted" aria-live="polite"></p>
+        </section>
+
+        <details id="howto" class="card howto" hidden>
+          <summary>How to play</summary>
+          <ol>
+            <li>Join the game, and once at least two people are in, anyone can press <em>Start game</em>.</li>
+            <li>Each round one player draws a secret word that only they can see, with no letters or numbers.</li>
+            <li>Everyone else watches the drawing appear live and types guesses. You get 75 seconds a round.</li>
+            <li>The first correct guess scores a point, and so does the drawer. If two guesses land within half a second, both score.</li>
+            <li>Everyone takes a turn drawing, then the highest score wins.</li>
+          </ol>
+        </details>
+
+        <!-- Game: canvas, word, timer, guesses -->
+        <section id="game" class="game" hidden aria-label="Game">
+          <div class="topbar card">
+            <div>
+              <span class="muted" id="round-label"></span>
+              <p id="word" class="word" aria-live="polite"></p>
+            </div>
+            <div class="timer" id="timer" aria-label="Time left">--</div>
+          </div>
+
+          <div class="board">
+            <div class="canvas-card card">
+              <canvas
+                id="canvas"
+                width="800"
+                height="600"
+                tabindex="0"
+                aria-label="Drawing board. When you are drawing, use arrow keys to move the brush and Space to put down a dot."
+              ></canvas>
+              <div id="tools" class="tools" hidden>
+                <div id="colors" class="colors" role="radiogroup" aria-label="Brush colour"></div>
+                <label class="size">
+                  Size <input id="size" type="range" min="2" max="24" value="6" />
+                </label>
+                <button id="clear" type="button">Clear</button>
+              </div>
+            </div>
+
+            <aside class="side">
+              <div class="card">
+                <h2>Scores</h2>
+                <ul id="scores" class="players"></ul>
+              </div>
+              <div class="card chat">
+                <h2>Guesses</h2>
+                <ul id="feed" class="feed" aria-live="polite" aria-relevant="additions"></ul>
+                <form id="guess-form" class="row">
+                  <label for="guess" class="visually-hidden">Your guess</label>
+                  <input id="guess" maxlength="40" placeholder="Type your guess…" autocomplete="off" />
+                  <button type="submit" class="primary">Guess</button>
+                </form>
+              </div>
+            </aside>
+          </div>
+        </section>
+
+        <!-- Game over -->
+        <section id="over" class="card" hidden aria-labelledby="over-title">
+          <h1 id="over-title">Game over!</h1>
+          <ol id="final" class="final"></ol>
+          <button id="again" class="primary big">Play again</button>
+        </section>
+
+        <p id="toast" class="toast" role="status" aria-live="polite" hidden></p>
+      </div>
+    </main>
+
+    <script>
+      const MIN_PLAYERS = 2;
+      const $ = (id) => document.getElementById(id);
+
+      // The campus visitor's token and name. The token proves who you are to the
+      // server, which picks the name for the game from it; the name here is only
+      // for the button's label.
+      function stored(key) {
+        try {
+          return localStorage.getItem(key) || "";
+        } catch {
+          return "";
+        }
+      }
+      const campusToken = stored("campus.token");
+      const campusName = stored("campus.name");
+
+      let state = null;
+
+      // --- API -----------------------------------------------------------------
+      async function act(action, extra = {}) {
+        const res = await fetch("/api/sketch", {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ action, ...extra }),
+        });
+        if (!res.ok) {
+          const msg = await res.text();
+          if (res.status !== 429) toast(msg);
+          return null;
+        }
+        return res.json();
+      }
+
+      let toastTimer;
+      function toast(msg) {
+        const t = $("toast");
+        t.textContent = msg;
+        t.hidden = false;
+        clearTimeout(toastTimer);
+        toastTimer = setTimeout(() => (t.hidden = true), 2500);
+      }
+
+      // --- live stream ---------------------------------------------------------
+      let es;
+      function connect() {
+        if (es) es.close();
+        es = new EventSource("/api/sketch/events");
+        es.addEventListener("state", (e) => {
+          state = JSON.parse(e.data);
+          render();
+        });
+        es.addEventListener("stroke", (e) => {
+          if (!state) return;
+          const s = JSON.parse(e.data);
+          state.strokes.push(s);
+          drawStroke(s);
+        });
+        es.addEventListener("clear", () => {
+          if (!state) return;
+          state.strokes = [];
+          redraw();
+        });
+      }
+      setInterval(() => state && state.me && act("ping"), 5000);
+
+      // --- rendering -----------------------------------------------------------
+      const esc = (s) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]);
+      let lastPhase = null;
+
+      function render() {
+        if (!state) return;
+        const { phase, me, players } = state;
+        $("loading").hidden = true;
+        $("lobby").hidden = phase !== "lobby";
+        $("howto").hidden = phase !== "lobby";
+        $("game").hidden = !(phase === "drawing" || phase === "reveal");
+        $("over").hidden = phase !== "over";
+
+        // lobby
+        $("join-box").hidden = !!me;
+        $("joined").hidden = !me;
+        if (me) $("me-name").textContent = me.name;
+        else renderJoin();
+        $("player-count").textContent = players.length;
+        $("lobby-players").innerHTML = players.length
+          ? players.map((p) => `<li>${avatar(p.name)}<span>${esc(p.name)}${me && p.id === me.id ? " (you)" : ""}</span></li>`).join("")
+          : `<li class="muted">Nobody yet — be the first!</li>`;
+        const need = (state.minPlayers ?? MIN_PLAYERS) - players.length;
+        $("start").disabled = !me || need > 0;
+        $("start-hint").textContent = !me
+          ? "Join to play."
+          : need > 0
+            ? `Waiting for ${need} more player${need === 1 ? "" : "s"}…`
+            : "Ready! Anyone can start.";
+
+        // game
+        if (phase === "drawing" || phase === "reveal") renderGame();
+
+        // over
+        if (phase === "over") {
+          const ranked = [...players].sort((a, b) => b.score - a.score);
+          $("final").innerHTML = ranked
+            .map((p, i) => `<li>${i === 0 ? "🏆 " : ""}${esc(p.name)} <strong>${p.score}</strong></li>`)
+            .join("");
+          $("again").disabled = !me || players.length < (state.minPlayers ?? MIN_PLAYERS);
+        }
+
+        if (phase !== lastPhase) {
+          lastPhase = phase;
+          if (phase === "drawing") redraw();
+        }
+      }
+
+      // Without a campus token the game can't know who you are.
+      function renderJoin() {
+        const btn = $("join");
+        if (!campusToken) {
+          btn.disabled = true;
+          btn.textContent = "Join the game";
+          $("join-hint").textContent = "Join the campus first, then come back to the arcade machine.";
+          return;
+        }
+        btn.disabled = false;
+        btn.textContent = campusName ? `Join the game as ${campusName}` : "Join the game";
+        $("join-hint").textContent = "";
+      }
+
+      function avatar(name) {
+        let h = 0;
+        for (const c of name) h = (h * 31 + c.charCodeAt(0)) % 360;
+        return `<span class="avatar" style="background:hsl(${h} 70% 55%)" aria-hidden="true">${esc(name[0].toUpperCase())}</span>`;
+      }
+
+      function renderGame() {
+        const { phase, isDrawer, word, hint, players, feed, round, rounds, iGuessed } = state;
+        const drawer = players.find((p) => p.drawing);
+        $("round-label").textContent = `Round ${round} of ${rounds}` + (drawer && !isDrawer ? ` · ${drawer.name} is drawing` : "");
+        if (phase === "reveal") $("word").innerHTML = `The word was <strong>${esc(word ?? "")}</strong>`;
+        else if (isDrawer) $("word").innerHTML = `Draw: <strong>${esc(word ?? "")}</strong>`;
+        else if (iGuessed) $("word").innerHTML = `You got it: <strong>${esc(word ?? "")}</strong>`;
+        else $("word").innerHTML = `<span class="hint">${esc(hint)}</span>`;
+
+        $("tools").hidden = !(isDrawer && phase === "drawing");
+        $("canvas").classList.toggle("can-draw", isDrawer && phase === "drawing");
+        const canGuess = phase === "drawing" && !isDrawer && !iGuessed && !!state.me;
+        $("guess").disabled = !canGuess;
+        $("guess-form").querySelector("button").disabled = !canGuess;
+        $("guess").placeholder = isDrawer ? "You're drawing!" : iGuessed ? "You got it! 🎉" : "Type your guess…";
+
+        $("scores").innerHTML = [...players]
+          .sort((a, b) => b.score - a.score)
+          .map(
+            (p) =>
+              `<li class="${p.guessed ? "guessed" : ""}">${avatar(p.name)}<span>${esc(p.name)}${p.drawing ? " ✏️" : ""}${p.guessed ? " ✅" : ""}</span><strong>${p.score}</strong></li>`,
+          )
+          .join("");
+
+        const list = $("feed");
+        list.innerHTML = feed
+          .map((f) =>
+            f.kind === "system"
+              ? `<li class="sys">${esc(f.text)}</li>`
+              : f.kind === "correct"
+                ? `<li class="ok">${esc(f.text)}</li>`
+                : `<li><b>${esc(f.name)}:</b> ${esc(f.text)}</li>`,
+          )
+          .join("");
+        list.scrollTop = list.scrollHeight;
+        renderColors();
+      }
+
+      // timer
+      setInterval(() => {
+        if (!state) return;
+        if (state.phase !== "drawing") return void ($("timer").textContent = state.phase === "reveal" ? "⏸" : "--");
+        const left = Math.max(0, Math.ceil((state.roundEndsAt - Date.now()) / 1000));
+        $("timer").textContent = left;
+        $("timer").classList.toggle("urgent", left <= 10);
+      }, 250);
+
+      // --- canvas --------------------------------------------------------------
+      const canvas = $("canvas");
+      const ctx = canvas.getContext("2d");
+      let color = "#1f1d1a";
+      let size = 6;
+
+      function renderColors() {
+        const box = $("colors");
+        if (box.childElementCount) return;
+        for (const c of state.colors) {
+          const b = document.createElement("button");
+          b.type = "button";
+          b.className = "swatch";
+          b.style.background = c;
+          b.setAttribute("role", "radio");
+          b.setAttribute("aria-label", `Colour ${c}`);
+          b.setAttribute("aria-checked", String(c === color));
+          b.onclick = () => {
+            color = c;
+            box.querySelectorAll(".swatch").forEach((s) => s.setAttribute("aria-checked", String(s === b)));
+          };
+          box.appendChild(b);
+        }
+      }
+      $("size").oninput = (e) => (size = Number(e.target.value));
+
+      function drawStroke(s) {
+        const w = canvas.width,
+          h = canvas.height;
+        ctx.strokeStyle = s.color;
+        ctx.fillStyle = s.color;
+        ctx.lineWidth = s.width;
+        ctx.lineCap = "round";
+        ctx.lineJoin = "round";
+        if (s.points.length === 1) {
+          ctx.beginPath();
+          ctx.arc(s.points[0].x * w, s.points[0].y * h, s.width / 2, 0, Math.PI * 2);
+          ctx.fill();
+          return;
+        }
+        ctx.beginPath();
+        ctx.moveTo(s.points[0].x * w, s.points[0].y * h);
+        for (const p of s.points.slice(1)) ctx.lineTo(p.x * w, p.y * h);
+        ctx.stroke();
+      }
+      function redraw() {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        if (state) for (const s of state.strokes) drawStroke(s);
+      }
+      redraw();
+
+      const canDraw = () => !!state && state.isDrawer && state.phase === "drawing";
+      let current = null;
+      let sentUpTo = 0;
+
+      function pos(e) {
+        const r = canvas.getBoundingClientRect();
+        return {
+          x: Math.min(1, Math.max(0, (e.clientX - r.left) / r.width)),
+          y: Math.min(1, Math.max(0, (e.clientY - r.top) / r.height)),
+        };
+      }
+
+      // Strokes stream in chunks while drawing so guessers see them appear live.
+      function flush(final) {
+        if (!current) return;
+        const pts = current.points;
+        if (pts.length - sentUpTo < (final ? 1 : 2)) return;
+        const from = Math.max(0, sentUpTo - 1);
+        const chunk = { points: pts.slice(from), width: current.width, color: current.color };
+        sentUpTo = pts.length;
+        act("draw", { stroke: chunk });
+      }
+
+      canvas.addEventListener("pointerdown", (e) => {
+        if (!canDraw()) return;
+        canvas.setPointerCapture(e.pointerId);
+        current = { points: [pos(e)], width: size, color };
+        sentUpTo = 0;
+        e.preventDefault();
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (!current) return;
+        const p = pos(e);
+        const last = current.points[current.points.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) < 0.003) return;
+        current.points.push(p);
+        // local preview of the latest segment
+        drawStroke({ points: [last, p], width: current.width, color: current.color });
+        if (current.points.length - sentUpTo >= 8) flush(false);
+        if (current.points.length >= 180) {
+          flush(true);
+          current = { points: [p], width: size, color };
+          sentUpTo = 0;
+        }
+      });
+      const end = () => {
+        if (!current) return;
+        flush(true);
+        current = null;
+      };
+      canvas.addEventListener("pointerup", end);
+      canvas.addEventListener("pointercancel", end);
+
+      // Keyboard drawing: arrows move a cursor, Space drops a dot, Shift+arrows draw a line.
+      let cursor = { x: 0.5, y: 0.5 };
+      canvas.addEventListener("keydown", (e) => {
+        if (!canDraw()) return;
+        const step = 0.02;
+        const moves = { ArrowLeft: [-step, 0], ArrowRight: [step, 0], ArrowUp: [0, -step], ArrowDown: [0, step] };
+        if (moves[e.key]) {
+          e.preventDefault();
+          const from = { ...cursor };
+          cursor = {
+            x: Math.min(1, Math.max(0, cursor.x + moves[e.key][0])),
+            y: Math.min(1, Math.max(0, cursor.y + moves[e.key][1])),
+          };
+          if (e.shiftKey) act("draw", { stroke: { points: [from, cursor], width: size, color } });
+        } else if (e.key === " " || e.key === "Enter") {
+          e.preventDefault();
+          act("draw", { stroke: { points: [cursor], width: size, color } });
+        }
+      });
+
+      // --- controls ------------------------------------------------------------
+      $("join").addEventListener("click", async () => {
+        if (!campusToken) return;
+        // The server reads the name from the campus token, never from the page.
+        const r = await act("join", { campusToken });
+        if (r) connect(); // reconnect so the stream knows who we are
+      });
+      $("leave").onclick = async () => {
+        await act("leave");
+        connect();
+      };
+      $("start").onclick = () => act("start");
+      $("again").onclick = () => act("start");
+      $("clear").onclick = () => act("clear");
+      $("guess-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        const text = $("guess").value.trim();
+        if (!text) return;
+        $("guess").value = "";
+        await act("guess", { text });
+      });
+
+      // --- start ---------------------------------------------------------------
+      // The first state comes from the server, then the live stream takes over.
+      (async function init() {
+        try {
+          const res = await fetch("/api/sketch");
+          if (!res.ok) throw new Error(String(res.status));
+          state = await res.json();
+          render();
+        } catch {
+          $("loading").textContent = "Couldn't reach the game. Close this window and try again.";
+          return;
+        }
+        connect();
+      })();
+    </script>
+  </body>
+</html>

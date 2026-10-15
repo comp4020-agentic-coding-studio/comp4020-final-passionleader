@@ -2,8 +2,9 @@
 
 A small 3D, real-time space for the ANU community: a stretch of campus between
 building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
-Centre), the Student Hub inside 154, and classrooms inside 155 (COMMON for
-anyone, COMP8020, and any course the admin opens).
+Centre), the Student Hub inside 154, classrooms inside 155 (COMMON for
+anyone, COMP8020, and any course the admin opens), and Chifley Library across
+the bridge to the south.
 Everyone in a space sees everyone else walk, chat, wave, dance and leave sticky
 notes, live. It is not an official ANU service.
 
@@ -33,7 +34,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    Notices and Board. Anyone asks, posts and comments (posts up to 500
    words); only lecturers and staff post notices. The whiteboard opens the
    course page in a window over the campus.
-6. Say hello to the dog in front of 154.
+6. Say hello to the dog in front of 154. In the Hub, the arcade machine plays
+   Sketch & Guess, a drawing game for everyone there. In Chifley Library the
+   catalogue desk opens room booking, the catalogue and research ethics.
 7. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
    track playing, with pause and next.

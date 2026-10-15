@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, mat, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { roomShell } from "./room.ts";
 
 // The Student Hub, inside building 154: an office at the back and a lounge
@@ -80,6 +80,8 @@ export function buildHub(): SpaceDef {
   rooms.rotation.y = -Math.PI / 2;
   g.add(rooms);
 
+  arcade(g, colliders, 9.5, -HALF.halfZ + 0.6);
+
   for (const [x, z] of [
     [-19, -12],
     [17, -12],
@@ -104,5 +106,37 @@ export function buildHub(): SpaceDef {
     bgm: ["Margin_Notes.mp3"],
     // A place to sit together; notes go up outside and in classrooms.
     noNotes: true,
+    // The arcade machine: E opens Sketch & Guess in the in-app window.
+    links: [{ x: 9.5, z: -HALF.halfZ + 1.9, label: "Play Sketch & Guess", url: "/minigame/sketch/", embeddable: true }],
   };
+}
+
+/**
+ * An arcade cabinet against the back wall, facing the room (+z), built from
+ * boxes: a dark body, a lit screen showing the game's name, a control deck
+ * and a marquee.
+ */
+function arcade(g: THREE.Group, colliders: Box[], x: number, z: number): void {
+  const cab = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.9, 0.8), mat(0x2b2350));
+  body.position.y = 0.95;
+  const screen = textPlane(["Sketch", "& Guess", "press E"], 0.66, 0.56, { bg: "#141a3a", fg: "#ffd84a", font: 0.12 });
+  screen.position.set(0, 1.42, 0.405);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.36), mat(0x3d3470));
+  deck.position.set(0, 1.02, 0.52);
+  deck.rotation.x = -0.25;
+  const marquee = new THREE.Mesh(
+    new THREE.BoxGeometry(0.9, 0.24, 0.1),
+    new THREE.MeshStandardMaterial({ color: 0xff5fa2, emissive: 0xff3d8b, emissiveIntensity: 0.6 }),
+  );
+  marquee.position.set(0, 1.98, 0.36);
+  const buttons = [0xff4040, 0x40c0ff, 0x60e060].map((c, i) => {
+    const b = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.03, 12), mat(c));
+    b.position.set(-0.15 + i * 0.15, 1.08, 0.56);
+    return b;
+  });
+  cab.add(body, screen, deck, marquee, ...buttons);
+  cab.position.set(x, 0, z);
+  g.add(cab);
+  solid(colliders, 1, 1.1, x, z + 0.1);
 }

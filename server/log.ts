@@ -28,6 +28,7 @@ export type Event =
   | "post-removed"
   | "post-comment"
   | "post-comment-removed"
+  | "game-join"
   | "classroom-created"
   | "classroom-removed"
   | "refused";

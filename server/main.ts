@@ -39,6 +39,7 @@ import {
 } from "./db.ts";
 import { log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
+import { sketchRoutes } from "./sketch/routes.ts";
 import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError } from "./spaces.ts";
 
 const app = new Hono();
@@ -116,7 +117,10 @@ app.post("/api/notes", async (c) => {
     return c.json({ error: "A note needs a place." }, 400);
   }
   const bad = textError(b.text);
-  if (bad) return c.json({ error: bad }, 400);
+  if (bad) {
+    log("refused", v, { action: "note", space: b.space, reason: bad });
+    return c.json({ error: bad }, 400);
+  }
   const { x, z } = clampTo(b.space, b.x, b.z);
   const where = noteSpotError(b.space, x, z);
   if (where) {
@@ -175,7 +179,10 @@ app.post("/api/notes/:id/comments", async (c) => {
   const note = findNote(Number(c.req.param("id")));
   if (!note) return c.json({ error: "That note is gone." }, 404);
   const bad = textError(b.text);
-  if (bad) return c.json({ error: bad }, 400);
+  if (bad) {
+    log("refused", v, { action: "comment", space: note.space, note: note.id, reason: bad });
+    return c.json({ error: bad }, 400);
+  }
   const result = addComment(v.name, note.id, (b.text as string).trim());
   if (!result.ok) {
     log("refused", v, { action: "comment", space: note.space, note: note.id, reason: "too soon", wait: result.wait });
@@ -282,7 +289,10 @@ app.post("/api/board", async (c) => {
     return c.json({ error: "Only lecturers and staff can post in Notices." }, 403);
   }
   const bad = postError(b.title, b.text);
-  if (bad) return c.json({ error: bad }, 400);
+  if (bad) {
+    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: bad });
+    return c.json({ error: bad }, 400);
+  }
   const result = addPost(v.name, b.space, b.tab, (b.title as string).trim(), (b.text as string).trim());
   if (!result.ok) {
     log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "too soon", wait: result.wait });
@@ -321,7 +331,10 @@ app.post("/api/board/:id/comments", async (c) => {
   const post = findPost(Number(c.req.param("id")));
   if (!post) return c.json({ error: "That post is gone." }, 404);
   const bad = textError(b.text);
-  if (bad) return c.json({ error: bad }, 400);
+  if (bad) {
+    log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: bad });
+    return c.json({ error: bad }, 400);
+  }
   const result = addPostComment(v.name, post.id, (b.text as string).trim());
   if (!result.ok) {
     log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: "too soon", wait: result.wait });
@@ -347,6 +360,9 @@ app.delete("/api/board-comments/:id", async (c) => {
   if (post) broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json({ ok: true });
 });
+
+// Sketch & Guess, the drawing game on the Hub's arcade machine.
+sketchRoutes(app);
 
 // Notes past their month: hidden from every query already, deleted hourly.
 const purge = (): void => {
