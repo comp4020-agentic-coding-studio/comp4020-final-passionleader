@@ -48,6 +48,14 @@ export interface SpaceDef {
   bgm: string[];
   /** Outdoors: a real sky and haze toward the horizon. Indoors: neither. */
   outdoor?: boolean;
+  /**
+   * Where sticky notes may go: never in a space with `noNotes`, never inside
+   * one of `noteBuildings`, never within 2 m of a door, a link or a
+   * `noteKeepClear` spot. The server checks the same (server/spaces.ts).
+   */
+  noNotes?: boolean;
+  noteBuildings?: Box[];
+  noteKeepClear?: { x: number; z: number }[];
   /** Spots where E opens a web page in a new tab (e.g. the classroom whiteboard). */
   /**
    * Spots where E opens a web page: in a window over the game when the site
@@ -401,15 +409,16 @@ export function buildNote(id: number): THREE.Group {
   const color = NOTE_COLORS[id % NOTE_COLORS.length]!;
   let paperMat = noteMats.get(color);
   if (!paperMat) noteMats.set(color, (paperMat = new THREE.MeshBasicMaterial({ color, toneMapped: false })));
-  const paper = new THREE.Mesh(new THREE.BoxGeometry(0.7, 0.02, 0.7), paperMat);
+  // 42 cm square: big enough to spot, small enough not to carpet a path.
+  const paper = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.02, 0.42), paperMat);
   paper.position.y = 0.02;
   // A dark rim just below the paper, so a note stands out on pale paving.
-  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.74, 0.016, 0.74), mat(0x3a3530));
+  const rim = new THREE.Mesh(new THREE.BoxGeometry(0.45, 0.016, 0.45), mat(0x3a3530));
   rim.position.y = 0.012;
   g.add(rim);
   // A slight curl at one corner so it reads as paper, not a tile.
-  const curl = new THREE.Mesh(new THREE.BoxGeometry(0.2, 0.02, 0.2), mat(0xffffff));
-  curl.position.set(0.25, 0.05, 0.25);
+  const curl = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.02, 0.12), mat(0xffffff));
+  curl.position.set(0.15, 0.05, 0.15);
   curl.rotation.z = 0.4;
   g.add(paper, curl);
   g.rotation.y = ((id * 37) % 30) * (Math.PI / 180) - Math.PI / 12;

@@ -23,12 +23,13 @@ import {
   lastSpot,
   noteCount,
   notesIn,
+  purgeExpiredNotes,
   removeClassroom,
   type Visitor,
 } from "./db.ts";
 import { log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
-import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace } from "./spaces.ts";
+import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace, noteSpotError } from "./spaces.ts";
 
 const app = new Hono();
 
@@ -107,6 +108,11 @@ app.post("/api/notes", async (c) => {
   const bad = textError(b.text);
   if (bad) return c.json({ error: bad }, 400);
   const { x, z } = clampTo(b.space, b.x, b.z);
+  const where = noteSpotError(b.space, x, z);
+  if (where) {
+    log("refused", v, { action: "note", space: b.space, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, reason: where });
+    return c.json({ error: where }, 400);
+  }
   const result = addNote(v.name, b.space, x, z, (b.text as string).trim());
   if (!result.ok) {
     log("refused", v, { action: "note", space: b.space, reason: "too soon", wait: result.wait });
@@ -226,6 +232,14 @@ app.delete("/api/classrooms/:code", async (c) => {
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ ok: true });
 });
+
+// Notes past their month: hidden from every query already, deleted hourly.
+const purge = (): void => {
+  const gone = purgeExpiredNotes();
+  if (gone) log("note-expired", null, { count: gone });
+};
+purge();
+setInterval(purge, 60 * 60 * 1000).unref();
 
 // The 3D client, once Vite has built it.
 const dist = "client/dist";

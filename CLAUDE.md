@@ -41,7 +41,10 @@ Read before planning or building: `README.md` (what good means for this app),
   was taken. `qa_` names are reserved for the password accounts.
 - Sticky notes: up to 100 words (and 600 characters), one per person every
   30 seconds, five per person per space (a sixth replaces their oldest, after a
-  warning). They never expire; only the author or an admin removes one.
+  warning). They disappear a month after they're stuck (the note says when);
+  until then only the author or an admin removes one. Never in the Student
+  Hub, never inside a building's footprint outside, never within 2 m of a door
+  or anything else you press E at; the server checks it.
   Comments: same text limits, one every 10 seconds, same removal rule.
 - Chat is never stored: 200 characters, the space only, gone from screens
   after a minute.

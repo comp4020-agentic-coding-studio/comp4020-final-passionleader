@@ -102,5 +102,7 @@ export function buildHub(): SpaceDef {
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 6.5, 7.5),
     bgm: ["Margin_Notes.mp3"],
+    // A place to sit together; notes go up outside and in classrooms.
+    noNotes: true,
   };
 }

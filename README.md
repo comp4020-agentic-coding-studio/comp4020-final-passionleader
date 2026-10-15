@@ -25,8 +25,10 @@ should feel at home in a virtual space shaped like the real campus they know.
    Menu, Jump and Use buttons.
 3. **Enter** to chat (gone after a minute). Hold **Q** to wave, say yes or no,
    "How ya doing, mate?", dance, or stick a note.
-4. A note stays where you stood until you or the admin remove it. Walk onto one
-   and press **E** to read and comment.
+4. A note stays where you stood for a month (it says the day it goes), unless
+   you or the admin remove it first. Notes go up outside and in classrooms,
+   not in the Student Hub and not on top of a door. Walk onto one and press
+   **E** to read and comment.
 5. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
    track playing, with pause and next.

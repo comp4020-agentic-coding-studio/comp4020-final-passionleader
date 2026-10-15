@@ -88,3 +88,36 @@ export function clampToAreas(areas: Area[], x: number, z: number): { x: number; 
   }
   return best;
 }
+
+// --- where a sticky note may go --------------------------------------------
+// Anywhere but the Student Hub, which is for sitting together, not papering.
+// Outside, never inside a building's footprint; everywhere, never within 2 m
+// of something you press E at (a door, the whiteboard, the dog), so a note
+// can't hide it or fight it for the E key. The client checks the same spots
+// first (client/src/main.ts noteSpotError), so people get told straight away.
+
+export const NOTE_CLEARANCE = 2;
+export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub"]);
+const BUILDINGS: Area[] = [
+  { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
+  { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
+];
+const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
+  { x: -8.6, z: 7 }, // 155's door
+  { x: 4.6, z: 3 }, // 154's door
+  { x: 4.6, z: -9 }, // the dog in front of 154
+];
+const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
+  { x: 8.9, z: 6 }, // the way out
+  { x: 0, z: -6.7 }, // the whiteboard
+];
+
+/** Why a note can't go here, or null if it can. */
+export function noteSpotError(space: SpaceId, x: number, z: number): string | null {
+  if (NO_NOTE_SPACES.has(space)) return "No sticky notes in the Student Hub.";
+  const outside = space === "outdoor";
+  if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
+  const clear = outside ? OUTDOOR_KEEP_CLEAR : CLASSROOM_KEEP_CLEAR;
+  if (clear.some((p) => Math.hypot(p.x - x, p.z - z) < NOTE_CLEARANCE)) return "Too close to a door or something you can use. Step away a little.";
+  return null;
+}

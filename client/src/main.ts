@@ -533,9 +533,21 @@ async function openNote(id: number): Promise<void> {
   }
 }
 
+/** Why a note can't go where the player stands, or null (server/spaces.ts noteSpotError). */
+function noteSpotError(): string | null {
+  if (!space || space.noNotes) return "No sticky notes in the Student Hub.";
+  const { x, z } = player.position;
+  if ((space.noteBuildings ?? []).some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
+  const spots = [...(space.noteKeepClear ?? []), ...space.doors, ...(space.links ?? [])];
+  if (spots.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) return "Too close to a door or something you can use. Step away a little.";
+  return null;
+}
+
 async function writeNote(): Promise<void> {
   if (!session || !space) return;
   stopMoving();
+  const where = noteSpotError();
+  if (where) return toast(where);
   try {
     const { count, limit } = await myNoteCount(session.token, space.id);
     composer.open(count >= limit ? `You already have ${limit} notes here. Sticking this one removes your oldest.` : undefined);

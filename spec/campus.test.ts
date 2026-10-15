@@ -35,9 +35,9 @@ describe("names", () => {
 describe("sticky notes", () => {
   it("is still there on the next visit", async () => {
     const { name, token } = await visitor();
-    const res = await api("/api/notes", "POST", { token, space: "hub", x: 1.5, z: -2, text: "Anyone doing COMP8020?" });
+    const res = await api("/api/notes", "POST", { token, space: "comp8020", x: 1.5, z: -2, text: "Anyone doing COMP8020?" });
     expect(res.status).toBe(201);
-    const notes = await (await api("/api/notes?space=hub")).json();
+    const notes = await (await api("/api/notes?space=comp8020")).json();
     expect(notes).toContainEqual(expect.objectContaining({ author: name, x: 1.5, z: -2, text: "Anyone doing COMP8020?" }));
   });
 
@@ -63,8 +63,8 @@ describe("sticky notes", () => {
 
   it("stays inside the space", async () => {
     const { token } = await visitor();
-    const { note } = await (await api("/api/notes", "POST", { token, space: "hub", x: 999, z: -999, text: "edge" })).json();
-    expect(note).toMatchObject({ x: 20, z: -13 });
+    const { note } = await (await api("/api/notes", "POST", { token, space: "comp8020", x: -999, z: -999, text: "edge" })).json();
+    expect(note).toMatchObject({ x: -10, z: -8 });
   });
 
   it("can be removed by its author but not by someone else", async () => {
@@ -76,6 +76,22 @@ describe("sticky notes", () => {
     expect(notes.map((n: { id: number }) => n.id)).not.toContain(note.id);
   });
 
+  it("can't go up in the Student Hub, inside a building, or right by a door", async () => {
+    const v = await visitor();
+    const post = (space: string, x: number, z: number) => api("/api/notes", "POST", { token: v.token, space, x, z, text: "here?" });
+    expect((await post("hub", 0, 0)).status).toBe(400);
+    expect((await post("comp8020", 8.5, 6)).status).toBe(400); // the classroom's way out
+    expect((await post("comp8020", 0, -6.5)).status).toBe(400); // the whiteboard
+    expect((await post("outdoor", -8, 7)).status).toBe(400); // 155's door
+  });
+
+  it("says when it disappears: a month after it was stuck", async () => {
+    const v = await visitor();
+    const { note } = await (await api("/api/notes", "POST", { token: v.token, space: "outdoor", x: -3, z: -14, text: "a month" })).json();
+    const days = (Date.parse(note.expiresAt + "Z") - Date.parse(note.createdAt + "Z")) / 86_400_000;
+    expect(days).toBe(30);
+  });
+
   it("needs a name first", async () => {
     expect((await api("/api/notes", "POST", { token: "nope", space: "hub", x: 0, z: 0, text: "hi" })).status).toBe(401);
   });
@@ -84,7 +100,7 @@ describe("sticky notes", () => {
 describe("comments", () => {
   it("can be added to a note and read back, one every 10 seconds", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
-    const { note } = await (await api("/api/notes", "POST", { token: a.token, space: "hub", x: 3, z: 3, text: "Study group?" })).json();
+    const { note } = await (await api("/api/notes", "POST", { token: a.token, space: "comp8020", x: 3, z: 3, text: "Study group?" })).json();
     expect((await api(`/api/notes/${note.id}/comments`, "POST", { token: b.token, text: "Count me in" })).status).toBe(201);
     expect((await api(`/api/notes/${note.id}/comments`, "POST", { token: b.token, text: "Again" })).status).toBe(429);
     const comments = await (await api(`/api/notes/${note.id}/comments`)).json();
@@ -93,13 +109,13 @@ describe("comments", () => {
 
   it("allows 100 words, not 101", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
-    const { note } = await (await api("/api/notes", "POST", { token: a.token, space: "hub", x: 4, z: 4, text: "q" })).json();
+    const { note } = await (await api("/api/notes", "POST", { token: a.token, space: "comp8020", x: 4, z: 4, text: "q" })).json();
     expect((await api(`/api/notes/${note.id}/comments`, "POST", { token: b.token, text: words(101) })).status).toBe(400);
   });
 
   it("can be removed by its author but not by the note's author", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
-    const { note } = await (await api("/api/notes", "POST", { token: a.token, space: "hub", x: 5, z: 5, text: "q" })).json();
+    const { note } = await (await api("/api/notes", "POST", { token: a.token, space: "comp8020", x: 5, z: 5, text: "q" })).json();
     const comment = await (await api(`/api/notes/${note.id}/comments`, "POST", { token: b.token, text: "reply" })).json();
     expect((await api(`/api/comments/${comment.id}`, "DELETE", { token: a.token })).status).toBe(403);
     expect((await api(`/api/comments/${comment.id}`, "DELETE", { token: b.token })).status).toBe(200);

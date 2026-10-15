@@ -179,6 +179,12 @@ export function buildOutdoor(): SpaceDef {
     halfX: 30,
     halfZ: 40,
     areas: OUTDOOR_AREAS,
+    // Same as server/spaces.ts: no notes in 155 or 154's footprint, or on the dog.
+    noteBuildings: [
+      { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
+      { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
+    ],
+    noteKeepClear: [{ x: 4.6, z: -9 }],
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),

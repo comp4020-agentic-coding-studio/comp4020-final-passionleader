@@ -1,6 +1,8 @@
 # 001: What lasts, and who sees it, when several people share a space
 
-Status: accepted (crit 9)
+Status: accepted (crit 9). Revised in crit 10: notes now disappear a month
+after they're stuck, can't go up in the Student Hub, and keep 2 m clear of
+doors; see "Notes that never expire" below.
 
 ![How the real-time layer talks: browsers, and the server and SQLite in one Fly machine](../../diagrams/5-crit9-realtime.png)
 
@@ -70,6 +72,8 @@ written, so someone coming back starts where they left.
   note.
 - **Notes that never expire.** Old notes pile up and can go stale; removal
   depends on authors and on me as admin.
+  *Crit 10:* that came true sooner than expected, so notes now go a month
+  after they're stuck, and the note says the day.
 - **Spaces kept apart.** You can't see who's in the Hub from outside, so the
   campus can look empty while the Hub is busy. Option D would have been simpler
   (one broadcast for everything) and better for a nearly empty app, but in a

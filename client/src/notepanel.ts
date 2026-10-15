@@ -8,7 +8,17 @@ export interface NoteView {
   author: string;
   text: string;
   createdAt: string;
+  /** When the note disappears (UTC, "YYYY-MM-DD HH:MM:SS"). */
+  expiresAt: string;
   canDelete: boolean;
+}
+
+/** "Disappears on 16 Nov" (or "today"), in the reader's own time zone. */
+function goneOn(utc: string): string {
+  const when = new Date(utc.replace(" ", "T") + "Z");
+  if (Number.isNaN(when.getTime())) return "";
+  const day = when.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+  return when.toDateString() === new Date().toDateString() ? "Disappears today" : `Disappears on ${day}`;
 }
 
 export interface CommentView {
@@ -213,7 +223,8 @@ export function mountNotePanel(h: {
       current = note;
       currentComments = initialComments;
       author.textContent = note.author;
-      date.textContent = note.createdAt;
+      date.textContent = `${note.createdAt} · ${goneOn(note.expiresAt)}`;
+      date.title = "Sticky notes disappear a month after they're stuck.";
       text.textContent = note.text;
       deleteNoteBtn.hidden = !note.canDelete;
       textarea.value = "";

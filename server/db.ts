@@ -24,6 +24,8 @@ export interface Note {
   z: number;
   text: string;
   createdAt: string;
+  /** When it disappears (UTC, "YYYY-MM-DD HH:MM:SS"). */
+  expiresAt: string;
   comments: number;
 }
 export interface Comment {
@@ -138,21 +140,26 @@ export const COMMENT_COOLDOWN_SECONDS = 10;
 // Five notes per person per space: a sixth replaces their oldest there, so no
 // one can paper a floor.
 export const NOTES_PER_SPACE = 5;
+// A note lasts a month, then goes: queries stop showing it at once, and the
+// rows (and their comments) are deleted within the hour.
+export const NOTE_DAYS = 30;
+const live = `n.created_at > datetime('now', '-${NOTE_DAYS} days')`;
 
 const noteCols = `n.id, n.space, n.author, n.x, n.z, n.text, n.created_at AS createdAt,
+  datetime(n.created_at, '+${NOTE_DAYS} days') AS expiresAt,
   (SELECT COUNT(*) FROM comments c WHERE c.note_id = n.id) AS comments`;
 
 export function notesIn(space: SpaceId): Note[] {
-  return db.prepare(`SELECT ${noteCols} FROM notes n WHERE n.space = ? ORDER BY n.created_at, n.id`).all(space) as unknown as Note[];
+  return db.prepare(`SELECT ${noteCols} FROM notes n WHERE n.space = ? AND ${live} ORDER BY n.created_at, n.id`).all(space) as unknown as Note[];
 }
 
 export function findNote(id: number): Note | undefined {
-  return db.prepare(`SELECT ${noteCols} FROM notes n WHERE n.id = ?`).get(id) as Note | undefined;
+  return db.prepare(`SELECT ${noteCols} FROM notes n WHERE n.id = ? AND ${live}`).get(id) as Note | undefined;
 }
 
 /** How many notes this visitor already has in a space. */
 export function noteCount(author: string, space: SpaceId): number {
-  return (db.prepare("SELECT COUNT(*) AS n FROM notes WHERE author = ? AND space = ?").get(author, space) as { n: number }).n;
+  return (db.prepare(`SELECT COUNT(*) AS n FROM notes n WHERE author = ? AND space = ? AND ${live}`).get(author, space) as { n: number }).n;
 }
 
 /** Seconds left before this visitor may post again, or 0. */
@@ -174,7 +181,7 @@ export function addNote(author: string, space: SpaceId, x: number, z: number, te
   try {
     let replaced: number | null = null;
     const mine = db
-      .prepare("SELECT id FROM notes WHERE author = ? AND space = ? ORDER BY created_at, id")
+      .prepare(`SELECT id FROM notes n WHERE author = ? AND space = ? AND ${live} ORDER BY created_at, id`)
       .all(author, space) as { id: number }[];
     if (mine.length >= NOTES_PER_SPACE) {
       replaced = mine[0].id;
@@ -190,6 +197,11 @@ export function addNote(author: string, space: SpaceId, x: number, z: number, te
     db.exec("ROLLBACK");
     throw err;
   }
+}
+
+/** Deletes notes past their month (comments go with them). Returns how many. */
+export function purgeExpiredNotes(): number {
+  return Number(db.prepare(`DELETE FROM notes WHERE created_at <= datetime('now', '-${NOTE_DAYS} days')`).run().changes);
 }
 
 export function deleteNote(id: number): void {

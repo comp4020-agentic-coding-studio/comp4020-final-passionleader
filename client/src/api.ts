@@ -19,6 +19,8 @@ export interface Note {
   z: number;
   text: string;
   createdAt: string;
+  /** When it disappears: a month after it was stuck (UTC). */
+  expiresAt: string;
   comments: number;
 }
 

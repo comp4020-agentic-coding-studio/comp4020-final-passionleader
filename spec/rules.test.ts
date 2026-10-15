@@ -91,3 +91,27 @@ describe("classrooms the admin opens and closes", () => {
     expect(db.lastSpot("pupil").space).toBe("outdoor");
   });
 });
+
+describe("notes last a month", () => {
+  it("hides a note past its month at once, and the hourly purge deletes it", () => {
+    db.createVisitor("old", "t-old");
+    const r = db.addNote("old", "outdoor", -3, -14, "long ago");
+    if (!r.ok) throw new Error("cooldown");
+    raw.prepare("UPDATE notes SET created_at = datetime('now', '-31 days') WHERE id = ?").run(r.note.id);
+    expect(db.findNote(r.note.id)).toBeUndefined();
+    expect(db.notesIn("outdoor").map((n) => n.id)).not.toContain(r.note.id);
+    expect(db.purgeExpiredNotes()).toBeGreaterThanOrEqual(1);
+    expect(raw.prepare("SELECT COUNT(*) AS n FROM notes WHERE id = ?").get(r.note.id)).toEqual({ n: 0 });
+  });
+});
+
+describe("where a note may go", () => {
+  it("anywhere outside but buildings and doors, in classrooms, never in the Hub", async () => {
+    const { noteSpotError } = await import("../server/spaces.ts");
+    expect(noteSpotError("outdoor", -3, -14)).toBeNull();
+    expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
+    expect(noteSpotError("outdoor", 4.6, -8)).not.toBeNull(); // on the dog
+    expect(noteSpotError("comp8020", 0, 2)).toBeNull();
+    expect(noteSpotError("hub", 0, 0)).not.toBeNull();
+  });
+});

@@ -21,6 +21,7 @@ export type Event =
   | "note"
   | "note-replaced"
   | "note-removed"
+  | "note-expired"
   | "comment"
   | "comment-removed"
   | "classroom-created"
