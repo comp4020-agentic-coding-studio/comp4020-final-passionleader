@@ -411,3 +411,52 @@
     flex-wrap: wrap;
   }
 }
+
+/* A grid board (the lawn): two thumbnails a row, a picture or a small title. */
+.board-list.is-grid {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.board-list.is-grid .board-empty {
+  grid-column: 1 / -1;
+}
+
+.board-list.is-grid .board-post {
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-start;
+  height: 100%;
+  min-height: 120px;
+  padding: 8px;
+}
+
+.board-list.is-grid .board-post-title {
+  font-size: 0.85rem;
+}
+
+.board-list.is-grid .board-post-meta {
+  font-size: 0.72rem;
+}
+
+.board-thumb {
+  display: block;
+  width: 100%;
+  aspect-ratio: 4 / 3;
+  object-fit: cover;
+  margin-bottom: 6px;
+  border-radius: 6px;
+  background: rgba(107, 63, 29, 0.12);
+}
+
+.board-thumb.is-text {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  padding: 8px;
+  overflow: hidden;
+  font-size: 0.8rem;
+  font-weight: 700;
+  text-align: center;
+  overflow-wrap: anywhere;
+}

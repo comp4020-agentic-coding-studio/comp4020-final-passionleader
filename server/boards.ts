@@ -16,6 +16,8 @@ export interface BoardDef {
   tabs: readonly BoardTabDef[];
   /** A line under the tabs, e.g. that the board is unofficial. */
   notice?: string;
+  /** "grid": posts as thumbnails (a post's first picture, else its title), two a row. */
+  layout?: "grid";
 }
 
 const UNOFFICIAL = "Not an official ANU service. Posters' identities aren't verified.";
@@ -42,6 +44,7 @@ const FIXED: Record<string, BoardDef> = {
     title: "Lawn noticeboard",
     tabs: [{ id: "board", label: "Noticeboard" }],
     notice: UNOFFICIAL,
+    layout: "grid",
   },
 };
 

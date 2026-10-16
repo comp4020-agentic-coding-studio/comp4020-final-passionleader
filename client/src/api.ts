@@ -129,6 +129,8 @@ export interface BoardConfig {
   title: string;
   tabs: { id: BoardTab; label: string; staffOnly?: boolean }[];
   notice?: string;
+  /** "grid": posts as thumbnails (first picture, else the title), two a row. */
+  layout?: "grid";
 }
 /** A space's board: its title, tabs and who posts where (404 if it has none). */
 export const getBoardConfig = (space: SpaceId): Promise<BoardConfig> => request<BoardConfig>(`/api/board-config?space=${space}`);

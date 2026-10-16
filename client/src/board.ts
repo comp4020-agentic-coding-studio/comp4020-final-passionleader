@@ -16,6 +16,8 @@ export interface BoardConfig {
   tabs: { id: BoardTab; label: string; staffOnly?: boolean }[];
   /** A line under the tabs, e.g. that the board is unofficial. */
   notice?: string;
+  /** "grid": posts as thumbnails (first picture, else the title), two a row. */
+  layout?: "grid";
 }
 
 export interface BoardPost {
@@ -351,6 +353,28 @@ export function mountBoard(h: {
             // The pinned notice has no date and no comments, so it shows just its author.
             meta.textContent = p.pinned ? p.author : `${p.author} · ${p.createdAt} · ${p.comments} ${p.comments === 1 ? "comment" : "comments"}`;
             b.append(t, meta);
+            // On a grid board (the lawn's posters) the first picture, if any,
+            // stands for the post; without one the title shows, smaller.
+            const pic = config.layout === "grid" ? p.files?.find((f) => isImage(f.name)) : undefined;
+            if (pic) {
+              const img = document.createElement("img");
+              img.className = "board-thumb";
+              img.alt = p.title;
+              img.loading = "lazy";
+              b.prepend(img);
+              b.classList.add("has-thumb");
+              void h.imageLink(pic.id).then((url) => {
+                if (url) img.src = url;
+                else img.remove();
+              });
+            } else if (config.layout === "grid") {
+              // No picture: a tile the same size with the title in it, small.
+              const tile = document.createElement("span");
+              tile.className = "board-thumb is-text";
+              tile.textContent = t.textContent;
+              t.hidden = true;
+              b.prepend(tile);
+            }
             b.addEventListener("click", () => void openPost(p));
             li.append(b);
             return li;
@@ -627,6 +651,7 @@ export function mountBoard(h: {
       title.textContent = config.title;
       boardNotice.textContent = config.notice ?? "";
       boardNotice.hidden = !config.notice;
+      posts.classList.toggle("is-grid", config.layout === "grid");
       buildTabs();
       tab = config.tabs[0]?.id ?? "";
       current = null;

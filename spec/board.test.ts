@@ -70,8 +70,9 @@ describe("Hub and lawn boards", () => {
   });
 
   it("gives the lawn one noticeboard tab, unofficial too", async () => {
-    const config = (await (await api("/api/board-config?space=outdoor")).json()) as { tabs: { id: string }[]; notice: string };
+    const config = (await (await api("/api/board-config?space=outdoor")).json()) as { tabs: { id: string }[]; notice: string; layout?: string };
     expect(config.tabs.map((t) => t.id)).toEqual(["board"]);
+    expect(config).toMatchObject({ layout: "grid" });
     expect(config.notice).toMatch(/Not an official ANU service/);
     const v = await visitor();
     expect((await post(v.token, "board", "Club fair on Friday", "outdoor")).status).toBe(201);
