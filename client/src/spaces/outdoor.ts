@@ -41,7 +41,11 @@ export function buildOutdoor(): SpaceDef {
   grass(315, 6, 192.5, 20);
   floor(g, OUTDOOR.halfX * 2 + 6, 44, 0, -5, texMat("ai/paving.jpg", 35, 22, 0xd6d2ca));
   floor(g, OUTDOOR.halfX * 2 + 6, 4, 0, 25, texMat("ai/paving.jpg", 35, 2, 0xd6d2ca));
-  floor(g, 14, OUTDOOR.halfZ * 2 + 6, -2, 0, texMat("ai/paving.jpg", 7, 27), 0.01);
+  // The path runs from the north edge to the library's forecourt (backdrop.ts,
+  // from z 23.2), and stops there so the two don't overlap and flicker.
+  const pathFrom = -OUTDOOR.halfZ - 3;
+  const pathTo = 23.2;
+  floor(g, 14, pathTo - pathFrom, -2, (pathFrom + pathTo) / 2, texMat("ai/paving.jpg", 7, (pathTo - pathFrom) / 3.2), 0.01);
   floor(g, 20, 16, -19, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
   buildBackdrop(g, colliders);
   // Trees, bushes and flowers (Quaternius, CC0), laid out evenly: trees in
