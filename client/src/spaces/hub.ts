@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, mat, place, poster, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -139,7 +139,7 @@ export function buildHub(): SpaceDef {
     ...HALF,
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 6.5, 7.5),
-    bgm: ["Margin_Notes.mp3"],
+    bgm: SHARED_BGM,
     floor: "wood",
     // A place to sit together; notes go up outside and in classrooms.
     noNotes: true,

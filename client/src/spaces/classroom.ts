@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, place, poster, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
 import { CLASSROOM_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -83,7 +83,7 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
     ...HALF,
     background: 0xe6e1d4,
     camera: new THREE.Vector3(0, 6.5, 7.5),
-    bgm: [lounge ? "Common_Room_Afternoon.mp3" : "The_Library_Window.mp3"],
+    bgm: SHARED_BGM,
     floor: "carpet",
     links: page ? [{ x: 0, z: -6.7, label: `Open the ${code} course page`, url: page, embeddable: true }] : [],
     seats: lounge ? LOUNGE_SEATS : DESK_SEATS,

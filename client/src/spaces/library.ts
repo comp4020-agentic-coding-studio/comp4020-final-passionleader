@@ -25,8 +25,9 @@ export function buildLibrary(): SpaceDef {
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/library_floor.jpg", 13, 9), { texture: "ai/library_wall.jpg", tint: 0xd8c8b0, trim: 0x2a1c12 });
   const sunlight = windows(g);
 
-  const sign = textPlane(["Chifley Library", "an unofficial, fan-made space"], 7, 1.2, { bg: "#5b3a24", fg: "#ffffff", font: 0.4 });
-  sign.position.set(0, 3.4, -HALF.halfZ + 0.01);
+  // Beside the door, not over it: the door's own label floats there.
+  const sign = textPlane(["Chifley Library", "an unofficial, fan-made space"], 4.6, 1, { bg: "#5b3a24", fg: "#ffffff", font: 0.34 });
+  sign.position.set(-4.3, 2.9, -HALF.halfZ + 0.01);
   g.add(sign);
   doorway(g, 0, -HALF.halfZ + 0.05, 0, "Exit to campus");
 
