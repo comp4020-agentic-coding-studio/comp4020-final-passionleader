@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, lightPool, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, LIBRARY_BGM, lightPool, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -100,7 +100,7 @@ export function buildLibrary(): SpaceDef {
     light: 0.7,
     tick: sunlight,
     camera: new THREE.Vector3(0, 7, 8.5),
-    bgm: ["Sunlight_on_Glass.mp3"],
+    bgm: LIBRARY_BGM,
     floor: "wood",
     // A chair at each study desk, facing it (north).
     seats: [4, 6.8, 9.4].flatMap((z) => [-12, -8, -4, 4, 8, 12].map((x) => ({ x, z: z + 0.8, rot: Math.PI, y: 0.45 }))),

@@ -82,14 +82,19 @@ function skinTexture(variant: Variant, look: Look): Promise<THREE.Texture | null
     const colours: Record<Part, number> = { skin: SKIN[look.skin]!, hair: HAIR[look.hair]!, top: CLOTH[look.top]!, bottom: CLOTH[look.bottom]! };
     for (const part of Object.keys(colours) as Part[]) {
       const cells = CELLS[variant][part];
-      // Shade relative to the part's lightest cell, so the gradient survives.
+      // Shade relative to the lightest cell in the same column, so the
+      // gradient survives. Per column, not per part: Figure B's legs are a
+      // much lighter skin column than her face, and measured against the
+      // legs her face came out brown whatever skin was picked.
       const lum = (x: number, y: number): number => {
         const i = (y * base.width + x) * 4;
         return 0.299 * base.data[i]! + 0.587 * base.data[i + 1]! + 0.114 * base.data[i + 2]!;
       };
-      const top = Math.max(...cells.map(([cx, cy]) => lum(cx * CELL + 16, cy * CELL + 16)), 1);
+      const tops = new Map<number, number>();
+      for (const [cx, cy] of cells) tops.set(cx, Math.max(tops.get(cx) ?? 1, lum(cx * CELL + 16, cy * CELL + 16)));
       const c = new THREE.Color(colours[part]);
       for (const [cx, cy] of cells) {
+        const top = tops.get(cx)!;
         for (let y = cy * CELL; y < (cy + 1) * CELL; y++) {
           for (let x = cx * CELL; x < (cx + 1) * CELL; x++) {
             const k = Math.min(1.15, lum(x, y) / top);
@@ -129,6 +134,7 @@ function loadTemplate(v: Variant): Promise<Template | null> {
     .loadAsync(`${import.meta.env.BASE_URL}assets/${CHARACTER.file(v)}`)
     .then((gltf) => {
       const scene = gltf.scene;
+      if (v === "female-a") dropProp(scene);
       const box = new THREE.Box3().setFromObject(scene);
       scene.scale.multiplyScalar(CHARACTER.height / (box.max.y - box.min.y));
       scene.rotation.y = CHARACTER.yaw;
@@ -137,6 +143,31 @@ function loadTemplate(v: Variant): Promise<Template | null> {
     .catch(() => null);
   templates.set(v, template);
   return template;
+}
+
+/**
+ * Figure B's arm mesh carries a prop: a long blue-and-grey bar (palette
+ * columns 7 and 11) held out past her hands, which reads as a rifle. Not on
+ * a campus. Its triangles are folded to nothing (every corner moved onto the
+ * shoulder), leaving her hands and sleeves as they are.
+ */
+function dropProp(scene: THREE.Object3D): void {
+  scene.traverse((o) => {
+    const mesh = o as THREE.SkinnedMesh;
+    if (!mesh.isSkinnedMesh) return;
+    const uv = mesh.geometry.getAttribute("uv");
+    const pos = mesh.geometry.getAttribute("position");
+    const joints = mesh.geometry.getAttribute("skinIndex");
+    if (!uv || !pos || !joints) return;
+    const arms = new Set(mesh.skeleton.bones.flatMap((b, i) => (/^arm-/.test(b.name) ? [i] : [])));
+    for (let i = 0; i < uv.count; i++) {
+      const col = Math.floor(uv.getX(i) * 16);
+      if (arms.has(joints.getX(i)) && (col === 7 || col === 11)) pos.setXYZ(i, Math.sign(pos.getX(i)) * 0.1, 0.3, 0);
+    }
+    pos.needsUpdate = true;
+    mesh.geometry.computeBoundingBox();
+    mesh.geometry.computeBoundingSphere();
+  });
 }
 
 /** Starts loading every body and the palette, so your own figure is ready by the time you've picked a name. */
@@ -193,9 +224,9 @@ function hatMesh(kind: number): THREE.Object3D | null {
       add(new THREE.SphereGeometry(0.56, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), -0.12);
       add(new THREE.CylinderGeometry(0.6, 0.6, 0.16, 20), -0.1);
       break;
-    case 2: // cap: a low dome and a peak at the front (+z)
-      add(new THREE.SphereGeometry(0.58, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2.4), -0.06);
-      add(new THREE.BoxGeometry(0.62, 0.04, 0.42), -0.04, 0.6);
+    case 2: // cap: a dome down to the brow and a peak joined to its front rim (+z)
+      add(new THREE.SphereGeometry(0.6, 20, 10, 0, Math.PI * 2, 0, Math.PI / 2), -0.12);
+      add(new THREE.BoxGeometry(0.72, 0.05, 0.5), -0.11, 0.68, 0.12);
       break;
     case 3: // bucket hat
       add(new THREE.CylinderGeometry(0.46, 0.56, 0.3, 20), 0.06);
@@ -368,9 +399,10 @@ export class Avatar {
 /**
  * How far above the head bone the top of each body's head is, in metres
  * (head-mesh top minus the bone, in model units, times the scale to 1.7 m).
- * Figure B's hair is piled higher, so its hats sit higher.
+ * Both crowns are 0.328 model units up; Figure B's bun rises higher, but at
+ * the back, so her hats sit on her crown in front of it, not on the bun.
  */
-const HAT_Y: Record<Variant, number> = { "male-a": 0.82, "female-a": 0.94 };
+const HAT_Y: Record<Variant, number> = { "male-a": 0.82, "female-a": 0.72 };
 /** Figure B is scaled down more to fit 1.7 m (its hair is taller), so its head, and hat, are narrower. */
 const HAT_SIZE: Record<Variant, number> = { "male-a": 1, "female-a": 0.86 };
 

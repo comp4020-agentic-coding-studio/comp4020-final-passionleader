@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, lightPool, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type Door, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, doorway, lightPool, place, LIBRARY_BGM, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type Door, type SpaceDef, type SpaceId } from "../world.ts";
 import { roomShell } from "./room.ts";
 
 // The small meeting rooms: six counselling rooms off the Student Hub
@@ -116,7 +116,7 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 5.5, 6.5),
     // The music of the space outside carries on (and starts, if you join straight into the room's door).
-    bgm: ref.parent === "library" ? ["Sunlight_on_Glass.mp3"] : SHARED_BGM,
+    bgm: ref.parent === "library" ? LIBRARY_BGM : SHARED_BGM,
     floor: "carpet",
     noNotes: true,
     seats: [-1.2, 0, 1.2].flatMap((x) => [

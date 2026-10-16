@@ -149,10 +149,10 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 ## Music
 
 `A_Long_Silence_Observed.mp3`, `Morning_at_the_Quad.mp3` (campus),
-`Margin_Notes.mp3` (Student Hub), `The_Library_Window.mp3` (classroom),
-`Sunlight_on_Glass.mp3` (Chifley Library), `Common_Room_Afternoon.mp3`
-(the COMMON lounge) — Music
-generated with Google AI (Gemini) for this project.
+`Margin_Notes.mp3`, `The_Library_Window.mp3` and `Common_Room_Afternoon.mp3`
+(shared by the Student Hub, the classrooms and their meeting rooms),
+`Sunlight_on_Glass.mp3` and `Where_The_Light_Settles.mp3` (Chifley Library
+and its team rooms) — Music generated with Google AI (Gemini) for this project.
 
 Everything else in the scene (room shells, characters, sticky notes, UI) is
 built from Three.js primitives and HTML/CSS in code.
