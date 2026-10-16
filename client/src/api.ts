@@ -124,7 +124,14 @@ export const getProjects = (): Promise<{ projects: { name: string; url: string }
 export const sendBugReport = (token: string, text: string, space: SpaceId | null): Promise<{ id: number }> =>
   request("/api/bugs", "POST", { token, text, space });
 
-export type BoardTab = "qa" | "notices" | "board";
+export type BoardTab = string;
+export interface BoardConfig {
+  title: string;
+  tabs: { id: BoardTab; label: string; staffOnly?: boolean }[];
+  notice?: string;
+}
+/** A space's board: its title, tabs and who posts where (404 if it has none). */
+export const getBoardConfig = (space: SpaceId): Promise<BoardConfig> => request<BoardConfig>(`/api/board-config?space=${space}`);
 /** A file attached to a post, a bug report or a room's chat. */
 export interface FileInfo {
   id: string;
@@ -139,7 +146,7 @@ export interface Post {
   text: string;
   createdAt: string;
   comments: number;
-  /** The fixed note at the top of Notices (not a real post: id 0, no comments). */
+  /** The fixed note at the top of a staff-only tab like Notices (not a real post: id 0, no comments). */
   pinned?: boolean;
   files?: FileInfo[];
 }

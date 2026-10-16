@@ -23,6 +23,7 @@ import {
   getComments,
   getNotes,
   getPostComments,
+  getBoardConfig,
   getPosts,
   isValidName,
   join,
@@ -665,8 +666,9 @@ const webview = mountWebView();
 // The dog in front of 154 asks for a feed: a link to my Buy Me a Coffee page.
 const dogPrompt = mountDogPrompt();
 
-// Each classroom's board (Q&A, Notices, Board). The server decides who may
-// post a notice; the dialog only hides the button from everyone else.
+// Boards in classrooms (Q&A, Notices, Board), the Student Hub and on the
+// lawn. The server decides who may post in a staff-only tab; the dialog only
+// hides the button from everyone else.
 const failed = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
 const board = mountBoard({
   async list(tab) {
@@ -725,6 +727,16 @@ const board = mountBoard({
     }
   },
 });
+
+// The space's board config (its tabs, who posts where) comes from the server.
+async function openBoard(id: SpaceId): Promise<void> {
+  try {
+    const config = await getBoardConfig(id);
+    if (space?.id === id) board.open(config, session?.role === "admin");
+  } catch (err) {
+    toast(failed(err, "Could not open the board. Try again."));
+  }
+}
 
 // When a dialog closes, hand focus back to the game view.
 for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
@@ -1281,7 +1293,7 @@ function interact(): void {
   } else if (target.kind === "spot") {
     stopMoving();
     if (target.id === "dog") dogPrompt.open();
-    else if (target.id === "board" && space) board.open(space.title.replace(/ classroom$/, ""), session?.role === "admin");
+    else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "projects") void openProjects();
     else if (target.id === "board-link") openStaffLink("board");
     else if (target.id === "side-link") openStaffLink("side");

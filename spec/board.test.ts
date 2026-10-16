@@ -48,7 +48,37 @@ describe("classroom board", () => {
     expect((await api(`/api/board/${created.id}`, "DELETE", { token: a.token })).status).toBe(200);
   });
 
-  it("only has boards in classrooms", async () => {
-    expect((await api("/api/board?space=hub&tab=qa")).status).toBe(404);
+  it("has no board where none stands", async () => {
+    expect((await api("/api/board?space=library&tab=board")).status).toBe(404);
+    expect((await api("/api/board-config?space=library")).status).toBe(404);
+  });
+});
+
+// The Student Hub's board, where staff and students find each other, and the
+// lawn's noticeboard. Anyone posts in every tab (there's no staff role yet,
+// so "Labs looking for students" is open too); both say they're unofficial.
+describe("Hub and lawn boards", () => {
+  it("gives the Hub three tabs, open to anyone, and says it's unofficial", async () => {
+    const config = (await (await api("/api/board-config?space=hub")).json()) as { tabs: { id: string; staffOnly?: boolean }[]; notice: string };
+    expect(config.tabs.map((t) => t.id)).toEqual(["labs", "students", "ask"]);
+    expect(config.tabs.some((t) => t.staffOnly)).toBe(false);
+    expect(config.notice).toMatch(/Not an official ANU service.*identities aren't verified/);
+    const v = await visitor();
+    expect((await post(v.token, "labs", "We need a research assistant.", "hub")).status).toBe(201);
+    const labs = (await (await api("/api/board?space=hub&tab=labs")).json()) as { author: string }[];
+    expect(labs.map((p) => p.author)).toContain(v.name);
+  });
+
+  it("gives the lawn one noticeboard tab, unofficial too", async () => {
+    const config = (await (await api("/api/board-config?space=outdoor")).json()) as { tabs: { id: string }[]; notice: string };
+    expect(config.tabs.map((t) => t.id)).toEqual(["board"]);
+    expect(config.notice).toMatch(/Not an official ANU service/);
+    const v = await visitor();
+    expect((await post(v.token, "board", "Club fair on Friday", "outdoor")).status).toBe(201);
+  });
+
+  it("refuses a classroom's tab on another board", async () => {
+    const v = await visitor();
+    expect((await post(v.token, "notices", "Not a Hub tab", "hub")).status).toBe(400);
   });
 });

@@ -54,6 +54,13 @@ Read before planning or building: `README.md` (what good means for this app),
   remove; closing a classroom removes its board. Outside COMP8020, what the
   whiteboard and the board to its right open is set by the admin only
   (https addresses), checked on the server.
+- The Student Hub's board (Labs looking for students, Students looking for
+  labs, Ask the Hub) and the lawn noticeboard (one tab) keep the same post
+  and comment rules; anyone posts in every tab until there's a staff role.
+  Which spaces have a board, their tabs and which tabs are staff-only live in
+  `server/boards.ts` alone; the client draws what it's sent. Both say
+  they're unofficial and that posters aren't verified. Notes keep 2 m off
+  the lawn noticeboard.
 - Chat is never stored: 200 characters, the space only, gone from screens
   after a minute.
 - Meeting rooms (counselling rooms off the Hub, team rooms off classrooms

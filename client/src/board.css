@@ -91,6 +91,16 @@
   font-weight: 700;
 }
 
+/* The Hub's tabs are long ("Labs looking for students"): let them wrap. */
+.board-tab {
+  line-height: 1.2;
+}
+
+.board-notice {
+  flex: none;
+  padding: 8px 20px 0;
+}
+
 .board-tab[aria-selected="true"] {
   border-bottom-color: var(--accent, #6b3f1d);
   background: rgba(255, 255, 255, 0.45);
@@ -386,6 +396,11 @@
   .board-tab {
     flex: 1;
     padding: 8px 6px;
+    font-size: 0.85rem;
+  }
+
+  .board-notice {
+    padding: 6px 12px 0;
   }
 
   .board-body {

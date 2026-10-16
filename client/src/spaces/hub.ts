@@ -19,7 +19,7 @@ export function buildHub(): SpaceDef {
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 16, 10.4), { tint: 0xe6e8ea, trim: 0x2f3e4f });
   const back = -HALF.halfZ + 0.01;
 
-  // The desk at the back, with the sign above it, and the noticeboard. The
+  // The desk at the back, with the sign above it. The
   // reception PC on the desk opens the admin's log and bug reports (the
   // server only answers the admin).
   block(g, colliders, [6, 1.1, 1.2], [0, -HALF.halfZ + 1.4], 0x2f5d8a);
@@ -30,9 +30,21 @@ export function buildHub(): SpaceDef {
   const sign = textPlane(["Student Hub", "an unofficial, fan-made space"], 6, 1.4, { bg: "#2f5d8a", fg: "#ffffff", font: 0.42 });
   sign.position.set(0, 2.9, back);
   g.add(sign);
-  // Where the noticeboard will go (plan 12): a poster until it's built.
+  // The Hub's board, where staff and students find each other (Labs looking
+  // for students, Students looking for labs, Ask the Hub), and beside it a
+  // desk whose PC opens ANU's researcher search in a new tab.
+  const cork = textPlane(["Student Hub board", "Labs · Students · Ask the Hub", "press E to read and post"], 3.4, 2.2, { bg: "#b98a55", fg: "#2c1d0c", font: 0.25 });
+  cork.position.set(-10, 2.1, back);
+  g.add(cork);
+  block(g, colliders, [1.6, 0.8, 0.8], [-6, -HALF.halfZ + 0.5], 0x6b4a2b);
+  place(g, "computerScreen.glb", 0.5, -6, -HALF.halfZ + 0.5, 0, true, 0.8);
+  const findTag = textPlane(["Find a researcher", "opens a new tab"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  findTag.position.set(-6, 1.85, back);
+  g.add(findTag);
+  // The poster that held the board's place, now on the west wall.
   const art = poster("ai/poster_hub.jpg", 1.6, 2.4);
-  art.position.set(-10, 2, back);
+  art.position.set(-HALF.halfX + 0.01, 2, -4);
+  art.rotation.y = Math.PI / 2;
   g.add(art);
 
   // The office half, at the back: two pods of three desks facing each
@@ -153,7 +165,10 @@ export function buildHub(): SpaceDef {
     links: [
       ...GAMES.map((game) => ({ x: game.x, z: -HALF.halfZ + 1.9, label: `Play ${game.title}`, url: game.url, embeddable: true })),
       { x: -1.5, z: -HALF.halfZ + 2.6, label: "Use the reception PC (activity log, bug reports)", url: "/admin/", embeddable: true },
+      // The research portal won't be framed, so a new tab.
+      { x: -6, z: -HALF.halfZ + 1.6, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
     ],
+    spots: [{ x: -10, z: -HALF.halfZ + 1.4, id: "board", label: "Open the Student Hub board" }],
   };
 }
 

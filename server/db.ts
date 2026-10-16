@@ -7,7 +7,7 @@ import { COMMON, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, ty
 // where they last stood. Notes: sticky notes on a space's floor, kept until
 // their author or an admin removes them. Comments: replies on a note.
 // Classrooms: the course codes the admin has opened in building 155.
-// Posts and post comments: each classroom's board (Q&A, Notices, Board).
+// Posts and post comments: the boards in classrooms, the Student Hub and on the lawn.
 // Audit: the admin's seven-day copy of the activity log (below). Bug
 // reports: what visitors send from the settings dialog. Files: what's been
 // attached to a bug report, a board post or a meeting room (the files
@@ -366,14 +366,12 @@ export function removeClassroom(code: string): boolean {
   }
 }
 
-// --- classroom boards --------------------------------------------------------
-// Each classroom has a board with three tabs. Anyone may post in Q&A and
-// Board and comment anywhere; only the admin (for now the only "staff") posts
-// in Notices, which main.ts checks. Posts stay until their author or an admin
-// removes them, or the classroom is closed.
+// --- boards ------------------------------------------------------------------
+// Classrooms, the Student Hub and the lawn have boards (boards.ts says which
+// tabs and who posts where; main.ts checks it). Posts stay until their author
+// or an admin removes them, or their classroom is closed.
 
-export type BoardTab = "qa" | "notices" | "board";
-export const BOARD_TABS: readonly BoardTab[] = ["qa", "notices", "board"];
+export type BoardTab = string;
 export const POST_COOLDOWN_SECONDS = 30;
 
 export interface Post {

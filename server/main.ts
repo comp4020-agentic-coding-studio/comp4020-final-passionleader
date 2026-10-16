@@ -6,9 +6,8 @@ import { getConnInfo } from "@hono/node-server/conninfo";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { marked } from "marked";
-import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayPostIn, mayRemove, postError, textError } from "./accounts.ts";
+import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayRemove, postError, textError } from "./accounts.ts";
 import {
-  BOARD_TABS,
   NOTES_PER_SPACE,
   addClassroom,
   addComment,
@@ -53,14 +52,14 @@ import {
   validLook,
   removeClassroom,
   setClassroomLink,
-  type BoardTab,
   type Visitor,
 } from "./db.ts";
 import { browserTag, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, livePlayer, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
-import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
+import { boardOf, mayPostIn, tabOf } from "./boards.ts";
+import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
 keepIn(addAudit);
@@ -393,56 +392,68 @@ if (process.env.PROJECTS_CHECK !== "0") {
 
 app.get("/api/projects", (c) => c.json({ projects, checkedAt: projectsCheckedAt }));
 
-// --- classroom boards --------------------------------------------------------
-// Every classroom has a board with three tabs. Anyone reads everything, posts
-// in Q&A and Board, and comments anywhere. Only lecturers and staff post in
-// Notices (until there's a staff role, the admin): checked here, refused with
-// a 403 and a log line. Authors and the admin remove posts and comments.
+// --- boards ------------------------------------------------------------------
+// Classrooms (Q&A, Notices, Board), the Student Hub and the lawn each have a
+// board; boards.ts lists their tabs. Anyone reads everything, posts in most
+// tabs and comments anywhere. Only lecturers and staff post in a staff-only
+// tab like Notices (until there's a staff role, the admin): checked here,
+// refused with a 403 and a log line. Authors and the admin remove posts and
+// comments.
 
-const isTab = (t: unknown): t is BoardTab => typeof t === "string" && (BOARD_TABS as readonly string[]).includes(t);
-// Not a row: the first thing in every Notices tab, saying who may post there.
-const PINNED_NOTICE = {
+// Not a row: the first thing in every staff-only tab, saying who may post there.
+const pinnedNotice = (label: string) => ({
   id: 0,
-  tab: "notices",
+  tab: label,
   author: "ANU campus",
   title: "Who can post here",
-  text: "Only lecturers and staff can post in Notices, so other users can't post here. Everyone can read and comment.",
+  text: `Only lecturers and staff can post in ${label}, so other users can't post here. Everyone can read and comment.`,
   createdAt: "",
   comments: 0,
   pinned: true,
-};
+});
+
+app.get("/api/board-config", (c) => {
+  const board = boardOf(c.req.query("space"));
+  if (!board) return c.json({ error: "There's no board here." }, 404);
+  return c.json(board);
+});
 
 app.get("/api/board", (c) => {
   const space = c.req.query("space");
-  const tab = c.req.query("tab");
-  if (!isClassroom(space)) return c.json({ error: "No such classroom." }, 404);
-  if (!isTab(tab)) return c.json({ error: "No such tab." }, 400);
-  const posts = postsIn(space, tab).map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
-  return c.json(tab === "notices" ? [PINNED_NOTICE, ...posts] : posts);
+  const board = boardOf(space);
+  if (!board) return c.json({ error: "There's no board here." }, 404);
+  const tab = tabOf(board, c.req.query("tab"));
+  if (!tab) return c.json({ error: "No such tab." }, 400);
+  const posts = postsIn(space!, tab.id).map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
+  return c.json(tab.staffOnly ? [{ ...pinnedNotice(tab.label), tab: tab.id }, ...posts] : posts);
 });
 
 app.post("/api/board", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
-  if (!isClassroom(b.space)) return c.json({ error: "No such classroom." }, 400);
-  if (!isTab(b.tab)) return c.json({ error: "No such tab." }, 400);
-  if (!mayPostIn(v, b.tab)) {
-    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "notices are for staff" }, { ip: ipOf(c), content: typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null });
-    return c.json({ error: "Only lecturers and staff can post in Notices." }, 403);
+  const board = boardOf(b.space);
+  if (!board) return c.json({ error: "There's no board here." }, 400);
+  const tab = tabOf(board, b.tab);
+  if (!tab) return c.json({ error: "No such tab." }, 400);
+  const space = b.space as string;
+  const content = typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null;
+  if (!mayPostIn(v, tab)) {
+    log("refused", v, { action: "post", space, tab: tab.id, reason: "staff only" }, { ip: ipOf(c), content });
+    return c.json({ error: `Only lecturers and staff can post in ${tab.label}.` }, 403);
   }
   const bad = postError(b.title, b.text);
   if (bad) {
-    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: bad }, { ip: ipOf(c), content: typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null });
+    log("refused", v, { action: "post", space, tab: tab.id, reason: bad }, { ip: ipOf(c), content });
     return c.json({ error: bad }, 400);
   }
-  const result = addPost(v.name, b.space, b.tab, (b.title as string).trim(), (b.text as string).trim());
+  const result = addPost(v.name, space, tab.id, (b.title as string).trim(), (b.text as string).trim());
   if (!result.ok) {
-    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content: typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null });
+    log("refused", v, { action: "post", space, tab: tab.id, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content });
     return c.json({ error: `One post every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
-  log("post", v, { space: b.space, tab: b.tab, post: result.post.id, words: wordCount(result.post.text) }, { ip: ipOf(c), content: `${result.post.title}\n\n${result.post.text}` });
-  broadcastSpace(b.space, { t: "action", kind: "board", tab: b.tab });
+  log("post", v, { space, tab: tab.id, post: result.post.id, words: wordCount(result.post.text) }, { ip: ipOf(c), content: `${result.post.title}\n\n${result.post.text}` });
+  broadcastSpace(space, { t: "action", kind: "board", tab: tab.id });
   return c.json(result.post, 201);
 });
 

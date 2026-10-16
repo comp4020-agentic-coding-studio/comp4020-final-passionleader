@@ -37,6 +37,10 @@ should feel at home in a virtual space shaped like the real campus they know.
    right lists classmates' final-project apps that are up (each opens in a
    new tab). In other classrooms both open whatever page the staff set (for
    now the admin). COMMON is a lounge, not a lecture room.
+   The Student Hub has a board too, by its back wall (Labs looking for
+   students, Students looking for labs, Ask the Hub), with a desk beside it
+   that opens ANU's researcher search in a new tab; the lawn has a
+   noticeboard between its benches. Both say they're unofficial.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier
    course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
@@ -108,7 +112,7 @@ post is removed. Chat, moves and emotes are not kept.
 
 ## What I chose not to build (yet)
 
-Voice in the meeting rooms, the Hub's boards, mail, one-to-one chat and
+Voice in the meeting rooms, mail, one-to-one chat and
 voice chat. "Staff" is only
 the admin account for now: nothing yet tells a lecturer from a student. The buildings are
 simplified, not surveyed.

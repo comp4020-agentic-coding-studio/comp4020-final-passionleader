@@ -1,14 +1,22 @@
-// A classroom's board: the dialog the board beside the whiteboard opens. It
-// has three tabs, Q&A, Notices and Board, each a list of posts. A post opens
+// A board: the dialog a classroom's board (Q&A, Notices, Board), the Student
+// Hub's or the lawn's opens. Its tabs come from the server (GET
+// /api/board-config), each a list of posts. A post opens
 // into its text and comments, and anyone can write a post or a comment. The
-// server decides who may post a notice (lecturers and staff) and who may
+// server decides who may post in a staff-only tab (lecturers and staff) and who may
 // delete what; this only hides the buttons a visitor couldn't use. A post can
 // carry up to five files (200 MB each), which upload once the post is up.
 
 import "./board.css";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 
-export type BoardTab = "qa" | "notices" | "board";
+export type BoardTab = string;
+
+export interface BoardConfig {
+  title: string;
+  tabs: { id: BoardTab; label: string; staffOnly?: boolean }[];
+  /** A line under the tabs, e.g. that the board is unofficial. */
+  notice?: string;
+}
 
 export interface BoardPost {
   id: number;
@@ -31,12 +39,6 @@ export interface BoardComment {
   canDelete: boolean;
 }
 
-const TABS: { id: BoardTab; label: string }[] = [
-  { id: "qa", label: "Q&A" },
-  { id: "notices", label: "Notices" },
-  { id: "board", label: "Board" },
-];
-
 // The same limits as sticky notes.
 const POST_WORDS = 500;
 const POST_CHARS = 3000;
@@ -52,7 +54,7 @@ function wordCount(text: string): number {
 type View = "list" | "post" | "write";
 
 export function mountBoard(h: {
-  /** Posts in one tab, newest first (the pinned notice comes first in "notices"). */
+  /** Posts in one tab, newest first (a staff-only tab starts with a pinned note). */
   list(tab: BoardTab): Promise<BoardPost[]>;
   /** A post's comments, oldest first. */
   comments(postId: number): Promise<BoardComment[]>;
@@ -69,7 +71,7 @@ export function mountBoard(h: {
   removePost(postId: number): Promise<string | null>;
   removeComment(commentId: number): Promise<string | null>;
 }): {
-  open(classroomCode: string, canPostNotices: boolean): void;
+  open(config: BoardConfig, canPostStaffOnly: boolean): void;
   /** A post or comment arrived or went, live: re-fetch whatever is on screen. */
   refresh(): void;
   close(): void;
@@ -102,17 +104,8 @@ export function mountBoard(h: {
   tablist.setAttribute("role", "tablist");
   tablist.setAttribute("aria-label", "Board sections");
   const tabButtons = new Map<BoardTab, HTMLButtonElement>();
-  for (const t of TABS) {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "board-tab";
-    b.id = `board-tab-${t.id}`;
-    b.setAttribute("role", "tab");
-    b.setAttribute("aria-controls", "board-body");
-    b.textContent = t.label;
-    tabButtons.set(t.id, b);
-    tablist.append(b);
-  }
+  const boardNotice = document.createElement("p");
+  boardNotice.className = "board-muted board-notice";
 
   const body = document.createElement("div");
   body.className = "board-body";
@@ -123,7 +116,7 @@ export function mountBoard(h: {
   error.className = "board-error";
   error.setAttribute("role", "alert");
 
-  card.append(head, tablist, body);
+  card.append(head, tablist, boardNotice, body);
   root.append(card);
   document.body.append(root);
 
@@ -138,7 +131,6 @@ export function mountBoard(h: {
   writeBtn.textContent = "Write a post";
   const noticeHint = document.createElement("p");
   noticeHint.className = "board-muted";
-  noticeHint.textContent = "Only lecturers and staff can post in Notices. You can read and comment.";
   toolbar.append(writeBtn, noticeHint);
   const posts = document.createElement("ul");
   posts.className = "board-list";
@@ -224,9 +216,9 @@ export function mountBoard(h: {
   writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, writeRow);
 
   let isOpen = false;
-  let code = "";
-  let canNotices = false;
-  let tab: BoardTab = "qa";
+  let config: BoardConfig = { title: "", tabs: [] };
+  let canStaff = false;
+  let tab: BoardTab = "";
   let view: View = "list";
   let current: BoardPost | null = null;
   // Anything already asking for a Yes/No, and requests in flight, so a double
@@ -267,7 +259,9 @@ export function mountBoard(h: {
       b.tabIndex = on ? 0 : -1;
     }
     body.setAttribute("aria-labelledby", `board-tab-${tab}`);
-    const canWrite = tab !== "notices" || canNotices;
+    const def = config.tabs.find((t) => t.id === tab);
+    const canWrite = !def?.staffOnly || canStaff;
+    noticeHint.textContent = `Only lecturers and staff can post in ${def?.label ?? "this tab"}. You can read and comment.`;
     writeBtn.hidden = !canWrite;
     noticeHint.hidden = canWrite;
   }
@@ -525,11 +519,30 @@ export function mountBoard(h: {
     await loadPosts();
   }
 
-  for (const [id, b] of tabButtons) b.addEventListener("click", () => void switchTab(id));
+  /** Rebuilds the tab buttons for the board being opened. */
+  function buildTabs(): void {
+    tabButtons.clear();
+    tablist.replaceChildren();
+    for (const t of config.tabs) {
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "board-tab";
+      b.id = `board-tab-${t.id}`;
+      b.setAttribute("role", "tab");
+      b.setAttribute("aria-controls", "board-body");
+      b.textContent = t.label;
+      b.addEventListener("click", () => void switchTab(t.id));
+      tabButtons.set(t.id, b);
+      tablist.append(b);
+    }
+    tablist.hidden = config.tabs.length < 2;
+  }
+
   tablist.addEventListener("keydown", (e) => {
     if (e.key !== "ArrowLeft" && e.key !== "ArrowRight") return;
-    const at = TABS.findIndex((t) => t.id === tab);
-    const next = TABS[(at + (e.key === "ArrowRight" ? 1 : -1) + TABS.length) % TABS.length]!;
+    const tabs = config.tabs;
+    const at = tabs.findIndex((t) => t.id === tab);
+    const next = tabs[(at + (e.key === "ArrowRight" ? 1 : -1) + tabs.length) % tabs.length]!;
     e.preventDefault();
     void switchTab(next.id).then(() => tabButtons.get(next.id)?.focus());
   });
@@ -608,11 +621,14 @@ export function mountBoard(h: {
   });
 
   return {
-    open(classroomCode, canPostNotices) {
-      code = classroomCode;
-      canNotices = canPostNotices;
-      title.textContent = `${code} board`;
-      tab = "qa";
+    open(next, canPostStaffOnly) {
+      config = next;
+      canStaff = canPostStaffOnly;
+      title.textContent = config.title;
+      boardNotice.textContent = config.notice ?? "";
+      boardNotice.hidden = !config.notice;
+      buildTabs();
+      tab = config.tabs[0]?.id ?? "";
       current = null;
       confirming = null;
       postsData = [];

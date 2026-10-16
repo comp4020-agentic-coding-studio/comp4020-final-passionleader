@@ -48,9 +48,6 @@ export function postError(title: unknown, text: unknown): string | null {
   return null;
 }
 
-/** Notices are for lecturers and staff; until there's a staff role, that's the admin. */
-export const mayPostIn = (v: { role: string }, tab: string): boolean => tab !== "notices" || v.role === "admin";
-
 export function textError(text: unknown): string | null {
   if (typeof text !== "string" || text.trim() === "") return "Write something first.";
   if (text.length > MAX_CHARS) return `Keep it under ${MAX_CHARS} characters.`;
