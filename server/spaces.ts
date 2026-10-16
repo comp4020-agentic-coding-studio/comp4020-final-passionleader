@@ -73,7 +73,7 @@ export function spaceInfo(id: SpaceId): Space | undefined {
 // --- meeting rooms -----------------------------------------------------------
 // Small rooms off a bigger space, each a space of its own so its people and
 // its chat stay in it: six counselling rooms off the Student Hub (invite-only),
-// three team rooms off every classroom and five off the library (open to
+// three team rooms off every classroom and four off the library (open to
 // anyone). Six people at most. realtime.ts decides who gets in. The door
 // spots are the client's too (client/src/spaces/meeting.ts).
 
@@ -84,7 +84,6 @@ const CLASSROOM_TEAM_DOORS = [-3, 0.5, 4].map((z) => ({ x: -8.9, z }));
 const LIBRARY_TEAM_DOORS = [
   { x: -14.9, z: -1.5 },
   { x: -14.9, z: 2.5 },
-  { x: -14.9, z: 6.5 },
   { x: 14.9, z: -1.5 },
   { x: 14.9, z: 2.5 },
 ];
@@ -172,6 +171,7 @@ const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
   { x: 0, z: -6.7 }, // the whiteboard
   { x: -6.4, z: -6.7 }, // the board
+  { x: 6.4, z: -6.7 }, // the board to its right (projects, or the staff's page)
   ...CLASSROOM_TEAM_DOORS,
 ];
 

@@ -113,6 +113,10 @@ for (const col of ["poop_x", "poop_z", "pooped_at"]) {
 // it's COMP8020. Move anything saved under the old id.
 db.exec("UPDATE notes SET space = 'comp8020' WHERE space = 'comp8280'");
 db.exec("UPDATE visitors SET last_space = 'comp8020' WHERE last_space = 'comp8280'");
+// Each classroom's two links the admin sets (the whiteboard, and the board to
+// its right), added after crit 9.
+const classroomCols = (db.prepare("PRAGMA table_info(classrooms)").all() as { name: string }[]).map((c) => c.name);
+for (const col of ["board_url", "side_url"]) if (!classroomCols.includes(col)) db.exec(`ALTER TABLE classrooms ADD COLUMN ${col} TEXT`);
 // The first two classrooms: the one there's always been, and COMMON for anyone.
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
 
@@ -259,14 +263,25 @@ export interface Classroom {
   code: string;
   space: SpaceId;
   createdAt: string;
+  /** What the whiteboard opens, if the admin has set it. */
+  boardUrl: string | null;
+  /** What the board right of the whiteboard opens, if set. */
+  sideUrl: string | null;
 }
 
+export type ClassroomLink = "board" | "side";
+
 export function classroomList(): Classroom[] {
-  const rows = db.prepare("SELECT code, created_at AS createdAt FROM classrooms ORDER BY code = 'COMMON' DESC, code").all() as unknown as {
-    code: string;
-    createdAt: string;
-  }[];
+  const rows = db
+    .prepare("SELECT code, created_at AS createdAt, board_url AS boardUrl, side_url AS sideUrl FROM classrooms ORDER BY code = 'COMMON' DESC, code")
+    .all() as unknown as Omit<Classroom, "space">[];
   return rows.map((r) => ({ ...r, space: classroomSpace(r.code) }));
+}
+
+/** Sets (or, with null, clears) one of a classroom's links. False if there's no such classroom. */
+export function setClassroomLink(code: string, which: ClassroomLink, url: string | null): boolean {
+  const col = which === "board" ? "board_url" : "side_url";
+  return db.prepare(`UPDATE classrooms SET ${col} = ? WHERE code = ?`).run(url, code).changes > 0;
 }
 
 const syncClassrooms = (): void => setClassrooms(classroomList().map((c) => c.code));

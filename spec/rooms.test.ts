@@ -23,7 +23,7 @@ async function inRoom(space: string): Promise<{ name: string; s: Socket }> {
 
 describe("meeting rooms", () => {
   it("lets anyone into a team room, and turns the seventh away", async () => {
-    const room = "team-library-5";
+    const room = "team-library-4";
     const six = [];
     for (let i = 0; i < 6; i++) six.push(await inRoom(room));
     const v = await visitor();
@@ -57,10 +57,10 @@ describe("meeting rooms", () => {
   });
 
   it("refuses an invite from outside a counselling room", async () => {
-    const a = await inRoom("team-library-4");
+    const a = await inRoom("team-library-3");
     const b = await visitor();
     a.s.send({ t: "invite", name: b.name });
-    await expect(a.s.next(refused("team-library-4", "not in a counselling room"))).resolves.toBeTruthy();
+    await expect(a.s.next(refused("team-library-3", "not in a counselling room"))).resolves.toBeTruthy();
   });
 
   it("shows a newcomer what was said while they weren't there, and forgets it once the room empties", async () => {

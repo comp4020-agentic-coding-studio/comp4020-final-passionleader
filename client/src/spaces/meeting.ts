@@ -4,11 +4,12 @@ import { roomShell } from "./room.ts";
 
 // The small meeting rooms: six counselling rooms off the Student Hub
 // (invite-only) and team rooms off every classroom (three) and the library
-// (five), open to anyone. Each is a space of its own, so its people and its
+// (four), open to anyone. Each is a space of its own, so its people and its
 // chat stay inside; six at most. The server decides who gets in
 // (server/realtime.ts) and knows the same door spots (server/spaces.ts
-// roomOf). Inside: one table with six chairs, a screen on the wall, the way
-// out on the north wall.
+// roomOf). Inside: one table with six chairs, and the way out on the side
+// you came in by: walk in through an east-facing door and the room's own
+// door is on its west wall, behind you, with a screen on the far wall.
 
 const HALF = { halfX: 5, halfZ: 4 };
 export const ROOM_CAP = 6;
@@ -21,10 +22,13 @@ export const CLASSROOM_TEAM_DOORS = [-3, 0.5, 4].map((z) => ({ x: -8.9, z }));
 export const LIBRARY_TEAM_DOORS = [
   { x: -14.9, z: -1.5 },
   { x: -14.9, z: 2.5 },
-  { x: -14.9, z: 6.5 },
   { x: 14.9, z: -1.5 },
   { x: 14.9, z: 2.5 },
 ];
+/** Where the room's own door is along its side wall. */
+const INNER_DOOR_Z = -1.5;
+/** -1 if the room's door is on its west wall (you came in heading east), +1 if east. */
+const innerSide = (parentDoor: { x: number }): number => (parentDoor.x > 0 ? -1 : 1);
 
 export interface RoomRef {
   kind: RoomKind;
@@ -58,8 +62,9 @@ export function roomDoors(prefix: string, doors: { x: number; z: number }[], lab
     ...d,
     label: label(i + 1),
     to: `${prefix}-${i + 1}`,
-    // Out of the door's reach, so a second E doesn't walk you straight back out.
-    arrive: { x: 0, z: -HALF.halfZ + 2.9 },
+    // Just inside the room's door, out of its reach, so a second E doesn't
+    // walk you straight back out.
+    arrive: { x: innerSide(d) * (HALF.halfX - 2.9), z: INNER_DOOR_Z },
   }));
 }
 
@@ -74,9 +79,10 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
     fg: "#ffffff",
     font: 0.3,
   });
-  sign.position.set(-2.6, 3.1, -HALF.halfZ + 0.01);
+  sign.position.set(0, 3.1, -HALF.halfZ + 0.01);
   g.add(sign);
-  doorway(g, 0, -HALF.halfZ + 0.05, 0, "Leave the room");
+  const side = innerSide(ref.door);
+  doorway(g, side * (HALF.halfX - 0.05), INNER_DOOR_Z, side < 0 ? Math.PI / 2 : -Math.PI / 2, "Leave the room");
 
   // The table and six chairs, three a side.
   block(g, colliders, [3.6, 0.75, 1.4], [0, 1], 0x8a6a50);
@@ -85,10 +91,10 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
     place(g, "chairDesk.glb", 1, x, 1 + 1.15, Math.PI);
   }
   solid(colliders, 3.8, 3.4, 0, 1);
-  // A screen on the east wall, for the team's work later.
+  // A screen on the far wall, for the team's work later.
   const screen = textPlane(["Shared screen", "(coming later)"], 2.6, 1.5, { bg: "#1f2d3d", fg: "#c9d6e3", font: 0.24 });
-  screen.position.set(HALF.halfX - 0.01, 1.9, 0.6);
-  screen.rotation.y = -Math.PI / 2;
+  screen.position.set(-side * (HALF.halfX - 0.01), 1.9, 0.6);
+  screen.rotation.y = side * (Math.PI / 2);
   g.add(screen);
   place(g, "pottedPlant.glb", 1.3, -HALF.halfX + 0.6, HALF.halfZ - 0.6);
   solid(colliders, 0.7, 0.7, -HALF.halfX + 0.6, HALF.halfZ - 0.6);
@@ -98,7 +104,7 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
     title: ref.title,
     group: g,
     colliders,
-    doors: [{ x: 0, z: -HALF.halfZ + 1.1, label: "Leave the room", to: ref.parent, arrive: { x: ref.door.x + (ref.door.x > 0 ? -1.8 : 1.8), z: ref.door.z } }],
+    doors: [{ x: side * (HALF.halfX - 1.1), z: INNER_DOOR_Z, label: "Leave the room", to: ref.parent, arrive: { x: ref.door.x + (ref.door.x > 0 ? -1.8 : 1.8), z: ref.door.z } }],
     ...HALF,
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 5.5, 6.5),

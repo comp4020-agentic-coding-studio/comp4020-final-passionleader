@@ -32,13 +32,17 @@ should feel at home in a virtual space shaped like the real campus they know.
    **E** to read and comment.
 5. In a classroom, **E** at the board left of the whiteboard opens its Q&A,
    Notices and Board. Anyone asks, posts and comments (posts up to 500
-   words); only lecturers and staff post notices. The whiteboard opens the
-   course page in a window over the campus.
-6. Say hello to the dog in front of 154. In the Hub, the arcade machine plays
-   Sketch & Guess, a drawing game for everyone there. In Chifley Library the
+   words); only lecturers and staff post notices. In COMP8020 the whiteboard
+   opens the course page in a window over the campus, and the board to its
+   right lists classmates' final-project apps that are up (each opens in a
+   new tab). In other classrooms both open whatever page the staff set (for
+   now the admin). COMMON is a lounge, not a lecture room.
+6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
+   Sketch & Guess, a drawing game for everyone there, and two of my earlier
+   course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
    catalogue desk opens room booking, the catalogue and research ethics.
 7. Meeting rooms: six counselling rooms off the Student Hub, three team rooms
-   off every classroom and five off the library. Up to six people each. Team
+   off every classroom and four off the library. Up to six people each. Team
    rooms are open to anyone; a counselling room lets in only whoever someone
    inside has invited by name. Inside, a group chat shows what's been said
    since the room last emptied; when the last person leaves it's gone, and so

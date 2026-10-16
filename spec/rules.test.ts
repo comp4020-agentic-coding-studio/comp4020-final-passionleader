@@ -90,6 +90,18 @@ describe("classrooms the admin opens and closes", () => {
     expect(db.findNote(r.note.id)).toBeUndefined();
     expect(db.lastSpot("pupil").space).toBe("outdoor");
   });
+
+  it("keeps the links the admin sets for a classroom's boards, and clears them", () => {
+    db.addClassroom("COMP6400", "qa_master");
+    expect(db.setClassroomLink("COMP6400", "board", "https://example.com/slides")).toBe(true);
+    expect(db.setClassroomLink("COMP6400", "side", "https://example.com/forms")).toBe(true);
+    const room = db.classroomList().find((c) => c.code === "COMP6400");
+    expect(room).toMatchObject({ boardUrl: "https://example.com/slides", sideUrl: "https://example.com/forms" });
+    db.setClassroomLink("COMP6400", "board", null);
+    expect(db.classroomList().find((c) => c.code === "COMP6400")?.boardUrl).toBeNull();
+    expect(db.setClassroomLink("NOPE1234", "board", "https://example.com/")).toBe(false);
+    db.removeClassroom("COMP6400");
+  });
 });
 
 describe("notes last a month", () => {

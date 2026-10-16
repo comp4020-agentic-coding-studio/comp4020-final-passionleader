@@ -1,0 +1,229 @@
+/* The classmates' final projects list: a modal over the scene with a filter
+   box and a scrolling list of live apps. Same backdrop as the settings
+   dialog, the classroom picker and the board. */
+
+#project-list {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 20, 20, 0.45);
+}
+
+#project-list[hidden],
+#project-list [hidden] {
+  display: none !important;
+}
+
+.projects-card {
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  width: min(560px, calc(100vw - 32px));
+  height: min(640px, calc(100vh - 32px));
+  overflow: hidden;
+  border-radius: 14px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+  font-family: system-ui, sans-serif;
+}
+
+.projects-card button {
+  font: inherit;
+  cursor: pointer;
+}
+
+.projects-card button:focus-visible,
+.projects-card input:focus-visible {
+  outline: 3px solid var(--accent, #6b3f1d);
+  outline-offset: 2px;
+}
+
+.projects-head {
+  flex: none;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+  padding: 14px 12px 4px 20px;
+}
+
+.projects-heading {
+  flex: 1;
+  min-width: 0;
+}
+
+.projects-title {
+  margin: 0;
+  font-size: 1.3rem;
+  line-height: 1.2;
+  overflow-wrap: anywhere;
+}
+
+.projects-sub {
+  margin: 4px 0 0;
+  font-size: 0.85rem;
+  opacity: 0.8;
+}
+
+.projects-close {
+  flex: none;
+  width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: #e6dcc0;
+  color: var(--ink, #3b2a12);
+  font-weight: 700;
+}
+
+.projects-tools {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 20px 8px;
+}
+
+.projects-filter {
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
+  min-height: 44px;
+  padding: 6px 12px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 10px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+}
+
+.projects-count {
+  flex: none;
+  padding: 2px 10px;
+  border-radius: 999px;
+  background: rgba(107, 63, 29, 0.15);
+  font-size: 0.8rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.projects-body {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 4px 20px 16px;
+}
+
+.projects-list {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.projects-row {
+  box-sizing: border-box;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 14px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 10px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  text-align: left;
+}
+
+button.projects-row:hover {
+  background: #fff3b0;
+}
+
+.projects-names {
+  flex: 1;
+  min-width: 0;
+}
+
+.projects-name {
+  display: block;
+  font-weight: 700;
+  overflow-wrap: anywhere;
+}
+
+.projects-host {
+  display: block;
+  font-size: 0.78rem;
+  opacity: 0.75;
+  overflow-wrap: anywhere;
+}
+
+.projects-hint {
+  flex: none;
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--accent, #6b3f1d);
+}
+
+/* This app: the one you're already in, highlighted and not a link. */
+.projects-row.is-mine {
+  border-style: dashed;
+  background: #ffe9a8;
+  cursor: default;
+}
+
+.projects-tag {
+  flex: none;
+  padding: 1px 8px;
+  border-radius: 999px;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+  font-size: 0.72rem;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.projects-status {
+  margin: 28px 0;
+  text-align: center;
+  opacity: 0.8;
+}
+
+.projects-error {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: #f6d4cc;
+  color: #7a1f10;
+  font-size: 0.9rem;
+}
+
+@media (max-width: 700px) {
+  #project-list {
+    padding: 6px;
+  }
+
+  .projects-card {
+    width: calc(100vw - 12px);
+    height: calc(100vh - 12px);
+    border-radius: 10px;
+  }
+
+  .projects-head {
+    padding-left: 14px;
+  }
+
+  .projects-tools {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .projects-body {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+}

@@ -81,7 +81,9 @@ export function buildHub(): SpaceDef {
   rooms.rotation.y = -Math.PI / 2;
   g.add(rooms);
 
-  arcade(g, colliders, 9.5, -HALF.halfZ + 0.6);
+  // A row of arcade machines against the back wall, each opening a game in
+  // the in-app window.
+  for (const game of GAMES) arcade(g, colliders, game.x, -HALF.halfZ + 0.6, game.screen, game.marquee);
 
   for (const [x, z] of [
     [-19, -12],
@@ -110,28 +112,37 @@ export function buildHub(): SpaceDef {
     bgm: ["Margin_Notes.mp3"],
     // A place to sit together; notes go up outside and in classrooms.
     noNotes: true,
-    // The arcade machine: E opens Sketch & Guess in the in-app window.
-    links: [{ x: 9.5, z: -HALF.halfZ + 1.9, label: "Play Sketch & Guess", url: "/minigame/sketch/", embeddable: true }],
+    // The arcade machines: E opens each game in the in-app window.
+    links: GAMES.map((game) => ({ x: game.x, z: -HALF.halfZ + 1.9, label: `Play ${game.title}`, url: game.url, embeddable: true })),
   };
 }
+
+// Sketch & Guess runs on this server; the other two are my earlier course
+// games on GitHub Pages: Two-Tone (riff 5, made with my pod) and Retro Run &
+// Gun (my crit 5). Both let themselves be shown inside another page.
+const GAMES = [
+  { x: 4.5, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone", "press E"], marquee: 0x40c0ff },
+  { x: 7, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess", "press E"], marquee: 0xff5fa2 },
+  { x: 9.5, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun", "press E"], marquee: 0xffb030 },
+];
 
 /**
  * An arcade cabinet against the back wall, facing the room (+z), built from
  * boxes: a dark body, a lit screen showing the game's name, a control deck
  * and a marquee.
  */
-function arcade(g: THREE.Group, colliders: Box[], x: number, z: number): void {
+function arcade(g: THREE.Group, colliders: Box[], x: number, z: number, lines: string[], glow: number): void {
   const cab = new THREE.Group();
   const body = new THREE.Mesh(new THREE.BoxGeometry(0.9, 1.9, 0.8), mat(0x2b2350));
   body.position.y = 0.95;
-  const screen = textPlane(["Sketch", "& Guess", "press E"], 0.66, 0.56, { bg: "#141a3a", fg: "#ffd84a", font: 0.12 });
+  const screen = textPlane(lines, 0.66, 0.56, { bg: "#141a3a", fg: "#ffd84a", font: 0.12 });
   screen.position.set(0, 1.42, 0.405);
   const deck = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.08, 0.36), mat(0x3d3470));
   deck.position.set(0, 1.02, 0.52);
   deck.rotation.x = -0.25;
   const marquee = new THREE.Mesh(
     new THREE.BoxGeometry(0.9, 0.24, 0.1),
-    new THREE.MeshStandardMaterial({ color: 0xff5fa2, emissive: 0xff3d8b, emissiveIntensity: 0.6 }),
+    new THREE.MeshStandardMaterial({ color: glow, emissive: glow, emissiveIntensity: 0.6 }),
   );
   marquee.position.set(0, 1.98, 0.36);
   const buttons = [0xff4040, 0x40c0ff, 0x60e060].map((c, i) => {

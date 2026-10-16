@@ -110,6 +110,9 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 | `tableCoffeeGlass.glb` | coffee table |
 | `lampRoundFloor.glb` | floor lamp |
 | `kitchenBar.glb` | coffee bar counter |
+| `loungeSofa.glb`, `loungeSofaLong.glb`, `loungeChair.glb` | sofas and armchairs in the COMMON lounge |
+| `table.glb`, `stoolBar.glb` | the big reading table and its stools (COMMON) |
+| `bookcaseOpen.glb` | open shelves in the COMMON lounge |
 | `kitchenCoffeeMachine.glb` | coffee machine |
 
 ## Textures (`tex/ai/`, generated with Google Gemini)
@@ -125,6 +128,7 @@ storey of facade).
 | `tex/ai/grass.jpg` | the lawn and the grass round the campus |
 | `tex/ai/carpet.jpg` | classroom carpet tiles |
 | `tex/ai/wood_floor.jpg` | Student Hub floorboards |
+| `tex/ai/library_floor.jpg` | Chifley Library's dark floorboards |
 
 ## Music
 

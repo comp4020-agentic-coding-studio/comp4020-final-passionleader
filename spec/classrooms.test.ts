@@ -25,6 +25,21 @@ describe("classrooms", () => {
     expect(list.map((c) => c.code)).toContain("COMP8020");
   });
 
+  it("lets only the admin set what a classroom's boards open", async () => {
+    const v = await visitor();
+    const res = await api("/api/classrooms/COMMON/link", "PUT", { token: v.token, which: "board", url: "https://example.com/" });
+    expect(res.status).toBe(403);
+    expect((await api("/api/classrooms/COMMON/link", "PUT", { which: "board", url: "https://example.com/" })).status).toBe(401);
+    const common = ((await (await api("/api/classrooms")).json()) as { code: string; boardUrl: string | null }[]).find((c) => c.code === "COMMON");
+    expect(common?.boardUrl).not.toBe("https://example.com/");
+  });
+
+  it("serves the classmates' projects list in its shape", async () => {
+    const body = (await (await api("/api/projects")).json()) as { projects: unknown[]; checkedAt: unknown };
+    expect(Array.isArray(body.projects)).toBe(true);
+    expect(body).toHaveProperty("checkedAt");
+  });
+
   it("keeps notes per classroom: one in COMMON isn't in COMP8020", async () => {
     const v = await visitor();
     const res = await api("/api/notes", "POST", { token: v.token, space: "common", x: 0, z: 0, text: "hello common" });

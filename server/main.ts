@@ -34,6 +34,7 @@ import {
   postsIn,
   purgeExpiredNotes,
   removeClassroom,
+  setClassroomLink,
   type BoardTab,
   type Visitor,
 } from "./db.ts";
@@ -250,6 +251,94 @@ app.delete("/api/classrooms/:code", async (c) => {
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ ok: true });
 });
+
+// The whiteboard and the board to its right open a web page the admin
+// chooses, in the in-app window (COMP8020's are fixed: its course page and
+// the classmates' projects). Only the admin sets them, checked here; any
+// https address, since it's only ever opened, never fetched by the server.
+
+const MAX_URL = 500;
+
+app.put("/api/classrooms/:code/link", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const code = c.req.param("code").toUpperCase();
+  const which = b.which;
+  if (v.role !== "admin") {
+    log("refused", v, { action: "set classroom link", code, reason: "not admin" });
+    return c.json({ error: "Only the admin can set what the boards open." }, 403);
+  }
+  if (which !== "board" && which !== "side") return c.json({ error: "Which board?" }, 400);
+  let url: string | null = null;
+  if (typeof b.url === "string" && b.url.trim()) {
+    try {
+      const u = new URL(b.url.trim());
+      if (u.protocol !== "https:" || b.url.trim().length > MAX_URL) throw new Error();
+      url = u.href;
+    } catch {
+      return c.json({ error: "Use a full https:// address." }, 400);
+    }
+  }
+  if (!setClassroomLink(code, which, url)) return c.json({ error: `${code} isn't open.` }, 404);
+  log("classroom-link", v, { code, which, url });
+  broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
+  return c.json({ ok: true });
+});
+
+// --- classmates' final projects -------------------------------------------------
+// COMP8020's side board lists the course's final-project apps that are up:
+// public comp4020-final-* repos in the course's GitHub organisation, each
+// tried at https://<repo>.fly.dev/, kept only if it answers. Looked up at
+// start and then every six hours, never per request, so visitors can't make
+// this server hammer GitHub or anyone's app.
+
+const ORG = "comp4020-agentic-coding-studio";
+const PROJECTS_EVERY_MS = 6 * 60 * 60 * 1000;
+let projects: { name: string; url: string }[] = [];
+let projectsCheckedAt: string | null = null;
+
+async function refreshProjects(): Promise<void> {
+  try {
+    const repos: string[] = [];
+    // The search finds them in two requests where listing the organisation's
+    // repos takes a dozen, which matters at 60 requests an hour without a key.
+    for (let page = 1; page <= 5; page++) {
+      const q = encodeURIComponent(`comp4020-final in:name org:${ORG} is:public`);
+      const res = await fetch(`https://api.github.com/search/repositories?q=${q}&per_page=100&page=${page}`, {
+        headers: { accept: "application/vnd.github+json", "user-agent": "comp4020-final-passionleader" },
+        signal: AbortSignal.timeout(15_000),
+      });
+      if (!res.ok) throw new Error(`GitHub ${res.status}`);
+      const batch = ((await res.json()) as { items: { name: string }[] }).items;
+      repos.push(...batch.map((r) => r.name).filter((n) => /^comp4020-final-[a-z0-9-]+$/i.test(n)));
+      if (batch.length < 100) break;
+    }
+    const found: { name: string; url: string }[] = [];
+    // A few at a time, each with a short timeout: a sleeping app that won't wake in time is left out.
+    for (let i = 0; i < repos.length; i += 8) {
+      await Promise.all(
+        repos.slice(i, i + 8).map(async (repo) => {
+          const url = `https://${repo.toLowerCase()}.fly.dev/`;
+          const res = await fetch(url, { method: "GET", redirect: "follow", signal: AbortSignal.timeout(8000) }).catch(() => null);
+          if (res?.ok) found.push({ name: repo.slice("comp4020-final-".length), url });
+          await res?.body?.cancel().catch(() => {});
+        }),
+      );
+    }
+    projects = found.sort((a, b) => a.name.localeCompare(b.name));
+    projectsCheckedAt = new Date().toISOString();
+    console.log(JSON.stringify({ at: projectsCheckedAt, event: "projects-checked", repos: repos.length, live: projects.length }));
+  } catch (err) {
+    console.error("projects check failed:", err instanceof Error ? err.message : err);
+  }
+}
+if (process.env.PROJECTS_CHECK !== "0") {
+  void refreshProjects();
+  setInterval(() => void refreshProjects(), PROJECTS_EVERY_MS).unref();
+}
+
+app.get("/api/projects", (c) => c.json({ projects, checkedAt: projectsCheckedAt }));
 
 // --- classroom boards --------------------------------------------------------
 // Every classroom has a board with three tabs. Anyone reads everything, posts

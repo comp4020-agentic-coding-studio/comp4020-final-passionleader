@@ -94,6 +94,10 @@ export const deleteComment = (token: string, id: number): Promise<unknown> => re
 export interface Classroom {
   code: string;
   space: SpaceId;
+  /** What the whiteboard opens, if the admin has set it (not COMP8020's: that's fixed). */
+  boardUrl?: string | null;
+  /** What the board right of the whiteboard opens, if set. */
+  sideUrl?: string | null;
 }
 
 export const getClassrooms = (): Promise<Classroom[]> => request<Classroom[]>("/api/classrooms");
@@ -103,6 +107,12 @@ export const createClassroom = (token: string, code: string): Promise<Classroom>
 
 export const removeClassroom = (token: string, code: string): Promise<unknown> =>
   request(`/api/classrooms/${encodeURIComponent(code)}`, "DELETE", { token });
+
+export const setClassroomLink = (token: string, code: string, which: "board" | "side", url: string | null): Promise<unknown> =>
+  request(`/api/classrooms/${encodeURIComponent(code)}/link`, "PUT", { token, which, url });
+
+export const getProjects = (): Promise<{ projects: { name: string; url: string }[]; checkedAt: string | null }> =>
+  request("/api/projects");
 
 export type BoardTab = "qa" | "notices" | "board";
 export interface Post {

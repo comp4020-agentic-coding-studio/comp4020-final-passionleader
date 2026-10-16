@@ -28,6 +28,8 @@ import {
   postComment,
   postNote,
   removeClassroom,
+  setClassroomLink,
+  getProjects,
   removePost,
   removePostComment,
   type Classroom,
@@ -46,6 +48,8 @@ import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountBoard } from "./board.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
+import { mountProjectList } from "./projectlist.ts";
+import { mountLinkEditor } from "./linkeditor.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -470,6 +474,48 @@ const picker = mountClassPicker({
     }
   },
 });
+// COMP8020's right-hand board: the classmates' final-project apps that are up.
+const projectList = mountProjectList();
+async function openProjects(): Promise<void> {
+  projectList.open();
+  try {
+    const { projects, checkedAt } = await getProjects();
+    projectList.show(projects, checkedAt);
+  } catch {
+    projectList.fail("Could not load the list. Try again in a moment.");
+  }
+}
+
+// Elsewhere the whiteboard and that board open the page the staff set: E
+// goes straight there, except for the admin, who can change it.
+let editing: { code: string; which: "board" | "side" } | null = null;
+const linkEditor = mountLinkEditor({
+  async save(url) {
+    if (!session || !editing) return "Join first.";
+    try {
+      await setClassroomLink(session.token, editing.code, editing.which, url);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not save it.";
+    }
+  },
+  visit(url) {
+    webview.open({ label: "Page from the staff", url, embeddable: true });
+  },
+});
+function openStaffLink(which: "board" | "side"): void {
+  if (!space) return;
+  const room = classroomList.find((c) => c.space === space!.id);
+  if (!room) return;
+  const url = (which === "board" ? room.boardUrl : room.sideUrl) ?? null;
+  const name = which === "board" ? `${room.code} whiteboard` : `${room.code} board (right of the whiteboard)`;
+  if (session?.role === "admin") {
+    editing = { code: room.code, which };
+    linkEditor.open({ title: name, url });
+  } else if (url) webview.open({ label: name, url, embeddable: true });
+  else toast("Nothing here yet: the staff haven't put a page up.");
+}
+
 function useClassrooms(list: Classroom[]): void {
   classroomList = list;
   setClassrooms(list);
@@ -545,7 +591,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -585,8 +631,8 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   }
   // Indoors there's no sun through a ceiling: daylight at full strength on
   // pale walls and floors glared, so rooms get a softer sun and fill.
-  sun.intensity = space.outdoor ? 2.6 : 1.3;
-  scene.environmentIntensity = space.outdoor ? 1 : 0.55;
+  sun.intensity = space.outdoor ? 2.6 : 1.3 * (space.light ?? 1);
+  scene.environmentIntensity = space.outdoor ? 1 : 0.55 * (space.light ?? 1);
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(space.camera);
@@ -986,6 +1032,9 @@ function interact(): void {
     stopMoving();
     if (target.id === "dog") dogPrompt.open();
     else if (target.id === "board" && space) board.open(space.title.replace(/ classroom$/, ""), session?.role === "admin");
+    else if (target.id === "projects") void openProjects();
+    else if (target.id === "board-link") openStaffLink("board");
+    else if (target.id === "side-link") openStaffLink("side");
   } else if (target.kind === "link") {
     stopMoving();
     // Over the game if the site allows framing, else a new tab; either way

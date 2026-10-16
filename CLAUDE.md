@@ -51,7 +51,9 @@ Read before planning or building: `README.md` (what good means for this app),
   characters) with a title of up to 80, one every 30 seconds; comments as
   for notes. Only lecturers and staff post in Notices (for now the admin),
   checked on the server; anyone reads and comments. Authors or the admin
-  remove; closing a classroom removes its board.
+  remove; closing a classroom removes its board. Outside COMP8020, what the
+  whiteboard and the board to its right open is set by the admin only
+  (https addresses), checked on the server.
 - Chat is never stored: 200 characters, the space only, gone from screens
   after a minute.
 - Meeting rooms (counselling rooms off the Hub, team rooms off classrooms

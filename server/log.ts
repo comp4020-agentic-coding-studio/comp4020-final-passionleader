@@ -31,6 +31,7 @@ export type Event =
   | "game-join"
   | "classroom-created"
   | "classroom-removed"
+  | "classroom-link"
   | "room-invite"
   | "room-closed"
   | "refused";

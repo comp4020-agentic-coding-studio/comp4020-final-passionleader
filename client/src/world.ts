@@ -54,6 +54,8 @@ export interface SpaceDef {
    * `noteKeepClear` spot. The server checks the same (server/spaces.ts).
    */
   noNotes?: boolean;
+  /** Indoors: how bright the room is lit, 1 being normal (the library is dimmer, so its windows glow). */
+  light?: number;
   /** Called every frame while this space is shown (animated scenery, like the dog). */
   tick?: (dt: number) => void;
   /** Spots where E does something particular to this space (the dog), by name. */

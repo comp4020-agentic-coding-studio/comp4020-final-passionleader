@@ -142,6 +142,10 @@ Pulled forward once those were done (budget left over), in this order:
   group-chat window: six invite-only counselling rooms off the Hub, three team
   rooms per classroom and five in the library; six people at most, checked on
   the server; the chat lasts while someone is inside. No files or voice yet
+- **11b** (in part): COMP8020's board right of the whiteboard lists
+  classmates' live final-project apps; in other classrooms the admin sets
+  what the whiteboard and that board open. COMMON becomes a lounge. Two more
+  arcade machines in the Hub for my earlier course games
 
 Already done ahead of this crit: the backdrop buildings and walkable areas
 (4a), and the music player and volume sliders (part of 13).
