@@ -57,6 +57,25 @@ export async function upload(token: string, target: FileTarget, file: File, prog
   }
 }
 
+/** Whether a file is a picture the board shows in place (the same list as the server's). */
+export const isImage = (name: string): boolean => /\.(png|jpe?g|gif|webp)$/i.test(name);
+
+// Links last five minutes; a picture's is reused for four, so redrawing a post doesn't ask again.
+const shown = new Map<string, { url: string; until: number }>();
+
+/** A link that shows an image in place, or null if it can't be had. */
+export async function imageLink(token: string, id: string): Promise<string | null> {
+  const hit = shown.get(id);
+  if (hit && hit.until > Date.now()) return hit.url;
+  try {
+    const { url } = await fileLink(token, id, true);
+    shown.set(id, { url, until: Date.now() + 4 * 60 * 1000 });
+    return url;
+  } catch {
+    return null;
+  }
+}
+
 /** Opens (downloads) a file, if the server lets this visitor have it. Resolves to an error message, or null. */
 export async function openFile(token: string, id: string): Promise<string | null> {
   try {

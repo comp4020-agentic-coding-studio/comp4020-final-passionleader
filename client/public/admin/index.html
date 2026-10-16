@@ -260,22 +260,20 @@
           el("span", "", ` · ${b.space || "no space"} · ${dayOf(b.at)} ${timeOf(b.at)}`));
         const ua = el("div", "meta mono", b.userAgent || "");
         const text = el("div", "text", b.text);
-        // A screenshot, if one came with it: the server hands a five-minute link (admin only).
+        // A screenshot, if one came with it, shown in place: the server hands a
+        // five-minute link (admin only). Click it for full size in a new tab.
         const shots = el("div", "shots");
         for (const f of b.files || []) {
-          const open = el("button", "", `🖼 ${f.name} (${Math.max(1, Math.round(f.size / 1024))} KB)`);
-          open.type = "button";
-          open.addEventListener("click", async () => {
-            try {
-              const { url } = await api(`/api/files/${f.id}/link`, "POST", {});
-              const img = el("img");
-              img.src = url;
-              img.alt = `Screenshot sent with ${b.author}'s report`;
-              open.replaceWith(img);
-              img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
-            } catch (err) { $("bug-error").textContent = err.message; }
-          });
-          shots.append(open);
+          const a = el("a");
+          a.target = "_blank";
+          a.rel = "noopener";
+          const img = el("img");
+          img.alt = `Screenshot sent with ${b.author}'s report (${f.name})`;
+          a.append(img);
+          shots.append(a);
+          api(`/api/files/${f.id}/link`, "POST", {})
+            .then(({ url }) => { img.src = url; a.href = url; })
+            .catch((err) => a.replaceWith(el("span", "details", `🖼 ${f.name}: ${err.message}`)));
         }
         const done = el("button", "", "Done (delete)");
         done.type = "button";

@@ -313,6 +313,21 @@
   gap: 6px;
 }
 
+.board-image {
+  display: inline-block;
+  max-width: 100%;
+}
+
+.board-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 360px;
+  min-height: 40px;
+  border: 1px solid rgba(0, 0, 0, 0.15);
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
 .board-file {
   min-height: 40px;
   max-width: 100%;

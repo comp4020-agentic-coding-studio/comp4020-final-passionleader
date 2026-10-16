@@ -166,4 +166,5 @@ export type FileTarget = { kind: "bug"; bug: number } | { kind: "board"; post: n
 export const askUpload = (token: string, target: FileTarget, name: string, size: number): Promise<{ id: string; url: string; type: string }> =>
   request("/api/files", "POST", { token, ...target, name, size });
 export const uploadDone = (token: string, id: string): Promise<unknown> => request(`/api/files/${id}/done`, "POST", { token });
-export const fileLink = (token: string, id: string): Promise<{ url: string; name: string }> => request(`/api/files/${id}/link`, "POST", { token });
+export const fileLink = (token: string, id: string, inline = false): Promise<{ url: string; name: string }> =>
+  request(`/api/files/${id}/link`, "POST", { token, inline });

@@ -665,7 +665,8 @@ app.post("/api/files/:id/done", async (c) => {
 });
 
 app.post("/api/files/:id/link", async (c) => {
-  const v = who(await body(c));
+  const b = await body(c);
+  const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
   const f = findFile(c.req.param("id"));
   if (!f || !f.ready) return c.json({ error: "That file is gone." }, 404);
@@ -681,7 +682,9 @@ app.post("/api/files/:id/link", async (c) => {
     return c.json({ error: f.kind === "room" ? "Only the people in the room can open its files." : "This is for the admin." }, 403);
   }
   try {
-    return c.json({ url: await downloadLink(f.key, f.name, f.kind === "bug" && isImage(f.name)), name: f.name });
+    // Images may be shown in place (a post's picture, a bug's screenshot); everything else downloads.
+    const inline = isImage(f.name) && (f.kind === "bug" || b.inline === true);
+    return c.json({ url: await downloadLink(f.key, f.name, inline), name: f.name });
   } catch (err) {
     return s3Error(c, err);
   }

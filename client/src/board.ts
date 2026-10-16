@@ -6,7 +6,7 @@
 // carry up to five files (200 MB each), which upload once the post is up.
 
 import "./board.css";
-import { ACCEPT, MAX_FILE_BYTES, sizeLabel } from "./uploads.ts";
+import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 
 export type BoardTab = "qa" | "notices" | "board";
 
@@ -63,6 +63,8 @@ export function mountBoard(h: {
   post(tab: BoardTab, title: string, text: string, files: File[], progress: (name: string, done: number) => void): Promise<string | null>;
   /** Opens (downloads) one of a post's files; resolves to an error message, or null. */
   openFile(id: string): Promise<string | null>;
+  /** A link that shows one of a post's pictures in place, or null. */
+  imageLink(id: string): Promise<string | null>;
   comment(postId: number, text: string): Promise<string | null>;
   removePost(postId: number): Promise<string | null>;
   removeComment(commentId: number): Promise<string | null>;
@@ -403,6 +405,26 @@ export function mountBoard(h: {
     postFiles.replaceChildren(
       ...(current.files ?? []).map((f) => {
         const li = document.createElement("li");
+        // A picture shows in the post (click for full size); anything else is a download button.
+        if (isImage(f.name)) {
+          const a = document.createElement("a");
+          a.className = "board-image";
+          a.target = "_blank";
+          a.rel = "noopener";
+          a.title = `${f.name} · ${sizeLabel(f.size)} (opens full size)`;
+          const img = document.createElement("img");
+          img.alt = f.name;
+          img.loading = "lazy";
+          a.append(img);
+          li.append(a);
+          void h.imageLink(f.id).then((url) => {
+            if (url) {
+              img.src = url;
+              a.href = url;
+            } else a.replaceWith(document.createTextNode(`🖼 ${f.name} (couldn't load)`));
+          });
+          return li;
+        }
         const b = document.createElement("button");
         b.type = "button";
         b.className = "board-secondary board-file";

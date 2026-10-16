@@ -55,7 +55,7 @@ import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
 import { mountBugReport } from "./bugreport.ts";
-import { openFile, upload } from "./uploads.ts";
+import { imageLink, openFile, upload } from "./uploads.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -695,6 +695,7 @@ const board = mountBoard({
     if (!session) return "Join first.";
     return openFile(session.token, id);
   },
+  imageLink: async (id) => (session ? imageLink(session.token, id) : null),
   async comment(postId, text) {
     if (!session) return "Join first.";
     try {
