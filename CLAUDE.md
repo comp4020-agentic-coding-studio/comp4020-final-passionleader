@@ -69,7 +69,9 @@ Read before planning or building: `README.md` (what good means for this app),
   counselling room lets in only those someone inside has invited. Both are
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
-  chat, host, invites and files go. No notes in meeting rooms.
+  chat, host, invites and files go, and the last one out is warned of
+  that before leaving (by the Leave button or the door). No notes in
+  meeting rooms.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

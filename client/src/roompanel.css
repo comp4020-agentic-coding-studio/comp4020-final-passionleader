@@ -345,3 +345,26 @@
     display: none !important;
   }
 }
+
+/* "You're the last one here": the chat and files go when the room empties. */
+.room-last-out {
+  margin: 0 0 8px;
+  padding: 10px 12px;
+  border: 2px solid #b5654a;
+  border-radius: 10px;
+  background: #fff1e0;
+}
+
+.room-last-out[hidden] {
+  display: none;
+}
+
+.room-last-out p {
+  margin: 0 0 8px;
+  font-size: 0.9rem;
+}
+
+.room-last-out-row {
+  display: flex;
+  gap: 8px;
+}

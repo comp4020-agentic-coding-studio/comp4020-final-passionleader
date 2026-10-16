@@ -53,6 +53,11 @@ export function mountRoomPanel(opts: {
   isOpen(): boolean;
   isTyping(): boolean;
   focusInput(): void;
+  /**
+   * Leaving: straight out if anyone else is inside; if you're the last, a
+   * warning first that the room's chat and files go when it empties.
+   */
+  askLeave(): void;
 } {
   const root = document.createElement("div");
   root.id = "room-panel";
@@ -84,6 +89,27 @@ export function mountRoomPanel(opts: {
   leave.className = "room-leave";
   leave.textContent = "Leave room";
   head.append(toggle, leave);
+
+  // Shown when the last person in the room goes to leave.
+  const lastOut = document.createElement("div");
+  lastOut.className = "room-last-out";
+  lastOut.hidden = true;
+  lastOut.setAttribute("role", "alertdialog");
+  lastOut.setAttribute("aria-label", "Leave the room?");
+  const lastOutText = document.createElement("p");
+  lastOutText.textContent = "You're the last one here. When you leave, this room's chat and shared files are cleared for good.";
+  const lastOutRow = document.createElement("div");
+  lastOutRow.className = "room-last-out-row";
+  const leaveYes = document.createElement("button");
+  leaveYes.type = "button";
+  leaveYes.className = "room-primary";
+  leaveYes.textContent = "Leave and clear";
+  const leaveNo = document.createElement("button");
+  leaveNo.type = "button";
+  leaveNo.className = "room-leave";
+  leaveNo.textContent = "Stay";
+  lastOutRow.append(leaveYes, leaveNo);
+  lastOut.append(lastOutText, lastOutRow);
 
   const members = document.createElement("ul");
   members.className = "room-members";
@@ -148,13 +174,16 @@ export function mountRoomPanel(opts: {
   fileStatus.hidden = true;
   sendRow.append(attach, picker, input, sendBtn);
 
-  root.append(head, members, invite, log, fileStatus, sendRow);
+  root.append(head, lastOut, members, invite, log, fileStatus, sendRow);
   document.body.append(root);
 
   let isOpen = false;
 
   function renderInfo(info: RoomInfo): void {
     title.textContent = info.title;
+    memberCount = info.members.length;
+    // Someone came in while we were asking: no need to warn any more.
+    if (memberCount > 1) lastOut.hidden = true;
     count.textContent = `${info.members.length}/${info.cap}`;
     count.setAttribute("aria-label", `${info.members.length} of ${info.cap} people`);
     members.replaceChildren(
@@ -265,7 +294,15 @@ export function mountRoomPanel(opts: {
 
   inviteBtn.addEventListener("click", sendInvite);
   sendBtn.addEventListener("click", sendMessage);
-  leave.addEventListener("click", () => opts.onLeave());
+  leave.addEventListener("click", askLeave);
+  leaveYes.addEventListener("click", () => {
+    lastOut.hidden = true;
+    opts.onLeave();
+  });
+  leaveNo.addEventListener("click", () => {
+    lastOut.hidden = true;
+    leave.focus();
+  });
   inviteInput.addEventListener("input", () => {
     inviteError.textContent = "";
   });
@@ -292,8 +329,19 @@ export function mountRoomPanel(opts: {
     }
   });
 
+  let memberCount = 0;
+  function askLeave(): void {
+    if (memberCount > 1) return opts.onLeave();
+    root.classList.remove("is-collapsed");
+    toggle.setAttribute("aria-expanded", "true");
+    chevron.textContent = "▲";
+    lastOut.hidden = false;
+    leaveNo.focus();
+  }
+
   function hide(): void {
     isOpen = false;
+    lastOut.hidden = true;
     root.hidden = true;
     log.replaceChildren();
     members.replaceChildren();
@@ -337,6 +385,7 @@ export function mountRoomPanel(opts: {
     close: hide,
     isOpen: () => isOpen,
     isTyping: () => isOpen && (document.activeElement === input || document.activeElement === inviteInput),
+    askLeave,
     focusInput() {
       if (!isOpen) return;
       root.classList.remove("is-collapsed");

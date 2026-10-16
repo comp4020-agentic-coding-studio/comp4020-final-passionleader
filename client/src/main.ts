@@ -1316,6 +1316,11 @@ function interact(): void {
       // we walk in when it says yes (roomOpen below).
       stopMoving();
       net?.enter(target.door.to, target.door.arrive.x, target.door.arrive.z);
+    } else if (space && meetingRoom(space.id) && roomPanel.isOpen()) {
+      // Out of a meeting room by its door: the same as Leave room, which
+      // warns the last one out that the chat and files go.
+      stopMoving();
+      roomPanel.askLeave();
     } else setSpace(target.door.to, target.door.arrive, true);
   } else if (target.kind === "spot") {
     stopMoving();
