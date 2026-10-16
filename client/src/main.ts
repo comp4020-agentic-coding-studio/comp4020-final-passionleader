@@ -55,6 +55,7 @@ import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
 import { mountBugReport } from "./bugreport.ts";
+import { openFile, upload } from "./uploads.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -96,14 +97,15 @@ const touch = $("touch");
 const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
 // Bug reports go to the admin; the gear's dialog opens the form.
 const bugReport = mountBugReport({
-  async send(text) {
-    if (!session) return "Join first.";
+  async send(text, shot, progress) {
+    if (!session) return { sent: false, error: "Join first." };
+    let id: number;
     try {
-      await sendBugReport(session.token, text, space?.id ?? null);
-      return null;
+      id = (await sendBugReport(session.token, text, space?.id ?? null)).id;
     } catch (err) {
-      return err instanceof ApiError ? err.message : "Could not send it.";
+      return { sent: false, error: err instanceof ApiError ? err.message : "Could not send it." };
     }
+    return { sent: true, error: shot ? await upload(session.token, { kind: "bug", bug: id }, shot, progress) : null };
   },
 });
 
@@ -551,6 +553,8 @@ const roomPanel = mountRoomPanel({
     const out = space?.doors[0];
     if (out) setSpace(out.to, out.arrive, true);
   },
+  onShare: async (file, progress) => (session ? upload(session.token, { kind: "room" }, file, progress) : "Join first."),
+  onOpenFile: async (id) => (session ? openFile(session.token, id) : "Join first."),
   maxLength: 200,
 });
 const roomInfo = (id: SpaceId, room: RoomState): RoomInfo => ({ title: meetingRoom(id)?.title ?? "Room", ...room });
@@ -671,14 +675,25 @@ const board = mountBoard({
   async comments(postId) {
     return (await getPostComments(postId)).map((c) => ({ ...c, canDelete: mine(c.author) }));
   },
-  async post(tab, title, text) {
+  async post(tab, title, text, files, progress) {
     if (!session || !space) return "Join first.";
+    let id: number;
     try {
-      await createPost(session.token, space.id, tab, title, text);
-      return null;
+      id = (await createPost(session.token, space.id, tab, title, text)).id;
     } catch (err) {
       return failed(err, "Could not post that.");
     }
+    // The post is up; its files follow one by one. One that fails says why,
+    // and the post stays (with whatever made it).
+    for (const file of files) {
+      const error = await upload(session.token, { kind: "board", post: id }, file, (done) => progress(file.name, done));
+      if (error) return `Posted, but ${file.name} didn't upload. ${error}`;
+    }
+    return null;
+  },
+  async openFile(id) {
+    if (!session) return "Join first.";
+    return openFile(session.token, id);
   },
   async comment(postId, text) {
     if (!session) return "Join first.";
@@ -840,10 +855,17 @@ const storage = {
 };
 
 nameInput.value = storage.get("campus.name");
+// Phone keyboards add spaces and lookalike characters (a full-width "＿"); the server does the same.
+const typedName = (): string => nameInput.value.normalize("NFKC").trim();
+// Shown for qa_ names, and for any name the server says has a password.
+let needsPassword = false;
 const syncPasswordRow = (): void => {
-  passwordRow.hidden = !RESERVED_RE.test(nameInput.value.trim());
+  passwordRow.hidden = !needsPassword && !RESERVED_RE.test(typedName());
 };
-nameInput.addEventListener("input", syncPasswordRow);
+nameInput.addEventListener("input", () => {
+  needsPassword = false;
+  syncPasswordRow();
+});
 syncPasswordRow();
 
 function showJoin(message = ""): void {
@@ -865,13 +887,15 @@ function showJoin(message = ""): void {
 
 joinForm.addEventListener("submit", (e) => {
   e.preventDefault();
-  const name = nameInput.value.trim();
+  const name = typedName();
   if (!isValidName(name)) {
     joinError.textContent = "Use letters, digits and underscore only, 1 to 8 characters.";
     return;
   }
-  const reserved = RESERVED_RE.test(name);
-  if (reserved && !passwordInput.value) {
+  const reserved = RESERVED_RE.test(name) || needsPassword;
+  // Phone keyboards add a space after a word; no account password has one.
+  const password = passwordInput.value.trim();
+  if (reserved && !password) {
     joinError.textContent = "This account needs its password.";
     return;
   }
@@ -879,7 +903,7 @@ joinForm.addEventListener("submit", (e) => {
   enterBtn.disabled = true;
   // Only reuse the stored token for the name it was issued to.
   const token = storage.get("campus.name").toLowerCase() === name.toLowerCase() ? storage.get("campus.token") : "";
-  join(name, token || undefined, reserved ? passwordInput.value : undefined)
+  join(name, token || undefined, reserved ? password : undefined)
     .then((s) => {
       session = s;
       // A look picked before joining goes up now; else the one saved last time.
@@ -892,6 +916,14 @@ joinForm.addEventListener("submit", (e) => {
       return loadClassrooms().then(enterWorld);
     })
     .catch((err: unknown) => {
+      // A taken name that's a password account: ask for its password instead.
+      if (err instanceof ApiError && err.status === 409 && err.data.password) {
+        needsPassword = true;
+        syncPasswordRow();
+        joinError.textContent = "This account signs in with its password. Enter it below.";
+        passwordInput.focus();
+        return;
+      }
       joinError.textContent = err instanceof ApiError ? err.message : "Something went wrong.";
     })
     .finally(() => {

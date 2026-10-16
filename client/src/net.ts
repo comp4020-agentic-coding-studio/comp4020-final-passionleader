@@ -35,6 +35,8 @@ export interface RoomLine {
   name: string;
   text: string;
   system?: boolean;
+  /** A file someone shared: click to fetch it (only while you're in the room). */
+  file?: { id: string; name: string; size: number };
 }
 
 export interface NetHandlers {

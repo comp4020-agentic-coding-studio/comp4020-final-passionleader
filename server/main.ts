@@ -41,6 +41,13 @@ import {
   addBugReport,
   bugReports,
   deleteBugReport,
+  findBugReport,
+  addFile,
+  findFile,
+  filesOn,
+  markFileReady,
+  purgeFiles,
+  uploadsToday,
   lookOf,
   saveLook,
   validLook,
@@ -50,9 +57,10 @@ import {
   type Visitor,
 } from "./db.ts";
 import { browserTag, keepIn, log } from "./log.ts";
-import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, setLook } from "./realtime.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, livePlayer, roomSessionOf, roomShare, setLook } from "./realtime.ts";
+import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
-import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError, teamRoomsOf } from "./spaces.ts";
+import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
 keepIn(addAudit);
@@ -94,8 +102,11 @@ function who(b: Body): Visitor | null {
 }
 
 app.post("/api/join", async (c) => {
-  const { name, token, password } = await body(c);
-  if (typeof name !== "string") return c.json({ error: "Pick a name." }, 400);
+  const b = await body(c);
+  const { token, password } = b;
+  if (typeof b.name !== "string") return c.json({ error: "Pick a name." }, 400);
+  // Phone keyboards add spaces and lookalike characters (a full-width "＿").
+  const name = b.name.normalize("NFKC").trim();
 
   // Test and admin accounts sign in with a password, from any browser.
   if (RESERVED.test(name)) {
@@ -104,7 +115,8 @@ app.post("/api/join", async (c) => {
       log("join-refused", { name }, { reason: "reserved name" }, { ip: ipOf(c) });
       return c.json({ error: "Names starting with qa_ are reserved." }, 403);
     }
-    if (typeof password !== "string" || !checkPassword(password, account.passwordHash)) {
+    // Trimmed: a phone keyboard's trailing space shouldn't lock a test account out (none has a space).
+    if (typeof password !== "string" || !checkPassword(password.trim(), account.passwordHash)) {
       log("join-refused", { name: account.name }, { reason: "wrong password" }, { ip: ipOf(c) });
       return c.json({ error: "Wrong password." }, 401);
     }
@@ -114,6 +126,15 @@ app.post("/api/join", async (c) => {
 
   if (!NAME_RULE.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores." }, 400);
   const existing = findByName(name);
+  // A name with a password behind it signs in with that password from any device.
+  if (existing?.passwordHash && typeof password === "string" && password.trim()) {
+    if (!checkPassword(password.trim(), existing.passwordHash)) {
+      log("join-refused", { name: existing.name }, { reason: "wrong password" }, { ip: ipOf(c) });
+      return c.json({ error: "Wrong password." }, 401);
+    }
+    log("join", existing, { how: "password" }, { ip: ipOf(c) });
+    return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
+  }
   if (existing) {
     // A name belongs to whoever first took it; only their browser's token gets it back.
     if (existing.token === token) {
@@ -121,7 +142,8 @@ app.post("/api/join", async (c) => {
       return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
     }
     log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: "name taken" }, { ip: ipOf(c) });
-    return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
+    // `password` says whether this name could be signed into with one instead.
+    return c.json({ error: `"${name}" is taken. Pick another name.`, password: !!existing.passwordHash }, 409);
   }
   const fresh = randomUUID();
   createVisitor(name, fresh);
@@ -395,7 +417,7 @@ app.get("/api/board", (c) => {
   const tab = c.req.query("tab");
   if (!isClassroom(space)) return c.json({ error: "No such classroom." }, 404);
   if (!isTab(tab)) return c.json({ error: "No such tab." }, 400);
-  const posts = postsIn(space, tab);
+  const posts = postsIn(space, tab).map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
   return c.json(tab === "notices" ? [PINNED_NOTICE, ...posts] : posts);
 });
 
@@ -433,6 +455,7 @@ app.delete("/api/board/:id", async (c) => {
     log("refused", v, { action: "remove post", space: post.space, post: post.id, owner: post.author, reason: "not the author" }, { ip: ipOf(c), content: `${post.title}\n\n${post.text}` });
     return c.json({ error: "Only its author can remove this post." }, 403);
   }
+  removeObjects(filesOn("post", post.id, true).map((f) => f.key));
   deletePost(post.id);
   log("post-removed", v, { space: post.space, tab: post.tab, post: post.id, owner: post.author }, { ip: ipOf(c), content: `${post.title}\n\n${post.text}` });
   broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab });
@@ -488,7 +511,7 @@ app.delete("/api/board-comments/:id", async (c) => {
 // every request; anyone joined may send a bug report.
 
 const AUDIT_GROUPS: Record<string, string[]> = {
-  content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report"],
+  content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "file"],
   signin: ["join", "join-refused", "connect", "disconnect"],
   refused: ["refused", "join-refused"],
 };
@@ -519,13 +542,16 @@ app.post("/api/admin/log", async (c) => {
 app.post("/api/admin/bugs", async (c) => {
   const r = await asAdmin(c);
   if (r instanceof Response) return r;
-  return c.json({ bugs: bugReports() });
+  return c.json({ bugs: bugReports().map((b) => ({ ...b, files: filesOn("bug", b.id).map(({ id, name, size }) => ({ id, name, size })) })) });
 });
 
 app.delete("/api/admin/bugs/:id", async (c) => {
   const r = await asAdmin(c);
   if (r instanceof Response) return r;
-  if (!deleteBugReport(Number(c.req.param("id")))) return c.json({ error: "Already gone." }, 404);
+  const id = Number(c.req.param("id"));
+  const shots = filesOn("bug", id, true).map((f) => f.key);
+  if (!deleteBugReport(id)) return c.json({ error: "Already gone." }, 404);
+  removeObjects(shots);
   return c.json({ ok: true });
 });
 
@@ -544,6 +570,121 @@ app.post("/api/bugs", async (c) => {
   if (!result.ok) return c.json({ error: `One report a minute. Wait ${result.wait}s.` }, 429);
   log("bug-report", v, { space, report: result.id, chars: text.length }, { ip: ipOf(c), content: text });
   return c.json({ id: result.id }, 201);
+});
+
+// --- attached files ----------------------------------------------------------------
+// A screenshot on your own bug report, files on your own board post (within
+// a day of posting), and files shared in the meeting room you're in. Each
+// is checked here: who may attach to what, the type (by extension) and the
+// size (200 MB); then the browser gets a five-minute link that S3 accepts for
+// exactly that file, and tells us when it's done. Fetching one is checked
+// the same way: the admin for bug screenshots, anyone for a board post's,
+// and only the people in the room for a room's (until it empties).
+
+const UPLOADS_PER_DAY = 50;
+const s3Error = (c: Context, err: unknown): Response => {
+  const code = err instanceof S3Failure ? err.code : "S3-NET";
+  console.error(JSON.stringify({ at: new Date().toISOString(), event: "s3-error", code, error: String((err as Error)?.name ?? err) }));
+  return c.json({ error: s3Message(code), code }, 503);
+};
+
+app.get("/api/files/status", (c) => c.json({ ready: s3Ready(), code: s3Ready() ? null : "S3-CONFIG" }));
+
+app.post("/api/files", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const kind = b.kind as FileKind;
+  if (kind !== "bug" && kind !== "board" && kind !== "room") return c.json({ error: "Attach it to what?" }, 400);
+  const name = cleanName(b.name);
+  if (!name) return c.json({ error: "That file needs a name of up to 120 characters." }, 400);
+  const refuse = (reason: string, status: 400 | 403 | 429): Response => {
+    log("refused", v, { action: "upload", kind, reason }, { ip: ipOf(c), content: name });
+    return c.json({ error: reason }, status);
+  };
+  const bad = fileError(kind, name, b.size);
+  if (bad) return refuse(bad, 400);
+  if (uploadsToday(v.name) >= UPLOADS_PER_DAY) return refuse(`Up to ${UPLOADS_PER_DAY} files a day.`, 429);
+
+  let postId: number | null = null;
+  let bugId: number | null = null;
+  let room: string | null = null;
+  let space: string | null = null;
+  if (kind === "bug") {
+    const report = findBugReport(Number(b.bug));
+    if (!report || report.author !== v.name) return refuse("Only on your own bug report.", 403);
+    if (filesOn("bug", report.id, true).length >= 1) return refuse("One screenshot per report.", 400);
+    bugId = report.id;
+    space = report.space;
+  } else if (kind === "board") {
+    const post = findPost(Number(b.post));
+    if (!post || post.author !== v.name) return refuse("Only on your own post.", 403);
+    if (Date.now() - Date.parse(post.createdAt.replace(" ", "T") + "Z") > 24 * 3600 * 1000) return refuse("Files go on a post within a day of posting.", 403);
+    if (filesOn("post", post.id, true).length >= 5) return refuse("Up to five files on a post.", 400);
+    postId = post.id;
+    space = post.space;
+  } else {
+    const at = livePlayer(v.name)?.space;
+    room = at && roomOf(at) ? roomSessionOf(v.name, at) : null;
+    if (!at || !room) return refuse("Only inside a meeting room.", 403);
+    space = at;
+  }
+  const id = randomUUID();
+  const key = keyFor(kind, id, name);
+  const type = typeOf(name);
+  try {
+    const url = await uploadLink(key, type, b.size as number);
+    addFile({ id, kind, owner: v.name, name, size: b.size as number, key, postId, bugId, room });
+    return c.json({ id, url, type }, 201);
+  } catch (err) {
+    log("refused", v, { action: "upload", kind, reason: err instanceof S3Failure ? err.code : "S3-NET" }, { ip: ipOf(c), content: name });
+    return s3Error(c, err);
+  }
+});
+
+app.post("/api/files/:id/done", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const f = findFile(c.req.param("id"));
+  if (!f || f.owner !== v.name) return c.json({ error: "No such upload." }, 404);
+  if (!f.ready) {
+    try {
+      const size = await arrivedSize(f.key);
+      if (size !== f.size) return c.json({ error: "The file didn't arrive whole. Try again." }, 409);
+    } catch (err) {
+      if (err instanceof S3Failure && err.code === "S3-MISSING") return c.json({ error: "The file didn't arrive. Try again." }, 409);
+      return s3Error(c, err);
+    }
+    markFileReady(f.id);
+    const space = f.kind === "room" ? livePlayer(v.name)?.space : f.kind === "board" ? findPost(f.postId!)?.space : null;
+    log("file", v, { space, kind: f.kind, post: f.postId, report: f.bugId, size: f.size }, { ip: ipOf(c), content: f.name });
+    if (f.kind === "board" && space) broadcastSpace(space, { t: "action", kind: "board", tab: findPost(f.postId!)?.tab, post: f.postId });
+    if (f.kind === "room" && space && roomSessionOf(v.name, space) === f.room) roomShare(space, v.name, { id: f.id, name: f.name, size: f.size });
+  }
+  return c.json({ ok: true });
+});
+
+app.post("/api/files/:id/link", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const f = findFile(c.req.param("id"));
+  if (!f || !f.ready) return c.json({ error: "That file is gone." }, 404);
+  const allowed =
+    f.kind === "board" ||
+    (f.kind === "bug" && v.role === "admin") ||
+    (f.kind === "room" && (() => {
+      const at = livePlayer(v.name)?.space;
+      return !!at && roomSessionOf(v.name, at) === f.room;
+    })());
+  if (!allowed) {
+    log("refused", v, { action: "download", kind: f.kind, reason: f.kind === "room" ? "not in the room" : "not admin" }, { ip: ipOf(c), content: f.name });
+    return c.json({ error: f.kind === "room" ? "Only the people in the room can open its files." : "This is for the admin." }, 403);
+  }
+  try {
+    return c.json({ url: await downloadLink(f.key, f.name, f.kind === "bug" && isImage(f.name)), name: f.name });
+  } catch (err) {
+    return s3Error(c, err);
+  }
 });
 
 // --- how you look -----------------------------------------------------------------
@@ -570,6 +711,7 @@ const purge = (): void => {
   const gone = purgeExpiredNotes();
   if (gone) log("note-expired", null, { count: gone });
   purgeOldAudit();
+  removeObjects(purgeFiles());
 };
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();

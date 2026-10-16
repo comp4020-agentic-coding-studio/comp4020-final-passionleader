@@ -10,6 +10,8 @@
   width: 100%; box-sizing: border-box; padding: 8px 10px; resize: vertical;
   border: 1px solid #8a6a50; border-radius: 8px; font: inherit;
 }
+.bug-shot { display: block; margin-top: 8px; font-size: 0.9rem; }
+.bug-shot input { display: block; margin-top: 4px; max-width: 100%; }
 .bug-status { min-height: 1.3em; margin: 6px 0 10px; font-size: 0.9rem; }
 .bug-card .settings-actions button { min-height: 44px; }
 .bug-card .bug-send { background: var(--accent); color: #fff; }

@@ -304,6 +304,26 @@
   resize: vertical;
 }
 
+.board-files {
+  list-style: none;
+  margin: 0 0 12px;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.board-file {
+  min-height: 40px;
+  max-width: 100%;
+  text-align: left;
+  overflow-wrap: anywhere;
+}
+
+.board-form input[type="file"] {
+  max-width: 100%;
+}
+
 .board-row {
   display: flex;
   align-items: center;

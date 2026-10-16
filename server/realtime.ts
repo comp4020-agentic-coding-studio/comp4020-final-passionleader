@@ -3,7 +3,8 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { findByName, findByToken, lastSpot, lookOf, saveLastSpot, type Look } from "./db.ts";
+import { dropRoomFiles, findByName, findByToken, lastSpot, lookOf, saveLastSpot, type Look } from "./db.ts";
+import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 
@@ -57,11 +58,15 @@ const seatTaken = (seat: string, by: Player): boolean => [...players.values()].s
 // sees what was said; when the last person leaves, the chat, the host and the
 // invite list all go. Counselling rooms are invite-only: the first one in is
 // the host, and only the people someone inside has invited may follow.
+// Files shared in a room (files.ts) belong to that sitting of it (`session`),
+// so they go with it too: nobody can fetch them after the room empties.
 
 const ROOM_LINES = 100;
-type RoomLine = { name: string; text: string; system?: boolean };
+type RoomLine = { name: string; text: string; system?: boolean; file?: { id: string; name: string; size: number } };
 interface RoomState {
   host: string;
+  /** This sitting of the room: a new one each time it fills from empty. */
+  session: string;
   invited: Set<string>; // lower-cased names
   lines: RoomLine[];
 }
@@ -89,6 +94,33 @@ const roomChanged = (space: SpaceId): void => {
   if (view) broadcastSpace(space, { t: "action", kind: "room", room: view });
 };
 
+/** Clears a room that has emptied: its chat, host, invites and files. */
+function closeRoom(space: SpaceId): void {
+  const state = rooms.get(space);
+  if (!state) return;
+  rooms.delete(space);
+  removeObjects(dropRoomFiles(state.session));
+}
+
+/** Where `name` is right now, if they're online (their newest tab). */
+export function livePlayer(name: string): Player | undefined {
+  let found: Player | undefined;
+  for (const p of players.values()) if (p.name === name) found = p;
+  return found;
+}
+
+/** The sitting of the meeting room `name` is in now, or null if they aren't in one. */
+export function roomSessionOf(name: string, space: SpaceId): string | null {
+  const state = rooms.get(space);
+  if (!state || !inSpace(space).some((p) => p.name === name)) return null;
+  return state.session;
+}
+
+/** Puts a file someone shared into the room's chat, for everyone inside. */
+export function roomShare(space: SpaceId, name: string, file: { id: string; name: string; size: number }): void {
+  roomSay(space, { name, text: `shared ${file.name}`, file });
+}
+
 /** Why `name` can't come into `space`, or null if they can (any space that isn't a meeting room is open). */
 function roomRefusal(space: SpaceId, name: string): string | null {
   const room = roomOf(space);
@@ -102,7 +134,7 @@ function roomRefusal(space: SpaceId, name: string): string | null {
 /** Someone came into a meeting room: the first one sets it up, everyone else is announced. */
 function roomJoined(space: SpaceId, name: string): void {
   if (!roomOf(space)) return;
-  if (!rooms.has(space)) rooms.set(space, { host: name, invited: new Set([name.toLowerCase()]), lines: [] });
+  if (!rooms.has(space)) rooms.set(space, { host: name, session: randomUUID(), invited: new Set([name.toLowerCase()]), lines: [] });
   roomSay(space, { name, text: `${name} joined`, system: true });
   roomChanged(space);
 }
@@ -111,7 +143,7 @@ function roomJoined(space: SpaceId, name: string): void {
 function roomLeft(space: SpaceId, name: string, who: { name: string; token: string; role: string } | null): void {
   if (!rooms.has(space)) return;
   if (inSpace(space).length === 0) {
-    rooms.delete(space);
+    closeRoom(space);
     log("room-closed", who, { space });
     return;
   }
@@ -150,7 +182,7 @@ export function evictSpace(space: SpaceId, to: SpaceId, at: { x: number; z: numb
     send(ws, { t: "moved", space: to, x: p.x, z: p.z, players: inSpace(to) });
     moved++;
   }
-  rooms.delete(space);
+  closeRoom(space);
   if (moved) dirty.add(to);
   return moved;
 }

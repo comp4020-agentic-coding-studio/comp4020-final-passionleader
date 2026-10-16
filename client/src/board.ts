@@ -2,9 +2,11 @@
 // has three tabs, Q&A, Notices and Board, each a list of posts. A post opens
 // into its text and comments, and anyone can write a post or a comment. The
 // server decides who may post a notice (lecturers and staff) and who may
-// delete what; this only hides the buttons a visitor couldn't use.
+// delete what; this only hides the buttons a visitor couldn't use. A post can
+// carry up to five files (200 MB each), which upload once the post is up.
 
 import "./board.css";
+import { ACCEPT, MAX_FILE_BYTES, sizeLabel } from "./uploads.ts";
 
 export type BoardTab = "qa" | "notices" | "board";
 
@@ -17,6 +19,7 @@ export interface BoardPost {
   createdAt: string;
   comments: number;
   pinned?: boolean;
+  files?: { id: string; name: string; size: number }[];
   canDelete: boolean;
 }
 
@@ -53,8 +56,13 @@ export function mountBoard(h: {
   list(tab: BoardTab): Promise<BoardPost[]>;
   /** A post's comments, oldest first. */
   comments(postId: number): Promise<BoardComment[]>;
-  /** Resolves to an error message, or null. */
-  post(tab: BoardTab, title: string, text: string): Promise<string | null>;
+  /**
+   * Posts, then uploads `files` onto it; resolves to an error message, or
+   * null. `progress` names the file uploading and how far it has got (0..1).
+   */
+  post(tab: BoardTab, title: string, text: string, files: File[], progress: (name: string, done: number) => void): Promise<string | null>;
+  /** Opens (downloads) one of a post's files; resolves to an error message, or null. */
+  openFile(id: string): Promise<string | null>;
   comment(postId: number, text: string): Promise<string | null>;
   removePost(postId: number): Promise<string | null>;
   removeComment(commentId: number): Promise<string | null>;
@@ -145,6 +153,9 @@ export function mountBoard(h: {
   postMeta.className = "board-muted";
   const postText = document.createElement("p");
   postText.className = "board-text";
+  const postFiles = document.createElement("ul");
+  postFiles.className = "board-files";
+  postFiles.setAttribute("aria-label", "Attached files");
   const postActions = document.createElement("div");
   postActions.className = "board-row";
   const commentList = document.createElement("div");
@@ -165,7 +176,7 @@ export function mountBoard(h: {
   commentBtn.textContent = "Comment";
   commentRow.append(commentCount, commentBtn);
   compose.append(commentBox, commentRow);
-  postView.append(backBtn, postTitle, postMeta, postText, postActions, commentList, compose);
+  postView.append(backBtn, postTitle, postMeta, postText, postFiles, postActions, commentList, compose);
 
   const writeView = document.createElement("form");
   writeView.className = "board-form";
@@ -184,6 +195,17 @@ export function mountBoard(h: {
   const textInput = document.createElement("textarea");
   textInput.id = "board-post-text";
   textInput.maxLength = POST_CHARS;
+  const filesLabel = document.createElement("label");
+  filesLabel.htmlFor = "board-post-files";
+  filesLabel.textContent = "Files (optional: up to 5, 200 MB each; images, PDF, txt, md, docx, pptx, xlsx, zip)";
+  const filesInput = document.createElement("input");
+  filesInput.id = "board-post-files";
+  filesInput.type = "file";
+  filesInput.multiple = true;
+  filesInput.accept = ACCEPT;
+  const uploadStatus = document.createElement("p");
+  uploadStatus.className = "board-muted";
+  uploadStatus.setAttribute("role", "status");
   const writeRow = document.createElement("div");
   writeRow.className = "board-row";
   const writeCount = document.createElement("span");
@@ -197,7 +219,7 @@ export function mountBoard(h: {
   submitBtn.className = "board-primary";
   submitBtn.textContent = "Post";
   writeRow.append(writeCount, cancelBtn, submitBtn);
-  writeView.append(titleLabel, titleInput, textLabel, textInput, writeRow);
+  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, writeRow);
 
   let isOpen = false;
   let code = "";
@@ -378,6 +400,19 @@ export function mountBoard(h: {
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
     postMeta.textContent = current.createdAt ? `${current.author} · ${current.createdAt}` : current.author;
     postText.textContent = current.text;
+    postFiles.replaceChildren(
+      ...(current.files ?? []).map((f) => {
+        const li = document.createElement("li");
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "board-secondary board-file";
+        b.textContent = `📎 ${f.name} · ${sizeLabel(f.size)}`;
+        b.addEventListener("click", () => void h.openFile(f.id).then((msg) => setError(msg ?? "")));
+        li.append(b);
+        return li;
+      }),
+    );
+    postFiles.hidden = !current.files?.length;
     // A pinned notice has no comments to read or add, so its comment box is hidden.
     compose.hidden = !!current.pinned;
     commentList.hidden = !!current.pinned;
@@ -493,11 +528,19 @@ export function mountBoard(h: {
     const t = titleInput.value.trim();
     const x = textInput.value.trim();
     if (!t || !x || submitBtn.disabled) return;
+    const files = [...(filesInput.files ?? [])];
+    if (files.length > 5) return setError("Up to five files on a post.");
+    if (files.some((f) => f.size > MAX_FILE_BYTES)) return setError("Files can be up to 200 MB.");
     void run(
-      () => h.post(tab, t, x),
+      () =>
+        h.post(tab, t, x, files, (name, done) => {
+          uploadStatus.textContent = `Uploading ${name}… ${Math.round(done * 100)}%`;
+        }),
       () => {
         titleInput.value = "";
         textInput.value = "";
+        filesInput.value = "";
+        uploadStatus.textContent = "";
         void goBack();
       },
     );
@@ -554,6 +597,8 @@ export function mountBoard(h: {
       commentsData = [];
       titleInput.value = "";
       textInput.value = "";
+      filesInput.value = "";
+      uploadStatus.textContent = "";
       commentBox.value = "";
       isOpen = true;
       root.hidden = false;

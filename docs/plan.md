@@ -141,7 +141,10 @@ Pulled forward once those were done (budget left over), in this order:
 - **21, 6a, 26a, 30** (if time): meeting rooms, each a small room with a
   group-chat window: six invite-only counselling rooms off the Hub, three team
   rooms per classroom and five in the library; six people at most, checked on
-  the server; the chat lasts while someone is inside. No files or voice yet
+  the server; the chat lasts while someone is inside. No voice yet
+- **18, 22** (pulled forward, with S3 in place): files on board posts, in
+  meeting rooms and on bug reports (screenshots), up to 200 MB, kept 30 days
+  at most, straight to a private S3 bucket by signed links
 - **10, extended**: the admin's log, read in the app at the Student Hub's
   reception PC (or `/admin/` in a tab during the crit): seven days of what
   people wrote and removed, sign-ins and refusals, with IPs; bug reports

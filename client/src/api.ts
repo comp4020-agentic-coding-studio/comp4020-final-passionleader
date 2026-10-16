@@ -39,6 +39,8 @@ export class ApiError extends Error {
   constructor(
     public status: number,
     message: string,
+    /** The rest of the server's answer (e.g. a taken name that has a password). */
+    public data: Record<string, unknown> = {},
   ) {
     super(message);
   }
@@ -69,7 +71,7 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
   }
   if (!res.ok) {
     const msg = (data as { error?: string } | null)?.error ?? `Server error (${res.status}).`;
-    throw new ApiError(res.status, msg);
+    throw new ApiError(res.status, msg, (data as Record<string, unknown> | null) ?? {});
   }
   return data as T;
 }
@@ -123,6 +125,12 @@ export const sendBugReport = (token: string, text: string, space: SpaceId | null
   request("/api/bugs", "POST", { token, text, space });
 
 export type BoardTab = "qa" | "notices" | "board";
+/** A file attached to a post, a bug report or a room's chat. */
+export interface FileInfo {
+  id: string;
+  name: string;
+  size: number;
+}
 export interface Post {
   id: number;
   tab: BoardTab;
@@ -133,6 +141,7 @@ export interface Post {
   comments: number;
   /** The fixed note at the top of Notices (not a real post: id 0, no comments). */
   pinned?: boolean;
+  files?: FileInfo[];
 }
 export interface PostComment {
   id: number;
@@ -150,3 +159,11 @@ export const getPostComments = (id: number): Promise<PostComment[]> => request<P
 export const createPostComment = (token: string, id: number, text: string): Promise<PostComment> =>
   request<PostComment>(`/api/board/${id}/comments`, "POST", { token, text });
 export const removePostComment = (token: string, id: number): Promise<unknown> => request(`/api/board-comments/${id}`, "DELETE", { token });
+
+// --- files (see uploads.ts) ---------------------------------------------------
+
+export type FileTarget = { kind: "bug"; bug: number } | { kind: "board"; post: number } | { kind: "room" };
+export const askUpload = (token: string, target: FileTarget, name: string, size: number): Promise<{ id: string; url: string; type: string }> =>
+  request("/api/files", "POST", { token, ...target, name, size });
+export const uploadDone = (token: string, id: string): Promise<unknown> => request(`/api/files/${id}/done`, "POST", { token });
+export const fileLink = (token: string, id: string): Promise<{ url: string; name: string }> => request(`/api/files/${id}/link`, "POST", { token });

@@ -9,7 +9,9 @@ import { COMMON, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, ty
 // Classrooms: the course codes the admin has opened in building 155.
 // Posts and post comments: each classroom's board (Q&A, Notices, Board).
 // Audit: the admin's seven-day copy of the activity log (below). Bug
-// reports: what visitors send from the settings dialog.
+// reports: what visitors send from the settings dialog. Files: what's been
+// attached to a bug report, a board post or a meeting room (the files
+// themselves are in S3, see files.ts; this is who sent what, and where).
 // Live positions never come here; they stay in server memory.
 
 export type Role = "user" | "admin";
@@ -151,6 +153,23 @@ db.exec(`
     user_agent TEXT,
     text       TEXT NOT NULL
   );
+`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS files (
+    id         TEXT PRIMARY KEY,
+    kind       TEXT NOT NULL,
+    owner      TEXT NOT NULL,
+    name       TEXT NOT NULL,
+    size       INTEGER NOT NULL,
+    key        TEXT NOT NULL,
+    post_id    INTEGER REFERENCES posts(id) ON DELETE CASCADE,
+    bug_id     INTEGER REFERENCES bug_reports(id) ON DELETE CASCADE,
+    room       TEXT,
+    ready      INTEGER NOT NULL DEFAULT 0,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS files_by_post ON files (post_id);
+  CREATE INDEX IF NOT EXISTS files_by_owner ON files (owner, created_at);
 `);
 // The first two classrooms: the one there's always been, and COMMON for anyone.
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
@@ -536,6 +555,10 @@ export function bugReports(): BugReport[] {
     .all() as unknown as BugReport[];
 }
 
+export function findBugReport(id: number): BugReport | undefined {
+  return db.prepare("SELECT id, at, author, browser, ip, space, user_agent AS userAgent, text FROM bug_reports WHERE id = ?").get(id) as BugReport | undefined;
+}
+
 export function deleteBugReport(id: number): boolean {
   return db.prepare("DELETE FROM bug_reports WHERE id = ?").run(id).changes > 0;
 }
@@ -574,4 +597,76 @@ export function lookOf(name: string): Look | null {
 
 export function saveLook(name: string, look: Look): void {
   db.prepare("UPDATE visitors SET look = ? WHERE name = ?").run(JSON.stringify(look), name);
+}
+
+// --- attached files ---------------------------------------------------------------
+// A row is written when someone asks to upload (not ready yet) and marked
+// ready once the server has seen the whole file arrive in S3. Only ready
+// files younger than 30 days are ever listed or handed out; the bucket
+// deletes the files themselves at 30 days.
+
+export interface FileRow {
+  id: string;
+  kind: "bug" | "board" | "room";
+  owner: string;
+  name: string;
+  size: number;
+  key: string;
+  postId: number | null;
+  bugId: number | null;
+  room: string | null;
+  ready: boolean;
+  createdAt: string;
+}
+/** What a list of attachments shows. */
+export type FileInfo = Pick<FileRow, "id" | "name" | "size">;
+
+const fileCols = "id, kind, owner, name, size, key, post_id AS postId, bug_id AS bugId, room, ready, created_at AS createdAt";
+const FRESH = "created_at > datetime('now', '-30 days')";
+
+export function addFile(f: Omit<FileRow, "ready" | "createdAt">): void {
+  db.prepare("INSERT INTO files (id, kind, owner, name, size, key, post_id, bug_id, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    f.id, f.kind, f.owner, f.name, f.size, f.key, f.postId, f.bugId, f.room,
+  );
+}
+
+/** A file not yet 30 days old, ready or still arriving. */
+export function findFile(id: string): FileRow | undefined {
+  const row = db.prepare(`SELECT ${fileCols} FROM files WHERE id = ? AND ${FRESH}`).get(id) as (Omit<FileRow, "ready"> & { ready: number }) | undefined;
+  return row ? { ...row, ready: !!row.ready } : undefined;
+}
+
+export function markFileReady(id: string): void {
+  db.prepare("UPDATE files SET ready = 1 WHERE id = ?").run(id);
+}
+
+/** A post's or a bug report's files: the ready ones to list, or with `all`, every row (to count or delete). */
+export function filesOn(on: "post" | "bug", id: number, all = false): (FileInfo & { key: string })[] {
+  const col = on === "post" ? "post_id" : "bug_id";
+  return db
+    .prepare(`SELECT id, name, size, key FROM files WHERE ${col} = ? ${all ? "" : `AND ready = 1 AND ${FRESH}`} ORDER BY created_at, id`)
+    .all(id) as unknown as (FileInfo & { key: string })[];
+}
+
+/** How many uploads `owner` has asked for in the last day. */
+export function uploadsToday(owner: string): number {
+  return (db.prepare("SELECT COUNT(*) AS n FROM files WHERE owner = ? AND created_at > datetime('now', '-1 day')").get(owner) as { n: number }).n;
+}
+
+/** Forgets a meeting room's files once it empties; returns their S3 keys to delete. */
+export function dropRoomFiles(room: string): string[] {
+  const rows = db.prepare("SELECT key FROM files WHERE room = ?").all(room) as { key: string }[];
+  db.prepare("DELETE FROM files WHERE room = ?").run(room);
+  return rows.map((r) => r.key);
+}
+
+/**
+ * Forgets uploads that never arrived (asked for over an hour ago) and files
+ * past their 30 days; returns the S3 keys of the ones that never arrived,
+ * in case half of one did (the bucket clears the rest itself).
+ */
+export function purgeFiles(): string[] {
+  const stale = db.prepare("SELECT key FROM files WHERE ready = 0 AND created_at <= datetime('now', '-1 hour')").all() as { key: string }[];
+  db.prepare("DELETE FROM files WHERE (ready = 0 AND created_at <= datetime('now', '-1 hour')) OR NOT " + FRESH).run();
+  return stale.map((r) => r.key);
 }

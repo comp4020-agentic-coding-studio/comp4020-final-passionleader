@@ -38,10 +38,10 @@
         <p class="join-sub">A small 3D space to run into people: students, staff, anyone. Not an official ANU service.</p>
         <label for="name">Please enter your student number (e.g. u1234567)</label>
         <p class="join-hint" id="name-hint">Staff and visitors: any name, up to 8 letters, digits or underscores.</p>
-        <input id="name" name="name" maxlength="12" placeholder="u1234567" aria-describedby="name-hint" autocomplete="off" autocapitalize="off" spellcheck="false" required />
+        <input id="name" name="name" maxlength="12" placeholder="u1234567" aria-describedby="name-hint" autocomplete="username" autocapitalize="off" autocorrect="off" spellcheck="false" required />
         <div id="password-row" hidden>
           <label for="password">Password (test and admin accounts only, never your ANU password)</label>
-          <input id="password" name="password" type="password" autocomplete="current-password" />
+          <input id="password" name="password" type="password" autocomplete="current-password" autocapitalize="off" autocorrect="off" spellcheck="false" />
         </div>
         <p id="join-error" role="alert"></p>
         <button type="submit" id="enter">Enter</button>

@@ -168,6 +168,37 @@
   font-weight: 700;
 }
 
+.room-attach {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 1px solid #c9b48a;
+  border-radius: 8px;
+  background: #fffbe0;
+  font-size: 1.1rem;
+}
+
+.room-file {
+  display: block;
+  margin-top: 2px;
+  padding: 4px 8px;
+  border: 1px solid currentColor;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.25);
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  overflow-wrap: anywhere;
+  cursor: pointer;
+}
+
+.room-file-status {
+  flex: none;
+  margin: 0;
+  padding: 0 10px;
+}
+
+.room-attach:disabled,
 .room-primary:disabled {
   opacity: 0.6;
   cursor: default;

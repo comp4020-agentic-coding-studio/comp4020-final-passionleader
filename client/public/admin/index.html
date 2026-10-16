@@ -44,6 +44,8 @@
   .more { margin-top: 10px; }
   .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
   .card .meta { color: var(--muted); font-size: 0.85rem; }
+  .card .shots { margin: 0 0 8px; }
+  .card .shots img { display: block; max-width: 100%; max-height: 60vh; border: 1px solid var(--line); border-radius: 6px; cursor: zoom-in; }
   .card .text { white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
   #signin { max-width: 360px; margin: 40px auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
   #signin input { width: 100%; margin-bottom: 8px; }
@@ -82,7 +84,7 @@
       <input id="f-space" placeholder="space" aria-label="Filter by space" size="10">
       <select id="f-event" aria-label="Filter by event">
         <option value="">All events</option>
-        <option value="content">Content (notes, comments, posts)</option>
+        <option value="content">Content (notes, comments, posts, files)</option>
         <option value="signin">Sign-ins</option>
         <option value="refused">Refused only</option>
       </select>
@@ -101,7 +103,7 @@
       <button type="button" class="more" id="older" hidden>Load older</button>
     </section>
     <section id="bug-view" hidden>
-      <p class="hint">Sent from the settings dialog (the gear). Kept 28 days, or until marked done.</p>
+      <p class="hint">Sent from the settings dialog (the gear). Kept 28 days, or until marked done; a screenshot is kept 30 days at most.</p>
       <p class="error" id="bug-error" role="alert"></p>
       <div id="bugs"></div>
     </section>
@@ -172,7 +174,7 @@
     if (d.action) parts.push(`tried to ${d.action}`);
     if (d.reason) parts.push(`reason: ${d.reason}`);
     if (d.owner) parts.push(`owner: ${d.owner}`);
-    for (const k of ["tab", "note", "post", "comment", "report", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online"]) {
+    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online"]) {
       if (d[k] !== undefined && d[k] !== null) parts.push(`${k}: ${d[k]}`);
     }
     return parts.join(" · ");
@@ -258,6 +260,23 @@
           el("span", "", ` · ${b.space || "no space"} · ${dayOf(b.at)} ${timeOf(b.at)}`));
         const ua = el("div", "meta mono", b.userAgent || "");
         const text = el("div", "text", b.text);
+        // A screenshot, if one came with it: the server hands a five-minute link (admin only).
+        const shots = el("div", "shots");
+        for (const f of b.files || []) {
+          const open = el("button", "", `🖼 ${f.name} (${Math.max(1, Math.round(f.size / 1024))} KB)`);
+          open.type = "button";
+          open.addEventListener("click", async () => {
+            try {
+              const { url } = await api(`/api/files/${f.id}/link`, "POST", {});
+              const img = el("img");
+              img.src = url;
+              img.alt = `Screenshot sent with ${b.author}'s report`;
+              open.replaceWith(img);
+              img.addEventListener("click", () => window.open(url, "_blank", "noopener"));
+            } catch (err) { $("bug-error").textContent = err.message; }
+          });
+          shots.append(open);
+        }
         const done = el("button", "", "Done (delete)");
         done.type = "button";
         done.addEventListener("click", async () => {
@@ -265,7 +284,7 @@
           try { await api(`/api/admin/bugs/${b.id}`, "DELETE", {}); loadBugs(); }
           catch (err) { $("bug-error").textContent = err.message; }
         });
-        card.append(meta, ua, text, done);
+        card.append(meta, ua, text, shots, done);
         list.append(card);
       }
     } catch (err) {

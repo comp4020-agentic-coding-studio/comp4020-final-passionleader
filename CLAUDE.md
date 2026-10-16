@@ -25,7 +25,7 @@ Read before planning or building: `README.md` (what good means for this app),
   `docs/plan.md`: the server log, classrooms the admin opens, links in an
   in-app window, then (pulled forward while there's budget) the east road,
   the dog, the classroom board, the Sketch & Guess game, the library and
-  the meeting rooms (chat only: no files, no voice).
+  the meeting rooms (chat and files, no voice) and attached files.
   Everything else in the plan is out until its crit.
 - Keep the real-time layer generic ("move", "action", "chat", per space), never
   tied to one room or one verb: the spaces and what people do in them will
@@ -61,11 +61,23 @@ Read before planning or building: `README.md` (what good means for this app),
   counselling room lets in only those someone inside has invited. Both are
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
-  chat, host and invites go. No notes in meeting rooms.
+  chat, host, invites and files go. No notes in meeting rooms.
+- Files (a bug report's screenshot, up to five on your own board post within
+  a day of posting, and any shared in the meeting room you're in): png, jpg,
+  gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an
+  image), 200 MB at most, 50 a day each; the type comes from the extension,
+  never the browser. They go straight from the browser to the private S3
+  bucket by five-minute links the server signs for that exact size and type,
+  and come back the same way, only to whoever may see them: anyone for a
+  post's, the people in the room for a room's, the admin for a screenshot's.
+  Kept 30 days at most (the bucket's rule, and the server stops listing them),
+  a room's only until it empties. Without S3 an upload refuses with "Uploads
+  aren't available right now. Please tell the admin. Error code: S3-…". The
+  AWS keys are Fly secrets only, never in the repo.
 - The admin's log keeps, for seven days only, what people wrote and removed
-  (notes, comments, posts), sign-ins, admin actions, refusals and bug
-  reports, each with its IP; never chat text, moves or emotes, never tokens
-  or passwords. Only the admin reads it or the bug reports (sent by anyone
+  (notes, comments, posts), sign-ins, admin actions, refusals, bug reports
+  and the names of files attached, each with its IP; never chat text, moves
+  or emotes, never tokens or passwords. Only the admin reads it or the bug reports (sent by anyone
   joined, one a minute), checked on the server. IPs and text stay out of
   stdout (`flyctl logs`).
 - Everything a person does reaches only the people in the same space.

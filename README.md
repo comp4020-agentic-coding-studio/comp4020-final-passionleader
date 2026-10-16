@@ -45,11 +45,20 @@ should feel at home in a virtual space shaped like the real campus they know.
    off every classroom and four off the library. Up to six people each. Team
    rooms are open to anyone; a counselling room lets in only whoever someone
    inside has invited by name. Inside, a group chat shows what's been said
-   since the room last emptied; when the last person leaves it's gone, and so
-   are the invites.
-8. Something broken? The gear's dialog has **Report a bug**: a short note
-   that only the admin reads.
-9. The gear (top right) sets the music and sound-effect volumes and switches
+   since the room last emptied, and the 📎 button shares a file with the
+   people inside; when the last person leaves the chat, the files and the
+   invites are gone.
+8. Something broken? The gear's dialog has **Report a bug**: a short note,
+   with a screenshot if you like, that only the admin reads.
+9. Files: a classroom board post can carry up to five, a meeting room's chat
+   shares them, and a bug report takes a screenshot. Images, PDF, txt, md,
+   docx, pptx, xlsx and zip, up to 200 MB each; nothing that runs, no web
+   pages. They're kept 30 days at most, in a private store only the app's
+   server can reach, and handed out by five-minute links to whoever may see
+   them (anyone for a board post, the people inside for a room, the admin for
+   a screenshot). If that store can't be reached, uploading says so, with an
+   error code (`S3-…`) to tell the admin.
+10. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
    track playing, with pause and next.
 
@@ -80,7 +89,8 @@ and new notes reach the same space within a second, and no other
 (`realtime.test.ts`); only the admin reads the seven-day log and the bug
 reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
 meeting room holds six and a counselling room only
-the invited (`rooms.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
+the invited (`rooms.test.ts`); files are checked by type, size and who may
+attach or fetch them (`files.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
 Judged by people: whether it feels familiar and restful, and whether talking
 gets easier.
 
@@ -90,14 +100,16 @@ The server writes every action to its log (`flyctl logs`): your name, a
 short tag of your browser (never its secret token), the space and what you
 did, but never what you said in chat. The admin can also read, for seven
 days, what people wrote and removed (notes, comments, posts), sign-ins,
-refusals and bug reports, with the **IP address** each came from, so abuse
-and bugs can be traced; after seven days they are deleted (bug reports
-after 28, or when dealt with). Chat, moves and emotes are not kept.
+refusals, bug reports and the names of files attached, with the **IP
+address** each came from, so abuse and bugs can be traced; after seven days
+they are deleted (bug reports after 28, or when dealt with). Files are kept
+30 days at most, a meeting room's only until it empties, and go when their
+post is removed. Chat, moves and emotes are not kept.
 
 ## What I chose not to build (yet)
 
-Files and voice in the meeting rooms, sitting on chairs, the Hub's boards,
-mail, one-to-one chat, voice, and character colours. "Staff" is only
+Voice in the meeting rooms, the Hub's boards, mail, one-to-one chat and
+voice chat. "Staff" is only
 the admin account for now: nothing yet tells a lecturer from a student. The buildings are
 simplified, not surveyed.
 

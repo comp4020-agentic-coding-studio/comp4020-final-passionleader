@@ -30,6 +30,8 @@ export interface Socket {
   next(pred: (m: Msg) => boolean, ms?: number): Promise<Msg>;
   /** Resolves true if a matching message arrives within ms, false otherwise. */
   sees(pred: (m: Msg) => boolean, ms: number): Promise<boolean>;
+  /** Like `sees`, but only messages arriving from now on count. */
+  seesNew(pred: (m: Msg) => boolean, ms: number): Promise<boolean>;
 }
 
 const open: WebSocket[] = [];
@@ -72,6 +74,12 @@ export function connect(token: string): Promise<Socket> {
         send: (msg) => ws.send(JSON.stringify(msg)),
         next,
         sees: (pred, ms) => next(pred, ms).then(() => true, () => false),
+        seesNew: (pred, ms) =>
+          new Promise((done) => {
+            const timer = setTimeout(() => (waiters.splice(waiters.indexOf(w), 1), done(false)), ms);
+            const w = { pred, done: () => (clearTimeout(timer), done(true)) };
+            waiters.push(w);
+          }),
       });
   });
 }

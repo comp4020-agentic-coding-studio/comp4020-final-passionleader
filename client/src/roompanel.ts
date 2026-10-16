@@ -5,8 +5,11 @@
 // A counselling room is invite-only, so anyone inside can invite a user by
 // name; a team room is open to all and has no invite row. The server decides
 // who may be invited or enter; this only collects the name and tidies it.
+// The 📎 button shares a file (200 MB at most) with the people inside; it is
+// gone, like the chat, once the room empties.
 
 import "./roompanel.css";
+import { ACCEPT, MAX_FILE_BYTES, sizeLabel } from "./uploads.ts";
 
 export interface RoomInfo {
   title: string;
@@ -24,6 +27,7 @@ export interface RoomLine {
   text: string;
   self?: boolean;
   system?: boolean;
+  file?: { id: string; name: string; size: number };
 }
 
 // The same rule as everywhere else for a user name.
@@ -34,6 +38,10 @@ export function mountRoomPanel(opts: {
   onSend(text: string): void;
   onInvite(name: string): void;
   onLeave(): void;
+  /** Shares a file; resolves to an error message, or null. `progress` gets 0..1. */
+  onShare(file: File, progress: (done: number) => void): Promise<string | null>;
+  /** Fetches a shared file; resolves to an error message, or null. */
+  onOpenFile(id: string): Promise<string | null>;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -122,9 +130,23 @@ export function mountRoomPanel(opts: {
   sendBtn.type = "button";
   sendBtn.className = "room-primary";
   sendBtn.textContent = "Send";
-  sendRow.append(input, sendBtn);
+  const attach = document.createElement("button");
+  attach.type = "button";
+  attach.className = "room-attach";
+  attach.textContent = "📎";
+  attach.title = "Share a file with the room (up to 200 MB)";
+  attach.setAttribute("aria-label", "Share a file with the room");
+  const picker = document.createElement("input");
+  picker.type = "file";
+  picker.accept = ACCEPT;
+  picker.hidden = true;
+  const fileStatus = document.createElement("p");
+  fileStatus.className = "room-note room-file-status";
+  fileStatus.setAttribute("role", "status");
+  fileStatus.hidden = true;
+  sendRow.append(attach, picker, input, sendBtn);
 
-  root.append(head, members, invite, log, sendRow);
+  root.append(head, members, invite, log, fileStatus, sendRow);
   document.body.append(root);
 
   let isOpen = false;
@@ -167,11 +189,38 @@ export function mountRoomPanel(opts: {
         who.textContent = line.name;
         el.append(who);
       }
-      el.append(document.createTextNode(line.text));
+      if (line.file) {
+        const f = line.file;
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "room-file";
+        b.textContent = `📎 ${f.name} · ${sizeLabel(f.size)}`;
+        b.addEventListener("click", () => void opts.onOpenFile(f.id).then((msg) => say(msg)));
+        el.append(b);
+      } else el.append(document.createTextNode(line.text));
     }
     log.append(el);
     while (log.childElementCount > MAX_LINES) log.firstElementChild?.remove();
   }
+
+  /** A line under the chat about a file: progress, or what went wrong. Empty hides it. */
+  function say(msg: string | null): void {
+    fileStatus.textContent = msg ?? "";
+    fileStatus.hidden = !msg;
+  }
+
+  attach.addEventListener("click", () => picker.click());
+  picker.addEventListener("change", async () => {
+    const file = picker.files?.[0];
+    picker.value = "";
+    if (!file) return;
+    if (file.size > MAX_FILE_BYTES) return say("Files can be up to 200 MB.");
+    attach.disabled = true;
+    say(`Uploading ${file.name}…`);
+    const error = await opts.onShare(file, (done) => say(`Uploading ${file.name}… ${Math.round(done * 100)}%`));
+    attach.disabled = false;
+    say(error);
+  });
 
   function sendMessage(): void {
     const text = input.value.trim();
@@ -231,6 +280,7 @@ export function mountRoomPanel(opts: {
     inviteInput.value = "";
     inviteError.textContent = "";
     invitedNote.textContent = "";
+    say(null);
     root.classList.remove("is-collapsed");
     toggle.setAttribute("aria-expanded", "true");
     chevron.textContent = "▲";

@@ -30,6 +30,16 @@ describe("names", () => {
   it("keeps qa_ names for the password accounts", async () => {
     expect((await api("/api/join", "POST", { name: "qa_" + freshName().slice(0, 5) })).status).toBe(403);
   });
+
+  it("never lets a password into an ordinary name, and reads a phone's name the same as a desk's", async () => {
+    const { name } = await visitor();
+    const taken = await api("/api/join", "POST", { name, password: "guess" });
+    expect(taken.status).toBe(409);
+    // An ordinary name has no password behind it, so the join screen won't ask for one.
+    expect((await taken.json()).password).toBe(false);
+    // A trailing space (a phone keyboard's) is the same name.
+    expect((await api("/api/join", "POST", { name: `${name} ` })).status).toBe(409);
+  });
 });
 
 describe("sticky notes", () => {

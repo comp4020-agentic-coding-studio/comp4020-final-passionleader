@@ -10,9 +10,9 @@
 //
 // Some lines are also kept for the admin, for seven days (db.ts audit): what
 // people wrote (notes, comments, posts, and what was removed), sign-ins,
-// admin actions and refusals. Those keep two things stdout never shows: the
-// IP the request came from, and the text itself. Moves, emotes, space changes
-// and chat stay out.
+// admin actions, files attached (their names) and refusals. Those keep two
+// things stdout never shows: the IP the request came from, and the text
+// itself (or the file's name). Moves, emotes, space changes and chat stay out.
 
 import { createHash } from "node:crypto";
 
@@ -41,6 +41,7 @@ export type Event =
   | "room-invite"
   | "room-closed"
   | "bug-report"
+  | "file"
   | "refused";
 
 /** What the admin's seven-day copy keeps (the rest only goes to stdout). */
@@ -64,6 +65,7 @@ const KEPT: ReadonlySet<Event> = new Set<Event>([
   "classroom-link",
   "room-invite",
   "bug-report",
+  "file",
   "refused",
 ]);
 
