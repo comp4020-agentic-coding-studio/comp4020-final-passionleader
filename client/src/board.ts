@@ -32,6 +32,10 @@ export interface BoardPost {
   pinned?: boolean;
   files?: { id: string; name: string; size: number }[];
   canDelete: boolean;
+  /** The author is the visitor (never the pinned note); the server checks it again. */
+  canEdit: boolean;
+  /** Set once the author has changed the post. */
+  editedAt?: string | null;
 }
 
 export interface BoardComment {
@@ -40,6 +44,8 @@ export interface BoardComment {
   text: string;
   createdAt: string;
   canDelete: boolean;
+  canEdit: boolean;
+  editedAt?: string | null;
 }
 
 // The same limits as sticky notes.
@@ -71,6 +77,10 @@ export function mountBoard(h: {
   /** A link that shows one of a post's pictures in place, or null. */
   imageLink(id: string): Promise<string | null>;
   comment(postId: number, text: string): Promise<string | null>;
+  /** Changes the visitor's own post's title and text (files stay); resolves to an error message, or null. */
+  editPost(postId: number, title: string, text: string): Promise<string | null>;
+  /** Changes the visitor's own comment; resolves to an error message, or null. */
+  editComment(commentId: number, text: string): Promise<string | null>;
   removePost(postId: number): Promise<string | null>;
   removeComment(commentId: number): Promise<string | null>;
 }): {
@@ -173,6 +183,26 @@ export function mountBoard(h: {
   commentBtn.textContent = "Comment";
   commentRow.append(commentCount, commentBtn);
   compose.append(commentBox, commentRow);
+  // One in-place editor, moved into whichever comment is being edited.
+  const editWrap = document.createElement("div");
+  editWrap.className = "board-edit";
+  const editBox = document.createElement("textarea");
+  editBox.maxLength = COMMENT_CHARS;
+  editBox.setAttribute("aria-label", "Edit comment");
+  const editRow = document.createElement("div");
+  editRow.className = "board-row";
+  const editCount = document.createElement("span");
+  editCount.className = "board-counter";
+  const editCancel = document.createElement("button");
+  editCancel.type = "button";
+  editCancel.className = "board-secondary";
+  editCancel.textContent = "Cancel";
+  const editSave = document.createElement("button");
+  editSave.type = "button";
+  editSave.className = "board-primary";
+  editSave.textContent = "Save";
+  editRow.append(editCount, editCancel, editSave);
+  editWrap.append(editBox, editRow);
   postView.append(backBtn, postTitle, postMeta, postText, postFiles, postActions, commentList, compose);
 
   const writeView = document.createElement("form");
@@ -230,6 +260,12 @@ export function mountBoard(h: {
   let confirming: string | null = null;
   let busy = false;
   let loadToken = 0;
+  // Editing: the post goes through the write form (the half-typed new post is
+  // set aside meanwhile); a comment through `editWrap`, in place.
+  let editingPost = false;
+  let editingCommentId: number | null = null;
+  let draftStash: { title: string; text: string } | null = null;
+  let focusEditFor: number | null = null;
 
   function setError(msg: string): void {
     error.textContent = msg;
@@ -253,6 +289,12 @@ export function mountBoard(h: {
     writeCount.textContent = `${pw} / ${POST_WORDS} words`;
     writeCount.classList.toggle("is-over", overP);
     submitBtn.disabled = busy || overP || titleInput.value.trim() === "" || textInput.value.trim() === "";
+
+    const ew = wordCount(editBox.value);
+    const overE = ew > COMMENT_WORDS;
+    editCount.textContent = `${ew} / ${COMMENT_WORDS} words`;
+    editCount.classList.toggle("is-over", overE);
+    editSave.disabled = busy || overE || editBox.value.trim() === "";
   }
 
   function syncTabs(): void {
@@ -384,6 +426,8 @@ export function mountBoard(h: {
   }
 
   function renderComments(): void {
+    if (editingCommentId !== null && !commentsData.some((c) => c.id === editingCommentId)) editingCommentId = null;
+    const hadFocus = document.activeElement === editBox;
     commentList.replaceChildren(
       ...(commentsData.length === 0
         ? [Object.assign(document.createElement("p"), { className: "board-muted", textContent: "No comments yet." })]
@@ -395,8 +439,31 @@ export function mountBoard(h: {
             const who = document.createElement("strong");
             who.textContent = c.author;
             const when = document.createElement("span");
-            when.textContent = c.createdAt;
+            when.textContent = c.editedAt ? `${c.createdAt} · edited` : c.createdAt;
             ch.append(who, when);
+            if (editingCommentId === c.id) {
+              row.append(ch, editWrap);
+              return row;
+            }
+            if (c.canEdit) {
+              const edit = document.createElement("button");
+              edit.type = "button";
+              edit.className = "board-link-edit";
+              edit.textContent = "Edit";
+              edit.dataset.edit = String(c.id);
+              edit.setAttribute("aria-label", `Edit comment by ${c.author}`);
+              edit.addEventListener("click", () => {
+                confirming = null;
+                setError("");
+                editingCommentId = c.id;
+                editBox.value = c.text;
+                renderComments();
+                updateCounters();
+                editBox.focus();
+                editBox.setSelectionRange(editBox.value.length, editBox.value.length);
+              });
+              ch.append(edit);
+            }
             if (c.canDelete) {
               ch.append(
                 deleteControl(
@@ -414,12 +481,17 @@ export function mountBoard(h: {
             return row;
           })),
     );
+    if (hadFocus && editingCommentId !== null) editBox.focus();
+    if (focusEditFor !== null) {
+      commentList.querySelector<HTMLElement>(`[data-edit="${focusEditFor}"]`)?.focus();
+      focusEditFor = null;
+    }
   }
 
   function renderPostHead(): void {
     if (!current) return;
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
-    postMeta.textContent = current.createdAt ? `${current.author} · ${current.createdAt}` : current.author;
+    postMeta.textContent = (current.createdAt ? `${current.author} · ${current.createdAt}` : current.author) + (current.editedAt ? " · edited" : "");
     // Posts are Markdown (safe DOM only, markdown.ts); comments stay plain text.
     postText.replaceChildren(renderMarkdown(current.text));
     postFiles.replaceChildren(
@@ -459,6 +531,15 @@ export function mountBoard(h: {
     compose.hidden = !!current.pinned;
     commentList.hidden = !!current.pinned;
     postActions.replaceChildren();
+    if (current.canEdit && !current.pinned) {
+      const editBtn = document.createElement("button");
+      editBtn.type = "button";
+      editBtn.className = "board-secondary board-edit-post";
+      editBtn.textContent = "Edit";
+      editBtn.setAttribute("aria-label", "Edit this post");
+      editBtn.addEventListener("click", startEditPost);
+      postActions.append(editBtn);
+    }
     if (current.canDelete) {
       const post = current;
       postActions.append(
@@ -511,7 +592,60 @@ export function mountBoard(h: {
     }
   }
 
+  function setWriteMode(editing: boolean): void {
+    editingPost = editing;
+    filesLabel.hidden = editing;
+    filesInput.hidden = editing;
+    uploadStatus.hidden = editing;
+    submitBtn.textContent = editing ? "Save" : "Post";
+  }
+
+  function startEditPost(): void {
+    if (!current || !current.canEdit || current.pinned) return;
+    draftStash = { title: titleInput.value, text: textInput.value };
+    titleInput.value = current.title;
+    textInput.value = current.text;
+    setWriteMode(true);
+    showView("write");
+    updateCounters();
+    titleInput.focus();
+  }
+
+  /** Leaves the edit form (saved or not) and puts the half-typed new post back. */
+  function endEditPost(): void {
+    if (draftStash) {
+      titleInput.value = draftStash.title;
+      textInput.value = draftStash.text;
+      draftStash = null;
+    }
+    setWriteMode(false);
+  }
+
+  function resetEdits(): void {
+    if (editingPost) endEditPost();
+    editingCommentId = null;
+  }
+
+  function backToPost(): void {
+    endEditPost();
+    showView("post");
+    renderPostHead();
+    renderComments();
+    updateCounters();
+    (postActions.querySelector<HTMLElement>(".board-edit-post") ?? backBtn).focus();
+  }
+
+  function cancelCommentEdit(): void {
+    if (editingCommentId === null) return;
+    focusEditFor = editingCommentId;
+    editingCommentId = null;
+    setError("");
+    renderComments();
+    updateCounters();
+  }
+
   async function openPost(p: BoardPost): Promise<void> {
+    resetEdits();
     current = p;
     commentsData = [];
     confirming = null;
@@ -525,6 +659,7 @@ export function mountBoard(h: {
   }
 
   async function goBack(): Promise<void> {
+    resetEdits();
     current = null;
     confirming = null;
     showView("list");
@@ -535,6 +670,7 @@ export function mountBoard(h: {
   }
 
   async function switchTab(next: BoardTab): Promise<void> {
+    resetEdits();
     tab = next;
     current = null;
     confirming = null;
@@ -578,17 +714,59 @@ export function mountBoard(h: {
     updateCounters();
     titleInput.focus();
   });
-  cancelBtn.addEventListener("click", () => void goBack());
+  cancelBtn.addEventListener("click", () => {
+    if (editingPost) backToPost();
+    else void goBack();
+  });
   backBtn.addEventListener("click", () => void goBack());
   titleInput.addEventListener("input", updateCounters);
   textInput.addEventListener("input", updateCounters);
   commentBox.addEventListener("input", updateCounters);
+  editBox.addEventListener("input", updateCounters);
+  editCancel.addEventListener("click", cancelCommentEdit);
+  editSave.addEventListener("click", () => {
+    if (editingCommentId === null || editSave.disabled) return;
+    const id = editingCommentId;
+    const text = editBox.value.trim();
+    if (!text) return;
+    void run(
+      () => h.editComment(id, text),
+      () => {
+        const c = commentsData.find((x) => x.id === id);
+        if (c) {
+          c.text = text;
+          c.editedAt = new Date().toISOString();
+        }
+        focusEditFor = id;
+        editingCommentId = null;
+        void loadComments();
+      },
+    );
+  });
 
   writeView.addEventListener("submit", (e) => {
     e.preventDefault();
     const t = titleInput.value.trim();
     const x = textInput.value.trim();
     if (!t || !x || submitBtn.disabled) return;
+    if (editingPost) {
+      if (!current) return;
+      const post = current;
+      void run(
+        () => h.editPost(post.id, t, x),
+        () => {
+          post.title = t;
+          post.text = x;
+          post.editedAt = new Date().toISOString();
+          backToPost();
+          // The list's copy comes from the server too, so the next visit to it is current.
+          void h.list(tab).then((list) => {
+            if (isOpen) postsData = list;
+          }, () => {});
+        },
+      );
+      return;
+    }
     const files = [...(filesInput.files ?? [])];
     if (files.length > 5) return setError("Up to five files on a post.");
     if (files.some((f) => f.size > MAX_FILE_BYTES)) return setError("Files can be up to 200 MB.");
@@ -626,6 +804,7 @@ export function mountBoard(h: {
     isOpen = false;
     root.hidden = true;
     loadToken++;
+    resetEdits();
     current = null;
     confirming = null;
     setError("");
@@ -641,6 +820,9 @@ export function mountBoard(h: {
     e.stopPropagation();
     if (e.key !== "Escape") return;
     e.preventDefault();
+    // Esc while editing cancels just the edit.
+    if (editingCommentId !== null && editWrap.contains(e.target as Node)) return cancelCommentEdit();
+    if (editingPost) return backToPost();
     // Esc in the post view or the form goes back to the list first.
     if (view === "list") hide();
     else void goBack();
@@ -660,6 +842,9 @@ export function mountBoard(h: {
       confirming = null;
       postsData = [];
       commentsData = [];
+      resetEdits();
+      draftStash = null;
+      setWriteMode(false);
       titleInput.value = "";
       textInput.value = "";
       filesInput.value = "";

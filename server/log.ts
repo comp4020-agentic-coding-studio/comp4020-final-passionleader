@@ -31,8 +31,10 @@ export type Event =
   | "comment"
   | "comment-removed"
   | "post"
+  | "post-edited"
   | "post-removed"
   | "post-comment"
+  | "post-comment-edited"
   | "post-comment-removed"
   | "game-join"
   | "classroom-created"
@@ -57,8 +59,10 @@ const KEPT: ReadonlySet<Event> = new Set<Event>([
   "comment",
   "comment-removed",
   "post",
+  "post-edited",
   "post-removed",
   "post-comment",
+  "post-comment-edited",
   "post-comment-removed",
   "classroom-created",
   "classroom-removed",

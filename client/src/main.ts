@@ -23,6 +23,8 @@ import {
   getComments,
   getNotes,
   getPostComments,
+  editPost,
+  editPostComment,
   getBoardConfig,
   getPosts,
   isValidName,
@@ -695,10 +697,10 @@ const failed = (err: unknown, fallback: string): string => (err instanceof ApiEr
 const board = mountBoard({
   async list(tab) {
     if (!space) return [];
-    return (await getPosts(space.id, tab)).map((p) => ({ ...p, canDelete: !p.pinned && mine(p.author) }));
+    return (await getPosts(space.id, tab)).map((p) => ({ ...p, canDelete: !p.pinned && mine(p.author), canEdit: !p.pinned && mine(p.author) }));
   },
   async comments(postId) {
-    return (await getPostComments(postId)).map((c) => ({ ...c, canDelete: mine(c.author) }));
+    return (await getPostComments(postId)).map((c) => ({ ...c, canDelete: mine(c.author), canEdit: mine(c.author) }));
   },
   async post(tab, title, text, files, progress) {
     if (!session || !space) return "Join first.";
@@ -728,6 +730,24 @@ const board = mountBoard({
       return null;
     } catch (err) {
       return failed(err, "Could not add that comment.");
+    }
+  },
+  async editPost(postId, title, text) {
+    if (!session) return "Join first.";
+    try {
+      await editPost(session.token, postId, title, text);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not save that.");
+    }
+  },
+  async editComment(commentId, text) {
+    if (!session) return "Join first.";
+    try {
+      await editPostComment(session.token, commentId, text);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not save that.");
     }
   },
   async removePost(postId) {

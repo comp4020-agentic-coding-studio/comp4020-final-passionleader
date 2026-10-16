@@ -83,3 +83,33 @@ describe("Hub and lawn boards", () => {
     expect((await post(v.token, "notices", "Not a Hub tab", "hub")).status).toBe(400);
   });
 });
+
+// Editing: authors fix their own posts and comments (same limits as posting),
+// and the board says it was edited. Nobody else edits, not even the admin.
+describe("editing posts and comments", () => {
+  it("lets the author edit a post, marks it edited, and refuses anyone else", async () => {
+    const [a, b] = await Promise.all([visitor(), visitor()]);
+    const created = await (await post(a.token, "board")).json();
+    expect(created.editedAt).toBeNull();
+    const edit = (token: string, text: string) => api(`/api/board/${created.id}`, "PATCH", { token, title: "Fixed title", text });
+    expect((await edit(b.token, "Not mine")).status).toBe(403);
+    expect((await edit(a.token, words(501))).status).toBe(400);
+    const res = await edit(a.token, "The crit is at **10**.");
+    expect(res.status).toBe(200);
+    const edited = await res.json();
+    expect(edited).toMatchObject({ title: "Fixed title", text: "The crit is at **10**." });
+    expect(edited.editedAt).toBeTruthy();
+  });
+
+  it("lets the author edit a comment, and only the author", async () => {
+    const [a, b] = await Promise.all([visitor(), visitor()]);
+    const created = await (await post(a.token, "qa")).json();
+    const comment = await (await api(`/api/board/${created.id}/comments`, "POST", { token: b.token, text: "Yes, 9:00." })).json();
+    expect((await api(`/api/board-comments/${comment.id}`, "PATCH", { token: a.token, text: "Hijacked" })).status).toBe(403);
+    const res = await api(`/api/board-comments/${comment.id}`, "PATCH", { token: b.token, text: "Sorry, 10:00." });
+    expect(res.status).toBe(200);
+    const list = (await (await api(`/api/board/${created.id}/comments`)).json()) as { id: number; text: string; editedAt: string | null }[];
+    expect(list.find((c) => c.id === comment.id)).toMatchObject({ text: "Sorry, 10:00." });
+    expect(list.find((c) => c.id === comment.id)?.editedAt).toBeTruthy();
+  });
+});

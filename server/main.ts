@@ -8,6 +8,8 @@ import { Hono, type Context } from "hono";
 import { marked } from "marked";
 import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayRemove, postError, textError } from "./accounts.ts";
 import {
+  editPost,
+  editPostComment,
   cached,
   setCached,
   NOTES_PER_SPACE,
@@ -480,6 +482,31 @@ app.delete("/api/board/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+// Editing: only the author, never the admin on someone else's behalf (an
+// admin removes; putting words in someone's mouth is another matter). Same
+// limits as posting, no cooldown; the post or comment then says "edited".
+app.patch("/api/board/:id", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const post = findPost(Number(c.req.param("id")));
+  if (!post) return c.json({ error: "That post is gone." }, 404);
+  const content = typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null;
+  if (v.name.toLowerCase() !== post.author.toLowerCase()) {
+    log("refused", v, { action: "edit post", space: post.space, post: post.id, owner: post.author, reason: "not the author" }, { ip: ipOf(c), content });
+    return c.json({ error: "Only its author can edit this post." }, 403);
+  }
+  const bad = postError(b.title, b.text);
+  if (bad) {
+    log("refused", v, { action: "edit post", space: post.space, post: post.id, reason: bad }, { ip: ipOf(c), content });
+    return c.json({ error: bad }, 400);
+  }
+  const edited = editPost(post.id, (b.title as string).trim(), (b.text as string).trim());
+  log("post-edited", v, { space: post.space, tab: post.tab, post: post.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: `${edited.title}\n\n${edited.text}` });
+  broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  return c.json({ ...edited, files: filesOn("post", edited.id).map(({ id, name, size }) => ({ id, name, size })) });
+});
+
 app.get("/api/board/:id/comments", (c) => {
   const post = findPost(Number(c.req.param("id")));
   if (!post) return c.json({ error: "That post is gone." }, 404);
@@ -505,6 +532,28 @@ app.post("/api/board/:id/comments", async (c) => {
   log("post-comment", v, { space: post.space, tab: post.tab, post: post.id, comment: result.comment.id, words: wordCount(result.comment.text) }, { ip: ipOf(c), content: result.comment.text });
   broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json(result.comment, 201);
+});
+
+app.patch("/api/board-comments/:id", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const comment = findPostComment(Number(c.req.param("id")));
+  if (!comment) return c.json({ error: "That comment is gone." }, 404);
+  const post = findPost(comment.postId);
+  if (v.name.toLowerCase() !== comment.author.toLowerCase()) {
+    log("refused", v, { action: "edit post comment", space: post?.space, comment: comment.id, owner: comment.author, reason: "not the author" }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
+    return c.json({ error: "Only its author can edit this comment." }, 403);
+  }
+  const bad = textError(b.text);
+  if (bad) {
+    log("refused", v, { action: "edit post comment", space: post?.space, comment: comment.id, reason: bad }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
+    return c.json({ error: bad }, 400);
+  }
+  const edited = editPostComment(comment.id, (b.text as string).trim());
+  log("post-comment-edited", v, { space: post?.space, comment: comment.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: edited.text });
+  if (post) broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  return c.json(edited);
 });
 
 app.delete("/api/board-comments/:id", async (c) => {

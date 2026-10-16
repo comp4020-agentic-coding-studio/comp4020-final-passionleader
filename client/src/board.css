@@ -273,7 +273,8 @@
 
 .board-link-danger {
   margin-left: auto;
-  min-height: 32px;
+  min-height: 44px;
+  min-width: 44px;
   padding: 2px 8px;
   border: 0;
   background: none;
@@ -495,4 +496,46 @@
   font-weight: 700;
   text-align: center;
   overflow-wrap: anywhere;
+}
+
+/* Editing a post (the write form, with Save) or a comment (in place). */
+.board-link-edit {
+  margin-left: auto;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 2px 10px;
+  border: 0;
+  background: none;
+  color: var(--accent, #6b3f1d);
+  font-size: 0.85rem;
+  font-weight: 700;
+  text-decoration: underline;
+}
+
+.board-link-edit + .board-link-danger,
+.board-link-edit + .board-confirm {
+  margin-left: 0;
+}
+
+.board-edit {
+  display: grid;
+  gap: 6px;
+  margin-top: 6px;
+}
+
+.board-edit textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 72px;
+  padding: 8px 10px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 8px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  resize: vertical;
+}
+
+.board-edit .board-row {
+  flex-wrap: wrap;
 }

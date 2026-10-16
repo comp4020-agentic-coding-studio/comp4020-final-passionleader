@@ -49,7 +49,10 @@ Read before planning or building: `README.md` (what good means for this app),
   Comments: same text limits, one every 10 seconds, same removal rule.
 - Classroom boards (Q&A, Notices, Board): posts up to 500 words (and 3000
   characters) with a title of up to 80, one every 30 seconds; comments as
-  for notes. Only lecturers and staff post in Notices (for now the admin),
+  for notes. Authors edit their own posts and comments (same limits; they
+  then say "edited"); nobody else does, not even the admin. Post text is
+  Markdown, rendered without innerHTML; comments are plain text.
+  Only lecturers and staff post in Notices (for now the admin),
   checked on the server; anyone reads and comments. Authors or the admin
   remove; closing a classroom removes its board. Outside COMP8020, what the
   whiteboard and the board to its right open is set by the admin only

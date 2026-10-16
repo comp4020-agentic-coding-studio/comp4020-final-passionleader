@@ -176,6 +176,11 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+// When a post or a board comment was last edited (null if never), added for crit 10.
+for (const table of ["posts", "post_comments"]) {
+  const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes("edited_at")) db.exec(`ALTER TABLE ${table} ADD COLUMN edited_at TEXT`);
+}
 // The first two classrooms: the one there's always been, and COMMON for anyone.
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
 
@@ -387,6 +392,7 @@ export interface Post {
   title: string;
   text: string;
   createdAt: string;
+  editedAt: string | null;
   comments: number;
 }
 export interface PostComment {
@@ -395,9 +401,10 @@ export interface PostComment {
   author: string;
   text: string;
   createdAt: string;
+  editedAt: string | null;
 }
 
-const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt,
+const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt, p.edited_at AS editedAt,
   (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments`;
 
 export function postsIn(space: SpaceId, tab: BoardTab): Post[] {
@@ -422,11 +429,23 @@ export function addPost(author: string, space: SpaceId, tab: BoardTab, title: st
   return { ok: true, post: findPost(Number(lastInsertRowid))! };
 }
 
+/** Rewrites a post's title and text (its author only, which main.ts checks). */
+export function editPost(id: number, title: string, text: string): Post {
+  db.prepare("UPDATE posts SET title = ?, text = ?, edited_at = datetime('now') WHERE id = ?").run(title, text, id);
+  return findPost(id)!;
+}
+
+/** Rewrites a board comment's text (its author only, which main.ts checks). */
+export function editPostComment(id: number, text: string): PostComment {
+  db.prepare("UPDATE post_comments SET text = ?, edited_at = datetime('now') WHERE id = ?").run(text, id);
+  return findPostComment(id)!;
+}
+
 export function deletePost(id: number): void {
   db.prepare("DELETE FROM posts WHERE id = ?").run(id);
 }
 
-const postCommentCols = "id, post_id AS postId, author, text, created_at AS createdAt";
+const postCommentCols = "id, post_id AS postId, author, text, created_at AS createdAt, edited_at AS editedAt";
 
 export function postCommentsOn(postId: number): PostComment[] {
   return db

@@ -147,6 +147,7 @@ export interface Post {
   title: string;
   text: string;
   createdAt: string;
+  editedAt?: string | null;
   comments: number;
   /** The fixed note at the top of a staff-only tab like Notices (not a real post: id 0, no comments). */
   pinned?: boolean;
@@ -158,15 +159,20 @@ export interface PostComment {
   author: string;
   text: string;
   createdAt: string;
+  editedAt?: string | null;
 }
 
 export const getPosts = (space: SpaceId, tab: BoardTab): Promise<Post[]> => request<Post[]>(`/api/board?space=${space}&tab=${tab}`);
 export const createPost = (token: string, space: SpaceId, tab: BoardTab, title: string, text: string): Promise<Post> =>
   request<Post>("/api/board", "POST", { token, space, tab, title, text });
 export const removePost = (token: string, id: number): Promise<unknown> => request(`/api/board/${id}`, "DELETE", { token });
+export const editPost = (token: string, id: number, title: string, text: string): Promise<Post> =>
+  request<Post>(`/api/board/${id}`, "PATCH", { token, title, text });
 export const getPostComments = (id: number): Promise<PostComment[]> => request<PostComment[]>(`/api/board/${id}/comments`);
 export const createPostComment = (token: string, id: number, text: string): Promise<PostComment> =>
   request<PostComment>(`/api/board/${id}/comments`, "POST", { token, text });
+export const editPostComment = (token: string, id: number, text: string): Promise<PostComment> =>
+  request<PostComment>(`/api/board-comments/${id}`, "PATCH", { token, text });
 export const removePostComment = (token: string, id: number): Promise<unknown> => request(`/api/board-comments/${id}`, "DELETE", { token });
 
 // --- files (see uploads.ts) ---------------------------------------------------
