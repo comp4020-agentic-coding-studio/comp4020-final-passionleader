@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, chalkboard, doorway, floor, lightPool, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
 import { CLASSROOM_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -42,8 +42,8 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   guestbook.position.set(HALF.halfX - 0.01, 2, -3.2);
   guestbook.rotation.y = -Math.PI / 2;
   // Left of the whiteboard: this classroom's board (Q&A, Notices, Board).
-  const cork = textPlane([`${code} board`, "Q&A · Notices · Board", "press E to read and post"], 3.4, 2.2, { bg: "#b98a55", fg: "#2c1d0c", font: 0.27 });
-  cork.position.set(-6.4, 2.1, -HALF.halfZ + 0.01);
+  const cork = chalkboard([`${code} board`, "Q&A · Notices · Board", "press E to read and post"], 3.4, 2.2, 0.27);
+  cork.position.set(-6.4, 2.1, -HALF.halfZ + 0.04);
   g.add(cork);
   g.add(guestbook);
   block(g, colliders, [1, 1.2, 0.8], [3.8, -6], texMat("ai/wood_tabletop.jpg", 1, 1, 0xb07a4a)); // the lectern

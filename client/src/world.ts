@@ -409,6 +409,28 @@ export function textPlane(lines: string[], w: number, h: number, opts: { bg?: st
 }
 
 /**
+ * A chalkboard: dark green slate with chalk-white writing, a timber frame and
+ * a chalk ledge, facing +z from its centre. The boards people post on (a
+ * classroom's, the Hub's, the lawn's) all use it, so they read as the same
+ * kind of thing wherever they hang.
+ */
+export function chalkboard(lines: string[], w: number, h: number, font = 0.26): THREE.Group {
+  const board = new THREE.Group();
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, h + 0.2, 0.06), mat(0x8a5a32));
+  const slate = textPlane(lines, w, h, { bg: "#2f4a3a", fg: "#f2f0e6", font });
+  slate.position.z = 0.035;
+  const ledge = new THREE.Mesh(new THREE.BoxGeometry(w + 0.1, 0.05, 0.14), mat(0x8a5a32));
+  ledge.position.set(0, -h / 2 - 0.08, 0.08);
+  // A stick of chalk and a duster on the ledge.
+  const chalk = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.025, 0.025), mat(0xf4f1e8));
+  chalk.position.set(w / 2 - 0.4, -h / 2 - 0.04, 0.09);
+  const duster = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.05, 0.08), mat(0x3b3b3b));
+  duster.position.set(-w / 2 + 0.45, -h / 2 - 0.03, 0.09);
+  board.add(frame, slate, ledge, chalk, duster);
+  return board;
+}
+
+/**
  * A door in a wall: a dark frame with a lit panel and a floating label. `facing`
  * is the direction (radians around y) the door's front looks toward.
  */

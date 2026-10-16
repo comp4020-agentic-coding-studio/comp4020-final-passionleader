@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { doorway, floor, mat, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
+import { chalkboard, doorway, floor, mat, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
 import { HIGH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
@@ -85,6 +85,9 @@ export function buildOutdoor(): SpaceDef {
     }
   }
   scatter(g, "nature/Bush_Common_Flowers.glb", 1.1, lawnBushes);
+  // On the lawn's north edge, facing it: the noticeboard, where anyone posts
+  // events, clubs and the like (one tab, unofficial). Notes keep 2 m off it.
+  noticeboard(g, colliders);
   if (HIGH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
 
   // Bushes every 3 m round each building, a metre out from the wall, with
@@ -110,9 +113,6 @@ export function buildOutdoor(): SpaceDef {
   // Benches on the lawn's south side; its east side gets a seat wall.
   bench(g, colliders, -23, -5.2, 0);
   bench(g, colliders, -16, -5.2, 0);
-  // Between them, the lawn's noticeboard: anyone posts events, clubs and the
-  // like (one tab, unofficial). Notes keep 2 m off it, as off a door.
-  noticeboard(g, colliders);
   buildStreetscape(g, colliders);
   const dog = addDog(g, colliders);
 
@@ -257,19 +257,19 @@ function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: num
   });
 }
 
-/** The lawn noticeboard, between the benches (server/spaces.ts keeps notes off it too). */
-const LAWN_BOARD = { x: -19.5, z: -5.6 };
+/** The lawn noticeboard, on its north edge (server/spaces.ts keeps notes off it too). */
+const LAWN_BOARD = { x: -19.5, z: -22.6 };
 
-/** Two timber posts and a cork face, facing the path (+z). */
+/** A chalkboard on two timber legs, facing the lawn (+z). */
 function noticeboard(g: THREE.Group, colliders: Box[]): void {
   const { x, z } = LAWN_BOARD;
-  for (const dx of [-1.5, 1.5]) {
-    const post = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.4, 0.14), mat(0x6b4a2b));
-    post.position.set(x + dx, 1.2, z);
-    g.add(post);
+  for (const dx of [-1.6, 1.6]) {
+    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.5, 0.14), mat(0x8a5a32));
+    leg.position.set(x + dx, 1.25, z - 0.05);
+    g.add(leg);
   }
-  const face = textPlane(["Lawn noticeboard", "events · clubs · anything", "press E to read and post"], 2.9, 1.5, { bg: "#b98a55", fg: "#2c1d0c", font: 0.22 });
-  face.position.set(x, 1.55, z + 0.08);
+  const face = chalkboard(["Lawn noticeboard", "events · clubs · anything", "press E to read and post"], 3, 1.6, 0.22);
+  face.position.set(x, 1.6, z);
   g.add(face);
-  solid(colliders, 3.2, 0.3, x, z);
+  solid(colliders, 3.4, 0.3, x, z);
 }

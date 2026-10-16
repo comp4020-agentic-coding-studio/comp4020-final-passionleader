@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, chalkboard, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -33,8 +33,8 @@ export function buildHub(): SpaceDef {
   // The Hub's board, where staff and students find each other (Labs looking
   // for students, Students looking for labs, Ask the Hub), and beside it a
   // desk whose PC opens ANU's researcher search in a new tab.
-  const cork = textPlane(["Student Hub board", "Labs · Students · Ask the Hub", "press E to read and post"], 3.4, 2.2, { bg: "#b98a55", fg: "#2c1d0c", font: 0.25 });
-  cork.position.set(-10, 2.1, back);
+  const cork = chalkboard(["Student Hub board", "Labs · Students · Ask the Hub", "press E to read and post"], 3.4, 2.2, 0.25);
+  cork.position.set(-10, 2.1, back + 0.03);
   g.add(cork);
   block(g, colliders, [1.6, 0.8, 0.8], [-6, -HALF.halfZ + 0.5], 0x6b4a2b);
   place(g, "computerScreen.glb", 0.5, -6, -HALF.halfZ + 0.5, 0, true, 0.8);
