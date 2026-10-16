@@ -111,7 +111,8 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 | `lampRoundFloor.glb` | floor lamp |
 | `kitchenBar.glb` | coffee bar counter |
 | `loungeSofa.glb`, `loungeSofaLong.glb`, `loungeChair.glb` | sofas and armchairs in the COMMON lounge |
-| `table.glb`, `stoolBar.glb` | the big reading table and its stools (COMMON) |
+| `stoolBar.glb` | stools at the big reading table (COMMON) |
+| `trashcan.glb`, `coatRackStanding.glb`, `plantSmall2.glb`, `plantSmall3.glb`, `books.glb`, `rugRectangle.glb` | small props (bins, coat stand, desk plants, books, doormat) |
 | `bookcaseOpen.glb` | open shelves in the COMMON lounge |
 | `kitchenCoffeeMachine.glb` | coffee machine |
 
@@ -129,12 +130,28 @@ storey of facade).
 | `tex/ai/carpet.jpg` | classroom carpet tiles |
 | `tex/ai/wood_floor.jpg` | Student Hub floorboards |
 | `tex/ai/library_floor.jpg` | Chifley Library's dark floorboards |
+| `tex/ai/interior_wall.jpg` | painted plaster on indoor walls (tinted per room) |
+| `tex/ai/library_wall.jpg` | Chifley Library's wood panelling |
+| `tex/ai/wood_tabletop.jpg` | desks, tables and the lectern |
+| `tex/ai/poster_hub.jpg`, `poster_classroom.jpg`, `poster_meeting.jpg` | framed posters (flat illustrations, no text) |
+
+## Sound effects (`sfx/`, Kenney, CC0)
+
+From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
+`confirmation_001`, `drop_002`, `error_004`) and "Impact Sounds"
+(`footstep_concrete_*`, `footstep_wood_*`, `footstep_carpet_*`,
+`impactPlank_medium_000`), unmodified `.ogg` files.
+
+- Author: Kenney (https://www.kenney.nl)
+- Source: https://kenney.nl/assets/interface-sounds and https://kenney.nl/assets/impact-sounds
+- Licence: Creative Commons Zero (CC0 1.0), stated in each pack's `License.txt`.
 
 ## Music
 
 `A_Long_Silence_Observed.mp3`, `Morning_at_the_Quad.mp3` (campus),
 `Margin_Notes.mp3` (Student Hub), `The_Library_Window.mp3` (classroom),
-`Sunlight_on_Glass.mp3` (Chifley Library) — Music
+`Sunlight_on_Glass.mp3` (Chifley Library), `Common_Room_Afternoon.mp3`
+(the COMMON lounge) — Music
 generated with Google AI (Gemini) for this project.
 
 Everything else in the scene (room shells, characters, sticky notes, UI) is

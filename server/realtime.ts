@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { findByName, findByToken, lastSpot, saveLastSpot } from "./db.ts";
+import { findByName, findByToken, lastSpot, lookOf, saveLastSpot, type Look } from "./db.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 
@@ -14,7 +14,8 @@ import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 // "move", "chat", "emote" and "action", never a particular room or verb, so
 // the spaces and what people do in them can keep changing.
 
-export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number };
+/** `seat` is the seat they're sitting on ("<space>:<n>"), if any; `look` how their figure looks. */
+export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null };
 /** Who's behind a socket, for the activity log only: never sent to anyone. */
 const owners = new WeakMap<WebSocket, { name: string; token: string; role: string }>();
 
@@ -33,6 +34,22 @@ const lastChat = new WeakMap<WebSocket, number>();
 const dirty = new Set<SpaceId>();
 
 const inSpace = (space: SpaceId): Player[] => [...players.values()].filter((p) => p.space === space);
+
+/** A new look for everyone called `name` (all their tabs), shown to their space at once. */
+export function setLook(name: string, look: Look): void {
+  for (const p of players.values()) {
+    if (p.name.toLowerCase() !== name.toLowerCase()) continue;
+    p.look = look;
+    dirty.add(p.space);
+  }
+}
+
+// --- seats ----------------------------------------------------------------------
+// Chairs, sofas and benches are numbered per space by the client
+// ("<space>:<n>"); the server only makes sure one person sits on each and
+// that it's in the space they're in. Getting up is moving, or leaving.
+const SEAT = /^([a-z0-9-]+):([0-9]{1,3})$/;
+const seatTaken = (seat: string, by: Player): boolean => [...players.values()].some((p) => p !== by && p.seat === seat);
 
 // --- meeting rooms ------------------------------------------------------------
 // A room's chat isn't stored either: it's kept here, in memory, only while at
@@ -152,7 +169,10 @@ function onMessage(ws: WebSocket, raw: string): void {
 
   if (msg.t === "move" && num(msg.x) && num(msg.y) && num(msg.z) && num(msg.rot)) {
     // Same rule as everywhere: the client's numbers are a request, not the truth.
-    Object.assign(player, clampTo(player.space, msg.x, msg.z));
+    const at = clampTo(player.space, msg.x, msg.z);
+    // Moving away gets you up; a seated figure turning on the spot stays put.
+    if (player.seat && Math.hypot(at.x - player.x, at.z - player.z) > 0.05) player.seat = undefined;
+    Object.assign(player, at);
     player.y = Math.max(0, Math.min(MAX_JUMP, msg.y));
     player.rot = msg.rot;
     dirty.add(player.space);
@@ -170,6 +190,7 @@ function onMessage(ws: WebSocket, raw: string): void {
       }
     }
     player.space = to;
+    player.seat = undefined;
     Object.assign(player, clampTo(to, msg.x, msg.z), { y: 0 });
     if (from !== to) {
       broadcastSpace(from, { t: "leave", id: player.id });
@@ -182,6 +203,15 @@ function onMessage(ws: WebSocket, raw: string): void {
     if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], players: inSpace(to) });
     send(ws, { t: "players", players: inSpace(to) });
     dirty.add(to);
+  } else if (msg.t === "sit" && (msg.seat === null || typeof msg.seat === "string")) {
+    // Sitting down: the seat must be in this space and free. null = stand up.
+    const m = typeof msg.seat === "string" ? SEAT.exec(msg.seat) : null;
+    if (msg.seat === null) player.seat = undefined;
+    else if (!m || m[1] !== player.space || seatTaken(msg.seat, player)) {
+      send(ws, { t: "action", kind: "seat-refused", seat: msg.seat });
+      return;
+    } else player.seat = msg.seat;
+    dirty.add(player.space);
   } else if (msg.t === "chat" && typeof msg.text === "string") {
     const text = msg.text.trim().slice(0, MAX_CHAT);
     const now = Date.now();
@@ -223,7 +253,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   // or gone. They come back outside its door instead.
   const room = roomOf(spot.space);
   const start = room ? { space: room.parent, x: room.door.x, z: room.door.z } : spot;
-  const player: Player = { id: randomUUID(), name, space: start.space, x: start.x, y: 0, z: start.z, rot: 0 };
+  const player: Player = { id: randomUUID(), name, space: start.space, x: start.x, y: 0, z: start.z, rot: 0, look: lookOf(name) };
   players.set(ws, player);
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });

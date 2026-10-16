@@ -41,13 +41,16 @@ import {
   addBugReport,
   bugReports,
   deleteBugReport,
+  lookOf,
+  saveLook,
+  validLook,
   removeClassroom,
   setClassroomLink,
   type BoardTab,
   type Visitor,
 } from "./db.ts";
 import { browserTag, keepIn, log } from "./log.ts";
-import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, setLook } from "./realtime.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError, teamRoomsOf } from "./spaces.ts";
 
@@ -106,7 +109,7 @@ app.post("/api/join", async (c) => {
       return c.json({ error: "Wrong password." }, 401);
     }
     log("join", account, { how: "password" }, { ip: ipOf(c) });
-    return c.json({ name: account.name, token: account.token, role: account.role, spawn: lastSpot(account.name) });
+    return c.json({ name: account.name, token: account.token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
   }
 
   if (!NAME_RULE.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores." }, 400);
@@ -115,7 +118,7 @@ app.post("/api/join", async (c) => {
     // A name belongs to whoever first took it; only their browser's token gets it back.
     if (existing.token === token) {
       log("join", existing, { how: "returning" }, { ip: ipOf(c) });
-      return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name) });
+      return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
     }
     log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: "name taken" }, { ip: ipOf(c) });
     return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
@@ -123,7 +126,7 @@ app.post("/api/join", async (c) => {
   const fresh = randomUUID();
   createVisitor(name, fresh);
   log("join", { name, token: fresh }, { how: "new" }, { ip: ipOf(c) });
-  return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn } });
+  return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn }, look: null });
 });
 
 // --- sticky notes ----------------------------------------------------------
@@ -541,6 +544,21 @@ app.post("/api/bugs", async (c) => {
   if (!result.ok) return c.json({ error: `One report a minute. Wait ${result.wait}s.` }, 429);
   log("bug-report", v, { space, report: result.id, chars: text.length }, { ip: ipOf(c), content: text });
   return c.json({ id: result.id }, 201);
+});
+
+// --- how you look -----------------------------------------------------------------
+// Anyone joined picks a look (colours and a hat) for their own figure only;
+// everyone in the space sees the change at once.
+
+app.put("/api/look", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const look = validLook(b.look);
+  if (!look) return c.json({ error: "That isn't a look." }, 400);
+  saveLook(v.name, look);
+  setLook(v.name, look);
+  return c.json({ ok: true });
 });
 
 // Sketch & Guess, the drawing game on the Hub's arcade machine.

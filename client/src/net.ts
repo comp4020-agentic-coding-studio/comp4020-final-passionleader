@@ -1,4 +1,5 @@
 import type { Classroom, Comment, Note } from "./api.ts";
+import type { Look } from "./lookpicker.ts";
 import type { SpaceId } from "./world.ts";
 
 // The client side of the real-time layer (server/realtime.ts): one socket,
@@ -14,6 +15,10 @@ export interface RemotePlayer {
   y: number;
   z: number;
   rot: number;
+  /** The seat they're sitting on ("<space>:<n>"), if any. */
+  seat?: string;
+  /** How they look, once they've picked (else a default from their name). */
+  look?: Look | null;
 }
 
 export type Emote = "wave" | "yes" | "no" | "mate" | "dance";
@@ -56,6 +61,8 @@ export interface NetHandlers {
   roomLine(line: RoomLine): void;
   /** The server said no: the room is full, invite-only, or the invite failed. */
   roomRefused(space: SpaceId, reason: string): void;
+  /** Someone's already on that seat. */
+  seatRefused(): void;
   status(online: boolean): void;
 }
 
@@ -69,6 +76,8 @@ export interface Net {
   emote(kind: Emote): void;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): void;
+  /** Sits on a seat ("<space>:<n>"), or stands up with null. */
+  sit(seat: string | null): void;
   close(): void;
 }
 
@@ -126,6 +135,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room") return on.room(m.room as RoomState);
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
+          if (m.kind === "seat-refused") return on.seatRefused();
       }
     };
     ws.onclose = () => {
@@ -163,6 +173,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     invite(name) {
       sendNow({ t: "invite", name });
+    },
+    sit(seat) {
+      sendNow({ t: "sit", seat });
     },
     close() {
       closed = true;

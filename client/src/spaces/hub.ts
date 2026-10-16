@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, mat, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, lightPool, mat, place, poster, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -10,11 +10,13 @@ import { roomShell } from "./room.ts";
 // chats, six people at most.
 
 const HALF = { halfX: 20, halfZ: 13 };
+/** The Hub's upholstery: navy, against its pale walls. */
+const HUB_FABRIC = { carpet: 0x2f4f78 };
 
 export function buildHub(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
-  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 16, 10.4), 0xe8e4da);
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 16, 10.4), { tint: 0xe6e8ea, trim: 0x2f3e4f });
   const back = -HALF.halfZ + 0.01;
 
   // The desk at the back, with the sign above it, and the noticeboard. The
@@ -28,9 +30,10 @@ export function buildHub(): SpaceDef {
   const sign = textPlane(["Student Hub", "an unofficial, fan-made space"], 6, 1.4, { bg: "#2f5d8a", fg: "#ffffff", font: 0.42 });
   sign.position.set(0, 2.9, back);
   g.add(sign);
-  const board = textPlane(["Noticeboard", "(boards coming soon)"], 3.2, 1.8, { bg: "#c8a26b", fg: "#3b2a12", font: 0.32 });
-  board.position.set(-10, 2.2, back);
-  g.add(board);
+  // Where the noticeboard will go (plan 12): a poster until it's built.
+  const art = poster("ai/poster_hub.jpg", 1.6, 2.4);
+  art.position.set(-10, 2, back);
+  g.add(art);
 
   // The office half, at the back: two pods of three desks facing each
   // other, each with a monitor and a chair, and closed bookcases on the wall
@@ -39,10 +42,10 @@ export function buildHub(): SpaceDef {
     for (const dx of [-1.5, 0, 1.5]) {
       const x = cx + dx;
       place(g, "desk.glb", 0.75, x, -7, Math.PI);
-      place(g, "chairDesk.glb", 1, x, -6.1, Math.PI);
+      place(g, "chairDesk.glb", 1, x, -6.1, Math.PI, true, 0, HUB_FABRIC);
       place(g, "computerScreen.glb", 0.45, x, -7.25, 0, true, 0.75);
       place(g, "desk.glb", 0.75, x, -8.1);
-      place(g, "chairDesk.glb", 1, x, -9, 0);
+      place(g, "chairDesk.glb", 1, x, -9, 0, true, 0, HUB_FABRIC);
       place(g, "computerScreen.glb", 0.45, x, -7.85, Math.PI, true, 0.75);
     }
     solid(colliders, 4.6, 2.3, cx, -7.55);
@@ -67,6 +70,7 @@ export function buildHub(): SpaceDef {
     place(g, "tableCoffeeGlass.glb", 0.45, x, z);
     place(g, "plantSmall1.glb", 0.4, x + 0.3, z, 0, true, 0.45);
     place(g, "lampRoundFloor.glb", 1.7, x + 1.9, z - 1.9);
+    lightPool(g, x + 1.9, z - 1.9, 3.2, 3.2);
     solid(colliders, 2.4, 0.9, x, z - 1.7);
     solid(colliders, 2.4, 0.9, x, z + 1.7);
     solid(colliders, 1.4, 0.9, x, z);
@@ -103,6 +107,26 @@ export function buildHub(): SpaceDef {
 
   doorway(g, -HALF.halfX + 0.05, 6, Math.PI / 2, "Exit to campus");
 
+  // Small things that make it lived-in: bins, a coat stand, plants on the
+  // desks, books, and a rug at the door.
+  for (const [x, z] of [
+    [-16.5, -9],
+    [5.5, 11.5],
+    [-18.5, 2.5],
+  ] as const) {
+    place(g, "trashcan.glb", 0.6, x, z);
+    solid(colliders, 0.5, 0.5, x, z);
+  }
+  place(g, "coatRackStanding.glb", 1.8, -18.8, 9.6);
+  solid(colliders, 0.6, 0.6, -18.8, 9.6);
+  place(g, "rugRectangle.glb", 0.05, -17.6, 6, Math.PI / 2, false);
+  for (const [x, z] of [
+    [-13.5, -7.7],
+    [10, -7.4],
+  ] as const) place(g, "plantSmall2.glb", 0.35, x, z, 0, true, 0.75);
+  place(g, "books.glb", 0.12, 7, -7.5, 0.4, true, 0.75);
+  place(g, "books.glb", 0.12, -10.5, -8, 1.2, true, 0.75);
+
   return {
     id: "hub",
     title: "Student Hub",
@@ -116,8 +140,15 @@ export function buildHub(): SpaceDef {
     background: 0xd9d4c6,
     camera: new THREE.Vector3(0, 6.5, 7.5),
     bgm: ["Margin_Notes.mp3"],
+    floor: "wood",
     // A place to sit together; notes go up outside and in classrooms.
     noNotes: true,
+    seats: [-11, -2, 7].flatMap((x) =>
+      [-0.5, 0.5].flatMap((dx) => [
+        { x: x + dx, z: 5 - 1.75, rot: 0, y: 0.4 },
+        { x: x + dx, z: 5 + 1.75, rot: Math.PI, y: 0.4 },
+      ]),
+    ),
     // The arcade machines: E opens each game in the in-app window.
     links: [
       ...GAMES.map((game) => ({ x: game.x, z: -HALF.halfZ + 1.9, label: `Play ${game.title}`, url: game.url, embeddable: true })),

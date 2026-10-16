@@ -56,6 +56,8 @@ export interface SpaceDef {
   noNotes?: boolean;
   /** Indoors: how bright the room is lit, 1 being normal (the library is dimmer, so its windows glow). */
   light?: number;
+  /** What your feet sound like on this space's floor (outside: paving). */
+  floor?: "concrete" | "wood" | "carpet";
   /** Called every frame while this space is shown (animated scenery, like the dog). */
   tick?: (dt: number) => void;
   /** Spots where E does something particular to this space (the dog), by name. */
@@ -68,6 +70,19 @@ export interface SpaceDef {
    * allows being framed (`embeddable`), otherwise in a new tab.
    */
   links?: { x: number; z: number; label: string; url: string; embeddable: boolean }[];
+  /**
+   * Places to sit: E nearby sits you down, facing `rot` (0 = +z), at seat
+   * height `y`. Numbered by their order here; the server keeps one person
+   * per seat ("<space>:<index>").
+   */
+  seats?: Seat[];
+}
+
+export interface Seat {
+  x: number;
+  z: number;
+  rot: number;
+  y: number;
 }
 
 /** The nearest point that lies in one of `areas`, written back into `pos`. */
@@ -203,16 +218,89 @@ export function texMat(file: string, repeatX: number, repeatY: number, tint = 0x
   return material;
 }
 
+/**
+ * A framed picture on a wall: the image (from assets/tex) on a plane, a thin
+ * dark frame behind it. Placed like textPlane: set its position and rotation.
+ */
+export function poster(file: string, w: number, h: number): THREE.Group {
+  const g = new THREE.Group();
+  const frame = new THREE.Mesh(new THREE.PlaneGeometry(w + 0.12, h + 0.12), mat(0x3b2a1a));
+  const picture = new THREE.Mesh(new THREE.PlaneGeometry(w, h), texMat(file, 1, 1, 0xffffff, 0.8));
+  picture.position.z = 0.006;
+  g.add(frame, picture);
+  return g;
+}
+
+/**
+ * Fake light: a soft warm glow on the floor (under a lamp, below a window),
+ * drawn additively so it brightens what's under it. No real light, so it
+ * costs almost nothing, and Low gets it too.
+ */
+let poolTexture: THREE.CanvasTexture | null = null;
+export function lightPool(g: THREE.Group, x: number, z: number, w: number, d: number, colour = 0xffd9a0, strength = 0.35): THREE.Mesh {
+  if (!poolTexture) {
+    const c = document.createElement("canvas");
+    c.width = c.height = 64;
+    const ctx = c.getContext("2d")!;
+    const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
+    grad.addColorStop(0, "rgba(255,255,255,1)");
+    grad.addColorStop(0.6, "rgba(255,255,255,0.45)");
+    grad.addColorStop(1, "rgba(255,255,255,0)");
+    ctx.fillStyle = grad;
+    ctx.fillRect(0, 0, 64, 64);
+    poolTexture = new THREE.CanvasTexture(c);
+  }
+  const m = new THREE.Mesh(
+    new THREE.PlaneGeometry(w, d),
+    new THREE.MeshBasicMaterial({ map: poolTexture, color: colour, transparent: true, opacity: strength, blending: THREE.AdditiveBlending, depthWrite: false }),
+  );
+  m.rotation.x = -Math.PI / 2;
+  m.position.set(x, 0.02, z);
+  m.userData.noShadow = true;
+  m.renderOrder = 1;
+  g.add(m);
+  return m;
+}
+
 /** A collision footprint with nothing drawn, for furniture drawn by a model. */
 export function solid(colliders: Box[], w: number, d: number, x: number, z: number): void {
   colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
 }
 
+/**
+ * Colours by the model's material name: Kenney's furniture calls its fabric
+ * "carpet" (a coral pink in every model), so `{ carpet: 0x2f5d8a }` gives a
+ * room its own upholstery.
+ */
+export type Tint = Partial<Record<string, number>>;
+const tinted = new Map<string, THREE.Material>();
+function applyTint(root: THREE.Object3D, tint: Tint): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    const swap = (m: THREE.Material): THREE.Material => {
+      const colour = tint[m.name];
+      if (colour === undefined) return m;
+      // One copy per material and colour, shared by every chair that wants it.
+      const key = `${m.uuid}:${colour}`;
+      let copy = tinted.get(key);
+      if (!copy) {
+        copy = (m as THREE.MeshStandardMaterial).clone();
+        (copy as THREE.MeshStandardMaterial).color.setHex(colour);
+        tinted.set(key, copy);
+      }
+      return copy;
+    };
+    mesh.material = Array.isArray(mesh.material) ? mesh.material.map(swap) : swap(mesh.material);
+  });
+}
+
 /** Places a model once it loads (it's drawn a moment later than the room); `y` lifts it onto a table. */
-export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0, shadow = true, y = 0): void {
+export function place(g: THREE.Group, file: string, height: number, x: number, z: number, rotY = 0, shadow = true, y = 0, tint?: Tint): void {
   void loadModel(file, height).then((model) => {
     if (!model) return;
     const m = model.clone(true);
+    if (tint) applyTint(m, tint);
     m.position.set(x, y, z);
     m.rotation.y = rotY;
     if (shadow) enableShadows(m);

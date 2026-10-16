@@ -242,13 +242,13 @@
 
 @media (max-width: 600px), (pointer: coarse) {
   #room-panel {
-    top: 96px; /* under the HUD, as the chat log is on phones */
     right: 12px;
     left: 12px;
     bottom: auto;
     width: auto;
     max-width: none;
-    height: 42vh;
+    height: 34vh;
+    top: 64px; /* the help line is hidden in rooms (style.css), so it can sit higher */
   }
 
   .room-toggle {

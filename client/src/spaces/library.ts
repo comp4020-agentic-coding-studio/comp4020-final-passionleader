@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, lightPool, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -22,7 +22,7 @@ const DOOR = { x: 0, z: -HALF.halfZ + 1.1 };
 export function buildLibrary(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
-  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/library_floor.jpg", 13, 9), 0xd9cdb8);
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/library_floor.jpg", 13, 9), { texture: "ai/library_wall.jpg", tint: 0xd8c8b0, trim: 0x2a1c12 });
   const sunlight = windows(g);
 
   const sign = textPlane(["Chifley Library", "an unofficial, fan-made space"], 7, 1.2, { bg: "#5b3a24", fg: "#ffffff", font: 0.4 });
@@ -31,11 +31,11 @@ export function buildLibrary(): SpaceDef {
   doorway(g, 0, -HALF.halfZ + 0.05, 0, "Exit to campus");
 
   // The middle: reception, and the search computers on a desk beside it.
-  block(g, colliders, [4, 1.1, 1.2], [-3, 0], 0x7a4e2e);
+  block(g, colliders, [4, 1.1, 1.2], [-3, 0], texMat("ai/wood_tabletop.jpg", 2, 1, 0x9a6438));
   const reception = textPlane(["Reception"], 2.4, 0.5, { bg: "#7a4e2e", fg: "#ffffff", font: 0.32 });
   reception.position.set(-3, 1.75, 0.61);
   g.add(reception);
-  block(g, colliders, [6, 0.9, 1], [4, 0], 0x8a6a50);
+  block(g, colliders, [6, 0.9, 1], [4, 0], texMat("ai/wood_tabletop.jpg", 3, 1, 0xb08a64));
   for (const [i, label] of ["Book a room", "Catalogue", "Research ethics"].entries()) {
     const x = 2 + i * 2;
     place(g, "computerScreen.glb", 0.45, x, -0.1, Math.PI, true, 0.9);
@@ -60,9 +60,20 @@ export function buildLibrary(): SpaceDef {
   for (const z of [4, 6.8, 9.4]) {
     for (const x of [-12, -8, -4, 4, 8, 12]) {
       place(g, "desk.glb", 0.75, x, z, Math.PI);
-      place(g, "chairDesk.glb", 1, x, z + 0.8, Math.PI);
+      place(g, "chairDesk.glb", 1, x, z + 0.8, Math.PI, true, 0, { carpet: 0x2f5a3e });
       solid(colliders, 2, 0.8, x, z);
     }
+  }
+  // Reading lamps' warm light over the study desks, and books on reception.
+  for (const z of [4, 6.8, 9.4]) for (const x of [-12, -8, -4, 4, 8, 12]) lightPool(g, x, z, 2.6, 1.8, 0xffcf8a, 0.18);
+  place(g, "books.glb", 0.14, -4.2, 0, 0.5, true, 1.1);
+  place(g, "plantSmall3.glb", 0.4, -1.6, 0, 0, true, 1.1);
+  for (const [x, z] of [
+    [-15.2, 10.2],
+    [15.2, 10.2],
+  ] as const) {
+    place(g, "trashcan.glb", 0.6, x, z);
+    solid(colliders, 0.5, 0.5, x, z);
   }
   LIBRARY_TEAM_DOORS.forEach((d, i) => doorway(g, d.x + Math.sign(d.x) * 1.05, d.z, -Math.sign(d.x) * (Math.PI / 2), `Team room ${i + 1}`));
 
@@ -89,6 +100,9 @@ export function buildLibrary(): SpaceDef {
     tick: sunlight,
     camera: new THREE.Vector3(0, 7, 8.5),
     bgm: ["Sunlight_on_Glass.mp3"],
+    floor: "wood",
+    // A chair at each study desk, facing it (north).
+    seats: [4, 6.8, 9.4].flatMap((z) => [-12, -8, -4, 4, 8, 12].map((x) => ({ x, z: z + 0.8, rot: Math.PI, y: 0.45 }))),
     // Each computer works from either side of its desk.
     links: [-1.2, 1.2].flatMap((z) => [
       { x: 2, z, label: "Book a library room", url: "https://anu.libcal.com/", embeddable: true },

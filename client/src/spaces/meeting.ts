@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, place, solid, texMat, textPlane, type Box, type Door, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, doorway, lightPool, place, poster, solid, texMat, textPlane, type Box, type Door, type SpaceDef, type SpaceId } from "../world.ts";
 import { roomShell } from "./room.ts";
 
 // The small meeting rooms: six counselling rooms off the Student Hub
@@ -72,7 +72,10 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
   const counselling = ref.kind === "counselling";
-  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 4, 3.2), counselling ? 0xe3e8ee : 0xeee9df);
+  roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/carpet.jpg", 4, 3.2, counselling ? 0x9fb4c8 : 0xc9b79c), {
+    tint: counselling ? 0xdfe8f0 : 0xf2eadc,
+    trim: counselling ? 0x2f4a66 : 0x5a4030,
+  });
 
   const sign = textPlane([ref.title, counselling ? "invite only · up to 6" : "open to all · up to 6"], 4.4, 0.9, {
     bg: counselling ? "#2f5d8a" : "#5b3a24",
@@ -85,17 +88,21 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
   doorway(g, side * (HALF.halfX - 0.05), INNER_DOOR_Z, side < 0 ? Math.PI / 2 : -Math.PI / 2, "Leave the room");
 
   // The table and six chairs, three a side.
-  block(g, colliders, [3.6, 0.75, 1.4], [0, 1], 0x8a6a50);
+  block(g, colliders, [3.6, 0.75, 1.4], [0, 1], texMat("ai/wood_tabletop.jpg", 2, 1, 0xc9a27a));
+  const fabric = { carpet: counselling ? 0x3f6f9a : 0xb5654a };
   for (const x of [-1.2, 0, 1.2]) {
-    place(g, "chairDesk.glb", 1, x, 1 - 1.15, 0);
-    place(g, "chairDesk.glb", 1, x, 1 + 1.15, Math.PI);
+    place(g, "chairDesk.glb", 1, x, 1 - 1.15, 0, true, 0, fabric);
+    place(g, "chairDesk.glb", 1, x, 1 + 1.15, Math.PI, true, 0, fabric);
   }
   solid(colliders, 3.8, 3.4, 0, 1);
-  // A screen on the far wall, for the team's work later.
-  const screen = textPlane(["Shared screen", "(coming later)"], 2.6, 1.5, { bg: "#1f2d3d", fg: "#c9d6e3", font: 0.24 });
-  screen.position.set(-side * (HALF.halfX - 0.01), 1.9, 0.6);
-  screen.rotation.y = side * (Math.PI / 2);
-  g.add(screen);
+  // A pendant light's glow on the table, and a small plant on it.
+  lightPool(g, 0, 1, 4.6, 3.2, 0xffe2b0, 0.28);
+  place(g, "plantSmall1.glb", 0.3, 0.9, 1.2, 0, true, 0.75);
+  // A picture on the far wall (where a shared screen may go one day).
+  const art = poster("ai/poster_meeting.jpg", 2.7, 1.5);
+  art.position.set(-side * (HALF.halfX - 0.01), 1.9, 0.6);
+  art.rotation.y = side * (Math.PI / 2);
+  g.add(art);
   place(g, "pottedPlant.glb", 1.3, -HALF.halfX + 0.6, HALF.halfZ - 0.6);
   solid(colliders, 0.7, 0.7, -HALF.halfX + 0.6, HALF.halfZ - 0.6);
 
@@ -110,6 +117,11 @@ export function buildMeetingRoom(id: SpaceId, ref: RoomRef): SpaceDef {
     camera: new THREE.Vector3(0, 5.5, 6.5),
     // No tracks of its own: the music of the space outside carries on.
     bgm: [],
+    floor: "carpet",
     noNotes: true,
+    seats: [-1.2, 0, 1.2].flatMap((x) => [
+      { x, z: 1 - 1.2, rot: 0, y: 0.45 },
+      { x, z: 1 + 1.2, rot: Math.PI, y: 0.45 },
+    ]),
   };
 }

@@ -43,6 +43,13 @@ const path = process.env.DATABASE_PATH ?? "data/app.db";
 mkdirSync(dirname(path), { recursive: true });
 const db = new DatabaseSync(path);
 db.exec("PRAGMA foreign_keys = ON");
+// Write-ahead logging: each write (every note, join, and now the admin's log
+// lines) costs one append instead of a full rewrite and sync, and readers
+// don't wait on writers. NORMAL sync is safe with WAL (a crash can lose the
+// last moment's writes, never corrupt the file). Wait up to 5 s for a lock.
+db.exec("PRAGMA journal_mode = WAL");
+db.exec("PRAGMA synchronous = NORMAL");
+db.exec("PRAGMA busy_timeout = 5000");
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS visitors (
@@ -104,6 +111,7 @@ const wanted: Record<string, string> = {
   last_note_at: "TEXT",
   last_comment_at: "TEXT",
   last_post_at: "TEXT",
+  look: "TEXT",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
@@ -530,4 +538,40 @@ export function bugReports(): BugReport[] {
 
 export function deleteBugReport(id: number): boolean {
   return db.prepare("DELETE FROM bug_reports WHERE id = ?").run(id).changes > 0;
+}
+
+// --- how people look ------------------------------------------------------------
+// A figure (two bodies), skin, hair, top and bottom colours as indexes into
+// fixed palettes (client/src/lookpicker.ts), and a hat. Indexes, not colours,
+// so nobody can paint themselves an arbitrary colour or slip anything else in.
+
+export interface Look {
+  body: number;
+  skin: number;
+  hair: number;
+  top: number;
+  bottom: number;
+  hat: number;
+}
+const LOOK_LIMITS: Record<keyof Look, number> = { body: 2, skin: 6, hair: 10, top: 10, bottom: 10, hat: 7 };
+
+/** The look if every part is a whole number in its range, else null. */
+export function validLook(v: unknown): Look | null {
+  if (typeof v !== "object" || v === null) return null;
+  const out: Partial<Look> = {};
+  for (const [k, n] of Object.entries(LOOK_LIMITS) as [keyof Look, number][]) {
+    const x = (v as Record<string, unknown>)[k];
+    if (typeof x !== "number" || !Number.isInteger(x) || x < 0 || x >= n) return null;
+    out[k] = x;
+  }
+  return out as Look;
+}
+
+export function lookOf(name: string): Look | null {
+  const row = db.prepare("SELECT look FROM visitors WHERE name = ?").get(name) as { look: string | null } | undefined;
+  return row?.look ? validLook(JSON.parse(row.look)) : null;
+}
+
+export function saveLook(name: string, look: Look): void {
+  db.prepare("UPDATE visitors SET look = ? WHERE name = ?").run(JSON.stringify(look), name);
 }

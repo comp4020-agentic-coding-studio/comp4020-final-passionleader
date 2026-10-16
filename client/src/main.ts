@@ -8,7 +8,9 @@ import { playTrack } from "./audio.ts";
 import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
 import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
-import { Avatar, motionFor, preloadCharacters, variantFor, type Variant } from "./character.ts";
+import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
+import { mountLookPicker } from "./lookpicker.ts";
+import { sfx, step, warmUp } from "./sfx.ts";
 import {
   ApiError,
   RESERVED_RE,
@@ -31,6 +33,7 @@ import {
   setClassroomLink,
   getProjects,
   sendBugReport,
+  saveLook,
   removePost,
   removePostComment,
   type Classroom,
@@ -55,7 +58,7 @@ import { mountBugReport } from "./bugreport.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 
 const SPEED = 4.2; // walking, world units per second
 const RUN_SPEED = 8; // with Shift held
@@ -65,6 +68,8 @@ const PLAYER_RADIUS = 0.4;
 const DOOR_RANGE = 1.6; // how close you must be for E to open a door
 const NOTE_RANGE = 1.3; // ...or to read a note
 const NOTE_LABEL_RANGE = 3; // a note shows its author's name within this
+const DOOR_LABEL_RANGE = 6; // indoors, a door's label shows within this
+const DOOR_LABEL_RANGE_OUT = 40; // outside the buildings are far apart: their names stay up
 
 const $ = <T extends HTMLElement>(id: string): T => {
   const el = document.getElementById(id);
@@ -104,7 +109,7 @@ const bugReport = mountBugReport({
 
 // Low (the default) vs High graphics: see settings.ts.
 const highQuality = HIGH;
-mountSettings({ reportBug: () => bugReport.open() });
+mountSettings({ reportBug: () => bugReport.open(), customise: () => openLookPicker() });
 mountBgmPlayer();
 
 const scene = new THREE.Scene();
@@ -190,13 +195,18 @@ window.addEventListener("resize", resize);
 resize();
 
 preloadCharacters();
-let me = new Avatar("male-a");
+// How you look: what you picked (saved on the server once you've joined),
+// else a default from your name. Picked before joining, it waits here.
+let myLook: Look | null = null;
+const lookOfMine = (): Look => myLook ?? defaultLookFor(session?.name ?? nameInput.value.trim());
+
+let me = new Avatar(defaultLookFor(""));
 let player = me.group;
 scene.add(player);
 
 /** Swaps in this visitor's own figure once we know their name. */
-function becomeAvatar(name: string): void {
-  const next = new Avatar(variantFor(name));
+function becomeAvatar(_name: string): void {
+  const next = new Avatar(lookOfMine());
   next.group.position.copy(player.position);
   next.group.rotation.copy(player.rotation);
   scene.remove(player);
@@ -204,6 +214,85 @@ function becomeAvatar(name: string): void {
   player = next.group;
   scene.add(player);
 }
+
+// --- picking a look --------------------------------------------------------------
+// The window (lookpicker.ts) with a small turning 3D preview of the figure.
+// From the join screen the choice waits until you've joined; in the game it's
+// saved on the server and everyone in the space sees it.
+
+const lookPicker = mountLookPicker({
+  preview(look) {
+    previewAvatar?.setLook(look);
+  },
+  async save(look) {
+    myLook = look;
+    me.setLook(look);
+    if (!session) return null; // sent once you've joined
+    try {
+      await saveLook(session.token, look);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not save your look.";
+    }
+  },
+});
+
+let previewAvatar: Avatar | null = null;
+let previewStop: (() => void) | null = null;
+function openLookPicker(): void {
+  const look = lookOfMine();
+  startPreview(look);
+  lookPicker.open(look);
+}
+/** A little scene of its own in the window: the figure on a turntable. */
+function startPreview(look: Look): void {
+  previewStop?.();
+  const slot = lookPicker.previewSlot;
+  const r = new THREE.WebGLRenderer({ antialias: true, alpha: true });
+  r.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  r.outputColorSpace = THREE.SRGBColorSpace;
+  slot.replaceChildren(r.domElement);
+  r.domElement.style.width = "100%";
+  r.domElement.style.height = "100%";
+  const s3 = new THREE.Scene();
+  s3.add(new THREE.HemisphereLight(0xffffff, 0x8a7a62, 1.6));
+  const key = new THREE.DirectionalLight(0xffffff, 1.6);
+  key.position.set(2, 3, 4);
+  s3.add(key);
+  const cam = new THREE.PerspectiveCamera(30, 1, 0.1, 50);
+  cam.position.set(0, 1.35, 4.4);
+  cam.lookAt(0, 0.95, 0);
+  previewAvatar = new Avatar(look);
+  s3.add(previewAvatar.group);
+  let last = performance.now();
+  let alive = true;
+  const frame = (): void => {
+    if (!alive) return;
+    if (!lookPicker.isOpen()) return previewStop?.();
+    const now = performance.now();
+    const dt = Math.min(0.1, (now - last) / 1000);
+    last = now;
+    const w = slot.clientWidth || 200;
+    const h = slot.clientHeight || 260;
+    if (r.domElement.width !== Math.round(w * r.getPixelRatio()) || r.domElement.height !== Math.round(h * r.getPixelRatio())) {
+      r.setSize(w, h, false);
+      cam.aspect = w / h;
+      cam.updateProjectionMatrix();
+    }
+    previewAvatar!.group.rotation.y += dt * 0.6;
+    previewAvatar!.update(dt);
+    r.render(s3, cam);
+    requestAnimationFrame(frame);
+  };
+  requestAnimationFrame(frame);
+  previewStop = () => {
+    alive = false;
+    previewStop = null;
+    previewAvatar = null;
+    r.dispose();
+  };
+}
+document.getElementById("customise")?.addEventListener("click", openLookPicker);
 
 /** A label floating over a figure; `kind` picks the CSS look. */
 function tag(group: THREE.Object3D, text: string, y: number, kind: string): CSS2DObject {
@@ -253,6 +342,10 @@ interface OtherView {
   rot: number;
   /** Smoothed ground speed, to pick idle / walk / run for the animation. */
   speed: number;
+  /** Their look, to notice when it changes. */
+  lookKey: string;
+  /** The seat they're on, if any. */
+  seat?: Seat;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
@@ -262,17 +355,33 @@ function upsertOther(p: RemotePlayer): void {
   if (p.id === selfId || p.space !== space?.id) return;
   let view = others.get(p.id);
   if (!view) {
-    const variant = variantFor(p.name);
-    const avatar = new Avatar(variant);
+    const look = p.look ?? defaultLookFor(p.name);
+    const variant = variantOf(look);
+    const avatar = new Avatar(look);
     const group = avatar.group;
     tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0 };
+    view = { avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look) };
     others.set(p.id, view);
   }
-  view.target.set(p.x, p.y, p.z);
-  view.rot = p.rot;
+  // A new look (they changed it while here): recolour in place.
+  const look = p.look ?? defaultLookFor(p.name);
+  const key = JSON.stringify(look);
+  if (key !== view.lookKey) {
+    view.lookKey = key;
+    view.variant = variantOf(look);
+    view.avatar.setLook(look);
+  }
+  // Sitting: on the seat, facing its way, whatever their last step said.
+  view.seat = p.seat ? seatAt(p.seat) : undefined;
+  if (view.seat) {
+    view.target.copy(seatedAt(view.seat));
+    view.rot = view.seat.rot;
+  } else {
+    view.target.set(p.x, p.y, p.z);
+    view.rot = p.rot;
+  }
 }
 
 function removeOther(id: string): void {
@@ -310,7 +419,7 @@ function showEmote(id: string, kind: Emote): void {
   if (kind === "yes" || kind === "no") avatar?.gesture(kind);
   if (kind === "wave" || kind === "dance") avatar?.perform(kind);
   const line = EMOTE_VOICE[kind];
-  const variant = id === selfId ? (session ? variantFor(session.name) : undefined) : others.get(id)?.variant;
+  const variant = id === selfId ? (session ? variantOf(lookOfMine()) : undefined) : others.get(id)?.variant;
   if (line && variant) {
     const d = id === selfId ? 0 : Math.hypot(figure.position.x - player.position.x, figure.position.z - player.position.z);
     // A voice to match the figure, and a stable pitch per person within it,
@@ -422,6 +531,7 @@ const composer = mountNoteComposer(async (text) => {
     const { note, replaced } = await postNote(session.token, space.id, player.position.x, player.position.z, text);
     if (replaced !== null) removeNote(replaced);
     upsertNote(note);
+    sfx("note");
     toast(replaced !== null ? "Note stuck. Your oldest note here was removed." : "Note stuck.");
   } catch (err) {
     throw asError(err);
@@ -606,13 +716,16 @@ for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
 
 let playing = false;
 let vy = 0;
+
+const doorLabels: CSS2DObject[] = [];
+const labelAt = new THREE.Vector3();
 
 function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): void {
   if (space) {
@@ -626,10 +739,23 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   noteRequest++;
   if (roomPanel.isOpen() && !meetingRoom(id)) {
     roomPanel.close();
+    document.body.classList.remove("in-room");
     if (playing) chat.show();
   }
 
+  // Black for a moment, then fade in (models load in the meantime).
+  const fade = document.getElementById("fade");
+  if (playing) sfx("door");
+  if (fade && playing) {
+    fade.classList.add("on");
+    window.setTimeout(() => fade.classList.remove("on"), 260);
+  }
+  mySeat = null;
   space = getSpace(id);
+  doorLabels.length = 0;
+  space.group.traverse((o) => {
+    if (o instanceof CSS2DObject && o.element.classList.contains("door-label")) doorLabels.push(o);
+  });
   if (!space.group.userData.shadowsOn) {
     enableShadows(space.group);
     space.group.userData.shadowsOn = true;
@@ -725,6 +851,7 @@ function showJoin(message = ""): void {
   keyGuide.hide();
   chat.hide();
   roomPanel.close();
+  document.body.classList.remove("in-room");
   net?.close();
   net = null;
   for (const id of [...others.keys()]) removeOther(id);
@@ -755,6 +882,9 @@ joinForm.addEventListener("submit", (e) => {
   join(name, token || undefined, reserved ? passwordInput.value : undefined)
     .then((s) => {
       session = s;
+      // A look picked before joining goes up now; else the one saved last time.
+      if (myLook) void saveLook(s.token, myLook).catch(() => {});
+      else myLook = s.look;
       passwordInput.value = "";
       storage.set("campus.name", s.name);
       storage.set("campus.token", s.token);
@@ -771,6 +901,7 @@ joinForm.addEventListener("submit", (e) => {
 
 function enterWorld(): void {
   if (!session) return;
+  warmUp();
   becomeAvatar(session.name);
   joinDialog.hidden = true;
   hud.hidden = false;
@@ -802,6 +933,8 @@ function goOnline(token: string): void {
     },
     leave: removeOther,
     chat(id, name, text) {
+      // A ping for someone else's line in a meeting room: the window may be folded away on a phone.
+      if (roomPanel.isOpen() && id !== selfId) sfx("message");
       if (roomPanel.isOpen()) roomPanel.add({ name, text, self: id === selfId });
       else chat.add({ name, text, self: id === selfId });
       const figure = figureOf(id);
@@ -839,6 +972,7 @@ function goOnline(token: string): void {
       if (space?.id !== id) setSpace(id, { x, z }, false);
       players.forEach(upsertOther);
       chat.hide();
+      document.body.classList.add("in-room");
       roomPanel.open(
         roomInfo(id, room),
         lines.map((l) => ({ ...l, self: !l.system && l.name === session?.name })),
@@ -850,7 +984,13 @@ function goOnline(token: string): void {
     roomLine(line) {
       if (roomPanel.isOpen()) roomPanel.add(line);
     },
+    seatRefused() {
+      mySeat = null;
+      sfx("error");
+      toast("Someone's already sitting there.");
+    },
     roomRefused(id, reason) {
+      sfx("error");
       toast(
         reason === "full"
           ? "That room is full (6 people)."
@@ -985,12 +1125,63 @@ tap("menu-btn", () => (radial.isOpen() ? radial.close() : radial.open()));
 // --- actions ---------------------------------------------------------------
 
 function jump(): void {
-  // Only from the floor: no double jumps.
+  // Only from the floor: no double jumps. Seated, jumping gets you up first.
+  if (mySeat) return standUp();
   if (player.position.y > 0) return;
   vy = JUMP_SPEED;
 }
 
+// --- sitting ---------------------------------------------------------------------
+// E near a free seat sits you down (the server keeps one person per seat);
+// any move gets you up. Seats are numbered per space: "<space>:<index>".
+
+let mySeat: { id: string; seat: Seat } | null = null;
+const SEAT_RANGE = 1.1;
+// The "sit" clip bends the legs and drops the hips to about 7 cm above the
+// feet: lift the figure so the hips are on the seat, and back a little so
+// the knees, not the bottom, are over the front edge.
+const HIP_DROP = 0.07;
+const SEAT_BACK = 0.18;
+/** Where a seated figure stands: on the seat, eased back from its front edge. */
+function seatedAt(seat: Seat): THREE.Vector3 {
+  return new THREE.Vector3(seat.x - Math.sin(seat.rot) * SEAT_BACK, Math.max(0, seat.y - HIP_DROP), seat.z - Math.cos(seat.rot) * SEAT_BACK);
+}
+
+/** The seat a "<space>:<n>" id names, if it's in this space. */
+function seatAt(id: string): Seat | undefined {
+  const [where, n] = id.split(":");
+  return where === space?.id ? space.seats?.[Number(n)] : undefined;
+}
+
+function sitDown(index: number): void {
+  if (!space?.seats?.[index]) return;
+  stopMoving();
+  const seat = space.seats[index]!;
+  mySeat = { id: `${space.id}:${index}`, seat };
+  net?.sit(mySeat.id);
+  sfx("click");
+}
+
+function standUp(): void {
+  if (!mySeat) return;
+  mySeat = null;
+  net?.sit(null);
+}
+
+/** Free seats near you: none someone else is on. */
+function seatNear(): { index: number; d: number } | null {
+  let best: { index: number; d: number } | null = null;
+  space?.seats?.forEach((seat, index) => {
+    const d = Math.hypot(player.position.x - seat.x, player.position.z - seat.z);
+    if (d > SEAT_RANGE || (best && best.d <= d)) return;
+    const taken = [...others.values()].some((o) => o.seat === seat);
+    if (!taken) best = { index, d };
+  });
+  return best;
+}
+
 type Target =
+  | { kind: "seat"; index: number }
   | { kind: "door"; door: Door }
   | { kind: "link"; label: string; url: string; embeddable: boolean }
   | { kind: "spot"; id: string; label: string }
@@ -1026,12 +1217,22 @@ function nearestTarget(): Target | null {
     here.sort((a, b) => b.id - a.id); // newest first
     best = { kind: "note", id: nearest.id, author: nearest.author, here };
   }
+  // A seat only when nothing else is in reach: a chair by a door shouldn't steal the door.
+  if (!best && !mySeat) {
+    const seat = seatNear();
+    if (seat) best = { kind: "seat", index: seat.index };
+  }
   return best;
 }
 
 function interact(): void {
+  // Seated, E gets you up.
+  if (mySeat) return standUp();
   const target = nearestTarget();
   if (!target) return;
+  if (target.kind === "seat") return sitDown(target.index);
+  // Anything but a door opens a window: a soft "open" sound.
+  if (target.kind !== "door") sfx("open");
   if (target.kind === "door") {
     if (target.door.to === "classroom") {
       stopMoving();
@@ -1076,6 +1277,8 @@ function update(dt: number, now: number): void {
     let moving = false;
     if (!busy()) {
       move.set(Number(dirs.right) - Number(dirs.left), 0, Number(dirs.down) - Number(dirs.up));
+      // Walking gets you up.
+      if (mySeat && move.lengthSq() > 0) standUp();
       if (move.lengthSq() > 0) {
         moving = true;
         move.normalize();
@@ -1086,20 +1289,30 @@ function update(dt: number, now: number): void {
         player.rotation.y += turn * Math.min(1, dt * 14);
       }
     }
-    me.setMotion(moving ? (running ? "run" : "walk") : "idle");
+    me.setMotion(mySeat ? "sit" : moving ? (running ? "run" : "walk") : "idle");
+    if (moving && player.position.y === 0) step(space.floor ?? "concrete", now, running ? 0.28 : 0.42);
     vy -= GRAVITY * dt;
     player.position.y = Math.max(0, player.position.y + vy * dt);
     if (player.position.y === 0) vy = 0;
-    pushOut(player.position, PLAYER_RADIUS, space.colliders);
+    if (mySeat) {
+      // On the seat (inside the chair's footprint, so no pushing out), facing its way.
+      player.position.copy(seatedAt(mySeat.seat));
+      player.rotation.y = mySeat.seat.rot;
+      vy = 0;
+    } else pushOut(player.position, PLAYER_RADIUS, space.colliders);
     keepIn(player.position, space.areas ?? [{ minX: -space.halfX, maxX: space.halfX, minZ: -space.halfZ, maxZ: space.halfZ }]);
-    net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
+    // Seated, the seat says where you are: send the floor spot, not the lift.
+    net?.sendMove({ x: player.position.x, y: mySeat ? 0 : player.position.y, z: player.position.z, rot: player.rotation.y });
 
     const target = busy() ? null : nearestTarget();
-    hintEl.hidden = !target;
+    hintEl.hidden = !target && !mySeat;
+    if (mySeat && !target) hintEl.textContent = `${touchScreen.matches ? "Use" : "E"} · Stand up (or just walk)`;
     if (target) {
       const key = touchScreen.matches ? "Use" : "E";
       hintEl.textContent =
-        target.kind === "door"
+        target.kind === "seat"
+          ? `${key} · Sit down`
+          : target.kind === "door"
           ? `${key} · ${target.door.label}`
           : target.kind === "link" || target.kind === "spot"
             ? `${key} · ${target.label}`
@@ -1116,7 +1329,7 @@ function update(dt: number, now: number): void {
     view.group.position.lerp(view.target, ease);
     const step = Math.hypot(view.group.position.x - before.x, view.group.position.z - before.z) / Math.max(dt, 1e-3);
     view.speed += (step - view.speed) * Math.min(1, dt * 8);
-    view.avatar.setMotion(motionFor(view.speed));
+    view.avatar.setMotion(view.seat ? "sit" : motionFor(view.speed));
     view.avatar.update(dt);
     // Turn the short way round, not through a full spin.
     const d = Math.atan2(Math.sin(view.rot - view.group.rotation.y), Math.cos(view.rot - view.group.rotation.y));
@@ -1125,6 +1338,14 @@ function update(dt: number, now: number): void {
 
   for (const view of notes.values()) {
     view.label.visible = view.group.position.distanceTo(player.position) <= NOTE_LABEL_RANGE;
+  }
+  // Door labels only near their door: a wall of them read as clutter, and
+  // from afar they sat on top of the signs (outside, the buildings' names
+  // stay visible from across the lawn).
+  for (const label of doorLabels) {
+    label.getWorldPosition(labelAt);
+    const d = Math.hypot(labelAt.x - player.position.x, labelAt.z - player.position.z);
+    label.visible = d <= (space.outdoor ? DOOR_LABEL_RANGE_OUT : DOOR_LABEL_RANGE);
   }
 
   // The sun's shadow box follows the player.

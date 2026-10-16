@@ -19,6 +19,9 @@ html, body {
 }
 #stage { position: fixed; inset: 0; outline: none; }
 #stage canvas { display: block; }
+/* A moment of black between spaces, so a room's furniture loading in isn't seen popping up. */
+#fade { position: fixed; inset: 0; z-index: 5; background: #000; opacity: 0; pointer-events: none; transition: opacity 0.35s ease-out; }
+#fade.on { opacity: 1; transition: none; }
 
 #hud {
   position: fixed; top: 12px; left: 16px; right: 16px;
@@ -33,7 +36,11 @@ html, body {
 /* Phones: keep the HUD's lines clear of the gear at the top right (44 px + gaps). */
 @media (max-width: 700px) {
   #hud p { max-width: calc(100vw - 96px); }
+  /* One line for the name: a long room name shouldn't push the help under the room's window. */
+  #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
 }
+/* In a meeting room on a phone, its window sits where the help line would be. */
+body.in-room #hud-help { display: none; }
 #toast { min-height: 1.2em; font-size: 0.9rem; font-weight: 600; }
 #toast:not(:empty) { display: inline-block; padding: 2px 10px; border-radius: 8px; background: rgba(255, 251, 224, 0.88); }
 
@@ -58,6 +65,10 @@ html, body {
   border: 0; border-radius: 8px; background: var(--accent); color: #fff;
 }
 #enter:disabled { opacity: 0.6; cursor: wait; }
+#customise {
+  display: block; width: 100%; min-height: 44px; margin-top: 8px; border: 1px dashed var(--accent);
+  border-radius: 10px; background: transparent; color: var(--ink); font: inherit; font-weight: 600; cursor: pointer;
+}
 #flavour {
   margin: 16px 0 0; padding-left: 18px; font-size: 0.85rem;
   font-style: italic; opacity: 0.85;

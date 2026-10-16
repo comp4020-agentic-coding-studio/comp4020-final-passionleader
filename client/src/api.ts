@@ -1,3 +1,4 @@
+import type { Look } from "./lookpicker.ts";
 import type { SpaceId } from "./world.ts";
 
 // Thin wrapper around the server's HTTP API (server/main.ts). Live movement,
@@ -9,6 +10,8 @@ export interface Session {
   role: "user" | "admin";
   /** Where to stand on entering: the last space and spot, or the campus spawn. */
   spawn: { space: SpaceId; x: number; z: number };
+  /** The look they saved last time, if any. */
+  look: Look | null;
 }
 
 export interface Note {
@@ -73,6 +76,8 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
 
 export const join = (name: string, token?: string, password?: string): Promise<Session> =>
   request<Session>("/api/join", "POST", { name, token, password });
+
+export const saveLook = (token: string, look: Look): Promise<unknown> => request("/api/look", "PUT", { token, look });
 
 export const getNotes = (space: SpaceId): Promise<Note[]> => request<Note[]>(`/api/notes?space=${space}`);
 
