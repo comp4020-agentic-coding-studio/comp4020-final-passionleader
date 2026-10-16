@@ -208,10 +208,39 @@
 
 .board-text {
   margin: 12px 0 16px;
-  white-space: pre-wrap;
   word-break: break-word;
   line-height: 1.45;
 }
+
+/* A post's Markdown (markdown.ts). */
+.board-text > :first-child { margin-top: 0; }
+.board-text p { margin: 0 0 10px; }
+.board-text h4, .board-text h5, .board-text h6 { margin: 14px 0 6px; }
+.board-text h4 { font-size: 1.1rem; }
+.board-text h5 { font-size: 1rem; }
+.board-text h6 { font-size: 0.9rem; }
+.board-text ul, .board-text ol { margin: 0 0 10px; padding-left: 22px; }
+.board-text blockquote {
+  margin: 0 0 10px;
+  padding: 2px 0 2px 12px;
+  border-left: 4px solid rgba(107, 63, 29, 0.35);
+  opacity: 0.9;
+}
+.board-text code {
+  padding: 1px 4px;
+  border-radius: 4px;
+  background: rgba(107, 63, 29, 0.12);
+  font-size: 0.9em;
+}
+.board-text pre {
+  margin: 0 0 10px;
+  padding: 8px 10px;
+  overflow-x: auto;
+  border-radius: 6px;
+  background: rgba(107, 63, 29, 0.12);
+}
+.board-text pre code { padding: 0; background: none; }
+.board-text a { color: var(--accent, #6b3f1d); text-decoration: underline; }
 
 .board-comments {
   display: grid;
@@ -415,6 +444,13 @@
 /* A grid board (the lawn): two thumbnails a row, a picture or a small title. */
 .board-list.is-grid {
   grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+/* Wider screens: more a row, each a poster-sized tile rather than a wall. */
+@media (min-width: 701px) {
+  .board-list.is-grid {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  }
 }
 
 .board-list.is-grid .board-empty {

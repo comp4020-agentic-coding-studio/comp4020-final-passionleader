@@ -7,6 +7,7 @@
 // carry up to five files (200 MB each), which upload once the post is up.
 
 import "./board.css";
+import { renderMarkdown } from "./markdown.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 
 export type BoardTab = string;
@@ -147,7 +148,7 @@ export function mountBoard(h: {
   postTitle.className = "board-view-title";
   const postMeta = document.createElement("p");
   postMeta.className = "board-muted";
-  const postText = document.createElement("p");
+  const postText = document.createElement("div");
   postText.className = "board-text";
   const postFiles = document.createElement("ul");
   postFiles.className = "board-files";
@@ -187,7 +188,7 @@ export function mountBoard(h: {
   titleInput.autocomplete = "off";
   const textLabel = document.createElement("label");
   textLabel.htmlFor = "board-post-text";
-  textLabel.textContent = "Post";
+  textLabel.textContent = "Post (Markdown works: **bold**, *italic*, # heading, - list, [link](https://…))";
   const textInput = document.createElement("textarea");
   textInput.id = "board-post-text";
   textInput.maxLength = POST_CHARS;
@@ -419,7 +420,8 @@ export function mountBoard(h: {
     if (!current) return;
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
     postMeta.textContent = current.createdAt ? `${current.author} · ${current.createdAt}` : current.author;
-    postText.textContent = current.text;
+    // Posts are Markdown (safe DOM only, markdown.ts); comments stay plain text.
+    postText.replaceChildren(renderMarkdown(current.text));
     postFiles.replaceChildren(
       ...(current.files ?? []).map((f) => {
         const li = document.createElement("li");
