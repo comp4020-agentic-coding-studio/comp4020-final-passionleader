@@ -13,6 +13,8 @@ import "./classpicker.css";
 export interface ClassroomItem {
   code: string;
   space: string;
+  /** How many are in it now, if known. */
+  online?: number;
 }
 
 const COMMON = "COMMON";
@@ -125,6 +127,12 @@ export function mountClassPicker(h: {
         pick.type = "button";
         pick.className = "class-pick";
         pick.textContent = item.code;
+        if (item.online) {
+          const here = document.createElement("span");
+          here.className = "class-online";
+          here.textContent = ` · ${item.online} here`;
+          pick.append(here);
+        }
         const on = item.code === selected;
         pick.classList.toggle("is-selected", on);
         pick.setAttribute("aria-pressed", String(on));

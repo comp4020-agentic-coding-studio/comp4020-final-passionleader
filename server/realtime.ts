@@ -33,6 +33,10 @@ const players = new Map<WebSocket, Player>();
 const alive = new WeakSet<WebSocket>();
 const lastChat = new WeakMap<WebSocket, number>();
 const dirty = new Set<SpaceId>();
+// How many are where goes to everyone, at most every few seconds and only
+// when it changed, so nobody walks into an empty Hub without knowing.
+const ONLINE_MS = 5_000;
+let lastOnline = "";
 
 const inSpace = (space: SpaceId): Player[] => [...players.values()].filter((p) => p.space === space);
 
@@ -294,6 +298,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   players.set(ws, player);
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
+  send(ws, { t: "action", kind: "online", counts: onlineCounts() });
   dirty.add(player.space);
   log("connect", visitor, { space: player.space, online: players.size }, { ip });
 
@@ -311,6 +316,19 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
 }
 
 /** Accepts WebSocket upgrades on /ws?token=…; only joined visitors get in. */
+/**
+ * Head counts per space, never who or where: meeting rooms are summed into
+ * "rooms" (a counselling room's guests stay private).
+ */
+export function onlineCounts(): Record<string, number> {
+  const counts: Record<string, number> = {};
+  for (const p of players.values()) {
+    const key = roomOf(p.space) ? "rooms" : p.space;
+    counts[key] = (counts[key] ?? 0) + 1;
+  }
+  return counts;
+}
+
 export function attachRealtime(server: Server): void {
   const wss = new WebSocketServer({ noServer: true });
 
@@ -332,6 +350,14 @@ export function attachRealtime(server: Server): void {
     for (const space of dirty) broadcastSpace(space, { t: "players", players: inSpace(space) });
     dirty.clear();
   }, TICK_MS).unref();
+
+  setInterval(() => {
+    const counts = onlineCounts();
+    const key = JSON.stringify(counts);
+    if (key === lastOnline) return;
+    lastOnline = key;
+    broadcastAll({ t: "action", kind: "online", counts });
+  }, ONLINE_MS).unref();
 
   setInterval(() => {
     for (const ws of players.keys()) {

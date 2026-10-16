@@ -89,6 +89,7 @@ const joinError = $("join-error");
 const enterBtn = $<HTMLButtonElement>("enter");
 const hud = $("hud");
 const hudName = $("hud-name");
+const hudOnline = $("hud-online");
 const toastEl = $("toast");
 const hintEl = $("hint");
 const touch = $("touch");
@@ -650,7 +651,28 @@ function openStaffLink(which: "board" | "side"): void {
 function useClassrooms(list: Classroom[]): void {
   classroomList = list;
   setClassrooms(list);
-  picker.update(list);
+  picker.update(withOnline(list));
+}
+
+// Who's where, as head counts only (plan 32): a line under the HUD's name and
+// a count beside each classroom in the picker, so nobody walks into an empty
+// room without knowing. Meeting rooms come summed as "rooms".
+let onlineCounts: Record<string, number> = {};
+const withOnline = (list: Classroom[]) => list.map((c) => ({ ...c, online: onlineCounts[c.space] ?? 0 }));
+function showOnline(): void {
+  // Short labels on a phone, so the line fits beside the gear.
+  const short = window.matchMedia("(max-width: 700px)").matches;
+  const n = (id: string): number => onlineCounts[id] ?? 0;
+  const inClassrooms = classroomList.reduce((sum, c) => sum + n(c.space), 0);
+  const parts = [
+    `Campus ${n("outdoor")}`,
+    `Hub ${n("hub")}`,
+    `${short ? "Lib" : "Library"} ${n("library")}`,
+    `${short ? "Class" : "Classrooms"} ${inClassrooms}`,
+    `Rooms ${n("rooms")}`,
+  ];
+  hudOnline.textContent = `${short ? "" : "Online: "}${parts.join(" · ")}`;
+  hudOnline.hidden = false;
 }
 async function loadClassrooms(): Promise<void> {
   try {
@@ -1009,6 +1031,11 @@ function goOnline(token: string): void {
     board() {
       if (board.isOpen()) board.refresh();
     },
+    online(counts) {
+      onlineCounts = counts;
+      showOnline();
+      if (picker.isOpen()) picker.update(withOnline(classroomList));
+    },
     moved(to, x, z, players) {
       toast("That classroom was closed. You're back outside.");
       setSpace(to, { x, z }, false);
@@ -1283,7 +1310,7 @@ function interact(): void {
     if (target.door.to === "classroom") {
       stopMoving();
       if (classroomList.length === 0) void loadClassrooms();
-      picker.open(classroomList, session?.role === "admin");
+      picker.open(withOnline(classroomList), session?.role === "admin");
     } else if (meetingRoom(target.door.to)) {
       // The server decides whether there's room and whether we're invited;
       // we walk in when it says yes (roomOpen below).

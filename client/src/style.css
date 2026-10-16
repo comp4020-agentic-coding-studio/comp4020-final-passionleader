@@ -32,12 +32,18 @@ html, body {
   display: inline-block; padding: 3px 10px; border-radius: 8px;
   background: rgba(255, 251, 224, 0.88); font-weight: 700;
 }
+#hud-online {
+  display: inline-block; padding: 2px 8px; border-radius: 6px;
+  background: rgba(255, 251, 224, 0.7); font-size: 0.8rem;
+}
+#hud-online[hidden] { display: none; }
 #hud-help { font-size: 0.85rem; opacity: 0.8; }
 /* Phones: keep the HUD's lines clear of the gear at the top right (44 px + gaps). */
 @media (max-width: 700px) {
   #hud p { max-width: calc(100vw - 96px); }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+  #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
 }
 /* In a meeting room on a phone, its window sits where the help line would be. */
 body.in-room #hud-help { display: none; }

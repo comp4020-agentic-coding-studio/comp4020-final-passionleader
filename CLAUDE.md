@@ -87,7 +87,9 @@ Read before planning or building: `README.md` (what good means for this app),
   or emotes, never tokens or passwords. Only the admin reads it or the bug reports (sent by anyone
   joined, one a minute), checked on the server. IPs and text stay out of
   stdout (`flyctl logs`).
-- Everything a person does reaches only the people in the same space.
+- Everything a person does reaches only the people in the same space. The
+  one exception is head counts per space (meeting rooms summed), sent to
+  everyone when they change: never names or positions.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).

@@ -16,7 +16,7 @@
 
 @media (pointer: coarse), (max-width: 700px) {
   #chat {
-    top: 96px; /* under #hud */
+    top: 124px; /* under #hud (name, head counts, help) */
     bottom: auto;
     left: 12px;
   }

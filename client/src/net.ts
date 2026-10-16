@@ -53,6 +53,8 @@ export interface NetHandlers {
   classrooms(list: Classroom[]): void;
   /** Something on this classroom's board changed. */
   board(): void;
+  /** Head counts per space (meeting rooms summed as "rooms"), whenever they change. */
+  online(counts: Record<string, number>): void;
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   /** The server let us into a meeting room: what's in it and what's been said. */
@@ -128,6 +130,7 @@ export function connect(token: string, on: NetHandlers): Net {
         case "action":
           if (m.kind === "classrooms") return on.classrooms(m.classrooms as Classroom[]);
           if (m.kind === "board") return on.board();
+          if (m.kind === "online") return on.online(m.counts as Record<string, number>);
           if (m.kind === "note") return on.note(m.note as Note);
           if (m.kind === "note-removed") return on.noteRemoved(m.id as number);
           if (m.kind === "comment") return on.comment(m.comment as Comment);

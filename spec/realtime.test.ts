@@ -73,4 +73,17 @@ describe("real time", () => {
     sa.ws.close();
     await expect(sb.next((m) => m.t === "leave" && m.id === welcome.id)).resolves.toBeTruthy();
   });
+
+  it("tells everyone how many are in each space, but never who", async () => {
+    const [a, b] = await Promise.all([visitor(), visitor()]);
+    const sa = await connect(a.token);
+    const online = (await sa.next((m) => m.t === "action" && m.kind === "online")) as unknown as { counts: Record<string, number> };
+    expect(Object.values(online.counts).every((n) => typeof n === "number")).toBe(true);
+    expect(JSON.stringify(online)).not.toContain(a.name);
+    // Someone arriving in the Hub shows up in its count within a few seconds.
+    const before = online.counts.hub ?? 0;
+    const sb = await connect(b.token);
+    sb.send({ t: "enter", space: "hub", x: 0, z: 9 });
+    await expect(sa.next((m) => m.t === "action" && m.kind === "online" && ((m.counts as Record<string, number>).hub ?? 0) > before, 8000)).resolves.toBeTruthy();
+  }, 12000);
 });
