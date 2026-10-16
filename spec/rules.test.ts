@@ -124,6 +124,7 @@ describe("where a note may go", () => {
     expect(noteSpotError("outdoor", -3, -14)).toBeNull();
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
     expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
+    expect(noteSpotError("outdoor", -19.5, -4.6)).not.toBeNull(); // on the lawn noticeboard
     expect(noteSpotError("comp8020", 0, 2)).toBeNull();
     expect(noteSpotError("hub", 0, 0)).not.toBeNull();
   });
