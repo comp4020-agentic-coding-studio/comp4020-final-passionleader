@@ -740,6 +740,12 @@ setInterval(purge, 60 * 60 * 1000).unref();
 // The 3D client, once Vite has built it.
 const dist = "client/dist";
 if (existsSync(dist)) {
+  // Pages always ask again, so a reload after a deploy gets the new build;
+  // Vite's /assets/ files carry a hash in their names and may be kept.
+  app.use("/*", async (c, next) => {
+    await next();
+    if (!c.req.path.startsWith("/assets/")) c.header("Cache-Control", "no-cache");
+  });
   app.use("/*", serveStatic({ root: dist }));
 } else {
   app.get("/", (c) => c.html('<!doctype html><title>ANU campus</title><p>Client not built yet. <a href="/readme/">README</a></p>'));
