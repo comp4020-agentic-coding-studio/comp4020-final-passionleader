@@ -170,6 +170,11 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS files_by_post ON files (post_id);
   CREATE INDEX IF NOT EXISTS files_by_owner ON files (owner, created_at);
+  CREATE TABLE IF NOT EXISTS cache (
+    key        TEXT PRIMARY KEY,
+    value      TEXT NOT NULL,
+    updated_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
 `);
 // The first two classrooms: the one there's always been, and COMMON for anyone.
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
@@ -667,4 +672,20 @@ export function purgeFiles(): string[] {
   const stale = db.prepare("SELECT key FROM files WHERE ready = 0 AND created_at <= datetime('now', '-1 hour')").all() as { key: string }[];
   db.prepare("DELETE FROM files WHERE (ready = 0 AND created_at <= datetime('now', '-1 hour')) OR NOT " + FRESH).run();
   return stale.map((r) => r.key);
+}
+
+// --- cache -----------------------------------------------------------------
+// Things the server works out slowly and would otherwise lose on a restart
+// (a deploy): for now, the classmates' final projects that were last up.
+
+export function cached<T>(key: string): T | undefined {
+  const row = db.prepare("SELECT value FROM cache WHERE key = ?").get(key) as { value: string } | undefined;
+  return row ? (JSON.parse(row.value) as T) : undefined;
+}
+
+export function setCached(key: string, value: unknown): void {
+  db.prepare("INSERT INTO cache (key, value) VALUES (?, ?) ON CONFLICT (key) DO UPDATE SET value = excluded.value, updated_at = datetime('now')").run(
+    key,
+    JSON.stringify(value),
+  );
 }

@@ -8,6 +8,8 @@ import { Hono, type Context } from "hono";
 import { marked } from "marked";
 import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayRemove, postError, textError } from "./accounts.ts";
 import {
+  cached,
+  setCached,
   NOTES_PER_SPACE,
   addClassroom,
   addComment,
@@ -347,8 +349,12 @@ app.put("/api/classrooms/:code/link", async (c) => {
 
 const ORG = "comp4020-agentic-coding-studio";
 const PROJECTS_EVERY_MS = 6 * 60 * 60 * 1000;
-let projects: { name: string; url: string }[] = [];
-let projectsCheckedAt: string | null = null;
+// A deploy restarts the server, and the check takes a minute or two: until
+// it's done, the list from before the restart shows, not an empty board.
+type Projects = { projects: { name: string; url: string }[]; checkedAt: string | null };
+const saved = cached<Projects>("projects");
+let projects: Projects["projects"] = saved?.projects ?? [];
+let projectsCheckedAt: string | null = saved?.checkedAt ?? null;
 
 async function refreshProjects(): Promise<void> {
   try {
@@ -380,6 +386,7 @@ async function refreshProjects(): Promise<void> {
     }
     projects = found.sort((a, b) => a.name.localeCompare(b.name));
     projectsCheckedAt = new Date().toISOString();
+    setCached("projects", { projects, checkedAt: projectsCheckedAt });
     console.log(JSON.stringify({ at: projectsCheckedAt, event: "projects-checked", repos: repos.length, live: projects.length }));
   } catch (err) {
     console.error("projects check failed:", err instanceof Error ? err.message : err);
