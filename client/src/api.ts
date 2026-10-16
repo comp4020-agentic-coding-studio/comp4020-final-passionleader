@@ -114,6 +114,9 @@ export const setClassroomLink = (token: string, code: string, which: "board" | "
 export const getProjects = (): Promise<{ projects: { name: string; url: string }[]; checkedAt: string | null }> =>
   request("/api/projects");
 
+export const sendBugReport = (token: string, text: string, space: SpaceId | null): Promise<{ id: number }> =>
+  request("/api/bugs", "POST", { token, text, space });
+
 export type BoardTab = "qa" | "notices" | "board";
 export interface Post {
   id: number;

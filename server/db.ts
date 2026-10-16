@@ -8,6 +8,8 @@ import { COMMON, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, ty
 // their author or an admin removes them. Comments: replies on a note.
 // Classrooms: the course codes the admin has opened in building 155.
 // Posts and post comments: each classroom's board (Q&A, Notices, Board).
+// Audit: the admin's seven-day copy of the activity log (below). Bug
+// reports: what visitors send from the settings dialog.
 // Live positions never come here; they stay in server memory.
 
 export type Role = "user" | "admin";
@@ -117,6 +119,31 @@ db.exec("UPDATE visitors SET last_space = 'comp8020' WHERE last_space = 'comp828
 // its right), added after crit 9.
 const classroomCols = (db.prepare("PRAGMA table_info(classrooms)").all() as { name: string }[]).map((c) => c.name);
 for (const col of ["board_url", "side_url"]) if (!classroomCols.includes(col)) db.exec(`ALTER TABLE classrooms ADD COLUMN ${col} TEXT`);
+db.exec(`
+  CREATE TABLE IF NOT EXISTS audit (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    at      TEXT NOT NULL,
+    event   TEXT NOT NULL,
+    who     TEXT,
+    browser TEXT,
+    role    TEXT,
+    ip      TEXT,
+    space   TEXT,
+    details TEXT NOT NULL,
+    content TEXT
+  );
+  CREATE INDEX IF NOT EXISTS audit_by_at ON audit (at);
+  CREATE TABLE IF NOT EXISTS bug_reports (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    at         TEXT NOT NULL,
+    author     TEXT NOT NULL,
+    browser    TEXT,
+    ip         TEXT,
+    space      TEXT,
+    user_agent TEXT,
+    text       TEXT NOT NULL
+  );
+`);
 // The first two classrooms: the one there's always been, and COMMON for anyone.
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
 
@@ -392,4 +419,115 @@ export function addPostComment(author: string, postId: number, text: string): { 
 
 export function deletePostComment(id: number): void {
   db.prepare("DELETE FROM post_comments WHERE id = ?").run(id);
+}
+
+// --- the admin's audit log -------------------------------------------------------
+// A copy of the activity log the admin can read in the app for seven days:
+// what people wrote (notes, comments, posts, and what was removed), sign-ins,
+// admin actions and refusals, each with the IP it came from. Moves, emotes
+// and chat aren't kept (chat is never stored). Deleted after seven days.
+
+export const AUDIT_DAYS = 7;
+export interface AuditEntry {
+  id: number;
+  at: string;
+  event: string;
+  who: string | null;
+  browser: string | null;
+  role: string | null;
+  ip: string | null;
+  space: string | null;
+  details: Record<string, unknown>;
+  content: string | null;
+}
+
+export function addAudit(e: Omit<AuditEntry, "id">): void {
+  db.prepare("INSERT INTO audit (at, event, who, browser, role, ip, space, details, content) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
+    e.at,
+    e.event,
+    e.who,
+    e.browser,
+    e.role,
+    e.ip,
+    e.space,
+    JSON.stringify(e.details),
+    e.content,
+  );
+}
+
+export interface AuditQuery {
+  who?: string;
+  space?: string;
+  events?: string[];
+  before?: number;
+  limit: number;
+}
+
+/** Newest first, filtered; `before` pages back by id. */
+export function auditEntries(q: AuditQuery): AuditEntry[] {
+  const where: string[] = [`at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${AUDIT_DAYS} days')`];
+  const args: (string | number)[] = [];
+  if (q.who) {
+    where.push("who = ? COLLATE NOCASE");
+    args.push(q.who);
+  }
+  if (q.space) {
+    where.push("space = ?");
+    args.push(q.space.toLowerCase());
+  }
+  if (q.events?.length) {
+    where.push(`event IN (${q.events.map(() => "?").join(", ")})`);
+    args.push(...q.events);
+  }
+  if (q.before) {
+    where.push("id < ?");
+    args.push(q.before);
+  }
+  const rows = db
+    .prepare(`SELECT id, at, event, who, browser, role, ip, space, details, content FROM audit WHERE ${where.join(" AND ")} ORDER BY id DESC LIMIT ?`)
+    .all(...args, q.limit) as unknown as (Omit<AuditEntry, "details"> & { details: string })[];
+  return rows.map((r) => ({ ...r, details: JSON.parse(r.details) as Record<string, unknown> }));
+}
+
+export function purgeOldAudit(): number {
+  const a = db.prepare(`DELETE FROM audit WHERE at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${AUDIT_DAYS} days')`).run().changes;
+  const b = db.prepare(`DELETE FROM bug_reports WHERE at <= strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${AUDIT_DAYS * 4} days')`).run().changes;
+  return Number(a) + Number(b);
+}
+
+// --- bug reports -----------------------------------------------------------------
+// Anyone joined can send one; only the admin reads them. Text only for now.
+
+export interface BugReport {
+  id: number;
+  at: string;
+  author: string;
+  browser: string | null;
+  ip: string | null;
+  space: string | null;
+  userAgent: string | null;
+  text: string;
+}
+export const BUG_COOLDOWN_SECONDS = 60;
+
+/** Adds a report, unless the author sent one in the last minute. */
+export function addBugReport(r: Omit<BugReport, "id" | "at">): { ok: true; id: number } | { ok: false; wait: number } {
+  const last = db.prepare("SELECT at FROM bug_reports WHERE author = ? ORDER BY id DESC LIMIT 1").get(r.author) as { at: string } | undefined;
+  const since = last ? (Date.now() - Date.parse(last.at)) / 1000 : Infinity;
+  if (since < BUG_COOLDOWN_SECONDS) return { ok: false, wait: Math.ceil(BUG_COOLDOWN_SECONDS - since) };
+  const at = new Date().toISOString();
+  const { lastInsertRowid } = db
+    .prepare("INSERT INTO bug_reports (at, author, browser, ip, space, user_agent, text) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(at, r.author, r.browser, r.ip, r.space, r.userAgent, r.text);
+  return { ok: true, id: Number(lastInsertRowid) };
+}
+
+export function bugReports(): BugReport[] {
+  return db
+    .prepare("SELECT id, at, author, browser, ip, space, user_agent AS userAgent, text FROM bug_reports ORDER BY id DESC LIMIT 500")
+    .all() as unknown as BugReport[];
+}
+
+export function deleteBugReport(id: number): boolean {
+  return db.prepare("DELETE FROM bug_reports WHERE id = ?").run(id).changes > 0;
 }

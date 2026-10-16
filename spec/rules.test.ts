@@ -4,6 +4,7 @@ import { join } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { describe, expect, it } from "vitest";
 import { checkPassword, hashPassword, mayRemove, textError } from "../server/accounts.ts";
+import { captureLog, keepIn, log } from "../server/log.ts";
 
 // Rules that take too long, or need an admin, to check against the running
 // app: exercised directly on the server's own code, with a throwaway database.
@@ -125,5 +126,40 @@ describe("where a note may go", () => {
     expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
     expect(noteSpotError("comp8020", 0, 2)).toBeNull();
     expect(noteSpotError("hub", 0, 0)).not.toBeNull();
+  });
+});
+
+describe("the admin's seven-day log", () => {
+  it("keeps what people wrote, with the IP, and leaves chat, emotes and moves out", () => {
+    keepIn(db.addAudit);
+    const stop = captureLog(() => {});
+    try {
+      log("note", { name: "writer", token: "t-writer" }, { space: "outdoor", note: 1 }, { ip: "203.0.113.7", content: "hello lawn" });
+      log("chat", { name: "writer", token: "t-writer" }, { space: "outdoor", chars: 5 }, { ip: "203.0.113.7", content: "secret" });
+      log("emote", { name: "writer", token: "t-writer" }, { space: "outdoor", kind: "wave" });
+      log("enter", { name: "writer", token: "t-writer" }, { from: "outdoor", space: "hub" });
+    } finally {
+      stop();
+    }
+    const mine = db.auditEntries({ who: "writer", limit: 50 });
+    expect(mine.map((e) => e.event)).toEqual(["note"]);
+    expect(mine[0]).toMatchObject({ ip: "203.0.113.7", content: "hello lawn", space: "outdoor" });
+    expect(JSON.stringify(mine)).not.toContain("t-writer");
+  });
+
+  it("filters by event and forgets entries older than seven days", () => {
+    keepIn(db.addAudit);
+    const stop = captureLog(() => {});
+    try {
+      log("refused", { name: "nosy", token: "t-nosy" }, { action: "remove note", reason: "not the author" }, { ip: "198.51.100.2" });
+    } finally {
+      stop();
+    }
+    expect(db.auditEntries({ who: "nosy", events: ["refused"], limit: 10 })).toHaveLength(1);
+    expect(db.auditEntries({ who: "nosy", events: ["note"], limit: 10 })).toHaveLength(0);
+    raw.prepare("UPDATE audit SET at = '2020-01-01T00:00:00.000Z' WHERE who = 'nosy'").run();
+    expect(db.auditEntries({ who: "nosy", limit: 10 })).toHaveLength(0);
+    db.purgeOldAudit();
+    expect(raw.prepare("SELECT COUNT(*) AS n FROM audit WHERE who = 'nosy'").get()).toEqual({ n: 0 });
   });
 });

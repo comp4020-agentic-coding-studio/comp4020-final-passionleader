@@ -1,0 +1,310 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Admin log</title>
+<style>
+  /* The admin's page: the last seven days of what people wrote, removed and
+     were refused, and the bug reports. Opened from the Student Hub's
+     reception PC (in the in-app window) or in its own tab. Every request is
+     checked on the server: only the admin gets anything back. */
+  :root { --ink: #3b2a12; --paper: #f5edd8; --card: #fffaf0; --accent: #6b3f1d; --line: #e2d4b4; --muted: #7a6a52; }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.45 system-ui, sans-serif; }
+  header { position: sticky; top: 0; z-index: 2; background: var(--paper); border-bottom: 1px solid var(--line); padding: 10px 14px; }
+  h1 { margin: 0; font-size: 1.15rem; }
+  .bar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 8px; }
+  .me { margin-left: auto; color: var(--muted); font-size: 0.85rem; }
+  button { min-height: 36px; padding: 0 12px; border: 1px solid var(--accent); border-radius: 8px; background: var(--card); color: var(--ink); font: inherit; cursor: pointer; }
+  button.primary { background: var(--accent); color: #fff; }
+  button[aria-selected="true"] { background: var(--accent); color: #fff; }
+  input, select { min-height: 36px; padding: 0 8px; border: 1px solid #bba57a; border-radius: 8px; background: #fff; color: var(--ink); font: inherit; }
+  label.check { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; }
+  main { padding: 10px 14px 40px; }
+  .hint { color: var(--muted); font-size: 0.85rem; margin: 4px 0 10px; }
+  .error { color: #a02020; min-height: 1.3em; }
+  table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); }
+  th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
+  th { position: sticky; top: 0; background: #efe3c4; font-size: 0.8rem; text-transform: uppercase; letter-spacing: 0.03em; }
+  tr.day td { background: #eadcb8; font-weight: 600; font-size: 0.85rem; }
+  .mono { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 0.85rem; }
+  .dot { display: inline-block; width: 10px; height: 10px; border-radius: 50%; margin-right: 6px; vertical-align: middle; }
+  .pill { display: inline-block; padding: 1px 8px; border-radius: 999px; font-size: 0.8rem; font-weight: 600; background: #ddd; white-space: nowrap; }
+  .pill.refused { background: #f3c5c0; color: #7a1414; }
+  .pill.removed { background: #f6d8b0; color: #7a4210; }
+  .pill.signin { background: #e4e0d6; color: #4a4232; }
+  .pill.content { background: #cfe5d0; color: #1f5a25; }
+  .pill.admin { background: #cddcf0; color: #1f3f6b; }
+  .badge { margin-left: 4px; padding: 0 6px; border-radius: 6px; background: var(--accent); color: #fff; font-size: 0.72rem; }
+  .details { color: var(--muted); font-size: 0.85rem; }
+  blockquote { margin: 4px 0 0; padding: 4px 8px; border-left: 3px solid #bba57a; background: #fff; white-space: pre-wrap; word-break: break-word;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  blockquote.open { display: block; }
+  .more { margin-top: 10px; }
+  .card { background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; margin-bottom: 10px; }
+  .card .meta { color: var(--muted); font-size: 0.85rem; }
+  .card .text { white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
+  #signin { max-width: 360px; margin: 40px auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
+  #signin input { width: 100%; margin-bottom: 8px; }
+  [hidden] { display: none !important; }
+  @media (max-width: 640px) {
+    thead { display: none; }
+    table, tbody, tr, td { display: block; width: 100%; }
+    tr { border-bottom: 1px solid var(--line); padding: 6px 0; }
+    td { border: 0; padding: 2px 8px; }
+    td.c-ip, td.c-space { display: inline-block; width: auto; }
+  }
+</style>
+</head>
+<body>
+<form id="signin" hidden autocomplete="off">
+  <h1>Admin sign-in</h1>
+  <p class="hint">This page is for the admin.</p>
+  <input id="si-name" placeholder="Name" aria-label="Name" autocomplete="off">
+  <input id="si-pass" type="password" placeholder="Password" aria-label="Password" autocomplete="off">
+  <p class="error" id="si-error" role="alert"></p>
+  <button class="primary" type="submit">Sign in</button>
+</form>
+
+<div id="app" hidden>
+  <header>
+    <h1 id="title">Activity log (last 7 days)</h1>
+    <div class="bar" role="tablist">
+      <button type="button" role="tab" id="tab-log" aria-selected="true">Log</button>
+      <button type="button" role="tab" id="tab-bugs" aria-selected="false">Bug reports (<span id="bug-count">0</span>)</button>
+      <button type="button" id="refresh">Refresh</button>
+      <label class="check"><input type="checkbox" id="auto" checked> Auto-refresh every 5 s</label>
+      <span class="me" id="me"></span>
+    </div>
+    <form class="bar" id="filters">
+      <input id="f-who" placeholder="who" aria-label="Filter by name" size="10">
+      <input id="f-space" placeholder="space" aria-label="Filter by space" size="10">
+      <select id="f-event" aria-label="Filter by event">
+        <option value="">All events</option>
+        <option value="content">Content (notes, comments, posts)</option>
+        <option value="signin">Sign-ins</option>
+        <option value="refused">Refused only</option>
+      </select>
+      <button type="submit" class="primary">Apply</button>
+      <button type="button" id="f-clear">Clear</button>
+    </form>
+  </header>
+  <main>
+    <section id="log-view">
+      <p class="hint">Each person is a name plus a browser tag (a hash of their browser's token, never the token). Same name with a different tag = a different browser. Chat text is never kept.</p>
+      <p class="error" id="log-error" role="alert"></p>
+      <table>
+        <thead><tr><th>Time</th><th>Who · browser</th><th>IP</th><th>Space</th><th>Event</th><th>Details</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table>
+      <button type="button" class="more" id="older" hidden>Load older</button>
+    </section>
+    <section id="bug-view" hidden>
+      <p class="hint">Sent from the settings dialog (the gear). Kept 28 days, or until marked done.</p>
+      <p class="error" id="bug-error" role="alert"></p>
+      <div id="bugs"></div>
+    </section>
+  </main>
+</div>
+
+<script type="module">
+  const $ = (id) => document.getElementById(id);
+  const el = (tag, cls, text) => {
+    const e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text !== undefined && text !== null) e.textContent = String(text);
+    return e;
+  };
+
+  // The game keeps its token in localStorage; a separate tab signs in for the session only.
+  const read = (store, key) => { try { return store.getItem(key) || ""; } catch { return ""; } };
+  let token = read(sessionStorage, "admin.token") || read(localStorage, "campus.token");
+
+  async function api(path, method, payload) {
+    const res = await fetch(path, { method, headers: { "content-type": "application/json" }, body: JSON.stringify({ token, ...payload }) });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw Object.assign(new Error(data.error || `Error ${res.status}`), { status: res.status });
+    return data;
+  }
+
+  function showSignin(message) {
+    $("app").hidden = true;
+    $("signin").hidden = false;
+    $("si-error").textContent = message || "";
+    $("si-name").focus();
+  }
+
+  $("signin").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("si-error").textContent = "";
+    try {
+      const res = await fetch("/api/join", { method: "POST", headers: { "content-type": "application/json" },
+        body: JSON.stringify({ name: $("si-name").value.trim(), password: $("si-pass").value }) });
+      const data = await res.json().catch(() => ({}));
+      $("si-pass").value = "";
+      if (!res.ok) return showSignin(data.error || "Could not sign in.");
+      if (data.role !== "admin") return showSignin("This page is for the admin.");
+      token = data.token;
+      try { sessionStorage.setItem("admin.token", token); } catch {}
+      start(data.name);
+    } catch {
+      showSignin("Could not reach the server.");
+    }
+  });
+
+  // --- the log ---
+  // A browser keeps its colour across reloads: the hue comes from its tag (hex).
+  function colourOf(tag) {
+    if (!tag) return "transparent";
+    return `hsl(${parseInt(tag.slice(0, 6), 16) % 360} 65% 45%)`;
+  }
+  function kindOf(event) {
+    if (event === "refused" || event === "join-refused") return "refused";
+    if (event.endsWith("-removed") || event === "note-replaced" || event === "note-expired") return "removed";
+    if (["join", "connect", "disconnect"].includes(event)) return "signin";
+    if (event.startsWith("classroom") || event === "room-invite") return "admin";
+    return "content";
+  }
+  function summary(e) {
+    const d = e.details || {};
+    const parts = [];
+    if (d.action) parts.push(`tried to ${d.action}`);
+    if (d.reason) parts.push(`reason: ${d.reason}`);
+    if (d.owner) parts.push(`owner: ${d.owner}`);
+    for (const k of ["tab", "note", "post", "comment", "report", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online"]) {
+      if (d[k] !== undefined && d[k] !== null) parts.push(`${k}: ${d[k]}`);
+    }
+    return parts.join(" · ");
+  }
+  const dayOf = (iso) => new Date(iso).toLocaleDateString(undefined, { weekday: "short", day: "numeric", month: "short" });
+  const timeOf = (iso) => new Date(iso).toLocaleTimeString(undefined, { hour12: false });
+
+  let lastDay = "";
+  let oldest = null;
+  function addRows(entries, append) {
+    const body = $("rows");
+    if (!append) { body.replaceChildren(); lastDay = ""; }
+    for (const e of entries) {
+      const day = dayOf(e.at);
+      if (day !== lastDay) {
+        const tr = el("tr", "day");
+        const td = el("td", "", day);
+        td.colSpan = 6;
+        tr.append(td);
+        body.append(tr);
+        lastDay = day;
+      }
+      const tr = el("tr");
+      tr.append(el("td", "mono", timeOf(e.at)));
+      const whoCell = el("td");
+      if (e.who) {
+        const dot = el("span", "dot");
+        dot.style.background = colourOf(e.browser);
+        whoCell.append(dot, el("strong", "", e.who));
+        if (e.browser) whoCell.append(el("span", "mono", ` · ${e.browser}`));
+        if (e.role) whoCell.append(el("span", "badge", e.role));
+      } else whoCell.append(el("span", "details", "(server)"));
+      tr.append(whoCell);
+      tr.append(el("td", "mono c-ip", e.ip || "–"));
+      tr.append(el("td", "c-space", e.space || "–"));
+      const ev = el("td");
+      ev.append(el("span", `pill ${kindOf(e.event)}`, e.event));
+      tr.append(ev);
+      const det = el("td");
+      det.append(el("div", "details", summary(e)));
+      if (e.content) {
+        const q = el("blockquote", "", e.content);
+        q.title = "Click to show all";
+        q.addEventListener("click", () => q.classList.toggle("open"));
+        det.append(q);
+      }
+      tr.append(det);
+      body.append(tr);
+    }
+    if (entries.length) oldest = entries[entries.length - 1].id;
+  }
+
+  function filters() {
+    return { who: $("f-who").value, space: $("f-space").value, event: $("f-event").value };
+  }
+  async function loadLog(append = false) {
+    $("log-error").textContent = "";
+    try {
+      const data = await api("/api/admin/log", "POST", { ...filters(), limit: 200, before: append ? oldest : undefined });
+      addRows(data.entries, append);
+      $("older").hidden = data.entries.length < 200;
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) return showSignin(err.message);
+      $("log-error").textContent = err.message;
+    }
+  }
+
+  // --- bug reports ---
+  async function loadBugs() {
+    $("bug-error").textContent = "";
+    try {
+      const { bugs } = await api("/api/admin/bugs", "POST", {});
+      $("bug-count").textContent = String(bugs.length);
+      const list = $("bugs");
+      list.replaceChildren();
+      if (!bugs.length) list.append(el("p", "hint", "No bug reports."));
+      for (const b of bugs) {
+        const card = el("div", "card");
+        const meta = el("div", "meta");
+        const dot = el("span", "dot");
+        dot.style.background = colourOf(b.browser);
+        meta.append(dot, el("strong", "", b.author), el("span", "mono", ` · ${b.browser || "?"} · ${b.ip || "no IP"}`),
+          el("span", "", ` · ${b.space || "no space"} · ${dayOf(b.at)} ${timeOf(b.at)}`));
+        const ua = el("div", "meta mono", b.userAgent || "");
+        const text = el("div", "text", b.text);
+        const done = el("button", "", "Done (delete)");
+        done.type = "button";
+        done.addEventListener("click", async () => {
+          if (!confirm("Delete this report?")) return;
+          try { await api(`/api/admin/bugs/${b.id}`, "DELETE", {}); loadBugs(); }
+          catch (err) { $("bug-error").textContent = err.message; }
+        });
+        card.append(meta, ua, text, done);
+        list.append(card);
+      }
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) return showSignin(err.message);
+      $("bug-error").textContent = err.message;
+    }
+  }
+
+  // --- tabs, refresh ---
+  let tab = "log";
+  function show(which) {
+    tab = which;
+    $("tab-log").setAttribute("aria-selected", String(which === "log"));
+    $("tab-bugs").setAttribute("aria-selected", String(which === "bugs"));
+    $("log-view").hidden = which !== "log";
+    $("bug-view").hidden = which !== "bugs";
+    $("filters").hidden = which !== "log";
+    $("title").textContent = which === "log" ? "Activity log (last 7 days)" : "Bug reports";
+    which === "log" ? loadLog() : loadBugs();
+  }
+  $("tab-log").addEventListener("click", () => show("log"));
+  $("tab-bugs").addEventListener("click", () => show("bugs"));
+  $("refresh").addEventListener("click", () => (tab === "log" ? loadLog() : loadBugs()));
+  $("older").addEventListener("click", () => loadLog(true));
+  $("filters").addEventListener("submit", (e) => { e.preventDefault(); loadLog(); });
+  $("f-clear").addEventListener("click", () => { $("f-who").value = ""; $("f-space").value = ""; $("f-event").value = ""; loadLog(); });
+  setInterval(() => {
+    // Only the newest page, and not while someone is reading further back.
+    if ($("auto").checked && tab === "log" && !document.hidden && $("rows").children.length <= 230) loadLog();
+  }, 5000);
+
+  function start(name) {
+    $("signin").hidden = true;
+    $("app").hidden = false;
+    $("me").textContent = name ? `Signed in as ${name}` : "";
+    show("log");
+    loadBugs();
+  }
+  if (token) start(""); else showSignin("");
+</script>
+</body>
+</html>

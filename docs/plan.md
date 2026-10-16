@@ -142,6 +142,11 @@ Pulled forward once those were done (budget left over), in this order:
   group-chat window: six invite-only counselling rooms off the Hub, three team
   rooms per classroom and five in the library; six people at most, checked on
   the server; the chat lasts while someone is inside. No files or voice yet
+- **10, extended**: the admin's log, read in the app at the Student Hub's
+  reception PC (or `/admin/` in a tab during the crit): seven days of what
+  people wrote and removed, sign-ins and refusals, with IPs; bug reports
+  sent from the settings dialog, read in a second tab. Only the admin, checked
+  on the server
 - **11b** (in part): COMP8020's board right of the whiteboard lists
   classmates' live final-project apps; in other classrooms the admin sets
   what the whiteboard and that board open. COMMON becomes a lounge. Two more

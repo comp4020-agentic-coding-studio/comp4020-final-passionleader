@@ -215,7 +215,7 @@ function onMessage(ws: WebSocket, raw: string): void {
   }
 }
 
-function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: string }): void {
+function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: string }, ip: string | null): void {
   const name = visitor.name;
   owners.set(ws, visitor);
   const spot = lastSpot(name);
@@ -228,7 +228,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
   dirty.add(player.space);
-  log("connect", visitor, { space: player.space, online: players.size });
+  log("connect", visitor, { space: player.space, online: players.size }, { ip });
 
   ws.on("pong", () => alive.add(ws));
   ws.on("message", (data) => onMessage(ws, data.toString()));
@@ -237,7 +237,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
     const left = roomOf(player.space);
     if (left) saveLastSpot(player.name, left.parent, left.door.x, left.door.z);
     else saveLastSpot(player.name, player.space, player.x, player.z);
-    log("disconnect", visitor, { space: player.space, online: players.size });
+    log("disconnect", visitor, { space: player.space, online: players.size }, { ip });
     broadcastSpace(player.space, { t: "leave", id: player.id });
     roomLeft(player.space, player.name, visitor);
   });
@@ -255,7 +255,10 @@ export function attachRealtime(server: Server): void {
       socket.end("HTTP/1.1 401 Unauthorized\r\n\r\n");
       return;
     }
-    wss.handleUpgrade(req, socket, head, (ws) => onConnect(ws, visitor));
+    // Fly puts the visitor's address in Fly-Client-IP; locally, the socket's (admin's log only).
+    const fly = req.headers["fly-client-ip"];
+    const ip = (typeof fly === "string" ? fly : null) ?? req.socket.remoteAddress ?? null;
+    wss.handleUpgrade(req, socket, head, (ws) => onConnect(ws, visitor, ip));
   });
 
   setInterval(() => {

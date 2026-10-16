@@ -2,6 +2,7 @@ import { randomUUID } from "node:crypto";
 import { existsSync, readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
+import { getConnInfo } from "@hono/node-server/conninfo";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { marked } from "marked";
@@ -33,15 +34,25 @@ import {
   postCommentsOn,
   postsIn,
   purgeExpiredNotes,
+  purgeOldAudit,
+  addAudit,
+  auditEntries,
+  AUDIT_DAYS,
+  addBugReport,
+  bugReports,
+  deleteBugReport,
   removeClassroom,
   setClassroomLink,
   type BoardTab,
   type Visitor,
 } from "./db.ts";
-import { log } from "./log.ts";
+import { browserTag, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace } from "./realtime.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isClassroom, isSpace, noteSpotError, teamRoomsOf } from "./spaces.ts";
+
+// Lines the admin can read back for seven days go into SQLite as well.
+keepIn(addAudit);
 
 const app = new Hono();
 
@@ -61,6 +72,20 @@ const wordCount = (s: string): number => s.trim().split(/\s+/).filter(Boolean).l
 const body = (c: Context): Promise<Body> => c.req.json<Body>().catch(() => ({}));
 
 /** The visitor behind a request's token, or null. */
+/**
+ * The IP a request came from, for the admin's seven-day log only: Fly puts
+ * the visitor's address in Fly-Client-IP; running locally, the socket's.
+ */
+function ipOf(c: Context): string | null {
+  const fly = c.req.header("fly-client-ip");
+  if (fly) return fly;
+  try {
+    return getConnInfo(c).remote.address ?? null;
+  } catch {
+    return null;
+  }
+}
+
 function who(b: Body): Visitor | null {
   return typeof b.token === "string" ? (findByToken(b.token) ?? null) : null;
 }
@@ -73,14 +98,14 @@ app.post("/api/join", async (c) => {
   if (RESERVED.test(name)) {
     const account = RESERVED_RULE.test(name) ? findByName(name) : undefined;
     if (!account?.passwordHash) {
-      log("join-refused", { name }, { reason: "reserved name" });
+      log("join-refused", { name }, { reason: "reserved name" }, { ip: ipOf(c) });
       return c.json({ error: "Names starting with qa_ are reserved." }, 403);
     }
     if (typeof password !== "string" || !checkPassword(password, account.passwordHash)) {
-      log("join-refused", { name: account.name }, { reason: "wrong password" });
+      log("join-refused", { name: account.name }, { reason: "wrong password" }, { ip: ipOf(c) });
       return c.json({ error: "Wrong password." }, 401);
     }
-    log("join", account, { how: "password" });
+    log("join", account, { how: "password" }, { ip: ipOf(c) });
     return c.json({ name: account.name, token: account.token, role: account.role, spawn: lastSpot(account.name) });
   }
 
@@ -89,15 +114,15 @@ app.post("/api/join", async (c) => {
   if (existing) {
     // A name belongs to whoever first took it; only their browser's token gets it back.
     if (existing.token === token) {
-      log("join", existing, { how: "returning" });
+      log("join", existing, { how: "returning" }, { ip: ipOf(c) });
       return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name) });
     }
-    log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: "name taken" });
+    log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: "name taken" }, { ip: ipOf(c) });
     return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
   }
   const fresh = randomUUID();
   createVisitor(name, fresh);
-  log("join", { name, token: fresh }, { how: "new" });
+  log("join", { name, token: fresh }, { how: "new" }, { ip: ipOf(c) });
   return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn } });
 });
 
@@ -119,22 +144,25 @@ app.post("/api/notes", async (c) => {
   }
   const bad = textError(b.text);
   if (bad) {
-    log("refused", v, { action: "note", space: b.space, reason: bad });
+    log("refused", v, { action: "note", space: b.space, reason: bad }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
     return c.json({ error: bad }, 400);
   }
   const { x, z } = clampTo(b.space, b.x, b.z);
   const where = noteSpotError(b.space, x, z);
   if (where) {
-    log("refused", v, { action: "note", space: b.space, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, reason: where });
+    log("refused", v, { action: "note", space: b.space, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, reason: where }, { ip: ipOf(c), content: (b.text as string).trim() });
     return c.json({ error: where }, 400);
   }
+  // What a sixth note pushes out, for the admin's log (read before it goes).
+  const oldest = noteCount(v.name, b.space) >= NOTES_PER_SPACE ? notesIn(b.space).find((n) => n.author === v.name) : undefined;
+  const replacedText = oldest?.text ?? null;
   const result = addNote(v.name, b.space, x, z, (b.text as string).trim());
   if (!result.ok) {
-    log("refused", v, { action: "note", space: b.space, reason: "too soon", wait: result.wait });
+    log("refused", v, { action: "note", space: b.space, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content: (b.text as string).trim() });
     return c.json({ error: `One note every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
-  log("note", v, { space: b.space, note: result.note.id, words: wordCount(result.note.text) });
-  if (result.replaced !== null) log("note-replaced", v, { space: b.space, note: result.replaced, by: result.note.id });
+  log("note", v, { space: b.space, note: result.note.id, words: wordCount(result.note.text) }, { ip: ipOf(c), content: result.note.text });
+  if (result.replaced !== null) log("note-replaced", v, { space: b.space, note: result.replaced, by: result.note.id }, { ip: ipOf(c), content: replacedText });
   // Everyone in the space sees it land (and the replaced one go) right away.
   if (result.replaced !== null) broadcastSpace(b.space, { t: "action", kind: "note-removed", id: result.replaced });
   broadcastSpace(b.space, { t: "action", kind: "note", note: result.note });
@@ -156,11 +184,11 @@ app.delete("/api/notes/:id", async (c) => {
   const note = findNote(Number(c.req.param("id")));
   if (!note) return c.json({ error: "That note is gone." }, 404);
   if (!mayRemove(v, note.author)) {
-    log("refused", v, { action: "remove note", space: note.space, note: note.id, owner: note.author, reason: "not the author" });
+    log("refused", v, { action: "remove note", space: note.space, note: note.id, owner: note.author, reason: "not the author" }, { ip: ipOf(c), content: note.text });
     return c.json({ error: "Only its author can remove this note." }, 403);
   }
   deleteNote(note.id);
-  log("note-removed", v, { space: note.space, note: note.id, owner: note.author });
+  log("note-removed", v, { space: note.space, note: note.id, owner: note.author }, { ip: ipOf(c), content: note.text });
   broadcastSpace(note.space, { t: "action", kind: "note-removed", id: note.id });
   return c.json({ ok: true });
 });
@@ -181,15 +209,15 @@ app.post("/api/notes/:id/comments", async (c) => {
   if (!note) return c.json({ error: "That note is gone." }, 404);
   const bad = textError(b.text);
   if (bad) {
-    log("refused", v, { action: "comment", space: note.space, note: note.id, reason: bad });
+    log("refused", v, { action: "comment", space: note.space, note: note.id, reason: bad }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
     return c.json({ error: bad }, 400);
   }
   const result = addComment(v.name, note.id, (b.text as string).trim());
   if (!result.ok) {
-    log("refused", v, { action: "comment", space: note.space, note: note.id, reason: "too soon", wait: result.wait });
+    log("refused", v, { action: "comment", space: note.space, note: note.id, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content: (b.text as string).trim() });
     return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
-  log("comment", v, { space: note.space, note: note.id, comment: result.comment.id, words: wordCount(result.comment.text) });
+  log("comment", v, { space: note.space, note: note.id, comment: result.comment.id, words: wordCount(result.comment.text) }, { ip: ipOf(c), content: result.comment.text });
   broadcastSpace(note.space, { t: "action", kind: "comment", comment: result.comment });
   return c.json(result.comment, 201);
 });
@@ -201,11 +229,11 @@ app.delete("/api/comments/:id", async (c) => {
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
   const note = findNote(comment.noteId);
   if (!mayRemove(v, comment.author)) {
-    log("refused", v, { action: "remove comment", space: note?.space, comment: comment.id, owner: comment.author, reason: "not the author" });
+    log("refused", v, { action: "remove comment", space: note?.space, comment: comment.id, owner: comment.author, reason: "not the author" }, { ip: ipOf(c), content: comment.text });
     return c.json({ error: "Only its author can remove this comment." }, 403);
   }
   deleteComment(comment.id);
-  log("comment-removed", v, { space: note?.space, comment: comment.id, owner: comment.author });
+  log("comment-removed", v, { space: note?.space, comment: comment.id, owner: comment.author }, { ip: ipOf(c), content: comment.text });
   if (note) broadcastSpace(note.space, { t: "action", kind: "comment-removed", id: comment.id, noteId: note.id });
   return c.json({ ok: true });
 });
@@ -223,12 +251,12 @@ app.post("/api/classrooms", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const code = typeof b.code === "string" ? b.code.trim().toUpperCase() : "";
   if (v.role !== "admin") {
-    log("refused", v, { action: "create classroom", code, reason: "not admin" });
+    log("refused", v, { action: "create classroom", code, reason: "not admin" }, { ip: ipOf(c) });
     return c.json({ error: "Only the admin can open a classroom." }, 403);
   }
   if (!CLASSROOM_CODE.test(code)) return c.json({ error: "Use a course code like COMP6300." }, 400);
   if (!addClassroom(code, v.name)) return c.json({ error: `${code} is already open.` }, 409);
-  log("classroom-created", v, { code, space: classroomSpace(code) });
+  log("classroom-created", v, { code, space: classroomSpace(code) }, { ip: ipOf(c) });
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ code, space: classroomSpace(code) }, 201);
 });
@@ -238,7 +266,7 @@ app.delete("/api/classrooms/:code", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const code = c.req.param("code").toUpperCase();
   if (v.role !== "admin") {
-    log("refused", v, { action: "remove classroom", code, reason: "not admin" });
+    log("refused", v, { action: "remove classroom", code, reason: "not admin" }, { ip: ipOf(c) });
     return c.json({ error: "Only the admin can close a classroom." }, 403);
   }
   if (code === COMMON) return c.json({ error: "COMMON stays open." }, 400);
@@ -247,7 +275,7 @@ app.delete("/api/classrooms/:code", async (c) => {
   let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
   for (const room of teamRoomsOf(space)) moved += evictSpace(room, FIRST_SPACE, { x: -8.4, z: 7 });
   if (!removeClassroom(code)) return c.json({ error: `${code} isn't open.` }, 404);
-  log("classroom-removed", v, { code, space, moved });
+  log("classroom-removed", v, { code, space, moved }, { ip: ipOf(c) });
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ ok: true });
 });
@@ -266,7 +294,7 @@ app.put("/api/classrooms/:code/link", async (c) => {
   const code = c.req.param("code").toUpperCase();
   const which = b.which;
   if (v.role !== "admin") {
-    log("refused", v, { action: "set classroom link", code, reason: "not admin" });
+    log("refused", v, { action: "set classroom link", code, reason: "not admin" }, { ip: ipOf(c) });
     return c.json({ error: "Only the admin can set what the boards open." }, 403);
   }
   if (which !== "board" && which !== "side") return c.json({ error: "Which board?" }, 400);
@@ -281,7 +309,7 @@ app.put("/api/classrooms/:code/link", async (c) => {
     }
   }
   if (!setClassroomLink(code, which, url)) return c.json({ error: `${code} isn't open.` }, 404);
-  log("classroom-link", v, { code, which, url });
+  log("classroom-link", v, { code, which, url }, { ip: ipOf(c) });
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ ok: true });
 });
@@ -375,20 +403,20 @@ app.post("/api/board", async (c) => {
   if (!isClassroom(b.space)) return c.json({ error: "No such classroom." }, 400);
   if (!isTab(b.tab)) return c.json({ error: "No such tab." }, 400);
   if (!mayPostIn(v, b.tab)) {
-    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "notices are for staff" });
+    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "notices are for staff" }, { ip: ipOf(c), content: typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null });
     return c.json({ error: "Only lecturers and staff can post in Notices." }, 403);
   }
   const bad = postError(b.title, b.text);
   if (bad) {
-    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: bad });
+    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: bad }, { ip: ipOf(c), content: typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null });
     return c.json({ error: bad }, 400);
   }
   const result = addPost(v.name, b.space, b.tab, (b.title as string).trim(), (b.text as string).trim());
   if (!result.ok) {
-    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "too soon", wait: result.wait });
+    log("refused", v, { action: "post", space: b.space, tab: b.tab, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content: typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null });
     return c.json({ error: `One post every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
-  log("post", v, { space: b.space, tab: b.tab, post: result.post.id, words: wordCount(result.post.text) });
+  log("post", v, { space: b.space, tab: b.tab, post: result.post.id, words: wordCount(result.post.text) }, { ip: ipOf(c), content: `${result.post.title}\n\n${result.post.text}` });
   broadcastSpace(b.space, { t: "action", kind: "board", tab: b.tab });
   return c.json(result.post, 201);
 });
@@ -399,11 +427,11 @@ app.delete("/api/board/:id", async (c) => {
   const post = findPost(Number(c.req.param("id")));
   if (!post) return c.json({ error: "That post is gone." }, 404);
   if (!mayRemove(v, post.author)) {
-    log("refused", v, { action: "remove post", space: post.space, post: post.id, owner: post.author, reason: "not the author" });
+    log("refused", v, { action: "remove post", space: post.space, post: post.id, owner: post.author, reason: "not the author" }, { ip: ipOf(c), content: `${post.title}\n\n${post.text}` });
     return c.json({ error: "Only its author can remove this post." }, 403);
   }
   deletePost(post.id);
-  log("post-removed", v, { space: post.space, tab: post.tab, post: post.id, owner: post.author });
+  log("post-removed", v, { space: post.space, tab: post.tab, post: post.id, owner: post.author }, { ip: ipOf(c), content: `${post.title}\n\n${post.text}` });
   broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab });
   return c.json({ ok: true });
 });
@@ -422,15 +450,15 @@ app.post("/api/board/:id/comments", async (c) => {
   if (!post) return c.json({ error: "That post is gone." }, 404);
   const bad = textError(b.text);
   if (bad) {
-    log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: bad });
+    log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: bad }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
     return c.json({ error: bad }, 400);
   }
   const result = addPostComment(v.name, post.id, (b.text as string).trim());
   if (!result.ok) {
-    log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: "too soon", wait: result.wait });
+    log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content: (b.text as string).trim() });
     return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
-  log("post-comment", v, { space: post.space, tab: post.tab, post: post.id, comment: result.comment.id, words: wordCount(result.comment.text) });
+  log("post-comment", v, { space: post.space, tab: post.tab, post: post.id, comment: result.comment.id, words: wordCount(result.comment.text) }, { ip: ipOf(c), content: result.comment.text });
   broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json(result.comment, 201);
 });
@@ -442,22 +470,88 @@ app.delete("/api/board-comments/:id", async (c) => {
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
   const post = findPost(comment.postId);
   if (!mayRemove(v, comment.author)) {
-    log("refused", v, { action: "remove post comment", space: post?.space, comment: comment.id, owner: comment.author, reason: "not the author" });
+    log("refused", v, { action: "remove post comment", space: post?.space, comment: comment.id, owner: comment.author, reason: "not the author" }, { ip: ipOf(c), content: comment.text });
     return c.json({ error: "Only its author can remove this comment." }, 403);
   }
   deletePostComment(comment.id);
-  log("post-comment-removed", v, { space: post?.space, comment: comment.id, owner: comment.author });
+  log("post-comment-removed", v, { space: post?.space, comment: comment.id, owner: comment.author }, { ip: ipOf(c), content: comment.text });
   if (post) broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json({ ok: true });
+});
+
+// --- the admin's log and bug reports -------------------------------------------
+// The Student Hub's reception PC opens /admin/ (and so can a browser tab, for
+// reading along during a crit). Only the admin reads either, checked here on
+// every request; anyone joined may send a bug report.
+
+const AUDIT_GROUPS: Record<string, string[]> = {
+  content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report"],
+  signin: ["join", "join-refused", "connect", "disconnect"],
+  refused: ["refused", "join-refused"],
+};
+
+async function asAdmin(c: Context): Promise<{ v: Visitor; b: Body } | Response> {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  if (v.role !== "admin") {
+    log("refused", v, { action: "read admin log", reason: "not admin" }, { ip: ipOf(c) });
+    return c.json({ error: "This is for the admin." }, 403);
+  }
+  return { v, b };
+}
+
+app.post("/api/admin/log", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const { b } = r;
+  const str = (x: unknown): string | undefined => (typeof x === "string" && x.trim() ? x.trim().slice(0, 80) : undefined);
+  const event = str(b.event);
+  const events = event ? (AUDIT_GROUPS[event] ?? [event]) : undefined;
+  const limit = typeof b.limit === "number" ? Math.max(1, Math.min(500, Math.floor(b.limit))) : 200;
+  const before = typeof b.before === "number" && Number.isFinite(b.before) ? b.before : undefined;
+  return c.json({ entries: auditEntries({ who: str(b.who), space: str(b.space), events, before, limit }), keepDays: AUDIT_DAYS });
+});
+
+app.post("/api/admin/bugs", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  return c.json({ bugs: bugReports() });
+});
+
+app.delete("/api/admin/bugs/:id", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  if (!deleteBugReport(Number(c.req.param("id")))) return c.json({ error: "Already gone." }, 404);
+  return c.json({ ok: true });
+});
+
+const MAX_BUG = 2000;
+
+app.post("/api/bugs", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const text = typeof b.text === "string" ? b.text.trim() : "";
+  if (!text) return c.json({ error: "Say what went wrong." }, 400);
+  if (text.length > MAX_BUG) return c.json({ error: `Up to ${MAX_BUG} characters.` }, 400);
+  const space = typeof b.space === "string" && isSpace(b.space) ? b.space : null;
+  const userAgent = (c.req.header("user-agent") ?? "").slice(0, 300) || null;
+  const result = addBugReport({ author: v.name, browser: browserTag(v.token), ip: ipOf(c), space, userAgent, text });
+  if (!result.ok) return c.json({ error: `One report a minute. Wait ${result.wait}s.` }, 429);
+  log("bug-report", v, { space, report: result.id, chars: text.length }, { ip: ipOf(c), content: text });
+  return c.json({ id: result.id }, 201);
 });
 
 // Sketch & Guess, the drawing game on the Hub's arcade machine.
 sketchRoutes(app);
 
 // Notes past their month: hidden from every query already, deleted hourly.
+// The admin's log past its seven days goes the same way.
 const purge = (): void => {
   const gone = purgeExpiredNotes();
   if (gone) log("note-expired", null, { count: gone });
+  purgeOldAudit();
 };
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();

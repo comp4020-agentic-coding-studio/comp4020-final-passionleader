@@ -62,6 +62,12 @@ Read before planning or building: `README.md` (what good means for this app),
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
   chat, host and invites go. No notes in meeting rooms.
+- The admin's log keeps, for seven days only, what people wrote and removed
+  (notes, comments, posts), sign-ins, admin actions, refusals and bug
+  reports, each with its IP; never chat text, moves or emotes, never tokens
+  or passwords. Only the admin reads it or the bug reports (sent by anyone
+  joined, one a minute), checked on the server. IPs and text stay out of
+  stdout (`flyctl logs`).
 - Everything a person does reaches only the people in the same space.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,

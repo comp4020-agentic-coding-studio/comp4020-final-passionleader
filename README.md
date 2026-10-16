@@ -47,7 +47,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    inside has invited by name. Inside, a group chat shows what's been said
    since the room last emptied; when the last person leaves it's gone, and so
    are the invites.
-8. The gear (top right) sets the music and sound-effect volumes and switches
+8. Something broken? The gear's dialog has **Report a bug**: a short note
+   that only the admin reads.
+9. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
    track playing, with pause and next.
 
@@ -75,10 +77,22 @@ Enforced by `spec/`: name rules (`campus.test.ts`); notes and comments
 persist, stay in their space, keep their limits, and only their author or an
 admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
 and new notes reach the same space within a second, and no other
-(`realtime.test.ts`); a meeting room holds six and a counselling room only
+(`realtime.test.ts`); only the admin reads the seven-day log and the bug
+reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
+meeting room holds six and a counselling room only
 the invited (`rooms.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
 Judged by people: whether it feels familiar and restful, and whether talking
 gets easier.
+
+### What the app keeps about you
+
+The server writes every action to its log (`flyctl logs`): your name, a
+short tag of your browser (never its secret token), the space and what you
+did, but never what you said in chat. The admin can also read, for seven
+days, what people wrote and removed (notes, comments, posts), sign-ins,
+refusals and bug reports, with the **IP address** each came from, so abuse
+and bugs can be traced; after seven days they are deleted (bug reports
+after 28, or when dealt with). Chat, moves and emotes are not kept.
 
 ## What I chose not to build (yet)
 

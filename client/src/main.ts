@@ -30,6 +30,7 @@ import {
   removeClassroom,
   setClassroomLink,
   getProjects,
+  sendBugReport,
   removePost,
   removePostComment,
   type Classroom,
@@ -50,6 +51,7 @@ import { mountBoard } from "./board.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
+import { mountBugReport } from "./bugreport.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
@@ -87,9 +89,22 @@ const touch = $("touch");
 // --- three.js setup --------------------------------------------------------
 
 const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
+// Bug reports go to the admin; the gear's dialog opens the form.
+const bugReport = mountBugReport({
+  async send(text) {
+    if (!session) return "Join first.";
+    try {
+      await sendBugReport(session.token, text, space?.id ?? null);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not send it.";
+    }
+  },
+});
+
 // Low (the default) vs High graphics: see settings.ts.
 const highQuality = HIGH;
-mountSettings();
+mountSettings({ reportBug: () => bugReport.open() });
 mountBgmPlayer();
 
 const scene = new THREE.Scene();
@@ -591,7 +606,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------

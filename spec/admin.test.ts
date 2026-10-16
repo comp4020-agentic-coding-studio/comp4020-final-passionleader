@@ -1,0 +1,33 @@
+import { describe, expect, it } from "vitest";
+import { api, visitor } from "./helpers.ts";
+
+// The admin's log and the bug reports: anyone joined may send a report, only
+// the admin reads either, and the server checks that on every request. The
+// admin's side needs qa_master's password, so what the log keeps is checked
+// on the server's own code in rules.test.ts.
+
+describe("the admin's log and bug reports", () => {
+  it("refuses the log to someone who hasn't joined, and to an ordinary visitor", async () => {
+    expect((await api("/api/admin/log", "POST", {})).status).toBe(401);
+    const v = await visitor();
+    expect((await api("/api/admin/log", "POST", { token: v.token })).status).toBe(403);
+    expect((await api("/api/admin/bugs", "POST", { token: v.token })).status).toBe(403);
+    expect((await api("/api/admin/bugs/1", "DELETE", { token: v.token })).status).toBe(403);
+  });
+
+  it("takes a bug report from a visitor, once a minute, and never shows it back to them", async () => {
+    const v = await visitor();
+    expect((await api("/api/bugs", "POST", { token: v.token, text: "   " })).status).toBe(400);
+    expect((await api("/api/bugs", "POST", { text: "no token" })).status).toBe(401);
+    const res = await api("/api/bugs", "POST", { token: v.token, text: "The door in the library didn't open.", space: "library" });
+    expect(res.status).toBe(201);
+    expect((await api("/api/bugs", "POST", { token: v.token, text: "again" })).status).toBe(429);
+    expect((await api("/api/bugs", "POST", { token: v.token, text: "x".repeat(2001) })).status).toBe(400);
+  });
+
+  it("serves the admin page itself (it asks the server for everything)", async () => {
+    const res = await api("/admin/");
+    expect(res.status).toBe(200);
+    expect(await res.text()).toContain("Activity log");
+  });
+});

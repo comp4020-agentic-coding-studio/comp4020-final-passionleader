@@ -22,7 +22,7 @@ function read(): Quality {
 export const QUALITY: Quality = read();
 export const HIGH = QUALITY === "high";
 
-export function mountSettings(): void {
+export function mountSettings(opts: { reportBug(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -108,7 +108,13 @@ export function mountSettings(): void {
   apply.textContent = "Apply";
   actions.append(close, apply);
 
-  card.append(title, sound, fieldset, note, actions);
+  // Something broken? A short report goes to the admin (bugreport.ts).
+  const bug = document.createElement("button");
+  bug.type = "button";
+  bug.className = "settings-bug";
+  bug.textContent = "🐞 Report a bug";
+
+  card.append(title, sound, fieldset, note, bug, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -121,6 +127,10 @@ export function mountSettings(): void {
     (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
   });
   close.addEventListener("click", hide);
+  bug.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.reportBug();
+  });
   dialog.addEventListener("keydown", (e) => {
     e.stopPropagation();
     if (e.key === "Escape") hide();

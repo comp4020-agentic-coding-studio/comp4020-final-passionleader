@@ -17,8 +17,14 @@ export function buildHub(): SpaceDef {
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 16, 10.4), 0xe8e4da);
   const back = -HALF.halfZ + 0.01;
 
-  // The desk at the back, with the sign above it, and the noticeboard.
+  // The desk at the back, with the sign above it, and the noticeboard. The
+  // reception PC on the desk opens the admin's log and bug reports (the
+  // server only answers the admin).
   block(g, colliders, [6, 1.1, 1.2], [0, -HALF.halfZ + 1.4], 0x2f5d8a);
+  place(g, "computerScreen.glb", 0.5, -1.5, -HALF.halfZ + 1.3, 0, true, 1.1);
+  const pcTag = textPlane(["Reception PC", "staff only"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  pcTag.position.set(-1.5, 1.85, -HALF.halfZ + 0.82);
+  g.add(pcTag);
   const sign = textPlane(["Student Hub", "an unofficial, fan-made space"], 6, 1.4, { bg: "#2f5d8a", fg: "#ffffff", font: 0.42 });
   sign.position.set(0, 2.9, back);
   g.add(sign);
@@ -113,7 +119,10 @@ export function buildHub(): SpaceDef {
     // A place to sit together; notes go up outside and in classrooms.
     noNotes: true,
     // The arcade machines: E opens each game in the in-app window.
-    links: GAMES.map((game) => ({ x: game.x, z: -HALF.halfZ + 1.9, label: `Play ${game.title}`, url: game.url, embeddable: true })),
+    links: [
+      ...GAMES.map((game) => ({ x: game.x, z: -HALF.halfZ + 1.9, label: `Play ${game.title}`, url: game.url, embeddable: true })),
+      { x: -1.5, z: -HALF.halfZ + 2.6, label: "Use the reception PC (activity log, bug reports)", url: "/admin/", embeddable: true },
+    ],
   };
 }
 
