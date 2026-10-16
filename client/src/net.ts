@@ -76,8 +76,8 @@ export interface Net {
   emote(kind: Emote): void;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): void;
-  /** Sits on a seat ("<space>:<n>"), or stands up with null. */
-  sit(seat: string | null): void;
+  /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
+  sit(seat: string | null, at?: { x: number; z: number }): void;
   close(): void;
 }
 
@@ -174,8 +174,11 @@ export function connect(token: string, on: NetHandlers): Net {
     invite(name) {
       sendNow({ t: "invite", name });
     },
-    sit(seat) {
-      sendNow({ t: "sit", seat });
+    sit(seat, at) {
+      // The seat's spot goes with it, and the next move from there isn't news.
+      if (at) lastPayload = "";
+      pending = null;
+      sendNow({ t: "sit", seat, ...at });
     },
     close() {
       closed = true;

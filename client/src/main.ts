@@ -1158,7 +1158,7 @@ function sitDown(index: number): void {
   stopMoving();
   const seat = space.seats[index]!;
   mySeat = { id: `${space.id}:${index}`, seat };
-  net?.sit(mySeat.id);
+  net?.sit(mySeat.id, { x: seat.x, z: seat.z });
   sfx("click");
 }
 
@@ -1301,8 +1301,11 @@ function update(dt: number, now: number): void {
       vy = 0;
     } else pushOut(player.position, PLAYER_RADIUS, space.colliders);
     keepIn(player.position, space.areas ?? [{ minX: -space.halfX, maxX: space.halfX, minZ: -space.halfZ, maxZ: space.halfZ }]);
-    // Seated, the seat says where you are: send the floor spot, not the lift.
-    net?.sendMove({ x: player.position.x, y: mySeat ? 0 : player.position.y, z: player.position.z, rot: player.rotation.y });
+    // Seated, send the seat's own spot (others ease the figure back on their
+    // side, as we do): the drawn spot is a little behind it, and the server
+    // reads any step away from the seat as getting up.
+    if (mySeat) net?.sendMove({ x: mySeat.seat.x, y: 0, z: mySeat.seat.z, rot: mySeat.seat.rot });
+    else net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
 
     const target = busy() ? null : nearestTarget();
     hintEl.hidden = !target && !mySeat;

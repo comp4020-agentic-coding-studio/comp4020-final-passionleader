@@ -205,12 +205,17 @@ function onMessage(ws: WebSocket, raw: string): void {
     dirty.add(to);
   } else if (msg.t === "sit" && (msg.seat === null || typeof msg.seat === "string")) {
     // Sitting down: the seat must be in this space and free. null = stand up.
+    // The client sends the seat's spot with it, and you're put there, so the
+    // moves that follow (from the same spot) don't count as walking off.
     const m = typeof msg.seat === "string" ? SEAT.exec(msg.seat) : null;
     if (msg.seat === null) player.seat = undefined;
     else if (!m || m[1] !== player.space || seatTaken(msg.seat, player)) {
       send(ws, { t: "action", kind: "seat-refused", seat: msg.seat });
       return;
-    } else player.seat = msg.seat;
+    } else {
+      player.seat = msg.seat;
+      if (num(msg.x) && num(msg.z)) Object.assign(player, clampTo(player.space, msg.x, msg.z), { y: 0 });
+    }
     dirty.add(player.space);
   } else if (msg.t === "chat" && typeof msg.text === "string") {
     const text = msg.text.trim().slice(0, MAX_CHAT);

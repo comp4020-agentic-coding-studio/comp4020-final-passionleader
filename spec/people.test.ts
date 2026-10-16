@@ -16,8 +16,11 @@ describe("sitting", () => {
     const sa = await connect(a.token);
     const sb = await connect(b.token);
     await sa.next((m) => m.t === "welcome");
-    sa.send({ t: "sit", seat: "outdoor:3" });
+    sa.send({ t: "sit", seat: "outdoor:3", x: -15.45, z: -5.2 });
     await expect(sb.next(seen(a.name, (p) => p.seat === "outdoor:3"))).resolves.toBeTruthy();
+    // Staying put on the seat (the client keeps sending its spot) keeps you seated.
+    sa.send({ t: "move", x: -15.45, y: 0, z: -5.2, rot: 0 });
+    expect(await sb.sees(seen(a.name, (p) => !p.seat), 600)).toBe(false);
     sa.send({ t: "move", x: 0, y: 0, z: -20, rot: 0 });
     await expect(sb.next(seen(a.name, (p) => !p.seat))).resolves.toBeTruthy();
   });
