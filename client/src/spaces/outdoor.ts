@@ -195,7 +195,7 @@ export function buildOutdoor(): SpaceDef {
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),
-    bgm: ["A_Long_Silence_Observed.mp3", "Morning_at_the_Quad.mp3"],
+    bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3"],
     outdoor: true,
     // The two lawn benches, two people each.
     seats: [-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))),

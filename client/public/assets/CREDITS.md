@@ -148,9 +148,11 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 
 ## Music
 
-`A_Long_Silence_Observed.mp3`, `Morning_at_the_Quad.mp3` (campus),
-`Margin_Notes.mp3`, `The_Library_Window.mp3` and `Common_Room_Afternoon.mp3`
-(shared by the Student Hub, the classrooms and their meeting rooms),
+`Noon_On_The_Green.mp3`, `Dappled_Sunlight_Trail.mp3` and
+`Windows_Down_in_July.mp3` (campus), `Margin_Notes.mp3`,
+`The_Library_Window.mp3`, `Common_Room_Afternoon.mp3` and
+`The_Velvet_Clearing.mp3` (shared by the Student Hub, the classrooms and
+their meeting rooms),
 `Sunlight_on_Glass.mp3` and `Where_The_Light_Settles.mp3` (Chifley Library
 and its team rooms) — Music generated with Google AI (Gemini) for this project.
 

@@ -138,9 +138,9 @@ export const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
 /**
  * The playlist the Student Hub, the classrooms (COMMON too) and their meeting
  * rooms share: walking between them keeps the song playing, and each visit
- * starts on one of the three at random.
+ * starts on one of the four at random.
  */
-export const SHARED_BGM = ["Margin_Notes.mp3", "Common_Room_Afternoon.mp3", "The_Library_Window.mp3"];
+export const SHARED_BGM = ["Margin_Notes.mp3", "Common_Room_Afternoon.mp3", "The_Library_Window.mp3", "The_Velvet_Clearing.mp3"];
 /** The library's two, shared with its team rooms the same way. */
 export const LIBRARY_BGM = ["Sunlight_on_Glass.mp3", "Where_The_Light_Settles.mp3"];
 
