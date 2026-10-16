@@ -555,6 +555,7 @@ const roomPanel = mountRoomPanel({
   },
   onShare: async (file, progress) => (session ? upload(session.token, { kind: "room" }, file, progress) : "Join first."),
   onOpenFile: async (id) => (session ? openFile(session.token, id) : "Join first."),
+  onImageLink: async (id) => (session ? imageLink(session.token, id) : null),
   maxLength: 200,
 });
 const roomInfo = (id: SpaceId, room: RoomState): RoomInfo => ({ title: meetingRoom(id)?.title ?? "Room", ...room });

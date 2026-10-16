@@ -192,6 +192,20 @@
   cursor: pointer;
 }
 
+.room-image {
+  display: block;
+  margin-top: 4px;
+}
+
+.room-image img {
+  display: block;
+  max-width: 100%;
+  max-height: 220px;
+  min-height: 40px;
+  border-radius: 8px;
+  cursor: zoom-in;
+}
+
 .room-file-status {
   flex: none;
   margin: 0;

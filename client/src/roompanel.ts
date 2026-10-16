@@ -9,7 +9,7 @@
 // gone, like the chat, once the room empties.
 
 import "./roompanel.css";
-import { ACCEPT, MAX_FILE_BYTES, sizeLabel } from "./uploads.ts";
+import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 
 export interface RoomInfo {
   title: string;
@@ -42,6 +42,8 @@ export function mountRoomPanel(opts: {
   onShare(file: File, progress: (done: number) => void): Promise<string | null>;
   /** Fetches a shared file; resolves to an error message, or null. */
   onOpenFile(id: string): Promise<string | null>;
+  /** A link that shows a shared picture in place, or null. */
+  onImageLink(id: string): Promise<string | null>;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -189,7 +191,26 @@ export function mountRoomPanel(opts: {
         who.textContent = line.name;
         el.append(who);
       }
-      if (line.file) {
+      if (line.file && isImage(line.file.name)) {
+        // A picture shows in the chat (click for full size in a new tab).
+        const f = line.file;
+        const a = document.createElement("a");
+        a.className = "room-image";
+        a.target = "_blank";
+        a.rel = "noopener";
+        a.title = `${f.name} · ${sizeLabel(f.size)} (opens full size)`;
+        const img = document.createElement("img");
+        img.alt = f.name;
+        a.append(img);
+        el.append(a);
+        void opts.onImageLink(f.id).then((url) => {
+          if (!url) return a.replaceWith(document.createTextNode(`🖼 ${f.name} (couldn't load)`));
+          const stick = atBottom();
+          img.addEventListener("load", () => stick && (log.scrollTop = log.scrollHeight), { once: true });
+          img.src = url;
+          a.href = url;
+        });
+      } else if (line.file) {
         const f = line.file;
         const b = document.createElement("button");
         b.type = "button";
