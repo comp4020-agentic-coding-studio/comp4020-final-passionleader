@@ -312,6 +312,9 @@ function buildSouth(g: THREE.Group, colliders: Box[], space: THREE.Group): void 
   sign.rotation.y = Math.PI;
   library.add(sign);
   g.add(library);
+  // Its ground is a beige forecourt, not the campus grass: the building fades
+  // when the camera comes close, and grass then showed where the library stands.
+  floor(g, 70, 16.3, 3, 31.35, texMat("ai/paving.jpg", 35, 8, 0xe2d6bc), 0.01);
   solid(colliders, 66, 14, 3, 32);
   markOccluderGroup(space, library);
 }
