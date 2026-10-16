@@ -54,6 +54,7 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountBoard } from "./board.ts";
+import { mountCafeGuide } from "./cafeguide.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
@@ -689,6 +690,8 @@ async function loadClassrooms(): Promise<void> {
 const webview = mountWebView();
 // The dog in front of 154 asks for a feed: a link to my Buy Me a Coffee page.
 const dogPrompt = mountDogPrompt();
+// Lab Coffee's menu board, north of 154: the cafés on campus.
+const cafeGuide = mountCafeGuide();
 
 // Boards in classrooms (Q&A, Notices, Board), the Student Hub and on the
 // lawn. The server decides who may post in a staff-only tab; the dialog only
@@ -781,13 +784,13 @@ async function openBoard(id: SpaceId): Promise<void> {
 }
 
 // When a dialog closes, hand focus back to the game view.
-for (const id of ["class-picker", "webview", "dog-prompt", "board"]) {
+for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"]) {
   const el = document.getElementById(id);
   if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -1345,6 +1348,7 @@ function interact(): void {
   } else if (target.kind === "spot") {
     stopMoving();
     if (target.id === "dog") dogPrompt.open();
+    else if (target.id === "cafes") cafeGuide.open();
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "projects") void openProjects();
     else if (target.id === "board-link") openStaffLink("board");

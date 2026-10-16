@@ -1,0 +1,36 @@
+/* The café list from Lab Coffee's menu board, in the settings dialog's style. */
+
+#cafe-guide {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  padding: 16px; background: rgba(20, 20, 20, 0.45);
+}
+#cafe-guide[hidden] { display: none; }
+.cafe-card {
+  width: min(560px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column;
+}
+.cafe-head { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.cafe-head h2 { margin: 0; }
+.cafe-close {
+  min-width: 44px; min-height: 44px; border: 0; border-radius: 8px;
+  background: rgba(0, 0, 0, 0.08); color: var(--ink); font-size: 1.1rem; cursor: pointer;
+}
+.cafe-list {
+  flex: 1; min-height: 0; overflow-y: auto; margin: 0; padding: 0 2px 0 0; list-style: none;
+  display: grid; gap: 10px;
+}
+.cafe-item {
+  padding: 10px 12px; border: 2px solid rgba(107, 63, 29, 0.35); border-radius: 10px;
+  background: rgba(255, 255, 255, 0.5);
+}
+.cafe-item:first-child { border-color: var(--accent); }
+.cafe-item h3 { margin: 0 0 4px; font-size: 1.05rem; }
+.cafe-item p { margin: 0 0 6px; font-size: 0.9rem; line-height: 1.4; }
+.cafe-where { font-weight: 700; opacity: 0.85; }
+.cafe-sells { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; list-style: none; }
+.cafe-sells li {
+  padding: 2px 8px; border-radius: 999px; background: rgba(107, 63, 29, 0.12); font-size: 0.8rem;
+}
+.cafe-link {
+  display: inline-flex; align-items: center; min-height: 44px;
+  color: var(--accent); font-weight: 700; font-size: 0.9rem;
+}

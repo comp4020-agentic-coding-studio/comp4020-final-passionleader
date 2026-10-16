@@ -44,6 +44,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    Under your name, how many people are on campus, in the Hub, the
    library, the classrooms and the meeting rooms (numbers only, never who),
    and the classroom picker shows how many are in each.
+   Lab Coffee wraps round 154's north-west corner, with a terrace; its menu
+   board (**E**) lists the cafés on campus, where each is and roughly what
+   it sells, gathered from public pages (not an official list).
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier
    course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the

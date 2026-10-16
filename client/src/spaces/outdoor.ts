@@ -4,6 +4,7 @@ import { HIGH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
 import { building } from "./buildings.ts";
+import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { buildStreetscape } from "./streetscape.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
@@ -174,6 +175,8 @@ export function buildOutdoor(): SpaceDef {
     entrance: { side: "west", at: 6, color: 0xf4f3ef }, // z = 3, over the door
   });
   sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 4.6, 3, -Math.PI / 2);
+  // Lab Coffee, along 154's north side and round its north-west corner.
+  buildLabCoffee(g, colliders);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 24.85, Math.PI, "Chifley Library");
@@ -196,11 +199,12 @@ export function buildOutdoor(): SpaceDef {
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
     ],
-    noteKeepClear: [DOG_SPOT, LAWN_BOARD],
+    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU],
     tick: dog,
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
       { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the lawn noticeboard" },
+      { x: CAFE_MENU.x, z: CAFE_MENU.z + 0.9, id: "cafes", label: "Read Lab Coffee's board (cafés on campus)" },
     ],
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.

@@ -142,7 +142,7 @@ function scatterOn(g: THREE.Group, file: string, height: number, spots: Spot[]):
 }
 
 /** A small round cafe table with two chairs, east and west of it. */
-function cafeTable(g: THREE.Group, colliders: Box[], x: number, z: number): void {
+export function cafeTable(g: THREE.Group, colliders: Box[], x: number, z: number): void {
   const t = new THREE.Group();
   const top = new THREE.Mesh(new THREE.CylinderGeometry(0.4, 0.4, 0.04, 18), mat(0xe9e6df));
   top.position.y = 0.74;
@@ -206,7 +206,8 @@ export function buildStreetscape(g: THREE.Group, colliders: Box[]): void {
 
   // Under 154's colonnade: picnic tables (inside the building's footprint,
   // so they're scenery), and planters either side of its door.
-  for (const z of [-16, -11, -6, 10, 14]) picnicTable(g, 7.2, z);
+  // (The northern end, z -18..-13, is Lab Coffee: labcoffee.ts.)
+  for (const z of [-11, -6, 10, 14]) picnicTable(g, 7.2, z);
   planter(g, colliders, 4.4, 0.2);
   planter(g, colliders, 4.4, 5.8);
 
