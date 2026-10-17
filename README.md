@@ -81,19 +81,34 @@ should feel at home in a virtual space shaped like the real campus they know.
 
 ## What good means for this app
 
+I wanted more than a game: a space where people can talk. A field study of
+363 young people in the UAE found that using metaverse platforms improves
+social skills and communication, and builds relationships and a sense of
+community (Youssef et al., 2024).
+
 - **Familiar places, so less effort.** By processing fluency theory (Reber,
   Schwarz & Winkielman, 2004), the brain spends less effort on visual and
   spatial information it already knows (a mental map), and that fluency feels
   safe and pleasant. By cognitive load theory (Sweller, 1988), a predictable,
   familiar campus cuts the extraneous load of learning a virtual world, leaving
   more for real tasks, deep thinking and creative work together. So the spaces
-  follow the real campus, and people can settle in without friction.
-- **Accessible from anywhere.** No building to reach, no weather, no physical
-  barrier: a community space in the browser, on a laptop or a phone.
+  follow the real campus's map and buildings: a virtual world that feels real,
+  where ANU students can drop in, rest and talk at ease.
+- **Across the campus, from anywhere.** ANU's campus is big: walking from
+  Yukeembruk to Kambri takes about 15 minutes, and that distance is a barrier
+  to meeting. A review of 52 studies on the urban metaverse (Tiwari, 2026)
+  argues that it can lower such barriers and draw more people into taking
+  part. Here, from home, a few keystrokes reach the ANU community: no
+  building to reach, no weather, on a laptop or a phone.
+- **The Student Hub and EdStem in one place.** Students can find a
+  supervisor they're interested in, and supervisors can find students they'd
+  like to work with.
 - **A place to rest, not another work screen.** Not the 2D tools we stare at
   all day, but a game-like space where anyone can drop in, relax and socialise
   without pressure.
-- **Easy for shy people.** Calm music and game-like art make it easier to be
+- **Easy for shy people.** Talking face to face can be a burden. Here, from
+  a keyboard, a shy student can look around, meet people they don't know and
+  start a network. Calm music and game-like art make it easier to be
   social. Stick a note to leave your mark, let classmates comment on it, or
   just dance together.
 
@@ -134,6 +149,13 @@ simplified, not surveyed.
 
 ## What I read while deciding
 
+- Youssef, E., Medhat, M., Abdellatif, S. & Yousif, N. B. (2024). [Analyzing
+  the impact of metaverse technology on social development: a field study on
+  Generation Z in the United Arab Emirates](https://doi.org/10.3390/socsci13090446).
+  *Social Sciences*, 13(9), 446.
+- Tiwari, A. (2026). [A review of the metaverse and its implications for
+  urban environments: ethical, social, and economic considerations](https://doi.org/10.1080/12265934.2026.2647852).
+  *International Journal of Urban Sciences*.
 - Reber, R., Schwarz, N. & Winkielman, P. (2004). Processing fluency and
   aesthetic pleasure. *Personality and Social Psychology Review*, 8(4), 364–382.
 - Sweller, J. (1988). Cognitive load during problem solving: effects on
