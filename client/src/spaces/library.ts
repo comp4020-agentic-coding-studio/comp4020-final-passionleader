@@ -4,8 +4,11 @@ import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
 // Inside Chifley Library. You come in through the north wall (the front
-// door at the end of the bridge). In the middle, the reception desk with
-// the search computers beside it; bookcases full of books to the north-east; study desks across the south half (Kenney furniture, CC0); team
+// door at the end of the bridge). Reception is in the north-west corner, with
+// a walkway behind it (north, between the desk and the wall) where staff
+// would stand, and the search computers on a desk south of it, on the way to
+// team room 1; bookcases full of books to the north-east; study desks across
+// the south half (Kenney furniture, CC0); team
 // rooms off the side walls (meeting.ts), open to anyone, six at most.
 // Simplified, not surveyed. The computers open the library's own sites:
 // room booking in a window over the game; the catalogue and the research
@@ -18,6 +21,10 @@ import { roomShell } from "./room.ts";
 const HALF = { halfX: 16, halfZ: 11 };
 /** The door, on the north wall (the back wall, facing the camera). */
 const DOOR = { x: 0, z: -HALF.halfZ + 1.1 };
+/** Reception desk's centre (4 m wide, 1.2 deep): north-west, leaving 2.4 m of walkway to the north wall. */
+const RECEPTION = { x: -9, z: -8 };
+/** The search computers' desk's centre (6 m wide, 1 deep): south of reception, north of team room 1's door. */
+const COMPUTERS = { x: -9, z: -4 };
 
 export function buildLibrary(): SpaceDef {
   const g = new THREE.Group();
@@ -31,22 +38,24 @@ export function buildLibrary(): SpaceDef {
   g.add(sign);
   doorway(g, 0, -HALF.halfZ + 0.05, 0, "Exit to campus");
 
-  // The middle: reception, and the search computers on a desk beside it.
-  block(g, colliders, [4, 1.1, 1.2], [-3, 0], texMat("ai/wood_tabletop.jpg", 2, 1, 0x9a6438));
+  // The north-west: reception, with 2.4 m of walkway behind it (north of the
+  // desk), and the search computers on their own desk south of it, between
+  // reception and team room 1's door (west wall, z -1.5), which stays clear.
+  block(g, colliders, [4, 1.1, 1.2], [RECEPTION.x, RECEPTION.z], texMat("ai/wood_tabletop.jpg", 2, 1, 0x9a6438));
   const reception = textPlane(["Reception"], 2.4, 0.5, { bg: "#7a4e2e", fg: "#ffffff", font: 0.32 });
-  reception.position.set(-3, 1.75, 0.61);
+  reception.position.set(RECEPTION.x, 1.75, RECEPTION.z + 0.61);
   g.add(reception);
-  block(g, colliders, [6, 0.9, 1], [4, 0], texMat("ai/wood_tabletop.jpg", 3, 1, 0xb08a64));
+  block(g, colliders, [6, 0.9, 1], [COMPUTERS.x, COMPUTERS.z], texMat("ai/wood_tabletop.jpg", 3, 1, 0xb08a64));
   for (const [i, label] of ["Book a room", "Catalogue", "Research ethics"].entries()) {
-    const x = 2 + i * 2;
-    place(g, "computerScreen.glb", 0.45, x, -0.1, Math.PI, true, 0.9);
+    const x = COMPUTERS.x - 2 + i * 2;
+    place(g, "computerScreen.glb", 0.45, x, COMPUTERS.z - 0.1, Math.PI, true, 0.9);
     const tag = textPlane([label], 1.7, 0.36, { bg: "#1f2d3d", fg: "#ffffff", font: 0.2 });
-    tag.position.set(x, 1.75, 0.51);
+    tag.position.set(x, 1.75, COMPUTERS.z + 0.51);
     g.add(tag);
   }
 
   // North-east of the door: rows of bookcases facing the room, full of books.
-  // North-west is left open, for the light from the windows to fall on.
+  // The north-west holds reception (above); the windows' light falls across it.
   const cases: [number, number][] = [];
   for (const z of [-8, -5]) {
     for (const x of [6.5, 9, 11.5, 14]) {
@@ -67,8 +76,8 @@ export function buildLibrary(): SpaceDef {
   }
   // Reading lamps' warm light over the study desks, and books on reception.
   for (const z of [4, 6.8, 9.4]) for (const x of [-12, -8, -4, 4, 8, 12]) lightPool(g, x, z, 2.6, 1.8, 0xffcf8a, 0.18);
-  place(g, "books.glb", 0.14, -4.2, 0, 0.5, true, 1.1);
-  place(g, "plantSmall3.glb", 0.4, -1.6, 0, 0, true, 1.1);
+  place(g, "books.glb", 0.14, RECEPTION.x - 1.2, RECEPTION.z, 0.5, true, 1.1);
+  place(g, "plantSmall3.glb", 0.4, RECEPTION.x + 1.4, RECEPTION.z, 0, true, 1.1);
   for (const [x, z] of [
     [-15.2, 10.2],
     [15.2, 10.2],
@@ -104,14 +113,15 @@ export function buildLibrary(): SpaceDef {
     floor: "wood",
     // A chair at each study desk, facing it (north).
     seats: [4, 6.8, 9.4].flatMap((z) => [-12, -8, -4, 4, 8, 12].map((x) => ({ x, z: z + 0.8, rot: Math.PI, y: 0.45 }))),
-    // Each computer works from either side of its desk.
-    links: [-1.2, 1.2].flatMap((z) => [
-      { x: 2, z, label: "Book a library room", url: "https://anu.libcal.com/", embeddable: true },
+    // Each computer works from either side of its desk. (LIBRARY_KEEP_CLEAR in
+    // server/spaces.ts lists these spots, so notes stay off them.)
+    links: [-1.2, 1.2].flatMap((dz) => [
+      { x: COMPUTERS.x - 2, z: COMPUTERS.z + dz, label: "Book a library room", url: "https://anu.libcal.com/", embeddable: true },
       // The catalogue refuses to be shown inside another page (tried 10/16): a new tab.
-      { x: 4, z, label: "Search the library catalogue (new tab)", url: "https://anulib.anu.edu.au/", embeddable: false },
+      { x: COMPUTERS.x, z: COMPUTERS.z + dz, label: "Search the library catalogue (new tab)", url: "https://anulib.anu.edu.au/", embeddable: false },
       {
-        x: 6,
-        z,
+        x: COMPUTERS.x + 2,
+        z: COMPUTERS.z + dz,
         label: "Research ethics system (new tab)",
         url: "https://services.anu.edu.au/information-technology/software-systems/research-ethics-management-system",
         embeddable: false,

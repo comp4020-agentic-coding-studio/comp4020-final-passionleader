@@ -1,17 +1,29 @@
 import * as THREE from "three";
-import { block, chalkboard, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
 // The Student Hub, inside building 154: an office at the back and a lounge
 // at the front, to run into people in. Not a copy of the real one, and not
-// an official ANU service. Along the east
-// wall, six doors to the counselling rooms (meeting.ts): invite-only group
-// chats, six people at most.
+// an official ANU service. In the north-west, a reception desk shaped like a
+// mirrored ㄴ seen from the camera (┘): a long bar running east from the west
+// wall, with a short leg going north at its east end. The board PC and the
+// researcher-search PC sit on the bar's north edge; visitors stand on its
+// south side, staff in the pocket behind it, open to the north. The admin's
+// desk is in the far north-west corner, behind that pocket. The office pod of
+// six desks is in the middle of the back half, the coffee bar under the sign.
+// Along the east wall, six doors to the counselling rooms (meeting.ts):
+// invite-only group chats, six people at most.
 
 const HALF = { halfX: 20, halfZ: 13 };
 /** The Hub's upholstery: navy, against its pale walls. */
 const HUB_FABRIC = { carpet: 0x2f4f78 };
+/** The three PCs on reception's bar (north edge, 2.25 m apart): E works from the south of each. */
+const BOARD_PC = { x: -17, z: -4.15 };
+const AI_PC = { x: -14.75, z: -4.15 };
+const FIND_PC = { x: -12.5, z: -4.15 };
+/** Where you stand to use them: just south of the bar (its south edge is z -3.55). */
+const RECEPTION_SPOT_Z = -2.7;
 
 export function buildHub(): SpaceDef {
   const g = new THREE.Group();
@@ -19,38 +31,52 @@ export function buildHub(): SpaceDef {
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/wood_floor.jpg", 16, 10.4), { tint: 0xe6e8ea, trim: 0x2f3e4f });
   const back = -HALF.halfZ + 0.01;
 
-  // The desk at the back, with the sign above it. The
-  // reception PC on the desk opens the admin's log and bug reports (the
-  // server only answers the admin).
-  block(g, colliders, [6, 1.1, 1.2], [0, -HALF.halfZ + 1.4], 0x2f5d8a);
-  place(g, "computerScreen.glb", 0.5, -1.5, -HALF.halfZ + 1.3, 0, true, 1.1);
-  const pcTag = textPlane(["Reception PC", "staff only"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
-  pcTag.position.set(-1.5, 1.85, -HALF.halfZ + 0.82);
+  // The admin's desk in the far north-west corner, against the back wall.
+  // Its PC opens the admin's log and bug reports (the server only answers the
+  // admin). The Hub's sign hangs on the back wall at the middle.
+  // 8 m long from the corner, so more staff PCs can go on it later; the admin PC is at its west end.
+  block(g, colliders, [8, 1.1, 1.2], [-15.9, -HALF.halfZ + 1.4], 0x2f5d8a);
+  place(g, "computerScreen.glb", 0.5, -18.4, -HALF.halfZ + 1.3, 0, true, 1.1);
+  const pcTag = textPlane(["Admin PC", "staff only"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  pcTag.position.set(-18.4, 1.85, -HALF.halfZ + 0.82);
   g.add(pcTag);
   const sign = textPlane(["Student Hub", "an unofficial, fan-made space"], 6, 1.4, { bg: "#2f5d8a", fg: "#ffffff", font: 0.42 });
   sign.position.set(0, 2.9, back);
   g.add(sign);
-  // The Hub's board, where staff and students find each other (Labs looking
-  // for students, Students looking for labs, Ask the Hub), and beside it a
-  // desk whose PC opens ANU's researcher search in a new tab.
-  const cork = chalkboard(["Student Hub board", "Labs · Students · Ask the Hub", "press E to read and post"], 3.4, 2.2, 0.25);
-  cork.position.set(-10, 2.1, back + 0.03);
-  g.add(cork);
-  block(g, colliders, [1.6, 0.8, 0.8], [-6, -HALF.halfZ + 0.5], 0x6b4a2b);
-  place(g, "computerScreen.glb", 0.5, -6, -HALF.halfZ + 0.5, 0, true, 0.8);
+
+  // Reception: a mirrored ㄴ (┘) in the north-west. The bar runs along
+  // z -4.45..-3.55 from the west wall to x -8; the leg goes north from its
+  // east end (x -8.9..-8.0) up to z -8. Staff stand in the pocket west of the
+  // leg and north of the bar (open to the north, the admin's desk in the
+  // corner beyond); visitors come up from the west door (z 6) across the open
+  // floor to the bar's south side. The PCs stand on the bar's north edge,
+  // spread along it (the board, the AI guide and the researcher search), and
+  // are used from the south (the spots below).
+  const RECEPTION_WOOD = 0x8a5a32;
+  block(g, colliders, [12, 0.9, 0.9], [-14, -4], RECEPTION_WOOD);
+  block(g, colliders, [0.9, 0.9, 3.55], [-8.45, -6.225], RECEPTION_WOOD);
+  place(g, "computerScreen.glb", 0.5, BOARD_PC.x, BOARD_PC.z, 0, true, 0.9);
+  const boardTag = textPlane(["Student Hub board", "press E to read and post"], 1.9, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  boardTag.position.set(BOARD_PC.x, 1.85, BOARD_PC.z);
+  g.add(boardTag);
+  place(g, "computerScreen.glb", 0.5, AI_PC.x, AI_PC.z, 0, true, 0.9);
+  const aiTag = textPlane(["AI essentials", "ANU guide · new tab"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  aiTag.position.set(AI_PC.x, 1.85, AI_PC.z);
+  g.add(aiTag);
+  place(g, "computerScreen.glb", 0.5, FIND_PC.x, FIND_PC.z, 0, true, 0.9);
   const findTag = textPlane(["Find a researcher", "opens a new tab"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
-  findTag.position.set(-6, 1.85, back);
+  findTag.position.set(FIND_PC.x, 1.85, FIND_PC.z);
   g.add(findTag);
-  // The poster that held the board's place, now on the west wall.
+  // A poster on the west wall, in the reception pocket.
   const art = poster("ai/poster_hub.jpg", 1.6, 2.4);
-  art.position.set(-HALF.halfX + 0.01, 2, -4);
+  art.position.set(-HALF.halfX + 0.01, 2, -7.5);
   art.rotation.y = Math.PI / 2;
   g.add(art);
 
   // The office half, at the back: two pods of three desks facing each
-  // other, each with a monitor and a chair, and closed bookcases on the wall
+  // other, one in the middle and one to the east, each with a monitor and a chair, and closed bookcases on the wall
   // (Kenney models, CC0).
-  for (const cx of [-12, 8.5]) {
+  for (const cx of [-2, 8.5]) {
     for (const dx of [-1.5, 0, 1.5]) {
       const x = cx + dx;
       place(g, "desk.glb", 0.75, x, -7, Math.PI);
@@ -66,10 +92,10 @@ export function buildHub(): SpaceDef {
     place(g, "bookcaseClosedWide.glb", 1.9, x, -HALF.halfZ + 0.4);
     solid(colliders, 2, 0.7, x, -HALF.halfZ + 0.4);
   }
-  // A coffee bar in the back corner.
-  for (const x of [-18, -17]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
-  place(g, "kitchenCoffeeMachine.glb", 0.4, -18, -HALF.halfZ + 0.5, 0, true, 0.95);
-  solid(colliders, 2.2, 0.8, -17.5, -HALF.halfZ + 0.5);
+  // A coffee bar on the back wall under the sign (the north-west corner is the admin's now).
+  for (const x of [-0.5, 0.5]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
+  place(g, "kitchenCoffeeMachine.glb", 0.4, -0.5, -HALF.halfZ + 0.5, 0, true, 0.95);
+  solid(colliders, 2.2, 0.8, 0, -HALF.halfZ + 0.5);
 
   // The lounge half, at the front: three corners of two sofas facing each
   // other across a glass coffee table, on a rug, with a floor lamp.
@@ -108,7 +134,7 @@ export function buildHub(): SpaceDef {
   for (const game of GAMES) arcade(g, colliders, game.x, -HALF.halfZ + 0.6, game.screen, game.marquee);
 
   for (const [x, z] of [
-    [-19, -12],
+    [-10.5, -12],
     [17, -12],
     [17, 12],
     [-19, 12],
@@ -133,11 +159,11 @@ export function buildHub(): SpaceDef {
   solid(colliders, 0.6, 0.6, -18.8, 9.6);
   place(g, "rugRectangle.glb", 0.05, -17.6, 6, Math.PI / 2, false);
   for (const [x, z] of [
-    [-13.5, -7.7],
+    [-3.5, -7.7],
     [10, -7.4],
   ] as const) place(g, "plantSmall2.glb", 0.35, x, z, 0, true, 0.75);
   place(g, "books.glb", 0.12, 7, -7.5, 0.4, true, 0.75);
-  place(g, "books.glb", 0.12, -10.5, -8, 1.2, true, 0.75);
+  place(g, "books.glb", 0.12, -0.5, -8, 1.2, true, 0.75);
 
   return {
     id: "hub",
@@ -164,11 +190,15 @@ export function buildHub(): SpaceDef {
     // The arcade machines: E opens each game in the in-app window.
     links: [
       ...GAMES.map((game) => ({ x: game.x, z: -HALF.halfZ + 1.9, label: `Play ${game.title}`, url: game.url, embeddable: true })),
-      { x: -1.5, z: -HALF.halfZ + 2.6, label: "Use the reception PC (activity log, bug reports)", url: "/admin/", embeddable: true },
-      // The research portal won't be framed, so a new tab.
-      { x: -6, z: -HALF.halfZ + 1.6, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
+      { x: -18.4, z: -HALF.halfZ + 2.6, label: "Use the admin PC (activity log, bug reports)", url: "/admin/", embeddable: true },
+      // ANU's AI guide sends X-Frame-Options: SAMEORIGIN, so a new tab.
+      { x: AI_PC.x, z: RECEPTION_SPOT_Z, label: "Read ANU's AI essentials (new tab)", url: "https://learningandteaching.anu.edu.au/resource-collection/ai-essentials/", embeddable: false },
+      // The research portal won't be framed, so a new tab. Used from the
+      // south of reception's bar.
+      { x: FIND_PC.x, z: RECEPTION_SPOT_Z, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
     ],
-    spots: [{ x: -10, z: -HALF.halfZ + 1.4, id: "board", label: "Open the Student Hub board" }],
+    // The board PC on reception's bar: you stand south of it.
+    spots: [{ x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the Student Hub board" }],
   };
 }
 

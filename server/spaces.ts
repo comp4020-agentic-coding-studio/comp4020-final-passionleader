@@ -161,12 +161,14 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 0, z: -9.9 }, // the way out, on the north wall
-  { x: 2, z: 1.2 }, // the search computers by reception, used from either side
-  { x: 4, z: 1.2 },
-  { x: 6, z: 1.2 },
-  { x: 2, z: -1.2 },
-  { x: 4, z: -1.2 },
-  { x: 6, z: -1.2 },
+  // The search computers south of reception (client/src/spaces/library.ts
+  // COMPUTERS: x -9, z -4), used from either side.
+  { x: -11, z: -2.8 },
+  { x: -9, z: -2.8 },
+  { x: -7, z: -2.8 },
+  { x: -11, z: -5.2 },
+  { x: -9, z: -5.2 },
+  { x: -7, z: -5.2 },
   ...LIBRARY_TEAM_DOORS,
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
