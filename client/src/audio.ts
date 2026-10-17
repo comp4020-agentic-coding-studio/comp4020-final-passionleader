@@ -5,6 +5,8 @@
 // Two volumes, background music and sound effects (the spoken emotes), are
 // set in the settings dialog and remembered per browser. The small player
 // box (bgmplayer.ts) shows the track and can pause it or skip to the next.
+// The music plays through a Web Audio gain rather than the element's own
+// volume, which iPhones ignore (it plays at full or not at all).
 
 const BGM_KEY = "campus.bgmVolume";
 const SFX_KEY = "campus.sfxVolume";
@@ -35,7 +37,29 @@ let index = 0;
 let started = false;
 let paused = false;
 const bgm = new Audio();
-bgm.volume = (bgmVolume / 100) * BGM_MAX;
+let gain: GainNode | null = null;
+let ctx: AudioContext | null = null;
+
+/** Routes the music through a gain node, on the first gesture; if Web Audio is missing, the element's volume does. */
+function route(): void {
+  if (ctx) return;
+  try {
+    ctx = new AudioContext();
+    gain = ctx.createGain();
+    ctx.createMediaElementSource(bgm).connect(gain).connect(ctx.destination);
+  } catch {
+    gain = null;
+  }
+  applyVolume();
+}
+function applyVolume(): void {
+  const level = (bgmVolume / 100) * BGM_MAX;
+  if (gain) {
+    bgm.volume = 1;
+    gain.gain.value = level;
+  } else bgm.volume = level;
+}
+applyVolume();
 
 const listeners = new Set<() => void>();
 const changed = (): void => listeners.forEach((f) => f());
@@ -50,7 +74,9 @@ function load(i: number): void {
   changed();
 }
 function resume(): void {
-  if (started && !paused && bgmVolume > 0) void bgm.play().catch(() => {});
+  if (!started || paused || bgmVolume === 0) return;
+  if (ctx?.state === "suspended") void ctx.resume();
+  void bgm.play().catch(() => {});
 }
 bgm.addEventListener("ended", () => nextTrack());
 
@@ -62,6 +88,7 @@ bgm.addEventListener("ended", () => nextTrack());
  */
 export function playTrack(files: string[]): void {
   started = true;
+  route();
   if (files.length === 0) return;
   if (files.join() === playlist.join()) return resume();
   playlist = files;
@@ -100,7 +127,7 @@ export const getSfxVolume = (): number => sfxVolume;
 export function setBgmVolume(v: number): void {
   bgmVolume = Math.max(0, Math.min(100, Math.round(v)));
   saveVolume(BGM_KEY, bgmVolume);
-  bgm.volume = (bgmVolume / 100) * BGM_MAX;
+  applyVolume();
   if (bgmVolume === 0) bgm.pause();
   else resume();
 }

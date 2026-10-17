@@ -16,6 +16,15 @@ html, body {
   color: var(--ink);
   font-family: system-ui, sans-serif;
   touch-action: none;
+  /* Tapping Jump fast must not start selecting the page's text (iPhones turn it
+     blue); text you type or read in a window stays selectable (below). */
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+}
+input, textarea, [role="dialog"], [role="region"], [role="alertdialog"] {
+  user-select: text;
+  -webkit-user-select: text;
 }
 #stage { position: fixed; inset: 0; outline: none; }
 #stage canvas { display: block; }

@@ -1191,6 +1191,32 @@ for (const btn of touch.querySelectorAll<HTMLButtonElement>("[data-dir]")) {
   btn.addEventListener("pointercancel", release);
   btn.addEventListener("pointerleave", release);
 }
+// iPhones ignore the viewport's user-scalable=no, so pinching, or tapping
+// twice fast (two fingers on the pad and Jump), zooms the page. Over the game
+// and its buttons, both are stopped here; windows scroll and zoom as normal.
+const overGame = (t: EventTarget | null): boolean => t instanceof Element && !!t.closest("#stage, #touch");
+for (const type of ["gesturestart", "gesturechange"]) {
+  document.addEventListener(type, (e) => {
+    if (overGame(e.target)) e.preventDefault();
+  });
+}
+document.addEventListener(
+  "touchmove",
+  (e) => {
+    if (e.touches.length > 1 && overGame(e.target)) e.preventDefault();
+  },
+  { passive: false },
+);
+let lastTouchEnd = 0;
+document.addEventListener(
+  "touchend",
+  (e) => {
+    const now = performance.now();
+    if (now - lastTouchEnd < 350 && overGame(e.target)) e.preventDefault();
+    lastTouchEnd = now;
+  },
+  { passive: false },
+);
 // A button acts on pointerdown, so it feels instant. If that opens a dialog,
 // the finger lifts over the dialog's backdrop, and the click the browser
 // sends after the tap would close it again ("click outside"). So the click
@@ -1215,7 +1241,26 @@ const tap = (id: string, fn: () => void): void =>
     if (busy()) swallowClickUntil = performance.now() + 700;
   });
 tap("jump-btn", () => jump());
-tap("use-btn", () => interact());
+// Use acts on pointerdown like the rest, except at a link that opens a new
+// tab: phones only let a page open a tab from the end of a tap, not its
+// start, so that one waits for the finger to lift.
+$("use-btn").addEventListener("pointerdown", (e) => {
+  e.preventDefault();
+  if (!playing || busy()) return;
+  const target = nearestTarget();
+  if (target?.kind === "link" && !target.embeddable && e.pointerType !== "mouse") useOnLift = true;
+  else {
+    interact();
+    if (busy()) swallowClickUntil = performance.now() + 700;
+  }
+});
+let useOnLift = false;
+$("use-btn").addEventListener("pointerup", () => {
+  if (!useOnLift) return;
+  useOnLift = false;
+  if (playing && !busy()) interact();
+});
+$("use-btn").addEventListener("pointercancel", () => (useOnLift = false));
 tap("menu-btn", () => (radial.isOpen() ? radial.close() : radial.open()));
 
 // --- actions ---------------------------------------------------------------
