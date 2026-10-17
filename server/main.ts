@@ -84,7 +84,7 @@ app.get("/readme/", (c) => {
   return c.html(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>README</title>
+<title>README · ANU Crossing</title>
 <style>body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:1rem/1.6 system-ui,sans-serif}img{max-width:100%}</style>
 </head><body><main>${body}</main><p><a href="/">Back to the campus</a></p></body></html>`);
 });
@@ -440,7 +440,7 @@ app.get("/api/projects", (c) => c.json({ projects, checkedAt: projectsCheckedAt 
 const pinnedNotice = (label: string) => ({
   id: 0,
   tab: label,
-  author: "ANU campus",
+  author: "ANU Crossing",
   title: "Who can post here",
   text: `Only lecturers and staff can post in ${label}, so other users can't post here. Everyone can read and comment.`,
   createdAt: "",
@@ -885,7 +885,7 @@ if (existsSync(dist)) {
   });
   app.use("/*", serveStatic({ root: dist }));
 } else {
-  app.get("/", (c) => c.html('<!doctype html><title>ANU campus</title><p>Client not built yet. <a href="/readme/">README</a></p>'));
+  app.get("/", (c) => c.html('<!doctype html><title>ANU Crossing (Unofficial)</title><p>Client not built yet. <a href="/readme/">README</a></p>'));
 }
 
 const port = Number(process.env.PORT ?? 8080);

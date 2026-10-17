@@ -1,4 +1,7 @@
-# ANU campus, unofficially
+# ANU Crossing (Unofficial)
+
+A place where people at ANU cross paths: ask what you don't know, meet
+people you wouldn't otherwise, in a campus you already know.
 
 A small 3D, real-time space for the ANU community: a stretch of campus between
 building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
