@@ -1,8 +1,9 @@
-/* The group-chat window for a counselling room or a team room: a panel over
-   the game on the right (below the music box and the gear), a sheet at the
-   top under the HUD on phones. Lines don't fade; the log scrolls. */
+/* A room's dock and chat: the dock (room name, head count, Chat, Leave) sits
+   top right below the music box and the gear, and the chat panel opens under
+   it. On phones the column spans the width under the HUD. The column takes no
+   clicks itself, so with the chat closed the game and the D-pad stay free. */
 
-#room-panel {
+#room-ui {
   position: fixed;
   top: 70px; /* below the music box and the gear */
   right: 12px;
@@ -13,50 +14,73 @@
   max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
-  overflow: hidden;
+  gap: 8px;
+  pointer-events: none;
+  font-family: system-ui, sans-serif;
+}
+
+#room-ui[hidden],
+#room-ui [hidden],
+.room-modal[hidden] {
+  display: none !important;
+}
+
+#room-ui > * {
+  pointer-events: auto;
+}
+
+.room-dock {
+  flex: none;
+  box-sizing: border-box;
+  padding: 8px 10px;
   border-radius: 14px;
   background: var(--paper, #f3e7a6);
   color: var(--ink, #3b2a12);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-  font-family: system-ui, sans-serif;
 }
 
-#room-panel[hidden],
-#room-panel [hidden] {
+.room-dock-top {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 0 4px 6px;
+}
+
+.room-dock-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+#room-panel {
+  flex: 1;
+  min-height: 0;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  padding-top: 8px;
+  border-radius: 14px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+}
+
+#room-panel[hidden] {
   display: none !important;
 }
 
-#room-panel button {
+#room-ui button,
+.room-modal button {
   font: inherit;
   cursor: pointer;
 }
 
-#room-panel button:focus-visible,
-#room-panel input:focus-visible {
+#room-ui button:focus-visible,
+#room-ui input:focus-visible,
+.room-modal button:focus-visible {
   outline: 3px solid var(--accent, #6b3f1d);
   outline-offset: 2px;
-}
-
-.room-head {
-  flex: none;
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 10px 10px 6px 14px;
-}
-
-.room-toggle {
-  flex: 1;
-  min-width: 0;
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 0;
-  border: 0;
-  background: none;
-  color: inherit;
-  text-align: left;
-  cursor: default;
 }
 
 /* Up to two lines, so "COMP8020 · Team room 2" isn't cut off beside the
@@ -84,23 +108,39 @@
   font-weight: 700;
 }
 
-.room-chevron {
-  display: none;
-  flex: none;
-  margin-left: auto;
-  font-size: 0.8rem;
-}
-
-.room-leave {
+.room-leave,
+.room-dock-btn {
   flex: none;
   min-height: 44px;
-  padding: 6px 10px;
+  padding: 6px 12px;
   font-size: 0.9rem;
   border: 0;
   border-radius: 8px;
   background: #e6dcc0;
   color: var(--ink, #3b2a12);
   font-weight: 700;
+}
+
+.room-dock-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.room-dock-btn[aria-pressed="true"] {
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+}
+
+.room-badge {
+  min-width: 1.4em;
+  padding: 0 6px;
+  border-radius: 999px;
+  background: #b3412e;
+  color: #fff;
+  font-size: 0.8rem;
+  line-height: 1.5;
+  text-align: center;
 }
 
 .room-members {
@@ -286,25 +326,19 @@
 }
 
 @media (max-width: 600px), (pointer: coarse) {
-  #room-panel {
+  #room-ui {
     right: 12px;
     left: 12px;
     bottom: auto;
     width: auto;
     max-width: none;
-    height: 34vh;
     top: 64px; /* the help line is hidden in rooms (style.css), so it can sit higher */
   }
 
-  .room-toggle {
-    cursor: pointer;
-    min-height: 44px;
-  }
-
   /* The sheet is short, so keep the top part tight and leave the log room. */
-  .room-head {
-    padding-top: 6px;
-    padding-bottom: 2px;
+  #room-panel {
+    flex: none;
+    height: 34vh;
   }
 
   .room-members {
@@ -332,39 +366,44 @@
     padding-top: 6px;
     padding-bottom: 8px;
   }
-
-  .room-chevron {
-    display: inline;
-  }
-
-  #room-panel.is-collapsed {
-    height: auto;
-  }
-
-  #room-panel.is-collapsed > :not(.room-head) {
-    display: none !important;
-  }
 }
 
-/* "You're the last one here": the chat and files go when the room empties. */
-.room-last-out {
+/* "You're the last one here": the chat and files go when the room empties.
+   A popup of its own, so it shows with the chat closed too. */
+.room-modal {
+  position: fixed;
+  inset: 0;
+  z-index: 40;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  background: rgba(20, 20, 20, 0.45);
+  font-family: system-ui, sans-serif;
+}
+
+.room-modal-card {
+  box-sizing: border-box;
+  width: min(380px, 100%);
+  padding: 18px 20px;
+  border-radius: 14px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+}
+
+.room-modal-card h2 {
   margin: 0 0 8px;
-  padding: 10px 12px;
-  border: 2px solid #b5654a;
-  border-radius: 10px;
-  background: #fff1e0;
+  font-size: 1.15rem;
 }
 
-.room-last-out[hidden] {
-  display: none;
-}
-
-.room-last-out p {
-  margin: 0 0 8px;
-  font-size: 0.9rem;
+.room-modal-card p {
+  margin: 0 0 14px;
+  font-size: 0.95rem;
+  line-height: 1.4;
 }
 
 .room-last-out-row {
   display: flex;
+  flex-wrap: wrap;
   gap: 8px;
 }
