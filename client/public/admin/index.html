@@ -100,7 +100,7 @@
   </header>
   <main>
     <section id="log-view">
-      <p class="hint">Each person is a name plus a browser tag (a hash of their browser's token, never the token). Same name with a different tag = a different browser. Chat text is never kept.</p>
+      <p class="hint">Each person is a name plus a browser tag (a hash of their browser's token, never the token). Same name with a different tag = a different browser. Chat text is never in this log; a report about a person carries the last five minutes of that space's chat (see Reports).</p>
       <p class="error" id="log-error" role="alert"></p>
       <table>
         <thead><tr><th>Time</th><th>Who · browser</th><th>IP</th><th>Space</th><th>Event</th><th>Details</th></tr></thead>
@@ -194,7 +194,7 @@
     return `hsl(${parseInt(tag.slice(0, 6), 16) % 360} 65% 45%)`;
   }
   function kindOf(event) {
-    if (event === "refused" || event === "join-refused") return "refused";
+    if (event === "refused" || event === "join-refused" || event === "person-report") return "refused";
     if (event.endsWith("-removed") || event === "note-replaced" || event === "note-expired") return "removed";
     if (["join", "connect", "disconnect"].includes(event)) return "signin";
     if (event.startsWith("classroom") || event.startsWith("restrict") || event === "room-invite") return "admin";

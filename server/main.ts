@@ -614,7 +614,7 @@ app.delete("/api/board-comments/:id", async (c) => {
 
 const AUDIT_GROUPS: Record<string, string[]> = {
   admin: ["restricted", "restriction-lifted", "classroom-created", "classroom-removed", "classroom-link"],
-  content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "file"],
+  content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "person-report", "file"],
   signin: ["join", "join-refused", "connect", "disconnect"],
   refused: ["refused", "join-refused"],
 };
@@ -722,7 +722,9 @@ app.post("/api/bugs", async (c) => {
   const chat = about && b.withChat === true && space ? recentChat(space) : null;
   const result = addBugReport({ author: v.name, browser: browserTag(v.token), ip: ipOf(c), space, userAgent, text, about, chat });
   if (!result.ok) return c.json({ error: `One report a minute. Wait ${result.wait}s.` }, 429);
-  log("bug-report", v, { space, report: result.id, chars: text.length, about, chatLines: chat?.length }, { ip: ipOf(c), content: text });
+  // A report about a person is its own event in the log, so it doesn't read as a bug.
+  if (about) log("person-report", v, { space, report: result.id, chars: text.length, about, chatLines: chat?.length ?? 0 }, { ip: ipOf(c), content: text });
+  else log("bug-report", v, { space, report: result.id, chars: text.length }, { ip: ipOf(c), content: text });
   return c.json({ id: result.id }, 201);
 });
 

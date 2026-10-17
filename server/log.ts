@@ -43,6 +43,7 @@ export type Event =
   | "room-invite"
   | "room-closed"
   | "bug-report"
+  | "person-report"
   | "file"
   | "restricted"
   | "restriction-lifted"
@@ -71,6 +72,7 @@ const KEPT: ReadonlySet<Event> = new Set<Event>([
   "classroom-link",
   "room-invite",
   "bug-report",
+  "person-report",
   "file",
   "restricted",
   "restriction-lifted",
