@@ -22,7 +22,7 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 const OUTDOOR_AREAS: Box[] = [
   { minX: -29.5, maxX: 5, minZ: -39.4, maxZ: -2 },
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
-  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 24.4 },
+  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
 ];
 
 export function buildOutdoor(): SpaceDef {
@@ -189,7 +189,8 @@ export function buildOutdoor(): SpaceDef {
     doors: [
       { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
-      { x: -2, z: 23.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
+      // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
+      { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
     halfX: 30,
     halfZ: 40,
@@ -209,6 +210,9 @@ export function buildOutdoor(): SpaceDef {
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),
+    // Chifley Library closes the south: walking up the bridge to its door,
+    // the camera climbs over your head instead of going into the building.
+    southWall: { from: 12, z: 22 },
     bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3"],
     outdoor: true,
     // The two lawn benches, two people each.

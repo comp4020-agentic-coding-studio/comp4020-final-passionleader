@@ -33,7 +33,7 @@ export interface Space {
 const OUTDOOR_AREAS: Area[] = [
   { minX: -29.5, maxX: 5, minZ: -39.4, maxZ: -2 },
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
-  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 24.4 },
+  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
 ];
 
 export const SPACES: Record<string, Space> = {
@@ -155,7 +155,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door
   { x: 4.6, z: 3 }, // 154's door
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
-  { x: -2, z: 23.6 }, // Chifley Library's front door
+  { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
   { x: -19.5, z: -22.6 }, // the lawn noticeboard (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
 ];

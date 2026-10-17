@@ -44,6 +44,12 @@ export interface SpaceDef {
   background: number;
   /** Camera offset from the player: further back outside, closer indoors. */
   camera: THREE.Vector3;
+  /**
+   * Where a wall closes the space to the south (+z): walking toward it, the
+   * camera rises and leans in, looking down on you at the edge `z` (where
+   * walking stops). `from` is where the rise starts.
+   */
+  southWall?: { from: number; z: number };
   /** Background tracks in client/public/assets/, played in turn. */
   bgm: string[];
   /** Outdoors: a real sky and haze toward the horizon. Indoors: neither. */

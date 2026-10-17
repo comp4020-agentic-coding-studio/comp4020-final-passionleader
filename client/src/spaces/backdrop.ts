@@ -1,6 +1,5 @@
 import * as THREE from "three";
 import { floor, mat, solid, texMat, textPlane, type Box } from "../world.ts";
-import { markOccluderGroup } from "./occluders.ts";
 
 // Scenery past the map's edges, laid out from my own sketch and photos (kept
 // out of the repo), not surveyed, so the campus ends in buildings rather than
@@ -53,6 +52,53 @@ function facadeTexture(wall: string, joint: string, glass: string, frame: string
   t.anisotropy = 4;
   facades.set(key, t);
   return t;
+}
+
+/**
+ * Chifley Library's face, one 4 m bay, drawn on a canvas: pale concrete upper
+ * floors with a tall dark window slot, over a ground floor of round arches on
+ * stone piers (after the 1960s building; not surveyed).
+ */
+let chifleyTex: THREE.CanvasTexture | null = null;
+function chifleyMat(len: number): THREE.MeshStandardMaterial {
+  if (!chifleyTex) {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 512;
+    const ctx = c.getContext("2d")!;
+    // Upper three floors: pale render, a tall slot window with mullions.
+    ctx.fillStyle = "#e6dccb";
+    ctx.fillRect(0, 0, 128, 384);
+    ctx.fillStyle = "#3a3229";
+    ctx.fillRect(40, 40, 48, 320);
+    ctx.fillStyle = "#c9a85a";
+    for (const y of [60, 170, 280]) ctx.fillRect(46, y, 36, 70);
+    ctx.fillStyle = "#3a3229";
+    for (const y of [60, 170, 280]) ctx.fillRect(62, y, 4, 70);
+    // A band between the upper floors and the arcade.
+    ctx.fillStyle = "#b8ab95";
+    ctx.fillRect(0, 372, 128, 16);
+    // Ground floor: a pebbly stone pier either side and a round arch, dark inside.
+    ctx.fillStyle = "#8f8270";
+    ctx.fillRect(0, 388, 128, 124);
+    ctx.fillStyle = "#2b2622";
+    ctx.beginPath();
+    ctx.moveTo(18, 512);
+    ctx.lineTo(18, 440);
+    ctx.arc(64, 440, 46, Math.PI, 0);
+    ctx.lineTo(110, 512);
+    ctx.fill();
+    ctx.fillStyle = "#d9b45e";
+    ctx.fillRect(40, 470, 48, 42);
+    chifleyTex = new THREE.CanvasTexture(c);
+    chifleyTex.colorSpace = THREE.SRGBColorSpace;
+    chifleyTex.wrapS = THREE.RepeatWrapping;
+    chifleyTex.anisotropy = 4;
+  }
+  const map = chifleyTex.clone();
+  map.needsUpdate = true;
+  map.repeat.set(len / 4, 1);
+  return new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0 });
 }
 
 /** Asphalt, drawn on a canvas: dark grey grain, no markings (a one-lane road). */
@@ -230,7 +276,7 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   block(backdrop, red, 50, -40, 16, 12, 3, 0, 0x6f6a64);
   block(backdrop, red, 52, -62, 20, 14, 4, 0, 0x6f6a64);
 
-  buildSouth(backdrop, colliders, g);
+  buildSouth(backdrop, colliders);
 
   backdrop.traverse((o) => {
     o.userData.noShadow = true;
@@ -239,7 +285,7 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
 }
 
 /** The south: a sunken outdoor level, the path's bridge over it, Chifley Library. */
-function buildSouth(g: THREE.Group, colliders: Box[], space: THREE.Group): void {
+function buildSouth(g: THREE.Group, colliders: Box[]): void {
   const DEPTH = 2.6;
   const z0 = 17;
   const z1 = 23;
@@ -291,30 +337,30 @@ function buildSouth(g: THREE.Group, colliders: Box[], space: THREE.Group): void 
   rail(5, 5, z0, z1);
 
   // Chifley Library across the end of the path, its door at the bridge. You
-  // can walk up to the door, so it fades when the camera ends up inside it.
+  // stop 3 m short of it (outdoor.ts) and it never fades: the end of the map.
   const library = new THREE.Group();
-  const brown = facadeTexture("#8a6a50", "#7a5c45", "#2c3338", "#b9a58c");
+  // Pale concrete over an arcade of round arches, its upper windows in tall
+  // dark slots (after the real building, drawn on the wall).
   const lib = new THREE.Mesh(new THREE.BoxGeometry(66, 4 * FLOOR_H, 14), [
-    facadeMat(brown, 14, 4),
-    facadeMat(brown, 14, 4),
-    mat(0x8f857a),
-    mat(0x8f857a),
-    facadeMat(brown, 66, 4),
-    facadeMat(brown, 66, 4),
+    chifleyMat(14),
+    chifleyMat(14),
+    mat(0xa39886),
+    mat(0xa39886),
+    chifleyMat(66),
+    chifleyMat(66),
   ]);
   lib.position.set(3, 2 * FLOOR_H, 32);
   library.add(lib);
+  // A deep cornice along the top.
+  const cornice = new THREE.Mesh(new THREE.BoxGeometry(67, 0.5, 1.2), mat(0xcfc3ae));
+  cornice.position.set(3, 4 * FLOOR_H + 0.1, 25.2);
+  library.add(cornice);
   const door = new THREE.Mesh(new THREE.BoxGeometry(6, 3.2, 0.2), mat(0x1c2328));
   door.position.set(-2, 1.6, 24.95);
   library.add(door);
-  const sign = textPlane(["Chifley Library"], 7, 1.1, { bg: "#2a2420", fg: "#ffffff", font: 0.7 });
-  sign.position.set(-2, 4, 24.85);
-  sign.rotation.y = Math.PI;
-  library.add(sign);
   g.add(library);
   // Its ground is a beige forecourt, not the campus grass: the building fades
   // when the camera comes close, and grass then showed where the library stands.
   floor(g, 70, 16.3, 3, 31.35, texMat("ai/paving.jpg", 35, 8, 0xe2d6bc), 0.01);
   solid(colliders, 66, 14, 3, 32);
-  markOccluderGroup(space, library);
 }

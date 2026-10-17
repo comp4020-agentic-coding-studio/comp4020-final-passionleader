@@ -850,7 +850,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   scene.environmentIntensity = space.outdoor ? 1 : 0.55 * (space.light ?? 1);
   player.position.set(at.x, 0, at.z);
   vy = 0;
-  camera.position.copy(player.position).add(space.camera);
+  camera.position.copy(player.position).add(cameraOffset(space, at.z));
   if (session) hudName.textContent = `You are ${session.name} · ${space.title}`;
   // Sound only after joining: the Enter click is the gesture browsers require.
   if (playing) playTrack(space.bgm);
@@ -1418,6 +1418,21 @@ function interact(): void {
   } else void openNote(target.id);
 }
 
+/**
+ * The camera's offset at `z`: the space's own, except near a south wall,
+ * where it rises and leans in until it looks down from over your head.
+ */
+const camOffset = new THREE.Vector3();
+function cameraOffset(s: SpaceDef, z: number): THREE.Vector3 {
+  camOffset.copy(s.camera);
+  if (!s.southWall) return camOffset;
+  const { from, z: wall } = s.southWall;
+  const t = THREE.MathUtils.smoothstep(z, from, wall);
+  // Higher and closer, looking down on you at the edge, so the building stays in front of the camera.
+  camOffset.set(s.camera.x, THREE.MathUtils.lerp(s.camera.y, 12, t), THREE.MathUtils.lerp(s.camera.z, 1.2, t));
+  return camOffset;
+}
+
 // --- game loop -------------------------------------------------------------
 
 let lastTime = performance.now();
@@ -1512,7 +1527,7 @@ function update(dt: number, now: number): void {
   sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 50);
 
   // Third-person camera, following across the floor but not up a jump.
-  const desired = player.position.clone().setY(0).add(space.camera);
+  const desired = player.position.clone().setY(0).add(cameraOffset(space, player.position.z));
   camera.position.lerp(desired, 1 - Math.exp(-8 * dt));
   lookTarget.copy(player.position).setY(space.outdoor ? 1.8 : 1);
   camera.lookAt(lookTarget);
