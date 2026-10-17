@@ -1378,8 +1378,8 @@ function interact(): void {
   const target = nearestTarget();
   if (!target) return;
   if (target.kind === "seat") return sitDown(target.index);
-  // Anything but a door opens a window: a soft "open" sound.
-  if (target.kind !== "door") sfx("open");
+  // Anything but a door opens a window: a soft "open" sound (the dog barks instead).
+  if (target.kind !== "door" && !(target.kind === "spot" && target.id === "dog")) sfx("open");
   if (target.kind === "door") {
     if (target.door.to === "classroom") {
       stopMoving();
@@ -1398,7 +1398,10 @@ function interact(): void {
     } else setSpace(target.door.to, target.door.arrive, true);
   } else if (target.kind === "spot") {
     stopMoving();
-    if (target.id === "dog") dogPrompt.open();
+    if (target.id === "dog") {
+      sfx("bark");
+      dogPrompt.open();
+    }
     else if (target.id === "cafes") cafeGuide.open();
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "projects") void openProjects();

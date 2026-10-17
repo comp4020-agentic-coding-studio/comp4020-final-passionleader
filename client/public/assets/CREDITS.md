@@ -146,6 +146,13 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 - Source: https://kenney.nl/assets/interface-sounds and https://kenney.nl/assets/impact-sounds
 - Licence: Creative Commons Zero (CC0 1.0), stated in each pack's `License.txt`.
 
+`dog_bark.ogg` (the dog in front of 154): two barks cut from "Barking dog #1"
+(0.9 s from 3.75 s), levelled, faded and re-encoded at 22 kHz mono.
+
+- Author: Joseph Sardin, BigSoundBank
+- Source: https://bigsoundbank.com/detail-0916-barking-dog.html
+- Licence: Creative Commons Zero (CC0 1.0), stated on the sound's page.
+
 ## Music
 
 `Noon_On_The_Green.mp3`, `Dappled_Sunlight_Trail.mp3` and

@@ -2,13 +2,14 @@ import { getSfxVolume } from "./audio.ts";
 
 // Short sound effects (Kenney's Interface and Impact Sounds, CC0, credited in
 // assets/CREDITS.md): footsteps that match the floor, doors, UI clicks, and
-// a ping for a new line in a meeting room's chat. Played through Web Audio,
+// a ping for a new line in a meeting room's chat, and the dog's bark
+// (BigSoundBank, CC0). Played through Web Audio,
 // each decoded once, at the sound-effects volume from the settings. Nothing
 // plays before the first click or key (browsers require one), and a sound
 // that fails to load just stays silent.
 
 export type Floor = "concrete" | "wood" | "carpet";
-export type Effect = "door" | "click" | "open" | "close" | "message" | "note" | "error";
+export type Effect = "door" | "click" | "open" | "close" | "message" | "note" | "error" | "bark";
 
 const FILES: Record<Effect, string> = {
   door: "impactPlank_medium_000",
@@ -18,6 +19,7 @@ const FILES: Record<Effect, string> = {
   message: "confirmation_001",
   note: "drop_002",
   error: "error_004",
+  bark: "dog_bark",
 };
 const STEPS: Record<Floor, string[]> = {
   concrete: ["footstep_concrete_000", "footstep_concrete_001", "footstep_concrete_002"],
@@ -25,7 +27,7 @@ const STEPS: Record<Floor, string[]> = {
   carpet: ["footstep_carpet_000", "footstep_carpet_001", "footstep_carpet_002"],
 };
 /** Each effect's own level, so a click isn't as loud as a door. */
-const LEVEL: Partial<Record<Effect, number>> = { click: 0.5, open: 0.6, close: 0.6, message: 0.55, door: 0.7 };
+const LEVEL: Partial<Record<Effect, number>> = { click: 0.5, open: 0.6, close: 0.6, message: 0.55, door: 0.7, bark: 0.6 };
 const STEP_LEVEL = 0.35;
 
 let ctx: AudioContext | null = null;
