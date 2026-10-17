@@ -40,10 +40,11 @@ should feel at home in a virtual space shaped like the real campus they know.
    right lists classmates' final-project apps that are up (each opens in a
    new tab). In other classrooms both open whatever page the staff set (for
    now the admin). COMMON is a lounge, not a lecture room.
-   The Student Hub has a board too, by its back wall (Labs looking for
-   students, Students looking for labs, Ask the Hub), with a desk beside it
-   that opens ANU's researcher search in a new tab; the lawn has a
-   noticeboard between its benches. Both say they're unofficial.
+   The Student Hub has a board too, on a PC at the reception desk by its
+   entrance (Labs looking for students, Students looking for labs, Ask the
+   Hub); the desk's other PCs open ANU's AI essentials guide and its
+   researcher search in new tabs. The lawn has a noticeboard at its north
+   edge. Both boards say they're unofficial.
    Under your name, how many people are on campus, in the Hub, the
    library, the classrooms and the meeting rooms (numbers only, never who),
    and the classroom picker shows how many are in each.

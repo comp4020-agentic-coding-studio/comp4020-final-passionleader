@@ -6,7 +6,8 @@ decides what that week is marked on.
 
 ## Direction
 
-A small 3D, real-time social space for the ANU community. The problem I care
+**ANU Crossing (Unofficial)**: a small 3D, real-time social space for the ANU
+community, somewhere people cross paths and can ask what they don't know. The problem I care
 about: students and staff (especially academics) almost never meet
 informally, so finding a supervisor, or a student for a lab, depends on luck.
 The space gives them somewhere to bump into each other: a stretch of campus
@@ -15,6 +16,8 @@ joined by doors. It is not an official ANU service and never looks like one.
 
 Started in crit 8 as Poop Room: one toilet, one poop each. The real-time
 layer from crit 9 carries over unchanged; the toilet and the poop don't.
+The detailed, numbered to-do list lives outside the repo (my own planning
+notes); the numbers below match it.
 
 ## Implementation order
 
@@ -50,39 +53,65 @@ layer from crit 9 carries over unchanged; the toilet and the poop don't.
 
 **Crit 10 requirement**
 
-10. Server-side structured log of every action (who, what, when) and a live
-    view of activity
+10. ✅ Server-side structured log of every action (who, what, when)
+    ([`d1a50b3`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d1a50b3)), and the admin's seven-day log with bug reports
+    ([`9fe0e7f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/9fe0e7f))
 
 **Boards**
 
-11. Classrooms: only `qa_master` creates them (course-code names); rows older
-    than six months are deleted; a question board per class
-11b. Classroom showcase board beside the whiteboard: links to classmates'
-    live final projects (public `comp4020-final-*` repos → their `fly.dev`
-    URLs, only ones that answer), and a guestbook beside it (300 words per
-    entry). Crit 9 only places the two boards and makes the whiteboard open
-    the course page.
-12. Hub boards: lab ads, looking-for-a-lab posts, CV posts, and a suggestions
-    board, each marked unofficial with unverified authors
+11. ✅ Classrooms the admin opens and closes, with a picker at 155's door
+    ([`fb17501`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/fb17501), [`658447e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/658447e))
+11b. ✅ (in part) COMP8020's board lists classmates' live final projects; elsewhere
+    the admin sets what the whiteboard and that board open ([`185cfc5`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/185cfc5))
+11c. ✅ A board per classroom: Q&A, Notices (staff only), Board ([`ea18534`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ea18534))
+12. ✅ The Student Hub's board: labs looking for students, students looking for
+    labs, Ask the Hub ([`f13eaef`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)); a researcher search beside it; the
+    lawn noticeboard ([`a67eece`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a67eece), [`c388d44`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c388d44)). Posts take Markdown
+    ([`f34664d`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f34664d)); authors edit their own ([`a1eabc5`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a1eabc5))
+
+**Rooms and files**
+
+21. ✅ Meeting rooms: invite-only counselling rooms off the Hub, team rooms off
+    classrooms and the library, six people each ([`ed5d0ef`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)); a toolbar
+    with a Chat button ([`0340a68`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/0340a68)); the last one out is warned
+    ([`502cfc4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/502cfc4))
+18. ✅ Files on board posts, in meeting rooms and on bug reports, by signed links
+    to a private S3 bucket ([`606b59d`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/606b59d))
 
 **Settings and looks**
 
-13. Esc settings: volume, graphics (low / high, shadows on / off), licences
-    and credits, UI language
-14. Character colours: skin, hair, eyes, clothes
-15. Better graphics: CC0 textures, low / high presets, checked on phones
-    (CC0 textures and furniture models are already in; presets are not)
+13. ✅ Settings: music and sound-effect volumes, graphics Low / High
+    ([`4a0c6de`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/4a0c6de)), sound effects ([`e23c0e2`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/e23c0e2))
+14. ✅ Your own look: figure, skin, hair, clothes, hat ([`e23c0e2`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/e23c0e2))
+15. ✅ Better graphics: CC0 textures and furniture, lived-in rooms, phones checked
+23. ✅ Sitting down on chairs, sofas and benches ([`e23c0e2`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/e23c0e2), [`dda350a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/dda350a))
+32. ✅ Head counts per space, numbers only ([`2e53582`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2e53582))
+33. ✅ (in part) Report someone, with the last five minutes of chat; the admin
+    restricts notes, posts, chat or coming in ([`919fbc5`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/919fbc5))
 
-**Messages**
+**Places**
 
-16. Mail: leave a message for someone who's offline
-17. One-to-one text chat
+26. ✅ Chifley Library's interior ([`f480247`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f480247), [`a84c5e9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a84c5e9)); the library
+    closes the map ([`b823045`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b823045))
+28. ✅ Sketch & Guess on the Hub's arcade machine ([`114ae4f`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/114ae4f))
+29. ✅ A dog in front of 154 ([`39f786e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/39f786e), [`8e0c987`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8e0c987))
+—   ✅ Lab Coffee and a list of the cafés on campus ([`8031751`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8031751), [`0d94d7c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/0d94d7c))
 
-**Later**
+**Final project (after crit 10), in this order**
 
-18. Attachments in one-to-one chat (png, jpg, pdf, up to 5 MB)
-19. Voice (hold F to talk, WebRTC; may not connect on locked-down networks
-    without a relay server)
+34. Camera that turns in four 90° steps
+35. Shaders for High graphics
+32a. A minimap
+38. Sign-up by student number with an emailed code, guest log-in, and roles:
+    guest, student, staff, admin (needs AWS SES)
+36. One-to-one counselling and private enquiries (with 16 mail, 17 one-to-one chat)
+37. Meeting rooms for working together, and saving a room's chat and files to
+    your own archive
+39. A shared Markdown document in team rooms
+33. The rest of reporting: report from a name tag, mute
+31. Voice (last; needs a relay server)
+—   Last of all, before Fly.io is taken back: a backup server on EC2
+    (`docs/self-hosting.md`)
 
 **On hold**
 
@@ -146,7 +175,7 @@ Pulled forward once those were done (budget left over), in this order:
   meeting rooms and on bug reports (screenshots), up to 200 MB, kept 30 days
   at most, straight to a private S3 bucket by signed links
 - **10, extended**: the admin's log, read in the app at the Student Hub's
-  reception PC (or `/admin/` in a tab during the crit): seven days of what
+  admin PC (or `/admin/` in a tab during the crit): seven days of what
   people wrote and removed, sign-ins and refusals, with IPs; bug reports
   sent from the settings dialog, read in a second tab. Only the admin, checked
   on the server
@@ -158,9 +187,17 @@ Pulled forward once those were done (budget left over), in this order:
 Already done ahead of this crit: the backdrop buildings and walkable areas
 (4a), and the music player and volume sliders (part of 13).
 
+Added later in the week, asked for while testing the live site: the Hub's
+board and researcher search (12), the lawn noticeboard (12a), head counts
+(32), Markdown and editing on boards, Lab Coffee, phone fixes
+([`276292a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/276292a)), reporting and restrictions (33, in part), the Hub and
+library rearranged ([`b4dbad9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b4dbad9)), the library as the map's edge, a
+licence ([`1630496`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1630496)), and the name **ANU Crossing (Unofficial)**
+([`b23ab30`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b23ab30)). Code freeze: Tuesday 20 October, 18:00.
+
 Owed to the crit: `docs/decisions/002-*.md`, `reflections/crit-10.md`,
 `PROCESS.md` rewritten, README facts updated, a rehearsal with two Chrome
-profiles narrated from the log alone.
+profiles narrated from the log alone, then the `crit-10` tag.
 
 ### Who does what this week
 

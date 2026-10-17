@@ -608,7 +608,7 @@ app.delete("/api/board-comments/:id", async (c) => {
 });
 
 // --- the admin's log and bug reports -------------------------------------------
-// The Student Hub's reception PC opens /admin/ (and so can a browser tab, for
+// The Student Hub's admin PC opens /admin/ (and so can a browser tab, for
 // reading along during a crit). Only the admin reads either, checked here on
 // every request; anyone joined may send a bug report.
 

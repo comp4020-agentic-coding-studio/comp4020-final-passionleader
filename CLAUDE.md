@@ -1,12 +1,12 @@
-# Harness — ANU virtual campus (was Poop Room)
+# Harness — ANU Crossing (Unofficial) (was Poop Room)
 
 The app is a small 3D, real-time social space for the ANU community, where
-students and staff who rarely meet informally can bump into each other. It
-started in crit 8 as Poop Room (one toilet, one poop each); from crit 9 it
-grows into a few ANU spaces joined by doors (a stretch of campus outside,
-the Student Hub, a classroom), with chat, emotes and sticky notes. Each crit
-is one step of that, and only that. The implementation order and this week's
-cut are in `docs/plan.md`.
+students and staff who rarely meet informally can bump into each other, and
+anyone can ask what they don't know. It started in crit 8 as Poop Room (one
+toilet, one poop each); from crit 9 it grew into ANU spaces joined by doors
+(a stretch of campus outside, the Student Hub, classrooms, Chifley Library,
+meeting rooms), with chat, emotes, sticky notes and boards. The
+implementation order and each crit's cut are in `docs/plan.md`.
 
 Read before planning or building: `README.md` (what good means for this app),
 `spec/README.md` and `spec/*.test.ts` (what is enforced), and the
@@ -16,17 +16,17 @@ Read before planning or building: `README.md` (what good means for this app),
 
 - When two sessions run in parallel, follow the role split and its limits in
   @docs/roles.md. Only the main session commits.
-- Commit one feature at a time, small, with a message that says why.
+- Commit one feature at a time, small, with a message that says why. Push
+  to `main` in batches, not after every commit: each push deploys.
 - Write every file in this repo in English (docs, comments, commit messages).
 - `PROCESS.md` has no History section: it must stay within 900–1100 words,
   and the commit messages and the `crit-*` tags already carry the history.
   Rewrite `PROCESS.md` at each crit so it describes the project as it stands.
-- Stay inside the current crit's scope. Crit 10 is the "Crit 10" section of
-  `docs/plan.md`: the server log, classrooms the admin opens, links in an
-  in-app window, then (pulled forward while there's budget) the east road,
-  the dog, the classroom board, the Sketch & Guess game, the library and
-  the meeting rooms (chat and files, no voice) and attached files.
-  Everything else in the plan is out until its crit.
+- Stay inside the current crit's scope: the "Crit 10" section of
+  `docs/plan.md`. Code freezes Tuesday 20 October, 18:00; after that, only
+  fixes that affect the crit. The "Final project" steps in the plan (camera
+  turning, shaders, sign-up and roles, counselling, archives, voice) are
+  out until crit 10 is tagged.
 - Keep the real-time layer generic ("move", "action", "chat", per space), never
   tied to one room or one verb: the spaces and what people do in them will
   keep changing.
