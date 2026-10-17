@@ -146,9 +146,8 @@ body.in-room #hud-help { display: none; }
   border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
   font: 800 14px system-ui, sans-serif; pointer-events: none; opacity: 0.8;
 }
-.use-badge.on { background: var(--accent); border-color: var(--accent); color: #fff; opacity: 1; animation: use-bob 1s ease-in-out infinite; }
-@keyframes use-bob { 50% { transform: translateY(-4px); } }
-@media (prefers-reduced-motion: reduce) { .use-badge.on { animation: none; } }
+/* Colour only: the label renderer places it with transform, so no transform animation. */
+.use-badge.on { background: var(--accent); border-color: var(--accent); color: #fff; opacity: 1; }
 .note-label {
   padding: 1px 6px; border-radius: 6px; background: #fff7b0; color: var(--ink);
   border: 1px solid #c9b23a; font: 600 11px system-ui, sans-serif; white-space: nowrap;

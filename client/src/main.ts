@@ -803,7 +803,7 @@ const labelAt = new THREE.Vector3();
 
 // A key badge floats over every door, screen and board you can use (not
 // seats or notes), so it's clear from a few steps away what E does something
-// at; the one E would use now stands out. Phones show the Use button's name.
+// at; the one E would use now turns the accent colour. Phones show "Use".
 const BADGE_RANGE = 7; // indoors, badges show within this
 const BADGE_RANGE_OUT = 12;
 let badges: { obj: CSS2DObject; x: number; z: number }[] = [];
