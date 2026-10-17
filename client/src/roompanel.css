@@ -335,10 +335,14 @@
     top: 64px; /* the help line is hidden in rooms (style.css), so it can sit higher */
   }
 
-  /* The sheet is short, so keep the top part tight and leave the log room. */
+  /* Open, the chat takes the whole screen under the dock (half a screen was
+     too cramped to read and type in); close it to walk. */
+  #room-ui {
+    bottom: 12px;
+  }
+
   #room-panel {
-    flex: none;
-    height: 34vh;
+    flex: 1 1 auto;
   }
 
   .room-members {

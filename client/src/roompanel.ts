@@ -209,9 +209,10 @@ export function mountRoomPanel(opts: {
   document.body.append(ui, lastOut);
 
   let isOpen = false;
-  // The chat panel is open or closed from the dock; it starts open on entering
-  // a room. A line from someone else while it is closed counts as unread.
-  let chatOpen = true;
+  // The chat panel is open or closed from the dock; it starts closed on entering
+  // a room, so the room is seen first. A line from someone else while it is
+  // closed counts as unread.
+  let chatOpen = false;
   let unread = 0;
 
   function syncChatButton(): void {
@@ -432,7 +433,7 @@ export function mountRoomPanel(opts: {
       inviteError.textContent = "";
       isOpen = true;
       ui.hidden = false;
-      setChat(true);
+      setChat(false);
     },
     update(info) {
       // Only the header, the member chips and the invited line change, so

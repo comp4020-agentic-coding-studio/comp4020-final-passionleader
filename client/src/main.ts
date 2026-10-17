@@ -1078,7 +1078,8 @@ function goOnline(token: string): void {
       if (space && roomPanel.isOpen()) roomPanel.update(roomInfo(space.id, room));
     },
     roomLine(line) {
-      if (roomPanel.isOpen()) roomPanel.add(line);
+      // A shared file comes back from the server like anyone's line: mark our own.
+      if (roomPanel.isOpen()) roomPanel.add({ ...line, self: !line.system && line.name === session?.name });
     },
     restricted(what, until) {
       sfx("error");
