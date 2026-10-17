@@ -801,6 +801,49 @@ let vy = 0;
 const doorLabels: CSS2DObject[] = [];
 const labelAt = new THREE.Vector3();
 
+// A key badge floats over every door, screen and board you can use (not
+// seats or notes), so it's clear from a few steps away what E does something
+// at; the one E would use now stands out. Phones show the Use button's name.
+const BADGE_RANGE = 7; // indoors, badges show within this
+const BADGE_RANGE_OUT = 12;
+let badges: { obj: CSS2DObject; x: number; z: number }[] = [];
+
+function placeBadges(): void {
+  for (const b of badges) {
+    scene.remove(b.obj);
+    b.obj.element.remove();
+  }
+  badges = [];
+  if (!space) return;
+  const at = [...space.doors, ...(space.links ?? []), ...(space.spots ?? [])];
+  for (const { x, z } of at) {
+    const el = document.createElement("div");
+    el.className = "use-badge";
+    el.textContent = touchScreen.matches ? "Use" : "E";
+    el.setAttribute("aria-hidden", "true");
+    const obj = new CSS2DObject(el);
+    obj.position.set(x, 3.2, z); // over where you stand, raised so it reads beside what you use
+    obj.visible = false;
+    scene.add(obj);
+    badges.push({ obj, x, z });
+  }
+}
+
+function showBadges(target: Target | null): void {
+  // The target is the nearest door, link or spot, so its badge is the nearest one.
+  const lit = target && target.kind !== "seat" && target.kind !== "note";
+  const range = space?.outdoor ? BADGE_RANGE_OUT : BADGE_RANGE;
+  let nearest: (typeof badges)[number] | null = null;
+  let nearestD = Infinity;
+  for (const b of badges) {
+    const d = Math.hypot(b.x - player.position.x, b.z - player.position.z);
+    b.obj.visible = playing && d <= range;
+    if (d < nearestD) [nearest, nearestD] = [b, d];
+    b.obj.element.classList.remove("on");
+  }
+  if (lit && nearest) nearest.obj.element.classList.add("on");
+}
+
 function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): void {
   if (space) {
     scene.remove(space.group);
@@ -835,6 +878,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
     space.group.userData.shadowsOn = true;
   }
   scene.add(space.group);
+  placeBadges();
   if (space.outdoor) {
     applySky();
     scene.fog = new THREE.Fog(0xc9dcea, 60, 220);
@@ -1480,6 +1524,7 @@ function update(dt: number, now: number): void {
     else net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
 
     const target = busy() ? null : nearestTarget();
+    showBadges(target);
     hintEl.hidden = !target && !mySeat;
     if (mySeat && !target) hintEl.textContent = `${touchScreen.matches ? "Use" : "E"} · Stand up (or just walk)`;
     if (target) {

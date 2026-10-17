@@ -140,6 +140,15 @@ body.in-room #hud-help { display: none; }
   padding: 2px 8px; border-radius: 6px; background: rgba(31, 45, 61, 0.85); color: #fff;
   font: 700 12px system-ui, sans-serif; white-space: nowrap;
 }
+.use-badge {
+  min-width: 26px; height: 26px; padding: 0 6px; box-sizing: border-box; border-radius: 6px;
+  display: grid; place-items: center; background: #fffbe0; color: var(--ink);
+  border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
+  font: 800 14px system-ui, sans-serif; pointer-events: none; opacity: 0.8;
+}
+.use-badge.on { background: var(--accent); border-color: var(--accent); color: #fff; opacity: 1; animation: use-bob 1s ease-in-out infinite; }
+@keyframes use-bob { 50% { transform: translateY(-4px); } }
+@media (prefers-reduced-motion: reduce) { .use-badge.on { animation: none; } }
 .note-label {
   padding: 1px 6px; border-radius: 6px; background: #fff7b0; color: var(--ink);
   border: 1px solid #c9b23a; font: 600 11px system-ui, sans-serif; white-space: nowrap;
@@ -150,6 +159,7 @@ body.in-room #hud-help { display: none; }
   white-space: normal; overflow-wrap: anywhere;
 }
 
+.join-pitch { margin: -2px 0 10px; font-size: 1.2rem; font-weight: 800; line-height: 1.25; color: var(--accent, #6b3f1d); }
 .join-sub { margin: -4px 0 12px; font-size: 0.85rem; opacity: 0.85; }
 .join-hint { margin: 2px 0 6px; font-size: 0.8rem; opacity: 0.75; }
 #password-row { margin-top: 10px; }
