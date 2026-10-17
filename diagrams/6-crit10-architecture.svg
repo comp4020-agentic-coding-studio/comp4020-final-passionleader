@@ -1,0 +1,123 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1500" height="1010" viewBox="0 0 1500 1010" role="img" aria-label="Browsers sign in over HTTP and keep one WebSocket each; one Node 24 process on a single Fly.io machine serves the client, the JSON API, the WebSocket and the admin page, and keeps SQLite on the volume. Files never pass through the server: it checks who may upload or fetch, signs a five-minute S3 link, and the browser talks to the private S3 bucket directly." font-family="system-ui, 'Noto Sans', 'DejaVu Sans', sans-serif">
+<title>Crit 10: the whole architecture</title>
+<defs><marker id="m-ink" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#2b2111"/></marker><marker id="m-acc" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#6b3f1d"/></marker><marker id="m-new" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#0f766e"/></marker><marker id="m-s3" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse"><path d="M0,0 L10,5 L0,10 z" fill="#b45309"/></marker></defs>
+<rect width="1500" height="1010" fill="#ffffff"/>
+<rect x="0" y="0" width="1500" height="64" fill="#fbf7e4"/>
+<text x="40" y="40" text-anchor="start" font-size="21" font-weight="700" fill="#2b2111">Crit 10: the whole architecture (browsers, one server, SQLite, S3)</text>
+<rect x="30" y="100" width="250" height="460" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="155.0" y="122" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Browser A (visitor)</text>
+<text x="155.0" y="144" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">Vite + Three.js client</text>
+<text x="155.0" y="162" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">net.ts: one WebSocket</text>
+<text x="155.0" y="180" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="155.0" y="198" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">moves, chat, emotes: sent,</text>
+<text x="155.0" y="216" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">never waits for a reply</text>
+<text x="155.0" y="234" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="155.0" y="252" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">notes, posts, reports: HTTP</text>
+<text x="155.0" y="270" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">files: straight to S3</text>
+<text x="155.0" y="288" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">by a signed link</text>
+<rect x="30" y="600" width="250" height="140" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="155.0" y="622" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Browser B (same space)</text>
+<text x="155.0" y="644" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">gets the same pushes</text>
+<text x="155.0" y="662" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">within a second</text>
+<text x="155.0" y="680" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="155.0" y="698" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">another space? hears nothing</text>
+<rect x="30" y="770" width="250" height="130" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="155.0" y="792" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Admin (qa_master)</text>
+<text x="155.0" y="814" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">Hub&#x27;s admin PC, or /admin/</text>
+<text x="155.0" y="832" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">in a tab: 7-day log, reports,</text>
+<text x="155.0" y="850" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">restrictions (role checked</text>
+<text x="155.0" y="868" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">on every request)</text>
+<rect x="440" y="88" width="700" height="790" rx="12" fill="none" stroke="#8a8478" stroke-width="1.4" stroke-dasharray="3 5"/>
+<text x="454" y="108" text-anchor="start" font-size="12" font-weight="600" fill="#8a8478">Fly.io machine (syd): ONE shared-cpu-1x, 256 MB, stops when idle; one 1 GB volume</text>
+<rect x="460" y="122" width="480" height="740" rx="10" fill="#fbfaf6" stroke="#2b2111" stroke-width="1.6"/>
+<text x="700" y="144" text-anchor="middle" font-size="14" font-weight="700" fill="#2b2111">Node 24 process: one thread, one event loop</text>
+<rect x="480" y="160" width="440" height="200" rx="8" fill="#ffffff" stroke="#2b2111" stroke-width="1.6"/>
+<text x="700.0" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Hono HTTP</text>
+<text x="700.0" y="204" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">static: client/dist · /readme/ · /admin/</text>
+<text x="700.0" y="222" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">POST /api/join → name + token (qa_: password)</text>
+<text x="700.0" y="240" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">notes · comments · boards (server/boards.ts)</text>
+<text x="700.0" y="258" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">edit = author only · Notices = admin only</text>
+<text x="700.0" y="276" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">reports (+ last 5 min of chat, server-attached)</text>
+<text x="700.0" y="294" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">admin: log · reports · restrictions</text>
+<text x="700.0" y="312" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">files: check who/type/size → sign S3 link</text>
+<text x="700.0" y="330" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">every refusal → audit log</text>
+<rect x="480" y="400" width="440" height="190" rx="8" fill="#ffffff" stroke="#0f766e" stroke-width="1.6"/>
+<text x="700.0" y="422" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">WebSocket /ws (ws library)</text>
+<text x="700.0" y="444" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">upgrade only with a valid token, not restricted</text>
+<text x="700.0" y="462" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">move · chat · emote · action, per space</text>
+<text x="700.0" y="480" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">positions clamped, pushed every 100 ms</text>
+<text x="700.0" y="498" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">meeting rooms: 6 max, counselling = invited</text>
+<text x="700.0" y="516" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">head counts to everyone, numbers only (5 s)</text>
+<text x="700.0" y="534" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">ping every 25 s, drop dead sockets</text>
+<rect x="480" y="630" width="210" height="210" rx="8" fill="#ffffff" stroke="#2b2111" stroke-width="1.6"/>
+<text x="585.0" y="652" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">In memory only</text>
+<text x="585.0" y="674" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">live positions</text>
+<text x="585.0" y="692" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">who is in which space</text>
+<text x="585.0" y="710" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">meeting-room chat</text>
+<text x="585.0" y="728" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">(gone when the</text>
+<text x="585.0" y="746" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">room empties)</text>
+<text x="585.0" y="764" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">nothing written</text>
+<text x="585.0" y="782" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">per move</text>
+<rect x="710" y="630" width="210" height="210" rx="8" fill="#ffffff" stroke="#2b2111" stroke-width="1.6"/>
+<text x="815.0" y="652" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">Hourly purge</text>
+<text x="815.0" y="674" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">notes &gt; 1 month</text>
+<text x="815.0" y="692" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">audit log &gt; 7 days</text>
+<text x="815.0" y="710" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">map chat &gt; 1 day</text>
+<text x="815.0" y="728" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">reports &gt; 28 days</text>
+<text x="815.0" y="746" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">file rows &gt; 30 days</text>
+<text x="815.0" y="764" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">(+ S3 objects)</text>
+<text x="815.0" y="782" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<rect x="1180" y="160" width="290" height="430" rx="8" fill="#f6ecb4" stroke="#2b2111" stroke-width="1.6"/>
+<text x="1325.0" y="182" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">/data volume: SQLite app.db</text>
+<text x="1325.0" y="204" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">node:sqlite, WAL, foreign keys</text>
+<text x="1325.0" y="222" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="1325.0" y="240" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">visitors (name, token, role, look)</text>
+<text x="1325.0" y="258" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">notes · comments</text>
+<text x="1325.0" y="276" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">posts · post_comments</text>
+<text x="1325.0" y="294" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">classrooms</text>
+<text x="1325.0" y="312" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">files (who may see, S3 key)</text>
+<text x="1325.0" y="330" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">audit (7 days, with IP)</text>
+<text x="1325.0" y="348" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">bug_reports (+ chat if a person)</text>
+<text x="1325.0" y="366" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">chat_lines (map chat, 1 day)</text>
+<text x="1325.0" y="384" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">restrictions</text>
+<text x="1325.0" y="402" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">cache</text>
+<text x="1325.0" y="420" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111"></text>
+<text x="1325.0" y="438" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">written on actions, never per move</text>
+<rect x="1180" y="650" width="290" height="190" rx="8" fill="#fde7c7" stroke="#b45309" stroke-width="1.6"/>
+<text x="1325.0" y="672" text-anchor="middle" font-size="13" font-weight="700" fill="#2b2111">AWS S3: private bucket</text>
+<text x="1325.0" y="694" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">Block all public access, SSE-S3</text>
+<text x="1325.0" y="712" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">objects expire after 30 days</text>
+<text x="1325.0" y="730" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">CORS: the app&#x27;s origin only</text>
+<text x="1325.0" y="748" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">server&#x27;s IAM user: Put/Get/Delete</text>
+<text x="1325.0" y="766" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">on this bucket only</text>
+<text x="1325.0" y="784" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">keys only in Fly secrets</text>
+<path d="M280,200 L478,200" fill="none" stroke="#6b3f1d" stroke-width="2.4" marker-end="url(#m-acc)"/>
+<text x="379" y="190" text-anchor="middle" font-size="12" font-weight="600" fill="#6b3f1d">① HTTP: join, notes, posts</text>
+<text x="379" y="218" text-anchor="middle" font-size="12" font-weight="400" fill="#6b3f1d">it must be saved</text>
+<path d="M280,450 L478,450" fill="none" stroke="#0f766e" stroke-width="2.4" marker-end="url(#m-new)"/>
+<text x="350" y="440" text-anchor="middle" font-size="12" font-weight="600" fill="#0f766e">② /ws?token=…</text>
+<text x="350" y="468" text-anchor="middle" font-size="12" font-weight="400" fill="#0f766e">move · chat · emote</text>
+<path d="M478,520 L282,520" fill="none" stroke="#0f766e" stroke-width="2.4" marker-end="url(#m-new)"/>
+<text x="360" y="510" text-anchor="middle" font-size="12" font-weight="600" fill="#0f766e">③ pushes to the space</text>
+<path d="M478,570 L380,570 L380,660 L282,660" fill="none" stroke="#0f766e" stroke-width="2.4" marker-end="url(#m-new)"/>
+<text x="330" y="650" text-anchor="middle" font-size="12" font-weight="600" fill="#0f766e">③ same pushes</text>
+<path d="M280,840 L420,840 L420,330 L478,330" fill="none" stroke="#6b3f1d" stroke-width="2.4" marker-end="url(#m-acc)"/>
+<text x="340" y="830" text-anchor="middle" font-size="12" font-weight="600" fill="#6b3f1d">admin API</text>
+<path d="M700,360 L700,398" fill="none" stroke="#6b3f1d" stroke-width="2.4" marker-end="url(#m-acc)"/>
+<text x="708" y="384" text-anchor="start" font-size="12" font-weight="600" fill="#6b3f1d">saved → broadcast &#x27;action&#x27;</text>
+<path d="M922,250 L1178,250" fill="none" stroke="#6b3f1d" stroke-width="2.4" marker-end="url(#m-acc)" marker-start="url(#m-acc)"/>
+<text x="1050" y="240" text-anchor="middle" font-size="12" font-weight="600" fill="#6b3f1d">INSERT / read</text>
+<path d="M922,500 L1178,500" fill="none" stroke="#2b2111" stroke-width="2.4" marker-end="url(#m-ink)"/>
+<text x="1010" y="472" text-anchor="middle" font-size="12" font-weight="600" fill="#2b2111">map chat line,</text>
+<text x="1010" y="490" text-anchor="middle" font-size="12" font-weight="400" fill="#2b2111">last spot on close</text>
+<path d="M922,660 L1060,660 L1060,560 L1178,560" fill="none" stroke="#2b2111" stroke-width="2.4" stroke-dasharray="4 4" marker-end="url(#m-ink)"/>
+<path d="M922,790 L1178,790" fill="none" stroke="#b45309" stroke-width="2.4" stroke-dasharray="4 4" marker-end="url(#m-s3)"/>
+<text x="1050" y="780" text-anchor="middle" font-size="12" font-weight="600" fill="#b45309">delete expired objects</text>
+<path d="M922,330 L1100,330 L1100,700 L1178,700" fill="none" stroke="#b45309" stroke-width="2.4" marker-end="url(#m-s3)"/>
+<text x="1092" y="380" text-anchor="end" font-size="12" font-weight="600" fill="#b45309">④ signs a 5-minute</text>
+<text x="1092" y="398" text-anchor="end" font-size="12" font-weight="400" fill="#b45309">PUT / GET link</text>
+<path d="M30,480 L14,480 L14,930 L1325,930 L1325,842" fill="none" stroke="#b45309" stroke-width="2.4" marker-end="url(#m-s3)"/>
+<text x="700" y="922" text-anchor="middle" font-size="12" font-weight="600" fill="#b45309">⑤ the browser uploads / downloads the file directly: it never passes through the 256 MB server</text>
+<text x="40" y="966" text-anchor="start" font-size="13" font-weight="400" fill="#8a8478">Everything a person does reaches only their own space; the server checks every permission (role, author, room member, restriction) and logs refusals.</text>
+<text x="40" y="990" text-anchor="start" font-size="13" font-weight="400" fill="#8a8478">One small machine holds the server and the database, so a write is a local file call; files, the one thing too big for it, live in S3.</text>
+</svg>
