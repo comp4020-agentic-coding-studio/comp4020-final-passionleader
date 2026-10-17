@@ -25,7 +25,11 @@
 .cafe-item:first-child { border-color: var(--accent); }
 .cafe-item h3 { margin: 0 0 4px; font-size: 1.05rem; }
 .cafe-item p { margin: 0 0 6px; font-size: 0.9rem; line-height: 1.4; }
-.cafe-where { font-weight: 700; opacity: 0.85; }
+.cafe-where { font-weight: 700; }
+.cafe-where a {
+  display: inline-flex; align-items: center; min-height: 44px;
+  color: var(--accent); text-underline-offset: 3px;
+}
 .cafe-sells { display: flex; flex-wrap: wrap; gap: 6px; margin: 0 0 6px; padding: 0; list-style: none; }
 .cafe-sells li {
   padding: 2px 8px; border-radius: 999px; background: rgba(107, 63, 29, 0.12); font-size: 0.8rem;

@@ -2,8 +2,8 @@ import "./cafeguide.css";
 import { CAFES, CAFES_CHECKED } from "./cafes.ts";
 
 // The menu board at Lab Coffee, on 154's north side: E opens a list of the
-// cafés on campus, where each is and roughly what it sells, with a link to
-// its own page in a new tab. The list is cafes.ts, gathered from public pages;
+// cafés on campus, where each is (a Google Maps link) and roughly what it
+// sells, with a link to its own page in a new tab. The list is cafes.ts, gathered from public pages;
 // it says when, and that it isn't official.
 
 export function mountCafeGuide(): { open(): void; isOpen(): boolean } {
@@ -38,9 +38,16 @@ export function mountCafeGuide(): { open(): void; isOpen(): boolean } {
     li.className = "cafe-item";
     const name = document.createElement("h3");
     name.textContent = cafe.name;
+    // The place opens in Google Maps, searched by name and building on campus.
     const where = document.createElement("p");
     where.className = "cafe-where";
-    where.textContent = `📍 ${cafe.where}`;
+    const map = document.createElement("a");
+    map.href = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${cafe.name}, ${cafe.where}, ANU, Acton ACT`)}`;
+    map.target = "_blank";
+    map.rel = "noopener noreferrer";
+    map.textContent = `📍 ${cafe.where}`;
+    map.setAttribute("aria-label", `${cafe.where}, on Google Maps (new tab)`);
+    where.append(map);
     const about = document.createElement("p");
     about.textContent = cafe.about;
     const sells = document.createElement("ul");
