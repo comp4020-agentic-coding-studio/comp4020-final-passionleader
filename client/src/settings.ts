@@ -22,7 +22,7 @@ function read(): Quality {
 export const QUALITY: Quality = read();
 export const HIGH = QUALITY === "high";
 
-export function mountSettings(opts: { reportBug(): void; customise(): void }): void {
+export function mountSettings(opts: { reportBug(): void; reportPerson(): void; customise(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -113,12 +113,16 @@ export function mountSettings(opts: { reportBug(): void; customise(): void }): v
   bug.type = "button";
   bug.className = "settings-bug";
   bug.textContent = "🐞 Report a bug";
+  const person = document.createElement("button");
+  person.type = "button";
+  person.className = "settings-bug";
+  person.textContent = "🚩 Report someone";
   const look = document.createElement("button");
   look.type = "button";
   look.className = "settings-bug";
   look.textContent = "👕 Customise look";
 
-  card.append(title, sound, fieldset, note, look, bug, actions);
+  card.append(title, sound, fieldset, note, look, bug, person, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -134,6 +138,10 @@ export function mountSettings(opts: { reportBug(): void; customise(): void }): v
   bug.addEventListener("click", () => {
     dialog.hidden = true;
     opts.reportBug();
+  });
+  person.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.reportPerson();
   });
   look.addEventListener("click", () => {
     dialog.hidden = true;

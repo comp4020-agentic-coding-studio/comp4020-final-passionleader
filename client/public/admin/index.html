@@ -6,8 +6,9 @@
 <title>Admin log</title>
 <style>
   /* The admin's page: the last seven days of what people wrote, removed and
-     were refused, and the bug reports. Opened from the Student Hub's
-     reception PC (in the in-app window) or in its own tab. Every request is
+     were refused, the bug reports and reports about people, and who is
+     stopped from doing what. Opened from the Student Hub's admin PC (in the
+     in-app window) or in its own tab. Every request is
      checked on the server: only the admin gets anything back. */
   :root { --ink: #3b2a12; --paper: #f5edd8; --card: #fffaf0; --accent: #6b3f1d; --line: #e2d4b4; --muted: #7a6a52; }
   * { box-sizing: border-box; }
@@ -47,6 +48,9 @@
   .card .shots { margin: 0 0 8px; }
   .card .shots img { display: block; max-width: 100%; max-height: 60vh; border: 1px solid var(--line); border-radius: 6px; cursor: zoom-in; }
   .card .text { white-space: pre-wrap; word-break: break-word; margin: 8px 0; }
+  .card .chat { margin: 0 0 8px; padding: 6px 8px; background: #fff; border: 1px solid var(--line); border-radius: 6px; max-height: 40vh; overflow-y: auto; }
+  .card .chat .line { word-break: break-word; padding: 1px 0; }
+  .card .chat .line.them { background: #f9dcd6; }
   #signin { max-width: 360px; margin: 40px auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
   #signin input { width: 100%; margin-bottom: 8px; }
   [hidden] { display: none !important; }
@@ -74,7 +78,8 @@
     <h1 id="title">Activity log (last 7 days)</h1>
     <div class="bar" role="tablist">
       <button type="button" role="tab" id="tab-log" aria-selected="true">Log</button>
-      <button type="button" role="tab" id="tab-bugs" aria-selected="false">Bug reports (<span id="bug-count">0</span>)</button>
+      <button type="button" role="tab" id="tab-bugs" aria-selected="false">Reports (<span id="bug-count">0</span>)</button>
+      <button type="button" role="tab" id="tab-limits" aria-selected="false">Restrictions (<span id="limit-count">0</span>)</button>
       <button type="button" id="refresh">Refresh</button>
       <label class="check"><input type="checkbox" id="auto" checked> Auto-refresh every 5 s</label>
       <span class="me" id="me"></span>
@@ -87,6 +92,7 @@
         <option value="content">Content (notes, comments, posts, files)</option>
         <option value="signin">Sign-ins</option>
         <option value="refused">Refused only</option>
+        <option value="admin">Admin actions</option>
       </select>
       <button type="submit" class="primary">Apply</button>
       <button type="button" id="f-clear">Clear</button>
@@ -103,9 +109,35 @@
       <button type="button" class="more" id="older" hidden>Load older</button>
     </section>
     <section id="bug-view" hidden>
-      <p class="hint">Sent from the settings dialog (the gear). Kept 28 days, or until marked done; a screenshot is kept 30 days at most.</p>
+      <p class="hint">Bug reports and reports about people, sent from the settings dialog (the gear). Kept 28 days, or until marked done; a screenshot is kept 30 days at most. A report about someone may carry the last five minutes of that space's chat, attached by the server (map chat is kept a day for this; meeting rooms' never).</p>
       <p class="error" id="bug-error" role="alert"></p>
       <div id="bugs"></div>
+    </section>
+    <section id="limit-view" hidden>
+      <p class="hint">Stop one person sticking notes (and commenting on them), posting on boards (and commenting), chatting, or coming in at all, for a number of hours. The server checks before each; they're told until when. Every change goes in the log.</p>
+      <form class="bar" id="limit-form">
+        <input id="l-name" placeholder="name" aria-label="Name to restrict" size="10" autocomplete="off" required>
+        <select id="l-what" aria-label="What to stop">
+          <option value="chat">Chat</option>
+          <option value="notes">Sticky notes</option>
+          <option value="posts">Board posts</option>
+          <option value="join">Coming in (all)</option>
+        </select>
+        <select id="l-hours" aria-label="For how long">
+          <option value="1">1 hour</option>
+          <option value="24" selected>1 day</option>
+          <option value="168">7 days</option>
+          <option value="720">30 days</option>
+          <option value="8760">1 year</option>
+        </select>
+        <input id="l-reason" placeholder="reason (optional)" aria-label="Reason" size="24" maxlength="200">
+        <button type="submit" class="primary">Restrict</button>
+      </form>
+      <p class="error" id="limit-error" role="alert"></p>
+      <table>
+        <thead><tr><th>Who</th><th>Stopped from</th><th>Until</th><th>By · reason</th><th></th></tr></thead>
+        <tbody id="limits"></tbody>
+      </table>
     </section>
   </main>
 </div>
@@ -165,7 +197,7 @@
     if (event === "refused" || event === "join-refused") return "refused";
     if (event.endsWith("-removed") || event === "note-replaced" || event === "note-expired") return "removed";
     if (["join", "connect", "disconnect"].includes(event)) return "signin";
-    if (event.startsWith("classroom") || event === "room-invite") return "admin";
+    if (event.startsWith("classroom") || event.startsWith("restrict") || event === "room-invite") return "admin";
     return "content";
   }
   function summary(e) {
@@ -174,7 +206,7 @@
     if (d.action) parts.push(`tried to ${d.action}`);
     if (d.reason) parts.push(`reason: ${d.reason}`);
     if (d.owner) parts.push(`owner: ${d.owner}`);
-    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online"]) {
+    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online", "name", "what", "until", "about", "chatLines"]) {
       if (d[k] !== undefined && d[k] !== null) parts.push(`${k}: ${d[k]}`);
     }
     return parts.join(" · ");
@@ -260,6 +292,25 @@
           el("span", "", ` · ${b.space || "no space"} · ${dayOf(b.at)} ${timeOf(b.at)}`));
         const ua = el("div", "meta mono", b.userAgent || "");
         const text = el("div", "text", b.text);
+        const tag = el("div", "meta");
+        if (!b.about) tag.append(el("span", "pill signin", "🐞 bug"));
+        if (b.about) {
+          tag.append(el("span", "pill refused", "🚩 report about"), " ", el("strong", "", b.about), " ");
+          const stop = el("button", "", `Restrict ${b.about}…`);
+          stop.type = "button";
+          stop.addEventListener("click", () => { $("l-name").value = b.about; show("limits"); $("l-what").focus(); });
+          tag.append(stop);
+        }
+        // The chat the server attached, oldest first; the reported person's lines stand out.
+        const said = el("div", "chat");
+        if (b.chat) {
+          said.append(el("div", "meta", b.chat.length ? `Chat in ${b.space} from the five minutes before:` : "No chat in the five minutes before."));
+          for (const line of b.chat) {
+            const row = el("div", "line" + (b.about && line.author.toLowerCase() === b.about.toLowerCase() ? " them" : ""));
+            row.append(el("span", "mono", `${timeOf(line.at)} `), el("strong", "", `${line.author}: `), el("span", "", line.text));
+            said.append(row);
+          }
+        }
         // A screenshot, if one came with it, shown in place: the server hands a
         // five-minute link (admin only). Click it for full size in a new tab.
         const shots = el("div", "shots");
@@ -282,7 +333,7 @@
           try { await api(`/api/admin/bugs/${b.id}`, "DELETE", {}); loadBugs(); }
           catch (err) { $("bug-error").textContent = err.message; }
         });
-        card.append(meta, ua, text, shots, done);
+        card.append(meta, tag, ua, text, said, shots, done);
         list.append(card);
       }
     } catch (err) {
@@ -291,21 +342,72 @@
     }
   }
 
+  // --- restrictions ---
+  const WHAT = { chat: "Chat", notes: "Sticky notes", posts: "Board posts", join: "Coming in (all)" };
+  async function loadLimits() {
+    $("limit-error").textContent = "";
+    try {
+      const { restrictions } = await api("/api/admin/restrictions", "POST", {});
+      $("limit-count").textContent = String(restrictions.length);
+      const rows = $("limits");
+      rows.replaceChildren();
+      if (!restrictions.length) {
+        const tr = el("tr");
+        const td = el("td", "hint", "Nobody is restricted.");
+        td.colSpan = 5;
+        tr.append(td);
+        rows.append(tr);
+      }
+      for (const r of restrictions) {
+        const tr = el("tr");
+        const lift = el("button", "", "Lift");
+        lift.type = "button";
+        lift.addEventListener("click", async () => {
+          try { await api("/api/admin/restrictions", "DELETE", { name: r.name, what: r.what }); loadLimits(); }
+          catch (err) { $("limit-error").textContent = err.message; }
+        });
+        const liftCell = el("td");
+        liftCell.append(lift);
+        tr.append(el("td", "", r.name), el("td", "", WHAT[r.what] || r.what), el("td", "", `${dayOf(r.until)} ${timeOf(r.until)}`),
+          el("td", "details", `${r.by}${r.reason ? ` · ${r.reason}` : ""}`), liftCell);
+        rows.append(tr);
+      }
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) return showSignin(err.message);
+      $("limit-error").textContent = err.message;
+    }
+  }
+  $("limit-form").addEventListener("submit", async (e) => {
+    e.preventDefault();
+    $("limit-error").textContent = "";
+    try {
+      await api("/api/admin/restrictions", "PUT", { name: $("l-name").value.trim(), what: $("l-what").value, hours: Number($("l-hours").value), reason: $("l-reason").value });
+      $("l-name").value = "";
+      $("l-reason").value = "";
+      loadLimits();
+    } catch (err) { $("limit-error").textContent = err.message; }
+  });
+
   // --- tabs, refresh ---
   let tab = "log";
+  const TITLES = { log: "Activity log (last 7 days)", bugs: "Reports", limits: "Restrictions" };
+  const LOADERS = { log: () => loadLog(), bugs: () => loadBugs(), limits: () => loadLimits() };
   function show(which) {
     tab = which;
     $("tab-log").setAttribute("aria-selected", String(which === "log"));
     $("tab-bugs").setAttribute("aria-selected", String(which === "bugs"));
+    $("tab-limits").setAttribute("aria-selected", String(which === "limits"));
     $("log-view").hidden = which !== "log";
     $("bug-view").hidden = which !== "bugs";
+    $("limit-view").hidden = which !== "limits";
     $("filters").hidden = which !== "log";
-    $("title").textContent = which === "log" ? "Activity log (last 7 days)" : "Bug reports";
-    which === "log" ? loadLog() : loadBugs();
+    $("title").textContent = TITLES[which];
+    LOADERS[which]();
   }
   $("tab-log").addEventListener("click", () => show("log"));
   $("tab-bugs").addEventListener("click", () => show("bugs"));
-  $("refresh").addEventListener("click", () => (tab === "log" ? loadLog() : loadBugs()));
+  $("tab-limits").addEventListener("click", () => show("limits"));
+  $("refresh").addEventListener("click", () => LOADERS[tab]());
   $("older").addEventListener("click", () => loadLog(true));
   $("filters").addEventListener("submit", (e) => { e.preventDefault(); loadLog(); });
   $("f-clear").addEventListener("click", () => { $("f-who").value = ""; $("f-space").value = ""; $("f-event").value = ""; loadLog(); });
@@ -320,6 +422,7 @@
     $("me").textContent = name ? `Signed in as ${name}` : "";
     show("log");
     loadBugs();
+    loadLimits();
   }
   if (token) start(""); else showSignin("");
 </script>

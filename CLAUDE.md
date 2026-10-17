@@ -65,8 +65,15 @@ Read before planning or building: `README.md` (what good means for this app),
   they're unofficial and that posters aren't verified. Notes keep 2 m off
   the lawn noticeboard, which lists posts as thumbnails, two a row (a
   post's first picture, or its title).
-- Chat is never stored: 200 characters, the space only, gone from screens
-  after a minute.
+- Chat: 200 characters, the space only, gone from screens after a minute.
+  Map chat (not meeting rooms') is kept one day in `chat_lines`, read only
+  when someone reports a person: the server then attaches that space's last
+  five minutes to the report (never text from the browser). Only the admin
+  reads it, and it's deleted after a day.
+- The admin can stop one person (never the admin) from sticky notes and
+  their comments, board posts and their comments, chat, or coming in at
+  all, for 1 hour to a year; the server checks before each, tells them
+  until when, closes their sockets for "coming in", and logs every change.
 - Meeting rooms (counselling rooms off the Hub, team rooms off classrooms
   and the library) hold six people at most. Team rooms are open; a
   counselling room lets in only those someone inside has invited. Both are
@@ -90,7 +97,8 @@ Read before planning or building: `README.md` (what good means for this app),
 - The admin's log keeps, for seven days only, what people wrote and removed
   (notes, comments, posts), sign-ins, admin actions, refusals, bug reports
   and the names of files attached, each with its IP; never chat text, moves
-  or emotes, never tokens or passwords. Only the admin reads it or the bug reports (sent by anyone
+  or emotes, never tokens or passwords. Only the admin reads it, the
+  restrictions, or the bug reports and reports about people (sent by anyone
   joined, one a minute), checked on the server. IPs and text stay out of
   stdout (`flyctl logs`).
 - Everything a person does reaches only the people in the same space. The

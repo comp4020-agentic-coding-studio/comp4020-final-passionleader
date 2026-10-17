@@ -45,6 +45,14 @@ import {
   bugReports,
   deleteBugReport,
   findBugReport,
+  lift,
+  purgeOldChat,
+  recentChat,
+  restrict,
+  restrictionOn,
+  restrictions,
+  RESTRICTABLE,
+  type Restrictable,
   addFile,
   findFile,
   filesOn,
@@ -59,7 +67,7 @@ import {
   type Visitor,
 } from "./db.ts";
 import { browserTag, keepIn, log } from "./log.ts";
-import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, livePlayer, roomSessionOf, roomShare, setLook } from "./realtime.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, livePlayer, noticeRestriction, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, mayPostIn, tabOf } from "./boards.ts";
@@ -104,6 +112,15 @@ function who(b: Body): Visitor | null {
   return typeof b.token === "string" ? (findByToken(b.token) ?? null) : null;
 }
 
+const RESTRICTED_WHAT: Record<Restrictable, string> = { notes: "sticking notes or commenting on them", posts: "posting or commenting on boards", chat: "chatting", join: "coming in" };
+/** If the admin has stopped `v` doing `what`, logs the refusal and answers 403; else null. */
+function stopped(c: Context, v: Visitor, what: Restrictable, details: Record<string, unknown>): Response | null {
+  const r = restrictionOn(v.name, what);
+  if (!r) return null;
+  log("refused", v, { ...details, reason: "restricted" }, { ip: ipOf(c) });
+  return c.json({ error: `The admin has stopped you ${RESTRICTED_WHAT[what]} until ${r.until.slice(0, 16).replace("T", " ")} UTC.`, until: r.until }, 403);
+}
+
 app.post("/api/join", async (c) => {
   const b = await body(c);
   const { token, password } = b;
@@ -123,6 +140,8 @@ app.post("/api/join", async (c) => {
       log("join-refused", { name: account.name }, { reason: "wrong password" }, { ip: ipOf(c) });
       return c.json({ error: "Wrong password." }, 401);
     }
+    const barred = stopped(c, account, "join", { action: "join" });
+    if (barred) return barred;
     log("join", account, { how: "password" }, { ip: ipOf(c) });
     return c.json({ name: account.name, token: account.token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
   }
@@ -135,12 +154,16 @@ app.post("/api/join", async (c) => {
       log("join-refused", { name: existing.name }, { reason: "wrong password" }, { ip: ipOf(c) });
       return c.json({ error: "Wrong password." }, 401);
     }
+    const barred = stopped(c, existing, "join", { action: "join" });
+    if (barred) return barred;
     log("join", existing, { how: "password" }, { ip: ipOf(c) });
     return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
   }
   if (existing) {
     // A name belongs to whoever first took it; only their browser's token gets it back.
     if (existing.token === token) {
+      const barred = stopped(c, existing, "join", { action: "join" });
+      if (barred) return barred;
       log("join", existing, { how: "returning" }, { ip: ipOf(c) });
       return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
     }
@@ -167,6 +190,8 @@ app.post("/api/notes", async (c) => {
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
   if (!isSpace(b.space)) return c.json({ error: "No such place." }, 400);
+  const barred = stopped(c, v, "notes", { action: "note", space: b.space });
+  if (barred) return barred;
   if (typeof b.x !== "number" || typeof b.z !== "number" || !Number.isFinite(b.x) || !Number.isFinite(b.z)) {
     return c.json({ error: "A note needs a place." }, 400);
   }
@@ -235,6 +260,8 @@ app.post("/api/notes/:id/comments", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const note = findNote(Number(c.req.param("id")));
   if (!note) return c.json({ error: "That note is gone." }, 404);
+  const barred = stopped(c, v, "notes", { action: "comment", space: note.space, note: note.id });
+  if (barred) return barred;
   const bad = textError(b.text);
   if (bad) {
     log("refused", v, { action: "comment", space: note.space, note: note.id, reason: bad }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
@@ -446,6 +473,8 @@ app.post("/api/board", async (c) => {
   const tab = tabOf(board, b.tab);
   if (!tab) return c.json({ error: "No such tab." }, 400);
   const space = b.space as string;
+  const barred = stopped(c, v, "posts", { action: "post", space, tab: tab.id });
+  if (barred) return barred;
   const content = typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null;
   if (!mayPostIn(v, tab)) {
     log("refused", v, { action: "post", space, tab: tab.id, reason: "staff only" }, { ip: ipOf(c), content });
@@ -491,6 +520,8 @@ app.patch("/api/board/:id", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const post = findPost(Number(c.req.param("id")));
   if (!post) return c.json({ error: "That post is gone." }, 404);
+  const barred = stopped(c, v, "posts", { action: "edit post", space: post.space, post: post.id });
+  if (barred) return barred;
   const content = typeof b.title === "string" || typeof b.text === "string" ? `${String(b.title ?? "")}\n\n${String(b.text ?? "")}`.slice(0, 3200) : null;
   if (v.name.toLowerCase() !== post.author.toLowerCase()) {
     log("refused", v, { action: "edit post", space: post.space, post: post.id, owner: post.author, reason: "not the author" }, { ip: ipOf(c), content });
@@ -519,6 +550,8 @@ app.post("/api/board/:id/comments", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const post = findPost(Number(c.req.param("id")));
   if (!post) return c.json({ error: "That post is gone." }, 404);
+  const barred = stopped(c, v, "posts", { action: "post comment", space: post.space, post: post.id });
+  if (barred) return barred;
   const bad = textError(b.text);
   if (bad) {
     log("refused", v, { action: "post comment", space: post.space, post: post.id, reason: bad }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
@@ -541,6 +574,8 @@ app.patch("/api/board-comments/:id", async (c) => {
   const comment = findPostComment(Number(c.req.param("id")));
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
   const post = findPost(comment.postId);
+  const barred = stopped(c, v, "posts", { action: "edit post comment", space: post?.space, comment: comment.id });
+  if (barred) return barred;
   if (v.name.toLowerCase() !== comment.author.toLowerCase()) {
     log("refused", v, { action: "edit post comment", space: post?.space, comment: comment.id, owner: comment.author, reason: "not the author" }, { ip: ipOf(c), content: typeof b.text === "string" ? b.text.slice(0, 3000) : null });
     return c.json({ error: "Only its author can edit this comment." }, 403);
@@ -578,6 +613,7 @@ app.delete("/api/board-comments/:id", async (c) => {
 // every request; anyone joined may send a bug report.
 
 const AUDIT_GROUPS: Record<string, string[]> = {
+  admin: ["restricted", "restriction-lifted", "classroom-created", "classroom-removed", "classroom-link"],
   content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "file"],
   signin: ["join", "join-refused", "connect", "disconnect"],
   refused: ["refused", "join-refused"],
@@ -622,6 +658,45 @@ app.delete("/api/admin/bugs/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+// Stopping someone doing one thing (notes, board posts, chat, or coming in
+// at all) for a while; the server checks before each of those. The admin
+// can't be restricted, and every change is logged.
+app.post("/api/admin/restrictions", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  return c.json({ restrictions: restrictions(), kinds: RESTRICTABLE });
+});
+
+app.put("/api/admin/restrictions", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const { v, b } = r;
+  const target = typeof b.name === "string" ? findByName(b.name.trim()) : undefined;
+  if (!target) return c.json({ error: "No one by that name." }, 404);
+  if (target.role === "admin") return c.json({ error: "The admin can't be restricted." }, 400);
+  const what = RESTRICTABLE.find((k) => k === b.what);
+  if (!what) return c.json({ error: "Restrict what?" }, 400);
+  const hours = typeof b.hours === "number" && Number.isFinite(b.hours) ? Math.max(1, Math.min(24 * 365, Math.round(b.hours))) : 0;
+  if (!hours) return c.json({ error: "For how many hours?" }, 400);
+  const until = new Date(Date.now() + hours * 3600_000).toISOString();
+  const reason = typeof b.reason === "string" && b.reason.trim() ? b.reason.trim().slice(0, 200) : null;
+  restrict(target.name, what, until, v.name, reason);
+  log("restricted", v, { name: target.name, what, until }, { ip: ipOf(c), content: reason });
+  noticeRestriction(target.name, what, until);
+  return c.json({ ok: true, until });
+});
+
+app.delete("/api/admin/restrictions", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const { v, b } = r;
+  const what = RESTRICTABLE.find((k) => k === b.what);
+  if (typeof b.name !== "string" || !what) return c.json({ error: "Lift what, from whom?" }, 400);
+  if (!lift(b.name.trim(), what)) return c.json({ error: "Already lifted." }, 404);
+  log("restriction-lifted", v, { name: b.name.trim(), what }, { ip: ipOf(c) });
+  return c.json({ ok: true });
+});
+
 const MAX_BUG = 2000;
 
 app.post("/api/bugs", async (c) => {
@@ -633,9 +708,21 @@ app.post("/api/bugs", async (c) => {
   if (text.length > MAX_BUG) return c.json({ error: `Up to ${MAX_BUG} characters.` }, 400);
   const space = typeof b.space === "string" && isSpace(b.space) ? b.space : null;
   const userAgent = (c.req.header("user-agent") ?? "").slice(0, 300) || null;
-  const result = addBugReport({ author: v.name, browser: browserTag(v.token), ip: ipOf(c), space, userAgent, text });
+  // A report about someone (abuse in the chat) can carry the space's chat
+  // from the last five minutes: the server attaches it, not the browser, so
+  // nobody can put words in someone else's mouth.
+  // Anyone with an account can be reported (qa_ names too); a name nobody has
+  // is refused, rather than quietly filed as a bug report.
+  let about: string | null = null;
+  if (typeof b.about === "string" && b.about.trim()) {
+    const target = findByName(b.about.normalize("NFKC").trim());
+    if (!target) return c.json({ error: `No one is called "${b.about.trim().slice(0, 20)}". Check the name above their head.` }, 404);
+    about = target.name;
+  }
+  const chat = about && b.withChat === true && space ? recentChat(space) : null;
+  const result = addBugReport({ author: v.name, browser: browserTag(v.token), ip: ipOf(c), space, userAgent, text, about, chat });
   if (!result.ok) return c.json({ error: `One report a minute. Wait ${result.wait}s.` }, 429);
-  log("bug-report", v, { space, report: result.id, chars: text.length }, { ip: ipOf(c), content: text });
+  log("bug-report", v, { space, report: result.id, chars: text.length, about, chatLines: chat?.length }, { ip: ipOf(c), content: text });
   return c.json({ id: result.id }, 201);
 });
 
@@ -781,6 +868,7 @@ const purge = (): void => {
   const gone = purgeExpiredNotes();
   if (gone) log("note-expired", null, { count: gone });
   purgeOldAudit();
+  purgeOldChat();
   removeObjects(purgeFiles());
 };
 purge();

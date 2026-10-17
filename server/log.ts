@@ -44,6 +44,8 @@ export type Event =
   | "room-closed"
   | "bug-report"
   | "file"
+  | "restricted"
+  | "restriction-lifted"
   | "refused";
 
 /** What the admin's seven-day copy keeps (the rest only goes to stdout). */
@@ -70,6 +72,8 @@ const KEPT: ReadonlySet<Event> = new Set<Event>([
   "room-invite",
   "bug-report",
   "file",
+  "restricted",
+  "restriction-lifted",
   "refused",
 ]);
 

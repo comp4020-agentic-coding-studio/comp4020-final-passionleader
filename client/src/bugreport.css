@@ -15,3 +15,10 @@
 .bug-status { min-height: 1.3em; margin: 6px 0 10px; font-size: 0.9rem; }
 .bug-card .settings-actions button { min-height: 44px; }
 .bug-card .bug-send { background: var(--accent); color: #fff; }
+.bug-who { display: block; margin-bottom: 8px; font-size: 0.9rem; }
+.bug-who input {
+  display: block; width: 100%; box-sizing: border-box; min-height: 44px; margin-top: 4px; padding: 0 10px;
+  border: 1px solid #8a6a50; border-radius: 8px; font: inherit;
+}
+.bug-chat { display: flex; align-items: center; gap: 8px; min-height: 44px; margin-bottom: 6px; font-size: 0.9rem; }
+.bug-chat input { width: 20px; height: 20px; }

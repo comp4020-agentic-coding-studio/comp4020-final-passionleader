@@ -121,8 +121,8 @@ export const setClassroomLink = (token: string, code: string, which: "board" | "
 export const getProjects = (): Promise<{ projects: { name: string; url: string }[]; checkedAt: string | null }> =>
   request("/api/projects");
 
-export const sendBugReport = (token: string, text: string, space: SpaceId | null): Promise<{ id: number }> =>
-  request("/api/bugs", "POST", { token, text, space });
+export const sendBugReport = (token: string, text: string, space: SpaceId | null, about?: { name: string; withChat: boolean } | null): Promise<{ id: number }> =>
+  request("/api/bugs", "POST", { token, text, space, about: about?.name, withChat: about?.withChat });
 
 export type BoardTab = string;
 export interface BoardConfig {

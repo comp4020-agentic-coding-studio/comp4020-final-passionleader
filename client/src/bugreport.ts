@@ -5,7 +5,10 @@ import { ACCEPT_IMAGES, MAX_FILE_BYTES } from "./uploads.ts";
 // a screenshot if you like (an image, up to 200 MB; it goes to the S3 bucket,
 // see uploads.ts, after the report itself is sent). The server adds who sent it, from which browser and IP, the space they were in
 // and their browser's user agent, and only the admin reads reports (on the
-// Student Hub's reception PC).
+// Student Hub's admin PC).
+// The same form reports a person ("Report someone"): who, what they did, and
+// if you like the last five minutes of this space's chat, which the server
+// attaches itself (map chat is kept a day for this, meeting rooms' never).
 
 const MAX = 2000;
 
@@ -15,8 +18,8 @@ export function mountBugReport(opts: {
    * the report itself went (it may have, with the screenshot failing after).
    * `progress` gets 0..1 while the image uploads.
    */
-  send(text: string, shot: File | null, progress: (done: number) => void): Promise<{ sent: boolean; error: string | null }>;
-}): { open(): void; isOpen(): boolean } {
+  send(text: string, shot: File | null, progress: (done: number) => void, about: { name: string; withChat: boolean } | null): Promise<{ sent: boolean; error: string | null }>;
+}): { open(person?: boolean): void; isOpen(): boolean } {
   const root = document.createElement("div");
   root.id = "bug-report";
   root.hidden = true;
@@ -32,6 +35,21 @@ export function mountBugReport(opts: {
   const hint = document.createElement("p");
   hint.className = "bug-hint";
   hint.textContent = "What happened, and what did you expect? Only the admin reads this. Your name, the place you're in and your browser are sent with it.";
+  const whoLabel = document.createElement("label");
+  whoLabel.className = "bug-who";
+  whoLabel.textContent = "Who? (their name above their head) ";
+  const who = document.createElement("input");
+  who.maxLength = 12;
+  who.autocomplete = "off";
+  who.setAttribute("autocapitalize", "off");
+  who.spellcheck = false;
+  whoLabel.append(who);
+  const chatLabel = document.createElement("label");
+  chatLabel.className = "bug-chat";
+  const withChat = document.createElement("input");
+  withChat.type = "checkbox";
+  withChat.checked = true;
+  chatLabel.append(withChat, " Send the last 5 minutes of chat here with it");
   const text = document.createElement("textarea");
   text.rows = 6;
   text.maxLength = MAX;
@@ -56,7 +74,7 @@ export function mountBugReport(opts: {
   send.className = "bug-send";
   send.textContent = "Send";
   actions.append(cancel, send);
-  card.append(title, hint, text, shotLabel, status, actions);
+  card.append(title, hint, whoLabel, chatLabel, text, shotLabel, status, actions);
   root.append(card);
   document.body.append(root);
 
@@ -74,8 +92,13 @@ export function mountBugReport(opts: {
   card.addEventListener("submit", async (e) => {
     e.preventDefault();
     const value = text.value.trim();
+    const name = who.value.normalize("NFKC").trim();
+    if (person && !name) {
+      status.textContent = "Type their name first.";
+      return;
+    }
     if (!value) {
-      status.textContent = "Say what went wrong first.";
+      status.textContent = person ? "Say what happened first." : "Say what went wrong first.";
       return;
     }
     const file = shot.files?.[0] ?? null;
@@ -85,13 +108,19 @@ export function mountBugReport(opts: {
     }
     send.disabled = true;
     status.textContent = "Sending…";
-    const { sent, error } = await opts.send(value, file, (done) => {
-      status.textContent = `Uploading the screenshot… ${Math.round(done * 100)}%`;
-    });
+    const { sent, error } = await opts.send(
+      value,
+      file,
+      (done) => {
+        status.textContent = `Uploading the screenshot… ${Math.round(done * 100)}%`;
+      },
+      person ? { name, withChat: withChat.checked } : null,
+    );
     send.disabled = false;
     if (sent) {
       text.value = "";
       shot.value = "";
+      who.value = "";
     }
     if (error) {
       status.textContent = sent ? `The report was sent, but not the screenshot. ${error}` : error;
@@ -101,11 +130,20 @@ export function mountBugReport(opts: {
     window.setTimeout(hide, 1200);
   });
 
+  let person = false;
   return {
-    open() {
+    open(aboutPerson = false) {
+      person = aboutPerson;
+      title.textContent = person ? "🚩 Report someone" : "🐞 Report a bug";
+      hint.textContent = person
+        ? "What did they do? Only the admin reads this, and can stop someone chatting, posting or coming in. Your name and the place you're in are sent with it."
+        : "What happened, and what did you expect? Only the admin reads this. Your name, the place you're in and your browser are sent with it.";
+      text.setAttribute("aria-label", person ? "What happened" : "What went wrong");
+      whoLabel.hidden = !person;
+      chatLabel.hidden = !person;
       status.textContent = "";
       root.hidden = false;
-      text.focus();
+      (person ? who : text).focus();
     },
     isOpen: () => !root.hidden,
   };

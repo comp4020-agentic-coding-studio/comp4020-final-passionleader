@@ -102,11 +102,11 @@ const touch = $("touch");
 const touchScreen = window.matchMedia("(pointer: coarse), (max-width: 700px)");
 // Bug reports go to the admin; the gear's dialog opens the form.
 const bugReport = mountBugReport({
-  async send(text, shot, progress) {
+  async send(text, shot, progress, about) {
     if (!session) return { sent: false, error: "Join first." };
     let id: number;
     try {
-      id = (await sendBugReport(session.token, text, space?.id ?? null)).id;
+      id = (await sendBugReport(session.token, text, space?.id ?? null, about)).id;
     } catch (err) {
       return { sent: false, error: err instanceof ApiError ? err.message : "Could not send it." };
     }
@@ -116,7 +116,7 @@ const bugReport = mountBugReport({
 
 // Low (the default) vs High graphics: see settings.ts.
 const highQuality = HIGH;
-mountSettings({ reportBug: () => bugReport.open(), customise: () => openLookPicker() });
+mountSettings({ reportBug: () => bugReport.open(), reportPerson: () => bugReport.open(true), customise: () => openLookPicker() });
 mountBgmPlayer();
 
 const scene = new THREE.Scene();
@@ -1079,6 +1079,12 @@ function goOnline(token: string): void {
     },
     roomLine(line) {
       if (roomPanel.isOpen()) roomPanel.add(line);
+    },
+    restricted(what, until) {
+      sfx("error");
+      const when = new Date(until).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+      const doing: Record<string, string> = { chat: "chatting", notes: "sticking notes", posts: "posting on boards", join: "coming in" };
+      toast(`The admin has stopped you ${doing[what] ?? what} until ${when}.`);
     },
     seatRefused() {
       mySeat = null;

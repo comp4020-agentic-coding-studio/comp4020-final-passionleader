@@ -25,6 +25,23 @@ describe("the admin's log and bug reports", () => {
     expect((await api("/api/bugs", "POST", { token: v.token, text: "x".repeat(2001) })).status).toBe(400);
   });
 
+  it("refuses restrictions to anyone but the admin", async () => {
+    const v = await visitor();
+    expect((await api("/api/admin/restrictions", "POST", { token: v.token })).status).toBe(403);
+    expect((await api("/api/admin/restrictions", "PUT", { token: v.token, name: v.name, what: "chat", hours: 1 })).status).toBe(403);
+    expect((await api("/api/admin/restrictions", "DELETE", { token: v.token, name: v.name, what: "chat" })).status).toBe(403);
+  });
+
+  it("takes a report about someone; the visitor can't supply the chat it carries", async () => {
+    const v = await visitor();
+    const rude = await visitor();
+    const res = await api("/api/bugs", "POST", { token: v.token, text: "Swearing at people.", space: "outdoor", about: rude.name, withChat: true, chat: [{ author: "x", text: "fake" }] });
+    expect(res.status).toBe(201);
+    // A name nobody has is refused, not filed as a bug report.
+    const other = await visitor();
+    expect((await api("/api/bugs", "POST", { token: other.token, text: "Who?", space: "outdoor", about: "zz_nobody" })).status).toBe(404);
+  });
+
   it("serves the admin page itself (it asks the server for everything)", async () => {
     const res = await api("/admin/");
     expect(res.status).toBe(200);

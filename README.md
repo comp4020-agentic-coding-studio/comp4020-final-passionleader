@@ -59,7 +59,10 @@ should feel at home in a virtual space shaped like the real campus they know.
    people inside; when the last person leaves the chat, the files and the
    invites are gone.
 8. Something broken? The gear's dialog has **Report a bug**: a short note,
-   with a screenshot if you like, that only the admin reads.
+   with a screenshot if you like, that only the admin reads. Someone being
+   abusive? **Report someone** sends their name and, if you like, the last
+   five minutes of chat where you are; the admin can stop a person chatting,
+   posting, sticking notes or coming in, for a while.
 9. Files: a classroom board post can carry up to five, a meeting room's chat
    shares them, and a bug report takes a screenshot. Images, PDF, txt, md,
    docx, pptx, xlsx and zip, up to 200 MB each; nothing that runs, no web
@@ -114,7 +117,9 @@ refusals, bug reports and the names of files attached, with the **IP
 address** each came from, so abuse and bugs can be traced; after seven days
 they are deleted (bug reports after 28, or when dealt with). Files are kept
 30 days at most, a meeting room's only until it empties, and go when their
-post is removed. Chat, moves and emotes are not kept.
+post is removed. Chat outside the meeting rooms is kept one day, read
+only if someone reports a person (then the last five minutes go to the
+admin with the report); meeting rooms' chat, moves and emotes are not kept.
 
 ## What I chose not to build (yet)
 

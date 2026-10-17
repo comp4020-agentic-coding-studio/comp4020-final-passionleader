@@ -67,6 +67,8 @@ export interface NetHandlers {
   roomRefused(space: SpaceId, reason: string): void;
   /** Someone's already on that seat. */
   seatRefused(): void;
+  /** The admin stopped us doing `what` (chat, notes, posts, join) until `until`. */
+  restricted(what: string, until: string): void;
   status(online: boolean): void;
 }
 
@@ -141,11 +143,13 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
           if (m.kind === "seat-refused") return on.seatRefused();
+          if (m.kind === "restricted") return on.restricted(m.what as string, m.until as string);
       }
     };
-    ws.onclose = () => {
+    ws.onclose = (e) => {
       on.status(false);
-      if (closed) return;
+      // 4003: the admin has stopped us coming in; trying again won't help.
+      if (closed || e.code === 4003) return;
       // Back off up to 8s, so a sleeping server isn't hammered while it wakes.
       setTimeout(open, retry);
       retry = Math.min(retry * 2, 8000);

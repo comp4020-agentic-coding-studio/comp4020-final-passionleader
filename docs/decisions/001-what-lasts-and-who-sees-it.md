@@ -2,7 +2,8 @@
 
 Status: accepted (crit 9). Revised in crit 10: notes now disappear a month
 after they're stuck, can't go up in the Student Hub, and keep 2 m clear of
-doors; see "Notes that never expire" below.
+doors; see "Notes that never expire" below. Map chat is now kept a day for
+reports about abuse; see "Losing chat" below.
 
 ![How the real-time layer talks: browsers, and the server and SQLite in one Fly machine](../../diagrams/5-crit9-realtime.png)
 
@@ -70,6 +71,10 @@ written, so someone coming back starts where they left.
 - **Losing chat.** Someone who arrives a minute late misses the conversation,
   and nothing can be quoted back later. Anything worth keeping has to become a
   note.
+  *Crit 10:* "nothing can be quoted back" also meant nobody could show the
+  admin what someone said. Map chat is now kept one day, read only when
+  someone reports a person, and the server attaches that space's last five
+  minutes itself. Meeting rooms' chat is still never stored.
 - **Notes that never expire.** Old notes pile up and can go stale; removal
   depends on authors and on me as admin.
   *Crit 10:* that came true sooner than expected, so notes now go a month
@@ -96,6 +101,7 @@ written, so someone coming back starts where they left.
 `spec/realtime.test.ts`: movement, chat, emotes and new notes reach the same
 space within a second and not another one. `spec/campus.test.ts` and
 `spec/rules.test.ts`: notes persist, belong to their space, keep to the
-limits, and only their author or an admin removes them. Chat not being stored
-is visible in `server/realtime.ts`: it is broadcast and never written. The
+limits, and only their author or an admin removes them. Map chat kept a
+day, per space, is checked in `spec/rules.test.ts`; meeting rooms' chat not
+being stored is visible in `server/realtime.ts`. The
 rule that positions are never written per move is in `CLAUDE.md`.

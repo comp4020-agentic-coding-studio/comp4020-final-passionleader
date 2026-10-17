@@ -165,3 +165,29 @@ describe("the admin's seven-day log", () => {
     expect(raw.prepare("SELECT COUNT(*) AS n FROM audit WHERE who = 'nosy'").get()).toEqual({ n: 0 });
   });
 });
+
+// Map chat is kept a day, only so a report about someone can carry the last
+// five minutes; restrictions stop one person doing one thing until a time.
+describe("kept chat and restrictions", () => {
+  it("gives a space's last five minutes of chat, not another space's, and forgets it after a day", () => {
+    db.keepChatLine("outdoor", "rude", "you're awful");
+    db.keepChatLine("hub", "other", "elsewhere");
+    expect(db.recentChat("outdoor").map((l) => l.text)).toContain("you're awful");
+    expect(db.recentChat("outdoor").map((l) => l.text)).not.toContain("elsewhere");
+    raw.prepare("UPDATE chat_lines SET at = '2020-01-01T00:00:00.000Z' WHERE author = 'rude'").run();
+    expect(db.recentChat("outdoor").map((l) => l.author)).not.toContain("rude");
+    db.purgeOldChat();
+    expect(raw.prepare("SELECT COUNT(*) AS n FROM chat_lines WHERE author = 'rude'").get()).toEqual({ n: 0 });
+  });
+
+  it("stops one thing until its time, regardless of case, and lifts", () => {
+    const later = new Date(Date.now() + 3600_000).toISOString();
+    db.restrict("Spammer", "chat", later, "qa_master", "flooding");
+    expect(db.restrictionOn("spammer", "chat")?.reason).toBe("flooding");
+    expect(db.restrictionOn("spammer", "notes")).toBeUndefined();
+    db.restrict("Spammer", "notes", "2020-01-01T00:00:00.000Z", "qa_master", null);
+    expect(db.restrictionOn("spammer", "notes")).toBeUndefined();
+    expect(db.lift("SPAMMER", "chat")).toBe(true);
+    expect(db.restrictionOn("spammer", "chat")).toBeUndefined();
+  });
+});

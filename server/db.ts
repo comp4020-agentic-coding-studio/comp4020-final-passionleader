@@ -176,6 +176,28 @@ db.exec(`
     updated_at TEXT NOT NULL DEFAULT (datetime('now'))
   );
 `);
+// Map chat, kept one day so a report can carry what was said (crit 10, was
+// never stored), and what the admin has stopped someone doing, and until when.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS chat_lines (
+    id     INTEGER PRIMARY KEY AUTOINCREMENT,
+    at     TEXT NOT NULL,
+    space  TEXT NOT NULL,
+    author TEXT NOT NULL,
+    text   TEXT NOT NULL
+  );
+  CREATE INDEX IF NOT EXISTS chat_by_space ON chat_lines (space, at);
+  CREATE TABLE IF NOT EXISTS restrictions (
+    name   TEXT NOT NULL COLLATE NOCASE,
+    what   TEXT NOT NULL,
+    until  TEXT NOT NULL,
+    by     TEXT NOT NULL,
+    reason TEXT,
+    PRIMARY KEY (name, what)
+  );
+`);
+const bugCols = (db.prepare("PRAGMA table_info(bug_reports)").all() as { name: string }[]).map((c) => c.name);
+for (const col of ["about", "chat"]) if (!bugCols.includes(col)) db.exec(`ALTER TABLE bug_reports ADD COLUMN ${col} TEXT`);
 // When a post or a board comment was last edited (null if never), added for crit 10.
 for (const table of ["posts", "post_comments"]) {
   const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
@@ -474,7 +496,7 @@ export function deletePostComment(id: number): void {
 // A copy of the activity log the admin can read in the app for seven days:
 // what people wrote (notes, comments, posts, and what was removed), sign-ins,
 // admin actions and refusals, each with the IP it came from. Moves, emotes
-// and chat aren't kept (chat is never stored). Deleted after seven days.
+// and chat aren't kept here (chat_lines below keeps it a day, for reports). Deleted after seven days.
 
 export const AUDIT_DAYS = 7;
 export interface AuditEntry {
@@ -544,6 +566,67 @@ export function purgeOldAudit(): number {
   return Number(a) + Number(b);
 }
 
+// --- map chat, kept a day -----------------------------------------------------------
+// Only so a report about abuse can carry the last few minutes of a space's
+// chat; nobody reads it otherwise, and it's deleted after a day.
+
+export const CHAT_KEEP_HOURS = 24;
+export const REPORT_CHAT_MINUTES = 5;
+export interface ChatLine {
+  at: string;
+  author: string;
+  text: string;
+}
+
+export function keepChatLine(space: string, author: string, text: string): void {
+  db.prepare("INSERT INTO chat_lines (at, space, author, text) VALUES (?, ?, ?, ?)").run(new Date().toISOString(), space, author, text);
+}
+
+/** The space's chat from the last `minutes`, oldest first. */
+export function recentChat(space: string, minutes = REPORT_CHAT_MINUTES): ChatLine[] {
+  const since = new Date(Date.now() - minutes * 60_000).toISOString();
+  return db.prepare("SELECT at, author, text FROM chat_lines WHERE space = ? AND at > ? ORDER BY id LIMIT 300").all(space, since) as unknown as ChatLine[];
+}
+
+export function purgeOldChat(): number {
+  const since = new Date(Date.now() - CHAT_KEEP_HOURS * 3600_000).toISOString();
+  return Number(db.prepare("DELETE FROM chat_lines WHERE at <= ?").run(since).changes);
+}
+
+// --- restrictions ----------------------------------------------------------------------
+// The admin can stop one person posting notes, posting on boards, chatting,
+// or joining at all, for a while; the server checks before each of those.
+
+export const RESTRICTABLE = ["notes", "posts", "chat", "join"] as const;
+export type Restrictable = (typeof RESTRICTABLE)[number];
+export interface Restriction {
+  name: string;
+  what: Restrictable;
+  until: string;
+  by: string;
+  reason: string | null;
+}
+
+export function restrict(name: string, what: Restrictable, until: string, by: string, reason: string | null): void {
+  db.prepare("INSERT OR REPLACE INTO restrictions (name, what, until, by, reason) VALUES (?, ?, ?, ?, ?)").run(name, what, until, by, reason);
+}
+
+export function lift(name: string, what: Restrictable): boolean {
+  return db.prepare("DELETE FROM restrictions WHERE name = ? AND what = ?").run(name, what).changes > 0;
+}
+
+/** The restriction on `name` doing `what` now, if there is one. */
+export function restrictionOn(name: string, what: Restrictable): Restriction | undefined {
+  return db
+    .prepare("SELECT name, what, until, by, reason FROM restrictions WHERE name = ? AND what = ? AND until > ?")
+    .get(name, what, new Date().toISOString()) as Restriction | undefined;
+}
+
+export function restrictions(): Restriction[] {
+  db.prepare("DELETE FROM restrictions WHERE until <= ?").run(new Date().toISOString());
+  return db.prepare("SELECT name, what, until, by, reason FROM restrictions ORDER BY until").all() as unknown as Restriction[];
+}
+
 // --- bug reports -----------------------------------------------------------------
 // Anyone joined can send one; only the admin reads them. Text only for now.
 
@@ -556,29 +639,34 @@ export interface BugReport {
   space: string | null;
   userAgent: string | null;
   text: string;
+  /** For a report about someone: who. */
+  about: string | null;
+  /** For a report about someone: the space's chat from the five minutes before. */
+  chat: ChatLine[] | null;
 }
 export const BUG_COOLDOWN_SECONDS = 60;
 
 /** Adds a report, unless the author sent one in the last minute. */
-export function addBugReport(r: Omit<BugReport, "id" | "at">): { ok: true; id: number } | { ok: false; wait: number } {
+export function addBugReport(r: Omit<BugReport, "id" | "at" | "about" | "chat"> & { about?: string | null; chat?: ChatLine[] | null }): { ok: true; id: number } | { ok: false; wait: number } {
   const last = db.prepare("SELECT at FROM bug_reports WHERE author = ? ORDER BY id DESC LIMIT 1").get(r.author) as { at: string } | undefined;
   const since = last ? (Date.now() - Date.parse(last.at)) / 1000 : Infinity;
   if (since < BUG_COOLDOWN_SECONDS) return { ok: false, wait: Math.ceil(BUG_COOLDOWN_SECONDS - since) };
   const at = new Date().toISOString();
   const { lastInsertRowid } = db
-    .prepare("INSERT INTO bug_reports (at, author, browser, ip, space, user_agent, text) VALUES (?, ?, ?, ?, ?, ?, ?)")
-    .run(at, r.author, r.browser, r.ip, r.space, r.userAgent, r.text);
+    .prepare("INSERT INTO bug_reports (at, author, browser, ip, space, user_agent, text, about, chat) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)")
+    .run(at, r.author, r.browser, r.ip, r.space, r.userAgent, r.text, r.about ?? null, r.chat ? JSON.stringify(r.chat) : null);
   return { ok: true, id: Number(lastInsertRowid) };
 }
 
 export function bugReports(): BugReport[] {
-  return db
-    .prepare("SELECT id, at, author, browser, ip, space, user_agent AS userAgent, text FROM bug_reports ORDER BY id DESC LIMIT 500")
-    .all() as unknown as BugReport[];
+  const rows = db
+    .prepare("SELECT id, at, author, browser, ip, space, user_agent AS userAgent, text, about, chat FROM bug_reports ORDER BY id DESC LIMIT 500")
+    .all() as unknown as (Omit<BugReport, "chat"> & { chat: string | null })[];
+  return rows.map((r) => ({ ...r, chat: r.chat ? (JSON.parse(r.chat) as ChatLine[]) : null }));
 }
 
 export function findBugReport(id: number): BugReport | undefined {
-  return db.prepare("SELECT id, at, author, browser, ip, space, user_agent AS userAgent, text FROM bug_reports WHERE id = ?").get(id) as BugReport | undefined;
+  return db.prepare("SELECT id, at, author, browser, ip, space, user_agent AS userAgent, text, about, NULL AS chat FROM bug_reports WHERE id = ?").get(id) as BugReport | undefined;
 }
 
 export function deleteBugReport(id: number): boolean {

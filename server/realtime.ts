@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, findByName, findByToken, lastSpot, lookOf, saveLastSpot, type Look } from "./db.ts";
+import { dropRoomFiles, findByName, findByToken, keepChatLine, lastSpot, lookOf, restrictionOn, saveLastSpot, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -107,6 +107,15 @@ function closeRoom(space: SpaceId): void {
 }
 
 /** Where `name` is right now, if they're online (their newest tab). */
+/** Tells everyone called `name` they've been stopped from `what`; for "join", closes their sockets too. */
+export function noticeRestriction(name: string, what: string, until: string): void {
+  for (const [ws, p] of players) {
+    if (p.name.toLowerCase() !== name.toLowerCase()) continue;
+    send(ws, { t: "action", kind: "restricted", what, until });
+    if (what === "join") ws.close(4003, "restricted");
+  }
+}
+
 export function livePlayer(name: string): Player | undefined {
   let found: Player | undefined;
   for (const p of players.values()) if (p.name === name) found = p;
@@ -258,12 +267,20 @@ function onMessage(ws: WebSocket, raw: string): void {
     const now = Date.now();
     if (!text || now - (lastChat.get(ws) ?? 0) < CHAT_GAP_MS) return;
     lastChat.set(ws, now);
-    // Chat is never stored: it exists only for the people in the space now.
+    const stopped = restrictionOn(player.name, "chat");
+    if (stopped) {
+      log("refused", owners.get(ws) ?? null, { action: "chat", space: player.space, reason: "restricted" });
+      send(ws, { t: "action", kind: "restricted", what: "chat", until: stopped.until });
+      return;
+    }
     // The log notes that someone spoke, and how much, not what they said.
     log("chat", owners.get(ws) ?? null, { space: player.space, chars: text.length });
     broadcastSpace(player.space, { t: "chat", id: player.id, name: player.name, text });
-    // In a meeting room the line also goes in the room's window, until the room empties.
+    // In a meeting room the line goes in the room's window, until the room
+    // empties, and nowhere else. Map chat is kept a day, only so a report
+    // about abuse can carry the last few minutes (db.ts, recentChat).
     if (rooms.has(player.space)) rooms.get(player.space)!.lines.push({ name: player.name, text });
+    else keepChatLine(player.space, player.name, text);
   } else if (msg.t === "invite" && typeof msg.name === "string") {
     // Anyone in a counselling room may invite someone in, by user name.
     const room = roomOf(player.space);
@@ -338,6 +355,11 @@ export function attachRealtime(server: Server): void {
     if (!visitor) {
       if (url.pathname === "/ws") log("refused", null, { action: "connect", reason: "unknown token" });
       socket.end("HTTP/1.1 401 Unauthorized\r\n\r\n");
+      return;
+    }
+    if (restrictionOn(visitor.name, "join")) {
+      log("refused", visitor, { action: "connect", reason: "restricted" });
+      socket.end("HTTP/1.1 403 Forbidden\r\n\r\n");
       return;
     }
     // Fly puts the visitor's address in Fly-Client-IP; locally, the socket's (admin's log only).
