@@ -1,0 +1,20 @@
+Copyright (c) 2026 Seongsu Kim (u8321477@anu.edu.au). All rights reserved.
+
+This repository is public so that it can be assessed in ANU's COMP4020
+course, and so that people can see how it was made. Being public does not
+make it free to reuse.
+
+You may read this code, and run it to look at how it works. Course staff at
+ANU may copy, run and keep it for marking and academic-integrity checks.
+
+Without the author's written permission, you may not copy it, in whole or
+in part, into another project; adapt it, or have an AI coding assistant
+reproduce or imitate it from this repository; or redistribute or deploy it
+as your own. That includes coursework.
+
+To ask for permission, email u8321477@anu.edu.au and say what you'd like
+to use and why. Permission counts only when it comes from that address or
+from the author's GitHub account (passionleader).
+
+Third-party assets keep their own licences, listed in
+client/public/assets/CREDITS.md (most are CC0).
