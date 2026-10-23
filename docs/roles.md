@@ -17,8 +17,8 @@ overlap (a big QA sweep, an asset hunt), and close it when it reports.
 | Backend and real-time | `server/`: routes, validation, SQLite, the WebSocket layer and its protocol |
 | Frontend core | `client/src/main.ts`, `net.ts`, `api.ts`, `world.ts`, `index.html`, `style.css` |
 | DevOps | Dockerfile, deploys (CI once public), database resets and backups, checking the live site after each deploy |
-| Observability | Server-side logging and any live activity view (crit 10) |
-| Docs and harness | Keeps README facts, `CLAUDE.md`, `docs/`, decision records and `PROCESS.md` current; translates my drafts. The arguments in README, PROCESS and reflections are mine |
+| Observability | Server-side logging and the admin's log (from crit 10) |
+| Docs and harness | Keeps README facts, `CLAUDE.md`, `docs/` and decision records current while building; translates my drafts. The arguments in README, PROCESS and reflections are mine, written once the build is finished |
 | Reviewer | Reads every slice the helper hands over before it is committed |
 | **Committer** | **The only session that runs `git add`, `commit`, `push` or tags** |
 
@@ -70,4 +70,6 @@ with random test names. The tokens live outside the repo.
 
 ## This week's split
 
-What each session is doing in the current crit is listed in `docs/plan.md`.
+The bundles, and what each session does in them, are in `docs/plan.md`.
+Review runs (several read-only reviewers at once, before a push) report to
+the main session; they never edit, commit or deploy.

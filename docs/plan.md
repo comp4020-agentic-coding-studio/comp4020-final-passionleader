@@ -1,8 +1,9 @@
 # Plan
 
 Where the app is going, in the order I'll build it. Earlier steps are what
-later ones stand on. Each crit takes a slice; the brief for each crit still
-decides what that week is marked on.
+later ones stand on. Crits 8–10 each took a slice (tags `crit-8` to
+`crit-10`); from 22 October it is one run to the final project, due
+Monday 9 November, 12:00, in three bundles (below).
 
 ## Direction
 
@@ -16,8 +17,10 @@ joined by doors. It is not an official ANU service and never looks like one.
 
 Started in crit 8 as Poop Room: one toilet, one poop each. The real-time
 layer from crit 9 carries over unchanged; the toilet and the poop don't.
-The detailed, numbered to-do list lives outside the repo (my own planning
-notes); the numbers below match it.
+Before building the final project I wrote two planning files outside the
+repo: a plan (direction, decisions, AWS set-up) and a numbered checklist of
+everything to build. The numbers below match that checklist, and so do the
+numbers in commit messages.
 
 ## Implementation order
 
@@ -64,6 +67,8 @@ notes); the numbers below match it.
 11b. ✅ (in part) COMP8020's board lists classmates' live final projects; elsewhere
     the admin sets what the whiteboard and that board open ([`185cfc5`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/185cfc5))
 11c. ✅ A board per classroom: Q&A, Notices (staff only), Board ([`ea18534`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ea18534))
+    — the Student Hub's board drops Ask the Hub and becomes a staff–student
+    matching board (63); classroom boards become PCs (67)
 12. ✅ The Student Hub's board: labs looking for students, students looking for
     labs, Ask the Hub ([`f13eaef`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)); a researcher search beside it; the
     lawn noticeboard ([`a67eece`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a67eece), [`c388d44`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/c388d44)). Posts take Markdown
@@ -97,115 +102,132 @@ notes); the numbers below match it.
 29. ✅ A dog in front of 154 ([`39f786e`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/39f786e), [`8e0c987`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8e0c987))
 —   ✅ Lab Coffee and a list of the cafés on campus ([`8031751`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8031751), [`0d94d7c`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/0d94d7c))
 
-**Final project (after crit 10), in this order**
+**Final project**
 
-34. Camera that turns in four 90° steps
-35. Shaders for High graphics
-32a. A minimap
-38. Sign-up by student number with an emailed code, guest log-in, and roles:
-    guest, student, staff, admin (needs AWS SES)
-36. One-to-one counselling and private enquiries (with 16 mail, 17 one-to-one chat)
+Everything left on the checklist is meant for the final project; whatever
+won't fit is dropped from the end of bundle 3 (below), not cut in advance.
+
+*Small fixes and comfort*
+
+40. Esc closes the lawn noticeboard
+41. "Open in new tab" opens the page you'd reached in the in-app window, if
+    the browser lets the app read it (checked first)
+45. A sticky note opens scrolled to the top
+46. Hearts on comments (the most-hearted pinned first), reporting a post or
+    comment, and a confirm before deleting, on notes and every board
+47. Lawn noticeboard posts go after 30 days, and the write form says so
+49. Times shown in Canberra time (stored as UTC)
+50. Emotes other than dance and notes once every two seconds, checked on the
+    server
+51. `/all message` reaches the chat log in every space; bubbles stay local
+54. The admin's "coming in" restriction kicks at once; a plain kick with no
+    restriction
+55. Jumping over sofas
+57. Signs say what a thing is, not "press E" (the E badge already does)
+74. The lit E badge sits over the thing you use, not behind it
+75. The meeting room door label isn't cut off by the chat column
+
+*Looks*
+
+42. A hat colour (the hair palette)
+43. A yellow hard hat only `qa_` accounts may wear, checked on the server
+44. The dog barks happily when you press "Buy me a feed"
+52. A coat-hanger button left of settings opens Customise look (it leaves
+    the settings dialog); faces stay visible when skin and hair match
+
+*Places*
+
+58. The lawn noticeboard moves south of Broger's garden bed, facing the main
+    path
+59. An ANU Sports tent at the east end with a PC to its site
+60. The lawn to the creek west of it, closer to the real place
+61. The east–west white path carries on across the asphalt
+62. An easter egg: a hidden toilet back to Poop Room
+63. The Hub's board: staff–student matching, without Ask the Hub
+64. Behind the Hub desk: two AI advisers (56) and a PC for enquiries, public
+    or private (private ones only the writer and staff see)
+65. Hub reception in order: matching board, researcher search, AI essentials
+    as a pile of papers
+66. A large wall calendar of campus events in the Hub
+67. Classroom boards as PCs
+68. COMMON is replaced by the ANUSA office, up the stairs left of the Hub's
+    entrance; 68a. a study-group board there showing who has joined
+69. The admin picks "new tab" or "in-app window" for a classroom link
+70. Research Ethics in the library as a pile of papers
+
+*Bigger features*
+
+56. AI campus assistants: one each in the library, the ANU Sports tent and
+    the ANUSA office, and a course adviser and a careers adviser in the Hub;
+    answers drawn from ANU pages fetched weekly; nothing said is stored, and
+    the window says so; a per-person daily limit (the model runs on the
+    course budget)
+38. Sign-up by student number with an emailed code (AWS SES), guest log-in,
+    and roles: guest, student, staff, admin; guests read and stick notes but
+    get a sign-up prompt when they try to post
+16. Mail to someone who isn't online, from a mailbox button beside the coat
+    hanger; 17, 36. one-to-one chat and counselling; 18. files on them
 37. Meeting rooms for working together, and saving a room's chat and files to
-    your own archive
-39. A shared Markdown document in team rooms
-33. The rest of reporting: report from a name tag, mute
+    your own archive; 39. a shared Markdown document in team rooms
+72. A skippable tutorial of small quests ("Go to the library" ✓)
+53. A minimap outside, desktop only, with the names of buildings you can enter
+33. The rest of reporting: mute
+35. Shaders for High graphics; 35a. the sky drifts left to right
+34. A camera button that turns 90° outside (last)
 31. Voice (last; needs a relay server)
-—   Last of all, before Fly.io is taken back: a backup server on EC2
+20. Club, residence and college / course spaces (last, if at all)
+—   After the course, before Fly.io is taken back: a backup server on EC2
     (`docs/self-hosting.md`)
 
-**On hold**
+*Review*
 
-20. Club, residence and college / course spaces
+73. Multi-agent review runs: before each push, several reviewers (bugs,
+    `CLAUDE.md` rules, missing specs, phone and keyboard-only, security) with
+    each finding checked again; research runs before the big items; and one
+    full audit on 6 November (README ↔ spec ↔ `CLAUDE.md` ↔ the live app,
+    screenshots of every space on desktop and phone)
 
-## Crit 9 (due Wednesday 14 October, 07:00)
+## Final project (due Monday 9 November, 12:00)
 
-Steps **1–9**, and step 10 if time allows (it's next week's task anyway).
+The course budget refills every Thursday, 09:00, so a bundle is one budget
+week, about $180, with some left spare. Each bundle ends with a review run
+(73) and a push; pushes deploy, so they come in batches.
 
-Owed to the crit, and more important than any feature:
+**Bundle 1 — 24 to 29 October: small fixes, then what changes the
+structure.** Push the three commits left from crit 10; small fixes and
+comfort (40, 45, 57, 70, 44, 55, 50, 49, 61, and from the 18 October QA: 74 the
+E badge over the library PCs sits too high, 75 a door label cut off in meeting
+rooms); looks (42, 43, 52); boards and
+the Hub (63, 65, 67, 69, 47, 58, 46's delete confirm); 41, 54, mute, 51,
+expired classrooms (11); hearts and reports (46); the enquiry PC and the
+ANU Sports tent (64, 59); research for 56 and 68; COMMON becomes the ANUSA
+office (68).
 
-- one decision record in `docs/decisions/` on how the app behaves with
-  several people at once (candidates: chat fades after a minute but sticky
-  notes stay; you only see people in your own space; returning visitors start
-  where they left)
-- `reflections/crit-9.md`
-- `PROCESS.md` rewritten for this week
-- `README.md`'s definition of good rewritten for the ANU space
+**Bundle 2 — 29 October to 4 November: big features.** The AI assistants
+(56); sign-up and roles (38; AWS SES production access is requested on 24
+October); mail and one-to-one chat (16, 17, 36, 18); the study-group board
+and the tutorial (68a, 72); the minimap and the wall calendar (53, 66).
+Shaders and the easter egg (35, 62) only if it runs to spare. Big
+implementation ends Friday 30 October; the rest of the week catches up.
 
-### Who does what this week
+**Bundle 3 — 5 to 9 November: finish, check, write.** On 5 November what
+bundle 2 left and the collaborative rooms (37, 39); from 6 November the full
+audit (73), then bugs, hotfixes and small things only, and the documents:
+README (400–600 words), PROCESS rewritten from scratch, `CLAUDE.md`, `spec/`,
+`reflections/crit-8.md` cut to 300 words. If anything has to go, it goes from
+here, in this order: 60, 34, UI language, 31, 20.
 
-Roles are in [`roles.md`](roles.md). This week:
+### Who does what
 
-- **Main (Opus):** accounts, spaces, doors, chat, emote and sticky-note
-  protocol, the maps' layout and collisions, specs, docs, commits, deploys
-- **Helper (Sonnet):** gathering building references (kept out of the repo),
-  finding CC0 textures and furniture with credits, the radial menu and chat
-  panel UI as self-contained modules, local QA of doors, chat and emotes with
-  several browsers
+Roles are in [`roles.md`](roles.md): one main session (Opus) plans, builds the
+server and the core client files, commits and deploys; a helper session
+(Sonnet) finds assets, builds self-contained UI modules the main session
+names, and does local QA. Review runs (73) are read-only and report to the
+main session.
 
-## Crit 10 (due Wednesday 21 October, 07:00)
+## Earlier crits
 
-Two people in their own browsers, told apart in the server log; what each
-may see and change checked on the server and written down. Steps, in order:
-
-- **10**: one JSON line per action on the server (who, which space, what,
-  when), readable with `flyctl logs`; decision record 002 on permissions
-- **11a**: a classroom picker at 155's door; only `qa_master` adds
-  classrooms, checked on the server (002's main example)
-- **25**: links open in an in-app window where the site allows it, otherwise
-  in a new tab, on desktop and phone
-- **15** (small): recheck the name tag against the top-right buttons at 390 px
-- if time: the classroom's exit door moves to the right-hand wall
-
-Pulled forward once those were done (budget left over), in this order:
-
-- **4b**: the road east of 154 carries on north between the O'Donoghue
-  centre and the red-brick buildings, as asphalt
-- **29**: a dog in front of 154; E asks whether to buy it some food, and yes
-  shows a "Buy me a feed" button that opens my Buy Me a Coffee page
-- **11c**: a board left of each classroom's whiteboard with three tabs
-  (Q&A, Notices, Board); only the admin posts notices, checked on the server
-- **28**: the Sketch & Guess drawing game on an arcade machine in the Hub,
-  in the in-app window, moved onto this server
-- **26** (if time): Chifley Library's interior behind its front door
-- **21, 6a, 26a, 30** (if time): meeting rooms, each a small room with a
-  group-chat window: six invite-only counselling rooms off the Hub, three team
-  rooms per classroom and five in the library; six people at most, checked on
-  the server; the chat lasts while someone is inside. No voice yet
-- **18, 22** (pulled forward, with S3 in place): files on board posts, in
-  meeting rooms and on bug reports (screenshots), up to 200 MB, kept 30 days
-  at most, straight to a private S3 bucket by signed links
-- **10, extended**: the admin's log, read in the app at the Student Hub's
-  admin PC (or `/admin/` in a tab during the crit): seven days of what
-  people wrote and removed, sign-ins and refusals, with IPs; bug reports
-  sent from the settings dialog, read in a second tab. Only the admin, checked
-  on the server
-- **11b** (in part): COMP8020's board right of the whiteboard lists
-  classmates' live final-project apps; in other classrooms the admin sets
-  what the whiteboard and that board open. COMMON becomes a lounge. Two more
-  arcade machines in the Hub for my earlier course games
-
-Already done ahead of this crit: the backdrop buildings and walkable areas
-(4a), and the music player and volume sliders (part of 13).
-
-Added later in the week, asked for while testing the live site: the Hub's
-board and researcher search (12), the lawn noticeboard (12a), head counts
-(32), Markdown and editing on boards, Lab Coffee, phone fixes
-([`276292a`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/276292a)), reporting and restrictions (33, in part), the Hub and
-library rearranged ([`b4dbad9`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b4dbad9)), the library as the map's edge, a
-licence ([`1630496`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/1630496)), and the name **ANU Crossing (Unofficial)**
-([`b23ab30`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b23ab30)). Code freeze: Tuesday 20 October, 18:00.
-
-Owed to the crit: `docs/decisions/002-*.md`, `reflections/crit-10.md`,
-`PROCESS.md` rewritten, README facts updated, a rehearsal with two Chrome
-profiles narrated from the log alone, then the `crit-10` tag.
-
-### Who does what this week
-
-Roles are in [`roles.md`](roles.md). This week:
-
-- **Main (Opus):** the server log, permission checks and classrooms (10, 11a),
-  wiring the in-app window into `main.ts`, the decision record, specs, docs,
-  commits, the push and the live check
-- **Helper (Sonnet):** the in-app web window as a self-contained module
-  (`webview.ts`/`.css`, 25), the 390 px check (15), local QA with two browsers
-  side by side once 10 and 11a land, and the log-only rehearsal dry run
+Crit 8 (Poop Room), crit 9 (steps 1–9, spaces and doors) and crit 10 (the
+server log, permissions checked on the server, files on S3, meeting rooms,
+the boards) are tagged `crit-8`, `crit-9` and `crit-10`; each tag's
+`docs/plan.md` has that week's plan and split.

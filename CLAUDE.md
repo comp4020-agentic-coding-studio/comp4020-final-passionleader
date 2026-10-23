@@ -6,7 +6,8 @@ anyone can ask what they don't know. It started in crit 8 as Poop Room (one
 toilet, one poop each); from crit 9 it grew into ANU spaces joined by doors
 (a stretch of campus outside, the Student Hub, classrooms, Chifley Library,
 meeting rooms), with chat, emotes, sticky notes and boards. The
-implementation order and each crit's cut are in `docs/plan.md`.
+implementation order and the final project's three bundles are in
+`docs/plan.md`; its numbers match the commit messages.
 
 Read before planning or building: `README.md` (what good means for this app),
 `spec/README.md` and `spec/*.test.ts` (what is enforced), and the
@@ -19,19 +20,24 @@ Read before planning or building: `README.md` (what good means for this app),
 - Commit one feature at a time, small, with a message that says why. Push
   to `main` in batches, not after every commit: each push deploys.
 - Write every file in this repo in English (docs, comments, commit messages).
-- `PROCESS.md` has no History section: it must stay within 900–1100 words,
-  and the commit messages and the `crit-*` tags already carry the history.
-  Rewrite `PROCESS.md` at each crit so it describes the project as it stands.
-- Stay inside the current crit's scope: the "Crit 10" section of
-  `docs/plan.md`. Code freezes Tuesday 20 October, 18:00; after that, only
-  fixes that affect the crit. The "Final project" steps in the plan (camera
-  turning, shaders, sign-up and roles, counselling, archives, voice) are
-  out until crit 10 is tagged.
+- `PROCESS.md`, `README.md`'s argument and `reflections/` are mine and are
+  written once, after the build is finished (bundle 3 in `docs/plan.md`);
+  don't rewrite them while building. Keep `README.md`'s facts and its list of
+  what is checked true as features land. `PROCESS.md` has no History section:
+  the commit messages and the `crit-*` tags carry the history.
+- Work in the current bundle of `docs/plan.md`, in its order. Big
+  implementation ends Friday 30 October; from Friday 6 November only bugs,
+  hotfixes, small things and the documents. The final project is due Monday
+  9 November, 12:00; the deployed app must stay up through it.
+- Before a push, `pnpm check` and `pnpm check:evidence` pass; after it, the
+  CI run (check, deploy) is watched and the live site visited with a `qa_`
+  account.
 - Keep the real-time layer generic ("move", "action", "chat", per space), never
   tied to one room or one verb: the spaces and what people do in them will
   keep changing.
-- When a feature replaces an old one (sticky notes replacing poops), say why
-  in the commit message and in `PROCESS.md`.
+- When a feature replaces an old one (sticky notes replacing poops, the
+  ANUSA office replacing COMMON), say why in the commit message, so the
+  final `PROCESS.md` can tell it.
 - A promise in `README.md` needs a check in `spec/` or a rule here; if it
   can't be checked, README says it's judged, not enforced.
 
