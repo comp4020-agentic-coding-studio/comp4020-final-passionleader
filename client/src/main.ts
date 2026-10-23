@@ -41,6 +41,7 @@ import {
   removePost,
   removePostComment,
   heartPostComment,
+  joinGroup,
   type Classroom,
   type Comment,
   type Note,
@@ -67,7 +68,7 @@ import { imageLink, openFile, upload } from "./uploads.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, pushOut, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { canberraTime } from "./when.ts";
 
 const SPEED = 4.2; // walking, world units per second
@@ -796,11 +797,21 @@ const board = mountBoard({
     board.close();
     bugReport.open(true, about);
   },
-  async post(tab, title, text, files, progress, isPrivate = false) {
+  async joinGroup(postId) {
+    if (!session) return "Join first.";
+    try {
+      await joinGroup(session.token, postId);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not join that group.");
+    }
+  },
+  myName: () => session?.name ?? null,
+  async post(tab, title, text, files, progress, isPrivate = false, capacity) {
     if (!session || !space) return "Join first.";
     let id: number;
     try {
-      id = (await createPost(session.token, boardKey || space.id, tab, title, text, isPrivate)).id;
+      id = (await createPost(session.token, boardKey || space.id, tab, title, text, isPrivate, capacity)).id;
     } catch (err) {
       return failed(err, "Could not post that.");
     }
@@ -1436,9 +1447,10 @@ tap("menu-btn", () => (radial.isOpen() ? radial.close() : radial.open()));
 // --- actions ---------------------------------------------------------------
 
 function jump(): void {
-  // Only from the floor: no double jumps. Seated, jumping gets you up first.
+  // Only from the ground (the floor, or a kerb you're standing on): no double jumps.
+  // Seated, jumping gets you up first.
   if (mySeat) return standUp();
-  if (player.position.y > 0) return;
+  if (!space || player.position.y > groundAt(player.position.x, player.position.z, space.colliders) + 0.01) return;
   vy = JUMP_SPEED;
 }
 
@@ -1473,8 +1485,14 @@ function sitDown(index: number): void {
   sfx("click");
 }
 
+/** How far in front of a seat you stand up: past a sofa's front edge and your own width. */
+const STAND_STEP = 0.75;
 function standUp(): void {
   if (!mySeat) return;
+  // Step out the way the seat faces. Left on the seat, you were inside the
+  // sofa's footprint, and pushing out of it could put you behind the sofa.
+  const { seat } = mySeat;
+  player.position.set(seat.x + Math.sin(seat.rot) * STAND_STEP, 0, seat.z + Math.cos(seat.rot) * STAND_STEP);
   mySeat = null;
   net?.sit(null);
 }
@@ -1570,6 +1588,7 @@ function interact(): void {
     else if (target.id === "cafes") cafeGuide.open();
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "enquiries" && space) void openBoard(space.id, "hub-desk");
+    else if (target.id === "study-groups" && space) void openBoard(space.id, "study-groups");
     else if (target.id === "projects") void openProjects();
     else if (target.id === "board-link") openStaffLink("board");
     else if (target.id === "side-link") openStaffLink("side");
@@ -1627,10 +1646,13 @@ function update(dt: number, now: number): void {
       }
     }
     me.setMotion(mySeat ? "sit" : moving ? (running ? "run" : "walk") : "idle");
-    if (moving && player.position.y === 0) step(space.floor ?? "concrete", now, running ? 0.28 : 0.42);
+    // The ground is the floor, or the top of a kerb you're over: land on it,
+    // and step off its edge to drop back down.
+    const ground = groundAt(player.position.x, player.position.z, space.colliders);
+    if (moving && player.position.y <= ground) step(space.floor ?? "concrete", now, running ? 0.28 : 0.42);
     vy -= GRAVITY * dt;
-    player.position.y = Math.max(0, player.position.y + vy * dt);
-    if (player.position.y === 0) vy = 0;
+    player.position.y = Math.max(ground, player.position.y + vy * dt);
+    if (player.position.y <= ground) vy = 0;
     if (mySeat) {
       // On the seat (inside the chair's footprint, so no pushing out), facing its way.
       player.position.copy(seatedAt(mySeat.seat));

@@ -41,6 +41,7 @@ import {
   staleClassrooms,
   postIdsIn,
   toggleHeart,
+  toggleMember,
   purgeExpiredNotes,
   purgeOldAudit,
   addAudit,
@@ -523,7 +524,13 @@ app.post("/api/board", async (c) => {
     log("refused", v, { action: "post", space, tab: tab.id, reason: bad }, { ip: ipOf(c), content });
     return c.json({ error: bad }, 400);
   }
-  const result = addPost(v.name, space, tab.id, (b.title as string).trim(), (b.text as string).trim(), board.allowPrivate === true && b.private === true);
+  // A study group says how many people (2-20); elsewhere there's no size.
+  let capacity: number | null = null;
+  if (board.groups) {
+    capacity = typeof b.capacity === "number" && Number.isInteger(b.capacity) ? b.capacity : NaN;
+    if (!(capacity >= 2 && capacity <= 20)) return c.json({ error: "How many people? Between 2 and 20." }, 400);
+  }
+  const result = addPost(v.name, space, tab.id, (b.title as string).trim(), (b.text as string).trim(), board.allowPrivate === true && b.private === true, capacity);
   if (!result.ok) {
     log("refused", v, { action: "post", space, tab: tab.id, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content });
     return c.json({ error: `One post every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
@@ -531,6 +538,23 @@ app.post("/api/board", async (c) => {
   log("post", v, { space, tab: tab.id, post: result.post.id, words: wordCount(result.post.text) }, { ip: ipOf(c), content: `${result.post.title}\n\n${result.post.text}` });
   broadcastSpace(spaceOfBoard(space), { t: "action", kind: "board", tab: tab.id });
   return c.json(result.post, 201);
+});
+
+// Joining a study group (or leaving it): anyone joined, never past its size;
+// its writer stays in. Everyone at the board sees the count change.
+app.post("/api/board/:id/join", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const post = findPost(Number(c.req.param("id")));
+  if (!post || !maySeePost(v, post)) return c.json({ error: "That post is gone." }, 404);
+  if (post.capacity === null) return c.json({ error: "That isn't a study group." }, 400);
+  const barred = stopped(c, v, "posts", { action: "join group", space: post.space, post: post.id });
+  if (barred) return barred;
+  const r = toggleMember(post, v.name);
+  if (!r.ok) return c.json({ error: r.why === "full" ? "That group is full." : "It's your group: remove the post to close it." }, 409);
+  log("group-joined", v, { space: post.space, post: post.id, joined: r.joined, members: r.members.length, capacity: post.capacity });
+  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  return c.json({ joined: r.joined, members: r.members });
 });
 
 app.delete("/api/board/:id", async (c) => {
@@ -934,7 +958,7 @@ sketchRoutes(app);
   if (ids.length) log("post-removed", null, { space: "hub", count: ids.length, reason: "tab removed" });
 }
 
-// COMMON, the "classroom for anyone", is gone: the ANUSA office (its own
+// COMMON, the "classroom for anyone", is gone: the ANUSA Student Lounge (its own
 // space, up 154's stairs) does that job now. Close it as the admin would, its
 // notes, posts and their files with it, and anyone saved inside starts
 // outside. Runs on every start and does nothing once it's gone.
@@ -943,7 +967,7 @@ if (classroomList().some((c) => c.code === OLD_COMMON)) {
   let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
   for (const room of teamRoomsOf(space)) moved += evictSpace(room, FIRST_SPACE, { x: -8.4, z: 7 });
   for (const id of postIdsIn(space)) removeObjects(filesOn("post", id, true).map((f) => f.key));
-  if (removeClassroom(OLD_COMMON)) log("classroom-removed", null, { code: OLD_COMMON, space, moved, reason: "replaced by the ANUSA office" });
+  if (removeClassroom(OLD_COMMON)) log("classroom-removed", null, { code: OLD_COMMON, space, moved, reason: "replaced by the ANUSA Student Lounge" });
 }
 
 const purge = (): void => {

@@ -5,7 +5,7 @@ people you wouldn't otherwise, in a campus you already know.
 
 A small 3D, real-time space for the ANU community: a stretch of campus between
 building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
-Centre), the Student Hub inside 154 and the ANUSA office up its stairs,
+Centre), the Student Hub inside 154 and the ANUSA Student Lounge up its stairs,
 classrooms inside 155 (COMP8020, and any course the admin opens), and Chifley
 Library across the bridge to the south.
 Everyone in a space sees everyone else walk, chat, wave, dance and leave sticky
@@ -43,9 +43,11 @@ should feel at home in a virtual space shaped like the real campus they know.
    The Student Hub's reception has the lab matching board (Labs looking for
    students, Students looking for labs), the researcher search, ANU's AI
    essentials guide, and "Ask the Hub", where a question can be private: only
-   you and the staff see it. The ANUSA office, up 154's stairs, has a board
-   for study groups and notices. The lawn noticeboard stands by the north
-   road; its posts go after 30 days. All the boards say they're unofficial.
+   you and the staff see it. The ANUSA Student Lounge, up 154's stairs, is a
+   place to rest and meet, with two meeting rooms. Beside 155's door, the
+   study-group board: start a group, say how many people, and others join
+   until it's full. The lawn noticeboard stands by the north road; its posts
+   go after 30 days. All the boards say they're unofficial.
    Comments take hearts (the most-hearted first), and anything someone wrote
    can be reported. Type "/all" before a chat line to reach every space.
    Under your name, how many people are on campus, in the Hub, the

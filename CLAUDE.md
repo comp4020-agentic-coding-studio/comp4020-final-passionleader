@@ -36,7 +36,7 @@ Read before planning or building: `README.md` (what good means for this app),
   tied to one room or one verb: the spaces and what people do in them will
   keep changing.
 - When a feature replaces an old one (sticky notes replacing poops, the
-  ANUSA office replacing COMMON), say why in the commit message, so the
+  ANUSA Student Lounge replacing COMMON), say why in the commit message, so the
   final `PROCESS.md` can tell it.
 - A promise in `README.md` needs a check in `spec/` or a rule here; if it
   can't be checked, README says it's judged, not enforced.
@@ -50,7 +50,7 @@ Read before planning or building: `README.md` (what good means for this app),
   30 seconds, five per person per space (a sixth replaces their oldest, after a
   warning). They disappear a month after they're stuck (the note says when);
   until then only the author or an admin removes one. Never in the Student
-  Hub or the ANUSA office, never inside a building's footprint outside, never
+  Hub or the ANUSA Student Lounge, never inside a building's footprint outside, never
   within 2 m of a door or anything else you press E at; the server checks it.
   Comments: same text limits, one every 10 seconds, same removal rule.
   Deleting a note or a comment asks first.
@@ -70,9 +70,12 @@ Read before planning or building: `README.md` (what good means for this app),
   whiteboard and the board to its right open is set by the admin only
   (https addresses), checked on the server.
 - The Student Hub's lab matching board (Labs looking for students,
-  Students looking for labs), its "Ask the Hub" enquiry board, the ANUSA
-  office's board and the lawn noticeboard keep the same post and comment
-  rules; anyone posts in every tab until there's a staff role. On "Ask the
+  Students looking for labs), its "Ask the Hub" enquiry board, the
+  study-group board beside 155's door and the lawn noticeboard keep the same
+  post and comment rules; anyone posts in every tab until there's a staff
+  role. A study group's writer sets how many people (2 to 20, them
+  included); others join or leave with a button, never past that, checked on
+  the server; the writer stays in until they remove the post. On "Ask the
   Hub" a writer may mark a question private: then only they and staff (for
   now the admin) see it, its comments and its files, checked on the server
   for each; no other board takes private posts. Lawn posts go after 30 days
@@ -81,7 +84,8 @@ Read before planning or building: `README.md` (what good means for this app),
   and which allow private posts or expire live in `server/boards.ts` alone;
   the client draws what it's sent. All say they're unofficial and that
   posters aren't verified. Notes keep 2 m off the lawn noticeboard (south of
-  Broger's flower bed), which lists posts as thumbnails, two a row (a post's
+  the flower bed east of Broger's) and the study-group board (beside 155's
+  door), which lists posts as thumbnails, two a row (a post's
   first picture, or its title).
 - Chat: 200 characters, the space only, gone from screens after a minute.
   The one exception: "/all message" reaches the chat log in every space

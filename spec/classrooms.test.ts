@@ -9,13 +9,11 @@ import { api, closeAll, visitor } from "./helpers.ts";
 afterAll(closeAll);
 
 describe("classrooms", () => {
-  it("lists COMP8020 first, and COMMON no more (the ANUSA office replaced it)", async () => {
+  it("lists COMP8020 first, and COMMON no more (the ANUSA Student Lounge replaced it)", async () => {
     const list = (await (await api("/api/classrooms")).json()) as { code: string; space: string }[];
     expect(list[0]).toEqual(expect.objectContaining({ code: "COMP8020", space: "comp8020" }));
     expect(list.map((c) => c.code)).not.toContain("COMMON");
-    // The office is a space of its own, with its own board, and no notes in it.
-    const config = (await (await api("/api/board-config?space=anusa")).json()) as { title: string };
-    expect(config.title).toBe("ANUSA board");
+    // The lounge is a space of its own, with no notes in it.
     const v = await visitor();
     expect((await api("/api/notes", "POST", { token: v.token, space: "anusa", x: 0, z: 0, text: "hi" })).status).toBe(400);
   });

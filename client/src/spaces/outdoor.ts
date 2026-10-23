@@ -92,9 +92,11 @@ export function buildOutdoor(): SpaceDef {
   }
   scatter(g, "nature/Bush_Common_Flowers.glb", 1.1, lawnBushes);
   // The noticeboard, where anyone posts events, clubs and the like (one tab,
-  // unofficial): against Broger's flower bed, facing the main road, so you
-  // see it walking between the lawn and 154. Notes keep 2 m off it.
-  noticeboard(g, colliders);
+  // unofficial): against the flower bed east of Broger's, facing the main
+  // road, so you see it walking between the lawn and 154. Notes keep 2 m off it.
+  noticeboard(g, colliders, LAWN_BOARD, 0, ["Lawn noticeboard", "events · clubs · anything"]);
+  // Beside 155's door, facing the path: the study-group board.
+  noticeboard(g, colliders, STUDY_BOARD, Math.PI / 2, ["Study groups", "start one · join one"]);
   // ANU Sport's blue tent at the north-west end, south of Symposium's bed.
   sportsTent(g, colliders);
   if (HIGH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
@@ -183,8 +185,8 @@ export function buildOutdoor(): SpaceDef {
   buildLabCoffee(g, colliders);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
   // North of the Hub's door, white stairs up 154's west face to the
-  // colonnade's upper level and the ANUSA office (as in the real building).
-  stairsUp(g, 5.3, -3.4);
+  // colonnade's upper level and the ANUSA Student Lounge (as in the real building).
+  stairsUp(g, colliders, 5.3, -3.4);
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 24.85, Math.PI, "Chifley Library");
 
@@ -196,8 +198,8 @@ export function buildOutdoor(): SpaceDef {
     doors: [
       { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
-      // Up the stairs north of the Hub's door, on the colonnade: the ANUSA office.
-      { x: 4.6, z: -3.4, label: "Up the stairs to the ANUSA office", to: "anusa", arrive: { x: 5.5, z: 2.5 } },
+      // Up the stairs north of the Hub's door, on the colonnade: the ANUSA Student Lounge.
+      { x: 4.6, z: -3.4, label: "Up the stairs to the ANUSA Student Lounge", to: "anusa", arrive: { x: 5.5, z: 2.5 } },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
@@ -209,11 +211,12 @@ export function buildOutdoor(): SpaceDef {
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
     ],
-    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC],
+    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, STUDY_BOARD],
     tick: dog,
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
       { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the lawn noticeboard" },
+      { x: STUDY_BOARD.x + 0.9, z: STUDY_BOARD.z, id: "study-groups", label: "Open the study-group board" },
       { x: CAFE_MENU.x, z: CAFE_MENU.z + 0.9, id: "cafes", label: "Read Lab Coffee's board (cafés on campus)" },
     ],
     // ANU Sport's site won't be framed, so a new tab.
@@ -281,39 +284,76 @@ function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: num
 }
 
 /**
- * A flight of white stairs against 154's west face, climbing north from
- * (x, z) to a landing with a door, and the door's label. Scenery you walk up
- * to, not on: E at its foot takes you up.
+ * White stairs on 154's west side, as on the real building: a solid flight
+ * rising north from (x, z) beside the colonnade up to the first floor (3.8 m,
+ * where 154's cladding starts), a landing there under the cladding, and the
+ * ANUSA Student Lounge's door on the landing. The open side has a low white wall, not
+ * a rail. Scenery you walk up to, not on: E at its foot takes you up.
  */
-function stairsUp(g: THREE.Group, x: number, z: number): void {
+const FIRST_FLOOR = 3.8;
+function stairsUp(g: THREE.Group, colliders: Box[], x: number, z: number): void {
   const white = mat(0xeef0f2);
-  const steps = 8;
+  const steps = 11;
+  const rise = FIRST_FLOOR / steps;
+  const run = 0.42;
+  const width = 1.5;
+  // Each step a solid block down to the ground: the flight reads as one mass.
   for (let i = 0; i < steps; i++) {
-    const step = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.36 * (i + 1), 0.45), white);
-    step.position.set(x + 0.2, (0.36 * (i + 1)) / 2, z - 0.4 - i * 0.45);
+    const h = rise * (i + 1);
+    const step = new THREE.Mesh(new THREE.BoxGeometry(width, h, run), white);
+    step.position.set(x, h / 2, z - run / 2 - i * run);
     step.castShadow = true;
     g.add(step);
   }
-  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, steps * 0.45 + 0.4), mat(0x8a8f96));
-  rail.position.set(x - 0.5, 3.0, z - 0.4 - (steps * 0.45) / 2 + 0.2);
-  rail.rotation.x = Math.atan2(0.36, 0.45) * 0.98;
-  g.add(rail);
-  doorway(g, x + 0.45, z - 0.4 - steps * 0.45, -Math.PI / 2, "ANUSA office (upstairs)");
+  const top = z - steps * run;
+  // The landing, back to 154's west face (x 6.15) and 2 m deep.
+  const landW = 6.15 - (x - width / 2);
+  const landing = new THREE.Mesh(new THREE.BoxGeometry(landW, FIRST_FLOOR, 2), white);
+  landing.position.set(x - width / 2 + landW / 2, FIRST_FLOOR / 2, top - 1);
+  landing.castShadow = true;
+  g.add(landing);
+  // A low wall on the open (west) side: sloping with the flight, level on the landing.
+  const flight = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.9, Math.hypot(steps * run, FIRST_FLOOR)), white);
+  flight.position.set(x - width / 2 - 0.075, FIRST_FLOOR / 2 + 0.45, z - (steps * run) / 2);
+  flight.rotation.x = Math.atan2(FIRST_FLOOR, steps * run);
+  const landWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1, 2), white);
+  landWall.position.set(x - width / 2 - 0.075, FIRST_FLOOR + 0.5, top - 1);
+  g.add(flight, landWall);
+  // Solid from the second step to the landing's far end (the foot stays clear for E).
+  const southEnd = z - 2 * run;
+  const northEnd = top - 2;
+  solid(colliders, width + 0.3, southEnd - northEnd, x, (southEnd + northEnd) / 2);
+  // The office's door on the landing, in 154's face, its label above.
+  const door = new THREE.Group();
+  doorway(door, 0, 0, -Math.PI / 2, "ANUSA Student Lounge");
+  door.position.set(6.1, FIRST_FLOOR, top - 1);
+  g.add(door);
 }
 
-/** The lawn noticeboard, just south of Broger's flower bed (server/spaces.ts keeps notes off it too). */
-const LAWN_BOARD = { x: -7, z: -31.6 };
+/** The lawn noticeboard, south of the flower bed east of Broger's (server/spaces.ts keeps notes off it too). */
+const LAWN_BOARD = { x: 1.75, z: -31.6 };
 
-/** A chalkboard on two timber legs, facing the main road (+z). */
-function noticeboard(g: THREE.Group, colliders: Box[]): void {
-  const { x, z } = LAWN_BOARD;
+/**
+ * The study-group board, beside 155's entrance (north of its door), facing
+ * the path (+x): where people starting a course look for others to study
+ * with. Notes keep 2 m off it too (server/spaces.ts).
+ */
+const STUDY_BOARD = { x: -8.6, z: 2.3 };
+
+/** A chalkboard on two timber legs, its face toward `facing` (radians about y; 0 faces +z). */
+function noticeboard(g: THREE.Group, colliders: Box[], at: { x: number; z: number }, facing: number, lines: string[]): void {
+  const board = new THREE.Group();
   for (const dx of [-1.6, 1.6]) {
     const leg = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.5, 0.14), mat(0x8a5a32));
-    leg.position.set(x + dx, 1.25, z - 0.05);
-    g.add(leg);
+    leg.position.set(dx, 1.25, -0.05);
+    board.add(leg);
   }
-  const face = chalkboard(["Lawn noticeboard", "events · clubs · anything"], 3, 1.6, 0.22);
-  face.position.set(x, 1.6, z);
-  g.add(face);
-  solid(colliders, 3.4, 0.3, x, z);
+  const face = chalkboard(lines, 3, 1.6, 0.22);
+  face.position.set(0, 1.6, 0);
+  board.add(face);
+  board.position.set(at.x, 0, at.z);
+  board.rotation.y = facing;
+  g.add(board);
+  const across = Math.abs(Math.sin(facing)) > 0.5;
+  solid(colliders, across ? 0.3 : 3.4, across ? 3.4 : 0.3, at.x, at.z);
 }

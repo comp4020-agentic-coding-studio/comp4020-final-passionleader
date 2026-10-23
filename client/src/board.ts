@@ -22,6 +22,8 @@ export interface BoardConfig {
   layout?: "grid";
   /** Writers may mark a post private (the Hub's enquiry board). */
   allowPrivate?: boolean;
+  /** Posts are study groups with a size that people join (the ANUSA board). */
+  groups?: boolean;
 }
 
 export interface BoardPost {
@@ -41,7 +43,14 @@ export interface BoardPost {
   editedAt?: string | null;
   /** Only the author, the staff and the admin see it. */
   private?: boolean;
+  /** A study group's size, and who has joined (its writer first). */
+  capacity?: number | null;
+  members?: string[];
 }
+
+/** "👥 3 / 5 joined" (and "· full") for a study group, else "". */
+const groupLine = (p: BoardPost): string =>
+  p.capacity ? `👥 ${p.members?.length ?? 0} / ${p.capacity} joined${(p.members?.length ?? 0) >= p.capacity ? " · full" : ""}` : "";
 
 export interface BoardComment {
   id: number;
@@ -89,7 +98,11 @@ export function mountBoard(h: {
    * Posts, then uploads `files` onto it; resolves to an error message, or
    * null. `progress` names the file uploading and how far it has got (0..1).
    */
-  post(tab: BoardTab, title: string, text: string, files: File[], progress: (name: string, done: number) => void, isPrivate: boolean): Promise<string | null>;
+  post(tab: BoardTab, title: string, text: string, files: File[], progress: (name: string, done: number) => void, isPrivate: boolean, capacity?: number): Promise<string | null>;
+  /** Joins a study group, or leaves it; resolves to an error message, or null. */
+  joinGroup(postId: number): Promise<string | null>;
+  /** The visitor's name, to tell whether they're in a group (null before joining the campus). */
+  myName(): string | null;
   /** Opens (downloads) one of a post's files; resolves to an error message, or null. */
   openFile(id: string): Promise<string | null>;
   /** A link that shows one of a post's pictures in place, or null. */
@@ -262,6 +275,17 @@ export function mountBoard(h: {
   const privateBox = document.createElement("input");
   privateBox.type = "checkbox";
   privateLabel.append(privateBox, document.createTextNode(" Private: only you and the Hub's staff see it, and the answers"));
+  // On a study-group board: how many people the group is for (the writer included).
+  const groupSize = document.createElement("label");
+  groupSize.className = "board-size";
+  groupSize.hidden = true;
+  const sizeInput = document.createElement("input");
+  sizeInput.type = "number";
+  sizeInput.min = "2";
+  sizeInput.max = "20";
+  sizeInput.value = "5";
+  sizeInput.inputMode = "numeric";
+  groupSize.append("How many people, you included (2 to 20)? ", sizeInput);
   const writeRow = document.createElement("div");
   writeRow.className = "board-row";
   const writeCount = document.createElement("span");
@@ -275,7 +299,7 @@ export function mountBoard(h: {
   submitBtn.className = "board-primary";
   submitBtn.textContent = "Post";
   writeRow.append(writeCount, cancelBtn, submitBtn);
-  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, privateLabel, writeRow);
+  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, privateLabel, groupSize, writeRow);
 
   let isOpen = false;
   let config: BoardConfig = { title: "", tabs: [] };
@@ -425,6 +449,7 @@ export function mountBoard(h: {
             // The pinned notice has no date and no comments, so it shows just its author.
             meta.textContent = p.pinned ? p.author : `${p.author} · ${canberraTime(p.createdAt)} · ${p.comments} ${p.comments === 1 ? "comment" : "comments"}`;
             if (p.private) meta.textContent += " · 🔒 Private";
+            if (p.capacity) meta.textContent += ` · ${groupLine(p)}`;
             b.append(t, meta);
             // On a grid board (the lawn's posters) the first picture, if any,
             // stands for the post; without one the title shows, smaller.
@@ -540,7 +565,7 @@ export function mountBoard(h: {
   function renderPostHead(): void {
     if (!current) return;
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
-    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "") + (current.private ? " · 🔒 Private" : "");
+    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "") + (current.private ? " · 🔒 Private" : "") + (current.capacity ? ` · ${groupLine(current)}` : "");
     // Posts are Markdown (safe DOM only, markdown.ts); comments stay plain text.
     postText.replaceChildren(renderMarkdown(current.text));
     postFiles.replaceChildren(
@@ -588,6 +613,37 @@ export function mountBoard(h: {
       editBtn.setAttribute("aria-label", "Edit this post");
       editBtn.addEventListener("click", startEditPost);
       postActions.append(editBtn);
+    }
+    // A study group: Join, or Leave if you're in it (its writer stays in), or Full.
+    if (current.capacity) {
+      const post = current;
+      const me = h.myName()?.toLowerCase();
+      const isIn = !!me && (post.members ?? []).some((m) => m.toLowerCase() === me);
+      const full = (post.members?.length ?? 0) >= post.capacity!;
+      const join = document.createElement("button");
+      join.type = "button";
+      join.className = isIn ? "board-secondary" : "board-primary";
+      join.textContent = post.canDelete ? "Your group" : isIn ? "Leave group" : full ? "Full" : "Join group";
+      join.disabled = busy || post.canDelete || !me || (!isIn && full);
+      join.setAttribute("aria-label", `${join.textContent}: ${groupLine(post)}`);
+      join.addEventListener("click", () =>
+        void run(() => h.joinGroup(post.id), async () => {
+          const list = await h.list(tab);
+          postsData = list;
+          const fresh = list.find((x) => x.id === post.id);
+          if (fresh && current?.id === post.id) {
+            current = fresh;
+            rerenderCurrent();
+          }
+        }),
+      );
+      postActions.append(join);
+      if ((post.members?.length ?? 0) > 0) {
+        const who = document.createElement("span");
+        who.className = "board-muted board-members";
+        who.textContent = `In it: ${(post.members ?? []).join(", ")}`;
+        postActions.append(who);
+      }
     }
     if (!current.canDelete && !current.pinned) {
       const post = current;
@@ -657,6 +713,7 @@ export function mountBoard(h: {
     filesInput.hidden = editing;
     uploadStatus.hidden = editing;
     privateLabel.hidden = editing || !config.allowPrivate;
+    groupSize.hidden = editing || !config.groups;
     submitBtn.textContent = editing ? "Save" : "Post";
   }
 
@@ -830,16 +887,19 @@ export function mountBoard(h: {
     const files = [...(filesInput.files ?? [])];
     if (files.length > 5) return setError("Up to five files on a post.");
     if (files.some((f) => f.size > MAX_FILE_BYTES)) return setError("Files can be up to 200 MB.");
+    const size = Number(sizeInput.value);
+    if (config.groups && !(Number.isInteger(size) && size >= 2 && size <= 20)) return setError("How many people? Between 2 and 20.");
     void run(
       () =>
         h.post(tab, t, x, files, (name, done) => {
           uploadStatus.textContent = `Uploading ${name}… ${Math.round(done * 100)}%`;
-        }, !!config.allowPrivate && privateBox.checked),
+        }, !!config.allowPrivate && privateBox.checked, config.groups ? size : undefined),
       () => {
         titleInput.value = "";
         textInput.value = "";
         filesInput.value = "";
         privateBox.checked = false;
+        sizeInput.value = "5";
         uploadStatus.textContent = "";
         void goBack();
       },

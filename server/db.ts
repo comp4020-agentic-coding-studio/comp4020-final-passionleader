@@ -212,6 +212,21 @@ for (const table of ["posts", "post_comments"]) {
   const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
   if (!cols.includes("edited_at")) db.exec(`ALTER TABLE ${table} ADD COLUMN edited_at TEXT`);
 }
+// Study groups (the ANUSA board): a post's size, and who has joined. The
+// writer is the first member; nobody joins a full group; members go with
+// their post.
+{
+  const cols = (db.prepare("PRAGMA table_info(posts)").all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes("capacity")) db.exec("ALTER TABLE posts ADD COLUMN capacity INTEGER");
+}
+db.exec(`
+  CREATE TABLE IF NOT EXISTS group_members (
+    post_id INTEGER NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    name    TEXT NOT NULL COLLATE NOCASE,
+    PRIMARY KEY (post_id, name)
+  );
+`);
+
 // Hearts on comments (sticky notes' and boards'): one per person per
 // comment, so a second press takes it back. The most-hearted comment is shown
 // first. A comment's hearts go with it.
@@ -229,7 +244,7 @@ db.exec(`
 `);
 
 // The classroom there's always been. (COMMON, the room for anyone, was the
-// second until the ANUSA office replaced it; main.ts clears it out.)
+// second until the ANUSA Student Lounge replaced it; main.ts clears it out.)
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?)").run("COMP8020");
 
 // --- visitors --------------------------------------------------------------
@@ -366,6 +381,24 @@ function byHearts<T extends { id: number; heartedBy: string[] }>(list: T[]): T[]
   return list.sort((a, b) => b.heartedBy.length - a.heartedBy.length || order.get(a.id)! - order.get(b.id)!);
 }
 
+export type JoinResult = { ok: true; joined: boolean; members: string[] } | { ok: false; why: "full" | "writer" };
+
+/**
+ * Joins a study group, or leaves it if `name` is in it already. Nobody joins
+ * a full group; the writer can't leave their own (they remove the post).
+ */
+export function toggleMember(post: Post, name: string): JoinResult {
+  const isIn = post.members.some((m) => m.toLowerCase() === name.toLowerCase());
+  if (isIn) {
+    if (post.author.toLowerCase() === name.toLowerCase()) return { ok: false, why: "writer" };
+    db.prepare("DELETE FROM group_members WHERE post_id = ? AND name = ?").run(post.id, name);
+    return { ok: true, joined: false, members: membersOf(post.id) };
+  }
+  if (post.capacity !== null && post.members.length >= post.capacity) return { ok: false, why: "full" };
+  db.prepare("INSERT OR IGNORE INTO group_members (post_id, name) VALUES (?, ?)").run(post.id, name);
+  return { ok: true, joined: true, members: membersOf(post.id) };
+}
+
 /** Hearts a comment, or takes the heart back if `name` already gave one. Returns whether it's hearted now. */
 export function toggleHeart(kind: HeartKind, target: number, name: string): boolean {
   const { changes } = db.prepare("DELETE FROM hearts WHERE kind = ? AND target = ? AND name = ?").run(kind, target, name);
@@ -495,6 +528,10 @@ export interface Post {
   comments: number;
   /** Only its author and staff see it (boards that allow it). */
   private: boolean;
+  /** A study group's size (the ANUSA board), else null. */
+  capacity: number | null;
+  /** Who has joined a study group (its writer first), else empty. */
+  members: string[];
 }
 export interface PostComment {
   id: number;
@@ -507,8 +544,13 @@ export interface PostComment {
 }
 
 const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt, p.edited_at AS editedAt,
-  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments, p.private`;
-const asPost = (r: unknown): Post => ({ ...(r as Post), private: (r as { private: number }).private === 1 });
+  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments, p.private, p.capacity`;
+const membersOf = (postId: number): string[] =>
+  (db.prepare("SELECT name FROM group_members WHERE post_id = ? ORDER BY rowid").all(postId) as { name: string }[]).map((r) => r.name);
+const asPost = (r: unknown): Post => {
+  const p = r as Omit<Post, "private" | "members"> & { private: number };
+  return { ...p, private: p.private === 1, capacity: p.capacity ?? null, members: p.capacity ? membersOf(p.id) : [] };
+};
 
 export function postsIn(space: SpaceId, tab: BoardTab, keepDays?: number): Post[] {
   const fresh = keepDays ? ` AND p.created_at > datetime('now', '-${Math.floor(keepDays)} days')` : "";
@@ -536,12 +578,14 @@ export function findPost(id: number): Post | undefined {
 
 export type AddPostResult = { ok: true; post: Post } | { ok: false; wait: number };
 
-export function addPost(author: string, space: SpaceId, tab: BoardTab, title: string, text: string, isPrivate = false): AddPostResult {
+export function addPost(author: string, space: SpaceId, tab: BoardTab, title: string, text: string, isPrivate = false, capacity: number | null = null): AddPostResult {
   const wait = cooldownLeft(author, "last_post_at", POST_COOLDOWN_SECONDS);
   if (wait > 0) return { ok: false, wait };
   const { lastInsertRowid } = db
-    .prepare("INSERT INTO posts (space, tab, author, title, text, private) VALUES (?, ?, ?, ?, ?, ?)")
-    .run(space, tab, author, title, text, isPrivate ? 1 : 0);
+    .prepare("INSERT INTO posts (space, tab, author, title, text, private, capacity) VALUES (?, ?, ?, ?, ?, ?, ?)")
+    .run(space, tab, author, title, text, isPrivate ? 1 : 0, capacity);
+  // A study group's writer is its first member.
+  if (capacity) db.prepare("INSERT OR IGNORE INTO group_members (post_id, name) VALUES (?, ?)").run(Number(lastInsertRowid), author);
   db.prepare("UPDATE visitors SET last_post_at = datetime('now') WHERE name = ?").run(author);
   return { ok: true, post: findPost(Number(lastInsertRowid))! };
 }

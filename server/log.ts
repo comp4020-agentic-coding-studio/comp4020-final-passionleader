@@ -35,6 +35,7 @@ export type Event =
   | "post-removed"
   | "post-expired"
   | "kicked"
+  | "group-joined"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

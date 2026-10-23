@@ -25,6 +25,11 @@ export const LIBRARY_TEAM_DOORS = [
   { x: 14.9, z: -1.5 },
   { x: 14.9, z: 2.5 },
 ];
+/** The ANUSA Student Lounge's two meeting rooms, on its west wall (same as server/spaces.ts). */
+export const ANUSA_TEAM_DOORS = [
+  { x: -8.9, z: -1.5 },
+  { x: -8.9, z: 3 },
+];
 /** Where the room's own door is along its side wall. */
 const INNER_DOOR_Z = -1.5;
 /** -1 if the room's door is on its west wall (you came in heading east), +1 if east. */
@@ -50,6 +55,10 @@ export function roomRef(id: SpaceId, classroomCode: (space: SpaceId) => string |
   if (!team) return undefined;
   const parent = team[1]!;
   const n = Number(team[2]);
+  if (parent === "anusa") {
+    const door = ANUSA_TEAM_DOORS[n - 1];
+    return door && { kind: "team", title: `ANUSA · Meeting room ${n}`, parent, door };
+  }
   const code = parent === "library" ? "Library" : classroomCode(parent);
   const doors = parent === "library" ? LIBRARY_TEAM_DOORS : code ? CLASSROOM_TEAM_DOORS : [];
   const door = doors[n - 1];

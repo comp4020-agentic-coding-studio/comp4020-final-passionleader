@@ -143,6 +143,8 @@ export interface BoardConfig {
   keepDays?: number;
   /** Writers may mark a post private (the Hub's enquiry board). */
   allowPrivate?: boolean;
+  /** Posts are study groups with a size that people join (the ANUSA board). */
+  groups?: boolean;
 }
 /** A board's title, tabs and who posts where (404 if there's none). Its key is its space, or "hub-desk". */
 export const getBoardConfig = (key: string): Promise<BoardConfig> => request<BoardConfig>(`/api/board-config?space=${encodeURIComponent(key)}`);
@@ -166,6 +168,9 @@ export interface Post {
   files?: FileInfo[];
   /** Only its author and staff see it. */
   private?: boolean;
+  /** A study group's size, and who has joined (its writer first). */
+  capacity?: number | null;
+  members?: string[];
 }
 export interface PostComment {
   id: number;
@@ -180,8 +185,10 @@ export interface PostComment {
 /** A board's posts; with a token, private ones of yours (or all of them, for the admin) too. */
 export const getPosts = (key: string, tab: BoardTab, token?: string): Promise<Post[]> =>
   request<Post[]>(`/api/board?space=${encodeURIComponent(key)}&tab=${tab}${token ? `&token=${encodeURIComponent(token)}` : ""}`);
-export const createPost = (token: string, key: string, tab: BoardTab, title: string, text: string, isPrivate = false): Promise<Post> =>
-  request<Post>("/api/board", "POST", { token, space: key, tab, title, text, private: isPrivate });
+export const createPost = (token: string, key: string, tab: BoardTab, title: string, text: string, isPrivate = false, capacity?: number): Promise<Post> =>
+  request<Post>("/api/board", "POST", { token, space: key, tab, title, text, private: isPrivate, capacity });
+/** Joins a study group, or leaves it. */
+export const joinGroup = (token: string, id: number): Promise<{ joined: boolean; members: string[] }> => request(`/api/board/${id}/join`, "POST", { token });
 export const removePost = (token: string, id: number): Promise<unknown> => request(`/api/board/${id}`, "DELETE", { token });
 export const editPost = (token: string, id: number, title: string, text: string): Promise<Post> =>
   request<Post>(`/api/board/${id}`, "PATCH", { token, title, text });

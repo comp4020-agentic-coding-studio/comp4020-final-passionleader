@@ -593,3 +593,26 @@
 .board-edit .board-row {
   flex-wrap: wrap;
 }
+
+/* A study group's size, in the write form (the ANUSA board). */
+.board-size {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
+.board-size input {
+  width: 4.5em;
+  min-height: 36px;
+  padding: 0 8px;
+  border: 1px solid #8a6a50;
+  border-radius: 8px;
+  font: inherit;
+}
+
+.board-members {
+  flex-basis: 100%;
+  font-size: 0.85rem;
+}

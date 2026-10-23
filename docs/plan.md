@@ -150,7 +150,7 @@ won't fit is dropped from the end of bundle 3 (below), not cut in advance.
     as a pile of papers
 66. A large wall calendar of campus events in the Hub
 67. Classroom boards as PCs
-68. COMMON is replaced by the ANUSA office, up the stairs left of the Hub's
+68. COMMON is replaced by the ANUSA Student Lounge, up the stairs left of the Hub's
     entrance; 68a. a study-group board there showing who has joined
 69. The admin picks "new tab" or "in-app window" for a classroom link
 70. Research Ethics in the library as a pile of papers
@@ -158,7 +158,7 @@ won't fit is dropped from the end of bundle 3 (below), not cut in advance.
 *Bigger features*
 
 56. AI campus assistants: one each in the library, the ANU Sports tent and
-    the ANUSA office, and a course adviser and a careers adviser in the Hub;
+    the ANUSA Student Lounge, and a course adviser and a careers adviser in the Hub;
     answers drawn from ANU pages fetched weekly; nothing said is stored, and
     the window says so; a per-person daily limit (the model runs on the
     course budget)

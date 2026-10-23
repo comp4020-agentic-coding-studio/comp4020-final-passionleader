@@ -33,10 +33,10 @@ describe("classroom board", () => {
     expect((await post(v.token, "board", words(500))).status).toBe(201);
   });
 
-  it("keeps each board to itself: a COMP8020 post isn't on the ANUSA board", async () => {
+  it("keeps each board to itself: a COMP8020 post isn't on the study-group board", async () => {
     const v = await visitor();
     const created = (await (await post(v.token, "board", "Only in COMP8020")).json()) as { id: number };
-    const there = (await (await api("/api/board?space=anusa&tab=groups")).json()) as { id: number }[];
+    const there = (await (await api("/api/board?space=study-groups&tab=groups")).json()) as { id: number }[];
     expect(there.map((p) => p.id)).not.toContain(created.id);
   });
 
@@ -161,5 +161,29 @@ describe("private enquiries", () => {
     const c = await visitor();
     const lawn = (await (await api("/api/board", "POST", { token: c.token, space: "outdoor", tab: "board", title: "Fair", text: "Friday", private: true })).json()) as { private: boolean };
     expect(lawn.private).toBe(false);
+  });
+});
+
+// The study-group board beside 155's door: a group has a size (2 to 20, its
+// writer included); others join or leave, never past it; the writer stays in.
+describe("study groups", () => {
+  it("lets people join up to the group's size, and leave again; the writer stays in", async () => {
+    const [w, a, b] = await Promise.all([visitor(), visitor(), visitor()]);
+    const config = (await (await api("/api/board-config?space=study-groups")).json()) as { title: string; groups?: boolean };
+    expect(config).toMatchObject({ title: "Study groups", groups: true });
+    const noSize = await api("/api/board", "POST", { token: w.token, space: "study-groups", tab: "groups", title: "COMP2100", text: "Thursdays" });
+    expect(noSize.status).toBe(400);
+    const res = await api("/api/board", "POST", { token: w.token, space: "study-groups", tab: "groups", title: "COMP2100", text: "Thursdays", capacity: 2 });
+    expect(res.status).toBe(201);
+    const group = (await res.json()) as { id: number; capacity: number; members: string[] };
+    expect(group.capacity).toBe(2);
+    expect(group.members.map((m) => m.toLowerCase())).toEqual([w.name.toLowerCase()]);
+    expect(await (await api(`/api/board/${group.id}/join`, "POST", { token: a.token })).json()).toMatchObject({ joined: true });
+    expect((await api(`/api/board/${group.id}/join`, "POST", { token: b.token })).status).toBe(409); // full
+    expect((await api(`/api/board/${group.id}/join`, "POST", { token: w.token })).status).toBe(409); // the writer stays in
+    expect(await (await api(`/api/board/${group.id}/join`, "POST", { token: a.token })).json()).toMatchObject({ joined: false });
+    expect(await (await api(`/api/board/${group.id}/join`, "POST", { token: b.token })).json()).toMatchObject({ joined: true });
+    const list = (await (await api("/api/board?space=study-groups&tab=groups")).json()) as { id: number; members: string[] }[];
+    expect(list.find((p) => p.id === group.id)?.members.map((m) => m.toLowerCase())).toEqual([w.name, b.name].map((n) => n.toLowerCase()));
   });
 });

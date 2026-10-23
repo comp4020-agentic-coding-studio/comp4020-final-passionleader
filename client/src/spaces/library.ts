@@ -115,9 +115,10 @@ export function buildLibrary(): SpaceDef {
     floor: "wood",
     // A chair at each study desk, facing it (north).
     seats: [4, 6.8, 9.4].flatMap((z) => [-12, -8, -4, 4, 8, 12].map((x) => ({ x, z: z + 0.8, rot: Math.PI, y: 0.45 }))),
-    // Each computer works from either side of its desk. (LIBRARY_KEEP_CLEAR in
-    // server/spaces.ts lists these spots, so notes stay off them.)
-    links: [-1.2, 1.2].flatMap((dz) => [
+    // Each computer works from the desk's south side, where you walk up to
+    // it: one E each, not one per side (six read as clutter). LIBRARY_KEEP_CLEAR
+    // in server/spaces.ts lists these spots, so notes stay off them.
+    links: [1.2].flatMap((dz) => [
       { x: COMPUTERS.x - 2, z: COMPUTERS.z + dz, label: "Book a library room", url: "https://anu.libcal.com/", embeddable: true },
       // The catalogue refuses to be shown inside another page (tried 10/16): a new tab.
       { x: COMPUTERS.x, z: COMPUTERS.z + dz, label: "Search the library catalogue (new tab)", url: "https://anulib.anu.edu.au/", embeddable: false },

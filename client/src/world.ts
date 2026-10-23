@@ -19,6 +19,15 @@ export interface Box {
   maxZ: number;
   /** How tall it is, for low things you can jump over (sofas). Unset: a wall. */
   top?: number;
+  /** You can stand on its top (a flower bed's kerb), not only jump over it. */
+  standOn?: boolean;
+}
+
+/** The ground under a point: the top of anything you can stand on there, else the floor. */
+export function groundAt(x: number, z: number, colliders: Box[]): number {
+  let y = 0;
+  for (const b of colliders) if (b.standOn && b.top !== undefined && x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ && b.top > y) y = b.top;
+  return y;
 }
 
 export interface Door {
@@ -116,7 +125,7 @@ export function keepIn(pos: THREE.Vector3, areas: Box[]): void {
 export function pushOut(pos: THREE.Vector3, radius: number, colliders: Box[]): void {
   for (let pass = 0; pass < 2; pass++) {
     for (const b of colliders) {
-      if (b.top !== undefined && pos.y > b.top) continue;
+      if (b.top !== undefined && pos.y >= b.top - 0.01) continue;
       const cx = THREE.MathUtils.clamp(pos.x, b.minX, b.maxX);
       const cz = THREE.MathUtils.clamp(pos.z, b.minZ, b.maxZ);
       const dx = pos.x - cx;
@@ -149,7 +158,7 @@ export const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
 
 /** Where the sun sits relative to whatever it follows: the sky shader uses the same direction. */
 /**
- * The playlist the Student Hub, the classrooms, the ANUSA office and their meeting
+ * The playlist the Student Hub, the classrooms, the ANUSA Student Lounge and their meeting
  * rooms share: walking between them keeps the song playing, and each visit
  * starts on one of the four at random.
  */

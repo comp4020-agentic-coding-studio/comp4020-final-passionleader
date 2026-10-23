@@ -120,7 +120,8 @@ function flowerBeds(g: THREE.Group, colliders: Box[]): void {
     const top = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, 0.02, depth - 0.3), soil);
     top.position.set(cx, 0.41, cz);
     g.add(box, top);
-    solid(colliders, w, depth, cx, cz);
+    // A low kerb you can jump up onto and walk along (or jump across).
+    colliders.push({ minX: cx - w / 2, maxX: cx + w / 2, minZ: cz - depth / 2, maxZ: cz + depth / 2, top: 0.42, standOn: true });
     // Shrubs along the middle, tall grass and flowers either side of them.
     for (let x = x0 + 0.8, i = 0; x < x1 - 0.5; x += 1.5, i++) {
       bushes.push({ x, z: cz + (i % 2 ? 0.25 : -0.25), rotY: x * 2.3, scale: 0.85 + (i % 3) * 0.1 });

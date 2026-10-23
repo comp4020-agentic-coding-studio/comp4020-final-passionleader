@@ -41,14 +41,14 @@ export const SPACES: Record<string, Space> = {
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // Up the stairs on 154's colonnade, north of the Hub's door (client/src/spaces/anusa.ts).
-  anusa: { label: "ANUSA office", halfX: 7, halfZ: 5, spawn: { x: 5.5, z: 2.5 } },
+  anusa: { label: "ANUSA Student Lounge", halfX: 10, halfZ: 7, spawn: { x: 8.4, z: 3 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
 export const CLASSROOM: Omit<Space, "label"> = { halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } };
 
 // Course codes like COMP6300 or MGMP2222 (four letters, four digits). The
-// old COMMON "classroom for anyone" is gone: the ANUSA office took its place.
+// old COMMON "classroom for anyone" is gone: the ANUSA Student Lounge took its place.
 export const CLASSROOM_CODE = /^[A-Z]{4}[0-9]{4}$/;
 export const OLD_COMMON = "COMMON";
 
@@ -89,6 +89,11 @@ const LIBRARY_TEAM_DOORS = [
   { x: 14.9, z: -1.5 },
   { x: 14.9, z: 2.5 },
 ];
+// The ANUSA Student Lounge's two meeting rooms, on its west wall (client/src/spaces/anusa.ts).
+const ANUSA_TEAM_DOORS = [
+  { x: -8.9, z: -1.5 },
+  { x: -8.9, z: 3 },
+];
 
 export interface Room {
   kind: "counselling" | "team";
@@ -109,7 +114,7 @@ export function roomOf(id: unknown): Room | undefined {
   const team = /^team-([a-z0-9]+)-([1-9])$/.exec(id);
   if (!team) return undefined;
   const parent = team[1]!;
-  const doors = parent === "library" ? LIBRARY_TEAM_DOORS : classrooms.has(parent) ? CLASSROOM_TEAM_DOORS : [];
+  const doors = parent === "library" ? LIBRARY_TEAM_DOORS : parent === "anusa" ? ANUSA_TEAM_DOORS : classrooms.has(parent) ? CLASSROOM_TEAM_DOORS : [];
   const door = doors[Number(team[2]) - 1];
   return door && { kind: "team", parent, door };
 }
@@ -156,23 +161,21 @@ const BUILDINGS: Area[] = [
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door
   { x: 4.6, z: 3 }, // 154's door
-  { x: 4.6, z: -3.4 }, // the stairs up to the ANUSA office
+  { x: 4.6, z: -3.4 }, // the stairs up to the ANUSA Student Lounge
+  { x: -8.6, z: 2.3 }, // the study-group board beside 155's door (client/src/spaces/outdoor.ts STUDY_BOARD)
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
-  { x: -7, z: -31.6 }, // the lawn noticeboard, south of Broger's bed (client/src/spaces/outdoor.ts LAWN_BOARD)
+  { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
   { x: -26, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 0, z: -9.9 }, // the way out, on the north wall
   // The search computers south of reception (client/src/spaces/library.ts
-  // COMPUTERS: x -9, z -4), used from either side.
+  // COMPUTERS: x -9, z -4), used from their south side.
   { x: -11, z: -2.8 },
   { x: -9, z: -2.8 },
   { x: -7, z: -2.8 },
-  { x: -11, z: -5.2 },
-  { x: -9, z: -5.2 },
-  { x: -7, z: -5.2 },
   ...LIBRARY_TEAM_DOORS,
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
@@ -185,7 +188,7 @@ const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
 
 /** Why a note can't go here, or null if it can. */
 export function noteSpotError(space: SpaceId, x: number, z: number): string | null {
-  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA office." : "No sticky notes in the Student Hub.";
+  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : "No sticky notes in the Student Hub.";
   if (roomOf(space)) return "No sticky notes in meeting rooms.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";

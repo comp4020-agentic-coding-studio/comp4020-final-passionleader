@@ -28,6 +28,8 @@ export interface BoardDef {
   allowPrivate?: boolean;
   /** Where people stand to use it, for live updates (its key, unless set). */
   space?: string;
+  /** Posts are study groups: the writer sets how many people (2-20) and others join. */
+  groups?: boolean;
 }
 
 const UNOFFICIAL = "Not an official ANU service. Posters' identities aren't verified.";
@@ -60,12 +62,15 @@ const FIXED: Record<string, BoardDef> = {
     allowPrivate: true,
     space: "hub",
   },
-  // The ANUSA office's wall: study groups and notices. (A board of its own
-  // shape, showing who has joined each group, comes next: plan 68a.)
-  anusa: {
-    title: "ANUSA board",
-    tabs: [{ id: "groups", label: "Study groups & notices" }],
-    notice: UNOFFICIAL,
+  // The study-group board, outside beside 155's entrance: a post is a group
+  // with a size, and anyone joins (or leaves) with a button until it's full.
+  // Stored as "study-groups"; its live updates go to the campus outside.
+  "study-groups": {
+    title: "Study groups",
+    tabs: [{ id: "groups", label: "Study groups" }],
+    notice: `${UNOFFICIAL} Start a group, say how many people, and others can join.`,
+    groups: true,
+    space: "outdoor",
   },
   // The noticeboard on the lawn: events, clubs, anything to promote. A
   // poster is for now, so posts go after 30 days, the same as their files.

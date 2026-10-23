@@ -1,80 +1,144 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, place, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { ANUSA_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
-// The ANUSA office: the students' association, up the stairs on 154's
-// colonnade, north of the Student Hub's door (replacing COMMON, which had
-// been doing this job as a "classroom for anyone"). A reception counter with
-// a PC to ANUSA's own site (it may be framed), where one of the AI campus
-// assistants will stand; a wall for the study-group board; and a lounge to
-// sit and meet in. Not a copy of the real office, and not ANUSA's service.
+// The ANUSA Student Lounge: the students' association, up the stairs on 154's west
+// side (it replaced COMMON, the "classroom for anyone"). A place for students
+// to come and rest, and for the association's people to meet: a reception
+// counter with a PC to ANUSA's site (it may be framed), where one of the AI
+// campus assistants will stand; the study-group board on the north wall; a
+// lounge of sofa corners, armchairs and a coffee bar; a long work table; and
+// two meeting rooms off the west wall (meeting.ts: open, six people at most).
+// Not a copy of the real office, and not ANUSA's service.
 
-export const ANUSA = { halfX: 7, halfZ: 5 };
+export const ANUSA = { halfX: 10, halfZ: 7 };
 /** The PC on the counter; E from the south of it. */
-export const ANUSA_PC = { x: -3, z: -2.9 };
-/** The study-group wall (68a): where its board will go. */
-export const STUDY_WALL = { x: 3.4, z: -4.6 };
+export const ANUSA_PC = { x: -4, z: -4.9 };
+/** The study-group board on the north wall; E from in front of it. */
+export const STUDY_WALL = { x: 4.5, z: -6.7 };
 
-const ANUSA_GREEN = 0x1e6b52;
+const GREEN = 0x1e6b52;
 
 export function buildAnusa(): SpaceDef {
   const g = new THREE.Group();
   const colliders: Box[] = [];
   const { halfX, halfZ } = ANUSA;
-  roomShell(g, colliders, halfX, halfZ, texMat("ai/carpet.jpg", 7, 5, 0xc9d6cf), { tint: 0xf1f3ef, trim: 0x2f4a3f });
+  roomShell(g, colliders, halfX, halfZ, texMat("ai/carpet.jpg", 10, 7, 0xc9d6cf), { tint: 0xf1f3ef, trim: 0x2f4a3f });
 
-  const sign = textPlane(["ANUSA office", "an unofficial, fan-made space"], 5, 1.2, { bg: "#1e6b52", fg: "#ffffff", font: 0.36 });
-  sign.position.set(-3, 2.9, -halfZ + 0.01);
+  const sign = textPlane(["ANUSA Student Lounge", "an unofficial, fan-made space"], 6, 1.2, { bg: "#1e6b52", fg: "#ffffff", font: 0.36 });
+  sign.position.set(-4, 2.9, -halfZ + 0.01);
   g.add(sign);
 
-  // Reception: a counter across the north-west with the PC on it.
-  block(g, colliders, [4, 1, 0.8], [ANUSA_PC.x, ANUSA_PC.z - 0.3], texMat("ai/wood_tabletop.jpg", 2, 1, 0x7a5236));
-  place(g, "computerScreen.glb", 0.5, ANUSA_PC.x, ANUSA_PC.z - 0.35, 0, true, 1);
+  // Reception, north-west: a counter with the PC, a plant and a coat stand.
+  block(g, colliders, [4.4, 1, 0.8], [ANUSA_PC.x, ANUSA_PC.z - 0.35], texMat("ai/wood_tabletop.jpg", 2, 1, 0x7a5236));
+  place(g, "computerScreen.glb", 0.5, ANUSA_PC.x, ANUSA_PC.z - 0.4, 0, true, 1);
   const pcTag = textPlane(["ANUSA", "clubs · advocacy · events"], 1.7, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
-  pcTag.position.set(ANUSA_PC.x, 1.95, ANUSA_PC.z - 0.72);
+  pcTag.position.set(ANUSA_PC.x, 1.95, ANUSA_PC.z - 0.77);
   g.add(pcTag);
+  place(g, "plantSmall2.glb", 0.4, ANUSA_PC.x + 1.8, ANUSA_PC.z - 0.4, 0, true, 1);
+  place(g, "coatRackStanding.glb", 1.8, -8.8, -6.2);
+  solid(colliders, 0.5, 0.5, -8.8, -6.2);
 
-  // The study-group wall, north-east: a green panel with its name.
-  const wall = textPlane(["Study groups", "find people to study with"], 3.2, 1.6, { bg: "#1e6b52", fg: "#ffffff", font: 0.3 });
+  // The study-group board on the north wall: a green panel with its name.
+  const wall = textPlane(["Study groups", "find people to study with"], 3.4, 1.6, { bg: "#1e6b52", fg: "#ffffff", font: 0.3 });
   wall.position.set(STUDY_WALL.x, 1.9, -halfZ + 0.02);
   g.add(wall);
+  const art = poster("ai/poster_hub.jpg", 1.4, 2.1);
+  art.position.set(halfX - 0.01, 2, -4.4);
+  art.rotation.y = -Math.PI / 2;
+  g.add(art);
 
-  // The lounge, south: two sofas facing over a coffee table on a rug.
-  floor(g, 5, 4, 0, 2.2, ANUSA_GREEN, 0.015);
-  const fabric = { carpet: 0x2f7d6a };
-  place(g, "loungeSofaLong.glb", 0.85, 0, 0.6, 0, true, 0, fabric);
-  place(g, "loungeSofa.glb", 0.85, 0, 3.8, Math.PI, true, 0, fabric);
-  place(g, "tableCoffeeGlass.glb", 0.45, 0, 2.2);
-  solid(colliders, 3, 0.9, 0, 0.6, SOFA_TOP);
-  solid(colliders, 2.2, 0.9, 0, 3.8, SOFA_TOP);
-  solid(colliders, 1.4, 0.9, 0, 2.2, SOFA_TOP);
-  place(g, "lampRoundFloor.glb", 1.7, 3.2, 2.2);
-  lightPool(g, 2.6, 2.2, 3.4, 3.4);
-  solid(colliders, 0.5, 0.5, 3.2, 2.2);
-  place(g, "pottedPlant.glb", 1.3, -6.2, 4.2);
-  solid(colliders, 0.7, 0.7, -6.2, 4.2);
+  // A coffee bar, north-east corner.
+  place(g, "kitchenBar.glb", 1, 8.4, -6.1, 0);
+  place(g, "kitchenCoffeeMachine.glb", 0.4, 8.4, -6.1, 0, true, 1);
+  solid(colliders, 2, 0.8, 8.4, -6.1);
+  for (const x of [7.5, 9.1]) place(g, "stoolBar.glb", 0.75, x, -5.2, Math.PI, true, 0, { carpet: GREEN });
+
+  // The lounge, south: two sofa corners on rugs, each round a coffee table.
+  const corners: [number, number][] = [
+    [-4.5, 0x3f6f73],
+    [4.5, 0xb5654a],
+  ];
+  for (const [x, rug] of corners) {
+    floor(g, 4.6, 4.6, x, 3.8, rug, 0.015);
+    const fabric = { carpet: x < 0 ? 0x2f7d6a : 0xc8912a };
+    place(g, "loungeSofaLong.glb", 0.85, x, 2.0, 0, true, 0, fabric);
+    place(g, "loungeSofa.glb", 0.85, x, 5.6, Math.PI, true, 0, fabric);
+    place(g, "tableCoffeeGlass.glb", 0.45, x, 3.8);
+    place(g, "plantSmall1.glb", 0.35, x + 0.3, 3.8, 0, true, 0.45);
+    solid(colliders, 3, 0.9, x, 2.0, SOFA_TOP);
+    solid(colliders, 2.2, 0.9, x, 5.6, SOFA_TOP);
+    solid(colliders, 1.4, 0.9, x, 3.8, SOFA_TOP);
+  }
+  // Armchairs by the east wall, round a lamp.
+  for (const z of [1.2, 3.2]) {
+    place(g, "loungeChair.glb", 0.8, 8.6, z, -Math.PI / 2, true, 0, { carpet: 0x2f4f78 });
+    solid(colliders, 1, 1, 8.6, z, SOFA_TOP);
+  }
+  place(g, "lampRoundFloor.glb", 1.7, 9.2, 2.2);
+  solid(colliders, 0.5, 0.5, 9.2, 2.2);
+  for (const [x, z] of [
+    [-4.5, 3.8],
+    [4.5, 3.8],
+    [8.4, 2.2],
+  ] as const)
+    lightPool(g, x, z, 3.6, 3.6, 0xfff0c8, 0.25);
+
+  // The work table, middle: where a group spreads out, stools both sides.
+  block(g, colliders, [5, 0.8, 1.6], [0, -1.8], texMat("ai/wood_tabletop.jpg", 3, 1, 0xd9b48a));
+  for (const x of [-1.8, -0.6, 0.6, 1.8]) {
+    for (const z of [-2.95, -0.65]) place(g, "stoolBar.glb", 0.75, x, z, z < -1.8 ? 0 : Math.PI, true, 0, { carpet: 0x3a3f4a });
+  }
+  solid(colliders, 5.4, 2.6, 0, -1.8);
+  lightPool(g, 0, -1.8, 5, 2.4, 0xfff0c8, 0.22);
+
+  // Shelves and plants along the south wall.
+  for (const x of [-1.2, 1.2]) {
+    place(g, "bookcaseOpen.glb", 1.9, x, halfZ - 0.4, Math.PI);
+    solid(colliders, 2, 0.7, x, halfZ - 0.4);
+  }
+  for (const [x, z] of [
+    [-9.2, 6.2],
+    [9.2, 6.2],
+    [-0.0, -4.6],
+  ] as const) {
+    place(g, "pottedPlant.glb", 1.3, x, z);
+    solid(colliders, 0.7, 0.7, x, z);
+  }
 
   // The way out: back down the stairs, on the east wall.
-  doorway(g, halfX - 0.05, 2.5, -Math.PI / 2, "Down to campus");
+  doorway(g, halfX - 0.05, 5, -Math.PI / 2, "Down to campus");
+  // The two meeting rooms, on the west wall.
+  ANUSA_TEAM_DOORS.forEach((d, i) => doorway(g, -halfX + 0.05, d.z, Math.PI / 2, `Meeting room ${i + 1}`));
+
+  // Sofas face each other over their tables; the armchairs face west.
+  const seats = corners.flatMap(([x]) =>
+    [-0.7, 0.7].flatMap((dx) => [
+      { x: x + dx, z: 2.05, rot: 0, y: 0.42 },
+      { x: x + dx, z: 5.55, rot: Math.PI, y: 0.42 },
+    ]),
+  );
+  seats.push(...[1.2, 3.2].map((z) => ({ x: 8.5, z, rot: -Math.PI / 2, y: 0.42 })));
+  seats.push(...[-1.8, -0.6, 0.6, 1.8].flatMap((x) => [{ x, z: -2.95, rot: 0, y: 0.7 }, { x, z: -0.65, rot: Math.PI, y: 0.7 }]));
 
   return {
     id: "anusa",
-    title: "ANUSA office",
+    title: "ANUSA Student Lounge",
     group: g,
     colliders,
-    doors: [{ x: halfX - 1.1, z: 2.5, label: "Go back down to campus", to: "outdoor", arrive: { x: 4.6, z: -3.4 } }],
+    doors: [
+      { x: halfX - 1.1, z: 5, label: "Go back down to campus", to: "outdoor", arrive: { x: 4.6, z: -2.6 } },
+      ...roomDoors("team-anusa", ANUSA_TEAM_DOORS, (n) => `Enter meeting room ${n}`),
+    ],
     halfX,
     halfZ,
     background: 0xe4ebe6,
-    camera: new THREE.Vector3(0, 6, 7),
+    camera: new THREE.Vector3(0, 7, 8.5),
     bgm: SHARED_BGM,
     floor: "carpet",
-    seats: [-0.7, 0.7].flatMap((dx) => [
-      { x: dx, z: 0.65, rot: 0, y: 0.42 },
-      { x: dx, z: 3.75, rot: Math.PI, y: 0.42 },
-    ]),
+    seats,
     links: [{ x: ANUSA_PC.x, z: ANUSA_PC.z + 1.3, label: "Open ANUSA's site", url: "https://anusa.com.au/", embeddable: true }],
-    spots: [{ x: STUDY_WALL.x, z: STUDY_WALL.z + 1.2, id: "board", label: "Open the ANUSA board (study groups)" }],
     // A place to sit and talk; notes go up outside and in classrooms.
     noNotes: true,
   };
