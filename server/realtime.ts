@@ -126,6 +126,11 @@ export function kick(name: string): number {
   return n;
 }
 
+/** Tells `name`, in every tab they have open, about something just for them (new mail). */
+export function tellPerson(name: string, msg: unknown): void {
+  for (const [ws, p] of players) if (p.name.toLowerCase() === name.toLowerCase()) send(ws, msg);
+}
+
 /** Tells everyone called `name` they've been stopped from `what`; for "join", closes their sockets too. */
 export function noticeRestriction(name: string, what: string, until: string): void {
   for (const [ws, p] of players) {

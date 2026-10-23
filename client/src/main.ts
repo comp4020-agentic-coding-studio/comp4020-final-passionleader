@@ -20,6 +20,11 @@ import {
   deleteComment,
   heartComment,
   joinAsGuest,
+  getMailbox,
+  readMail,
+  deleteMail as deleteMailItem,
+  sendMailTo,
+  isMember,
   getNpcs,
   askNpc,
   type NpcDef,
@@ -67,6 +72,7 @@ import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
+import { mountMailbox } from "./mailbox.ts";
 import { dogHappy } from "./spaces/dog.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
@@ -156,6 +162,67 @@ hangerBtn.setAttribute("aria-label", "Customise look");
 hangerBtn.setAttribute("aria-haspopup", "dialog");
 hangerBtn.addEventListener("click", () => openLookPicker());
 document.body.append(hangerBtn);
+
+// The mailbox (plan 16): left of the hanger, with a count of unread mail.
+const mailBtn = document.createElement("button");
+mailBtn.type = "button";
+mailBtn.id = "mail-btn";
+mailBtn.title = "Mail";
+mailBtn.setAttribute("aria-haspopup", "dialog");
+const mailIcon = document.createElement("span");
+mailIcon.textContent = "📮";
+mailIcon.setAttribute("aria-hidden", "true");
+const mailBadge = document.createElement("span");
+mailBadge.className = "mail-badge";
+mailBadge.hidden = true;
+mailBtn.append(mailIcon, mailBadge);
+document.body.append(mailBtn);
+function showUnread(n: number): void {
+  mailBadge.textContent = String(n);
+  mailBadge.hidden = n === 0;
+  mailBtn.setAttribute("aria-label", n ? `Mail, ${n} unread` : "Mail");
+}
+showUnread(0);
+const mailbox = mountMailbox({
+  async load() {
+    if (!session) return "Join first.";
+    try {
+      const box = await getMailbox(session.token);
+      showUnread(box.unread);
+      return box;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not open your mail.";
+    }
+  },
+  async read(id) {
+    if (!session) return;
+    try {
+      showUnread((await readMail(session.token, id)).unread);
+    } catch {
+      // It's read on screen anyway.
+    }
+  },
+  async remove(id) {
+    if (!session) return "Join first.";
+    try {
+      showUnread((await deleteMailItem(session.token, id)).unread);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not delete it.";
+    }
+  },
+  async send(to, subject, text) {
+    if (!session) return "Join first.";
+    try {
+      await sendMailTo(session.token, to, subject, text);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not send it.";
+    }
+  },
+  member: () => isMember(session),
+});
+mailBtn.addEventListener("click", () => mailbox.open());
 mountBgmPlayer();
 
 const scene = new THREE.Scene();
@@ -909,7 +976,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -1161,6 +1228,9 @@ async function enterAs(s: Session): Promise<void> {
   storage.set("campus.name", s.name);
   storage.set("campus.token", s.token);
   storage.set("campus.role", s.role);
+  // Mail waiting since last time.
+  if (isMember(s)) void getMailbox(s.token).then((box) => showUnread(box.unread)).catch(() => {});
+  else showUnread(0);
   // Classrooms first, so a visitor who left one comes back into it.
   await loadClassrooms();
   enterWorld();
@@ -1253,6 +1323,11 @@ function goOnline(token: string): void {
         const view = notes.get(c.noteId);
         if (view) upsertNote({ ...view.note, comments: view.note.comments + 1 });
       }
+    },
+    mail(unread) {
+      showUnread(unread);
+      sfx("message");
+      toast(`📮 New mail (${unread} unread).`);
     },
     hearts(noteId) {
       if (panel.openNoteId() === noteId) void refreshComments(noteId);

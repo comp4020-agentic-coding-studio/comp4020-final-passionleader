@@ -40,6 +40,7 @@ export type Event =
   | "signed-up"
   | "password-reset"
   | "npc-asked"
+  | "mail-sent"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

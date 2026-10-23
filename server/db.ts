@@ -254,6 +254,22 @@ db.exec(`
   );
 `);
 
+// Mail (plan 16): a message to a signed-up person by name, read whenever they
+// come in. Only its sender and its reader see it; kept 30 days, or until the
+// reader deletes it.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mail (
+    id      INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender  TEXT NOT NULL COLLATE NOCASE,
+    reader  TEXT NOT NULL COLLATE NOCASE,
+    subject TEXT NOT NULL,
+    body    TEXT NOT NULL,
+    sent_at TEXT NOT NULL DEFAULT (datetime('now')),
+    read_at TEXT
+  );
+  CREATE INDEX IF NOT EXISTS mail_by_reader ON mail (reader, sent_at);
+`);
+
 // Hearts on comments (sticky notes' and boards'): one per person per
 // comment, so a second press takes it back. The most-hearted comment is shown
 // first. A comment's hearts go with it.
@@ -454,6 +470,35 @@ function byHearts<T extends { id: number; heartedBy: string[] }>(list: T[]): T[]
   const order = new Map(list.map((c, i) => [c.id, i]));
   return list.sort((a, b) => b.heartedBy.length - a.heartedBy.length || order.get(a.id)! - order.get(b.id)!);
 }
+
+export interface Mail {
+  id: number;
+  sender: string;
+  reader: string;
+  subject: string;
+  body: string;
+  sentAt: string;
+  readAt: string | null;
+}
+const mailCols = "id, sender, reader, subject, body, sent_at AS sentAt, read_at AS readAt";
+export const MAIL_DAYS = 30;
+const freshMail = `sent_at > datetime('now', '-${MAIL_DAYS} days')`;
+
+/** Sends mail; false if the sender sent one under 30 seconds ago. */
+export function sendMailTo(sender: string, reader: string, subject: string, body: string): Mail | null {
+  const recent = db.prepare("SELECT 1 FROM mail WHERE sender = ? AND sent_at > datetime('now', '-30 seconds')").get(sender);
+  if (recent) return null;
+  const { lastInsertRowid } = db.prepare("INSERT INTO mail (sender, reader, subject, body) VALUES (?, ?, ?, ?)").run(sender, reader, subject, body);
+  return db.prepare(`SELECT ${mailCols} FROM mail WHERE id = ?`).get(Number(lastInsertRowid)) as unknown as Mail;
+}
+/** Someone's inbox (newest first), and what they've sent. */
+export const inboxOf = (name: string): Mail[] => db.prepare(`SELECT ${mailCols} FROM mail WHERE reader = ? AND ${freshMail} ORDER BY id DESC LIMIT 200`).all(name) as unknown as Mail[];
+export const sentBy = (name: string): Mail[] => db.prepare(`SELECT ${mailCols} FROM mail WHERE sender = ? AND ${freshMail} ORDER BY id DESC LIMIT 200`).all(name) as unknown as Mail[];
+export const findMail = (id: number): Mail | undefined => db.prepare(`SELECT ${mailCols} FROM mail WHERE id = ?`).get(id) as Mail | undefined;
+export const markRead = (id: number): void => void db.prepare("UPDATE mail SET read_at = datetime('now') WHERE id = ? AND read_at IS NULL").run(id);
+export const deleteMail = (id: number): void => void db.prepare("DELETE FROM mail WHERE id = ?").run(id);
+export const unreadCount = (name: string): number => (db.prepare(`SELECT COUNT(*) AS n FROM mail WHERE reader = ? AND read_at IS NULL AND ${freshMail}`).get(name) as { n: number }).n;
+export const purgeOldMail = (): number => Number(db.prepare(`DELETE FROM mail WHERE NOT (${freshMail})`).run().changes);
 
 export type JoinResult = { ok: true; joined: boolean; members: string[] } | { ok: false; why: "full" | "writer" };
 

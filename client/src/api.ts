@@ -117,6 +117,21 @@ export interface NpcDef {
 export const getNpcs = (): Promise<NpcDef[]> => request<NpcDef[]>("/api/npcs");
 export const askNpc = (token: string, id: string, text: string): Promise<{ reply: string }> => request(`/api/npc/${id}/ask`, "POST", { token, text });
 
+/** A message to or from someone signed up (plan 16). */
+export interface MailItem {
+  id: number;
+  sender: string;
+  reader: string;
+  subject: string;
+  body: string;
+  sentAt: string;
+  readAt: string | null;
+}
+export const sendMailTo = (token: string, to: string, subject: string, text: string): Promise<MailItem> => request("/api/mail", "POST", { token, to, subject, text });
+export const getMailbox = (token: string): Promise<{ inbox: MailItem[]; sent: MailItem[]; unread: number }> => request("/api/mail/box", "POST", { token });
+export const readMail = (token: string, id: number): Promise<{ unread: number }> => request(`/api/mail/${id}/read`, "POST", { token });
+export const deleteMail = (token: string, id: number): Promise<{ unread: number }> => request(`/api/mail/${id}`, "DELETE", { token });
+
 /** Signed up (or a test account): may post, comment, heart, attach files and report. */
 export const isMember = (s: { role: string } | null | undefined): boolean => !!s && s.role !== "guest";
 

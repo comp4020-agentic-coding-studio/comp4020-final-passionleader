@@ -217,3 +217,24 @@ describe("campus assistants", () => {
     expect((await api("/api/npc/nobody/ask", "POST", { token: g.token, text: "Hi" })).status).toBe(404);
   });
 });
+
+// Mail: members only, to someone signed up by name; only its reader sees it
+// in their inbox, and may delete it; unread counts.
+describe("mail", () => {
+  it("goes from one member to another, counts as unread until read, and only its reader can delete it", async () => {
+    const [a, b, c] = await Promise.all([visitor(), visitor(), visitor()]);
+    const g = await guest();
+    expect((await api("/api/mail", "POST", { token: g.token, to: b.name, subject: "Hi", text: "From a guest" })).status).toBe(403);
+    expect((await api("/api/mail", "POST", { token: a.token, to: g.name, subject: "Hi", text: "To a guest" })).status).toBe(404);
+    const sent = await api("/api/mail", "POST", { token: a.token, to: b.name, subject: "Study group?", text: "Want to join mine on Thursdays?" });
+    expect(sent.status).toBe(201);
+    const { id } = (await sent.json()) as { id: number };
+    expect((await api("/api/mail", "POST", { token: a.token, to: b.name, subject: "Again", text: "too soon" })).status).toBe(429);
+    const box = (await (await api("/api/mail/box", "POST", { token: b.token })).json()) as { inbox: { id: number; sender: string }[]; unread: number };
+    expect(box.unread).toBe(1);
+    expect(box.inbox[0]).toMatchObject({ id, sender: a.name });
+    expect((await (await api(`/api/mail/${id}/read`, "POST", { token: b.token })).json()).unread).toBe(0);
+    expect((await api(`/api/mail/${id}`, "DELETE", { token: c.token })).status).toBe(404);
+    expect((await api(`/api/mail/${id}`, "DELETE", { token: b.token })).status).toBe(200);
+  });
+});

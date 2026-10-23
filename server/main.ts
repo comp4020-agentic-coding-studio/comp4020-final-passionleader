@@ -44,6 +44,14 @@ import {
   postIdsIn,
   toggleHeart,
   toggleMember,
+  sendMailTo,
+  inboxOf,
+  sentBy,
+  findMail,
+  markRead,
+  deleteMail,
+  unreadCount,
+  purgeOldMail,
   createGuest,
   createMember,
   findByEmail,
@@ -84,7 +92,7 @@ import {
   type Visitor,
 } from "./db.ts";
 import { browserTag, keepIn, log } from "./log.ts";
-import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, roomSessionOf, roomShare, setLook } from "./realtime.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, tellPerson, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
@@ -319,6 +327,59 @@ app.post("/api/password/finish", async (c) => {
   forgetCode(who2.email);
   log("password-reset", account, {}, { ip: ipOf(c) });
   return c.json({ name: account.name, token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
+});
+
+// --- mail (plan 16) ------------------------------------------------------------
+// A message to someone signed up, by name, read whenever they come in. Only
+// members send it (and only to members); one every 30 seconds; a subject
+// (80) and up to 1000 characters. Its reader sees it, and may delete it; its
+// sender sees what they sent. If the reader is online, their mailbox lights
+// up at once. The log notes that mail went, not what it said.
+
+app.post("/api/mail", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "mail");
+  if (guest) return guest;
+  const barred = stopped(c, v, "posts", { action: "mail" });
+  if (barred) return barred;
+  const to = typeof b.to === "string" ? findByName(b.to.normalize("NFKC").trim()) : undefined;
+  if (!to || !isMember(to)) return c.json({ error: "There's nobody signed up by that name." }, 404);
+  if (to.name.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "That's you." }, 400);
+  const subject = typeof b.subject === "string" ? b.subject.trim() : "";
+  const text = typeof b.text === "string" ? b.text.trim() : "";
+  if (!subject || subject.length > 80) return c.json({ error: "A subject, up to 80 characters." }, 400);
+  if (!text || text.length > 1000) return c.json({ error: "Write something, up to 1000 characters." }, 400);
+  const sent = sendMailTo(v.name, to.name, subject, text);
+  if (!sent) return c.json({ error: "One message every 30 seconds." }, 429);
+  log("mail-sent", v, { to: to.name, chars: text.length });
+  tellPerson(to.name, { t: "action", kind: "mail", unread: unreadCount(to.name) });
+  return c.json(sent, 201);
+});
+
+app.post("/api/mail/box", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  return c.json({ inbox: inboxOf(v.name), sent: sentBy(v.name), unread: unreadCount(v.name) });
+});
+
+app.post("/api/mail/:id/read", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const m = findMail(Number(c.req.param("id")));
+  if (!m || m.reader.toLowerCase() !== v.name.toLowerCase()) return c.json({ error: "That message is gone." }, 404);
+  markRead(m.id);
+  return c.json({ unread: unreadCount(v.name) });
+});
+
+app.delete("/api/mail/:id", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const m = findMail(Number(c.req.param("id")));
+  if (!m || m.reader.toLowerCase() !== v.name.toLowerCase()) return c.json({ error: "That message is gone." }, 404);
+  deleteMail(m.id);
+  return c.json({ unread: unreadCount(v.name) });
 });
 
 // --- the AI campus assistants (plan 56) ---------------------------------------
@@ -1193,6 +1254,7 @@ const purge = (): void => {
   }
   purgeOldAudit();
   purgeOldChat();
+  purgeOldMail();
   removeObjects(purgeFiles());
 };
 purge();

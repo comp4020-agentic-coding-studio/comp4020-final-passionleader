@@ -1,0 +1,30 @@
+/* The mailbox, in the settings dialog's style. */
+
+#mailbox {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  padding: 16px; background: rgba(20, 20, 20, 0.45);
+}
+#mailbox[hidden] { display: none; }
+.mail-card { width: min(480px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+.mail-head { display: flex; align-items: center; justify-content: space-between; }
+.mail-head h2 { margin: 0; }
+.mail-close { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.1rem; cursor: pointer; }
+.mail-tabs { display: flex; gap: 6px; margin: 8px 0; }
+.mail-tabs button { min-height: 40px; padding: 0 14px; border: 1px solid #8a6a50; border-radius: 20px; background: #fff; cursor: pointer; font: inherit; }
+.mail-tabs button[aria-selected="true"] { background: var(--accent, #6b3f1d); color: #fff; border-color: transparent; }
+.mail-body { flex: 1; overflow-y: auto; min-height: 160px; }
+.mail-list { list-style: none; margin: 0; padding: 0; }
+.mail-row { display: grid; grid-template-columns: 1fr auto; gap: 2px 10px; width: 100%; min-height: 52px; padding: 8px 10px; border: 0; border-bottom: 1px solid #e6dcc0; background: none; text-align: left; cursor: pointer; font: inherit; }
+.mail-row.is-unread { font-weight: 700; background: #fff8e1; }
+.mail-who { grid-column: 1; }
+.mail-when { grid-column: 2; grid-row: 1; font-size: 0.8rem; opacity: 0.7; }
+.mail-subject { grid-column: 1 / -1; font-size: 0.9rem; opacity: 0.85; }
+.mail-empty { opacity: 0.75; }
+.mail-message h3 { margin: 4px 0; }
+.mail-meta { margin: 0 0 8px; font-size: 0.85rem; opacity: 0.75; }
+.mail-text { white-space: pre-wrap; word-break: break-word; line-height: 1.45; }
+.mail-form { display: grid; gap: 8px; }
+.mail-form label { display: grid; gap: 4px; font-size: 0.9rem; }
+.mail-form input, .mail-form textarea { min-height: 40px; padding: 6px 10px; border: 1px solid #8a6a50; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%; }
+.mail-send { min-height: 44px; background: var(--accent, #6b3f1d); color: #fff; border: 0; border-radius: 8px; font: inherit; cursor: pointer; }
+.mail-status { min-height: 1.3em; margin: 6px 0 0; font-size: 0.9rem; }

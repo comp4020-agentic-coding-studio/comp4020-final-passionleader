@@ -110,6 +110,15 @@ Read before planning or building: `README.md` (what good means for this app),
   when someone reports a person: the server then attaches that space's last
   five minutes to the report (never text from the browser). Only the admin
   reads it, and it's deleted after a day.
+- Mail: a member writes to another member by name (subject 80, up to 1000
+  characters, one every 30 seconds); only its reader sees it in their inbox
+  and may delete it, its sender sees what they sent; kept 30 days. If the
+  reader is online their mailbox lights up at once. The log notes that mail
+  went and to whom, never what it said. Guests neither send nor receive it.
+- The AI campus assistants (server/npcs.ts) answer anyone joined, guests
+  too, one question every three seconds, 500 characters; nothing asked is
+  stored, and their window says so and that the campus is unofficial. Until
+  a model is connected they say they aren't, and point to their pages.
 - The admin can stop one person (never the admin) from sticky notes and
   their comments, board posts and their comments, chat, or coming in at
   all, for 1 hour to a year; the server checks before each, tells them
