@@ -289,8 +289,13 @@ export function solid(colliders: Box[], w: number, d: number, x: number, z: numb
   colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, ...(top === undefined ? {} : { top }) });
 }
 
-/** Sofas and coffee tables: low enough to jump over (a jump peaks at about 1.2 m). */
-export const SOFA_TOP = 0.85;
+/**
+ * Sofas and coffee tables: low enough to jump over. A jump peaks at about
+ * 1.2 m and spends 0.46 s above 0.7 m, so even walking (4.2 m/s) carries you
+ * the 1.7 m across a sofa and your own width; at 0.85 m (the backrest) a
+ * walking jump fell just short.
+ */
+export const SOFA_TOP = 0.7;
 
 /**
  * Colours by the model's material name: Kenney's furniture calls its fabric
