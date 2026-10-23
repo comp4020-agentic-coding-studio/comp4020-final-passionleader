@@ -35,7 +35,9 @@ jobs:
         # volume; the spec runs against it
         run: |
           docker build -t app .
-          docker run -d --init --name app -p 8080:8080 -e PORT=8080 --tmpfs /data app
+          # MAIL_TEST_OUTBOX: sign-up codes stay in memory for the spec to
+          # read, instead of going by SES. Only in this throwaway container.
+          docker run -d --init --name app -p 8080:8080 -e PORT=8080 -e MAIL_TEST_OUTBOX=1 --tmpfs /data app
       - name: Run the spec
         run: pnpm check
         env:

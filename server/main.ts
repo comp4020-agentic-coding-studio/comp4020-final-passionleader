@@ -1,4 +1,5 @@
-import { randomUUID } from "node:crypto";
+import { createHash, randomInt, randomUUID } from "node:crypto";
+import { MailFailure, lastMail, mailReady, sendMail, testOutbox } from "./mail.ts";
 import { existsSync, readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
@@ -6,7 +7,7 @@ import { getConnInfo } from "@hono/node-server/conninfo";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
 import { marked } from "marked";
-import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, mayRemove, postError, textError } from "./accounts.ts";
+import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, hashPassword, mayRemove, postError, textError } from "./accounts.ts";
 import {
   editPost,
   editPostComment,
@@ -42,6 +43,14 @@ import {
   postIdsIn,
   toggleHeart,
   toggleMember,
+  createGuest,
+  createMember,
+  findByEmail,
+  forgetCode,
+  isMember,
+  resetPassword,
+  storeCode,
+  takeCode,
   purgeExpiredNotes,
   purgeOldAudit,
   addAudit,
@@ -119,6 +128,18 @@ function who(b: Body): Visitor | null {
   return typeof b.token === "string" ? (findByToken(b.token) ?? null) : null;
 }
 
+/**
+ * Guests (came in without signing up) may walk, chat, emote, stick notes and
+ * use team rooms; posting, commenting, hearts, joining groups, files and
+ * reporting someone need an ANU sign-up. Refused here (403, logged), not
+ * only hidden in the browser; the client shows a sign-up prompt.
+ */
+function guestRefused(c: Context, v: Visitor, action: string): Response | null {
+  if (isMember(v)) return null;
+  log("refused", v, { action, reason: "guest" }, { ip: ipOf(c) });
+  return c.json({ error: "Sign up with your ANU email to do that.", signup: true }, 403);
+}
+
 const RESTRICTED_WHAT: Record<Restrictable, string> = { notes: "sticking notes or commenting on them", posts: "posting or commenting on boards", chat: "chatting", join: "coming in" };
 /** If the admin has stopped `v` doing `what`, logs the refusal and answers 403; else null. */
 function stopped(c: Context, v: Visitor, what: Restrictable, details: Record<string, unknown>): Response | null {
@@ -156,6 +177,9 @@ app.post("/api/join", async (c) => {
 
   if (!NAME_RULE.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores." }, 400);
   const existing = findByName(name);
+  // Since sign-up, a name without a password is a guest's: guests come in
+  // with { guest: true } (below), members with their name and password.
+  if (existing?.role === "retired") return c.json({ error: `"${name}" belonged to someone from before sign-up. Pick another name.` }, 409);
   // A name with a password behind it signs in with that password from any device.
   if (existing?.passwordHash && typeof password === "string" && password.trim()) {
     if (!checkPassword(password.trim(), existing.passwordHash)) {
@@ -168,7 +192,7 @@ app.post("/api/join", async (c) => {
     return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
   }
   if (existing) {
-    // A name belongs to whoever first took it; only their browser's token gets it back.
+    // A guest's name belongs to their browser: only its token gets it back.
     if (existing.token === token) {
       const barred = stopped(c, existing, "join", { action: "join" });
       if (barred) return barred;
@@ -179,10 +203,128 @@ app.post("/api/join", async (c) => {
     // `password` says whether this name could be signed into with one instead.
     return c.json({ error: `"${name}" is taken. Pick another name.`, password: !!existing.passwordHash }, 409);
   }
+  return c.json({ error: "Sign up with your ANU email to pick a name, or come in as a guest." }, 404);
+});
+
+// Coming in as a guest: your browser's guest back if it has one, else the
+// next free guestNNN. Guests walk, chat, emote, stick notes and use team
+// rooms; posting, commenting, hearts, files and reports need signing up.
+app.post("/api/guest", async (c) => {
+  const b = await body(c);
+  const known = typeof b.token === "string" ? findByToken(b.token) : undefined;
+  if (known?.role === "guest") {
+    const barred = stopped(c, known, "join", { action: "join" });
+    if (barred) return barred;
+    log("join", known, { how: "guest returning" }, { ip: ipOf(c) });
+    return c.json({ name: known.name, token: known.token, role: "guest", spawn: lastSpot(known.name), look: lookOf(known.name) });
+  }
   const fresh = randomUUID();
-  createVisitor(name, fresh);
-  log("join", { name, token: fresh }, { how: "new" }, { ip: ipOf(c) });
-  return c.json({ name, token: fresh, role: "user", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn }, look: null });
+  const name = createGuest(fresh);
+  if (!name) return c.json({ error: "The campus is full of guests right now. Sign up, or try later." }, 503);
+  log("join", { name, token: fresh }, { how: "guest" }, { ip: ipOf(c) });
+  return c.json({ name, token: fresh, role: "guest", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn }, look: null });
+});
+
+// --- signing up with an ANU email ---------------------------------------------
+// Students give their student number (u1234567, the email is
+// u1234567@anu.edu.au); staff tick "I'm staff" and give their @anu.edu.au
+// address (not a student number). A six-digit code goes there by SES, ten
+// minutes, five tries, one email a minute. With the code: a name (the usual
+// rules) and a password (8+ characters) make the account. Forgot it? The same
+// code by email sets a new one, and every browser signs in again.
+
+const STUDENT_NO = /^u\d{7}$/i;
+const STAFF_EMAIL = /^[a-z][a-z0-9._-]{0,63}@anu\.edu\.au$/i;
+const code6 = (): string => String(randomInt(0, 1_000_000)).padStart(6, "0");
+const hashCode = (email: string, code: string): string => createHash("sha256").update(`${email.toLowerCase()}:${code}`).digest("hex");
+
+/** The ANU email a sign-up names, and whether it's staff's; or an error. */
+function anuEmail(b: Body): { email: string; staff: boolean } | { error: string } {
+  if (b.staff === true) {
+    const email = typeof b.email === "string" ? b.email.trim().toLowerCase() : "";
+    if (!STAFF_EMAIL.test(email) || STUDENT_NO.test(email.split("@")[0]!)) return { error: "Staff: your @anu.edu.au address (not a student number)." };
+    return { email, staff: true };
+  }
+  const no = typeof b.studentNo === "string" ? b.studentNo.trim().toLowerCase() : "";
+  if (!STUDENT_NO.test(no)) return { error: "Your student number, like u1234567." };
+  return { email: `${no}@anu.edu.au`, staff: false };
+}
+
+async function sendCode(c: Context, email: string, purpose: "signup" | "reset"): Promise<Response> {
+  if (!mailReady()) return c.json({ error: "Email isn't available right now. Please tell the admin. Error code: MAIL-CONFIG" }, 503);
+  const code = code6();
+  if (!storeCode(email, purpose, hashCode(email, code))) return c.json({ error: "A code went to that address under a minute ago. Check your inbox (and junk)." }, 429);
+  const subject = purpose === "signup" ? `${code} is your ANU Crossing sign-up code` : `${code} resets your ANU Crossing password`;
+  const text = `Your code is ${code}. It works for ten minutes.\n\nIf you didn't ask for it, ignore this email.\n\nANU Crossing is an unofficial, fan-made campus; it isn't an ANU service.`;
+  try {
+    await sendMail(email, subject, text);
+  } catch (err) {
+    forgetCode(email);
+    return c.json({ error: `The email didn't go. Please tell the admin. Error code: ${err instanceof MailFailure ? err.code : "MAIL-SEND"}` }, 502);
+  }
+  log("mail-code", null, { purpose }, { ip: ipOf(c) });
+  return c.json({ sent: true, to: email });
+}
+
+app.post("/api/signup/start", async (c) => {
+  const b = await body(c);
+  const who2 = anuEmail(b);
+  if ("error" in who2) return c.json({ error: who2.error }, 400);
+  if (findByEmail(who2.email)) return c.json({ error: "That email has an account already. Sign in, or reset its password." }, 409);
+  return sendCode(c, who2.email, "signup");
+});
+
+app.post("/api/signup/finish", async (c) => {
+  const b = await body(c);
+  const who2 = anuEmail(b);
+  if ("error" in who2) return c.json({ error: who2.error }, 400);
+  const stored = takeCode(who2.email, "signup");
+  if (!stored || typeof b.code !== "string" || stored !== hashCode(who2.email, b.code.trim())) {
+    log("join-refused", null, { reason: "wrong sign-up code" }, { ip: ipOf(c) });
+    return c.json({ error: "That code is wrong or too old. Ask for a new one." }, 401);
+  }
+  const name = typeof b.name === "string" ? b.name.normalize("NFKC").trim() : "";
+  if (!NAME_RULE.test(name) || RESERVED.test(name) || /^guest\d{3}$/i.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores (not qa_ or guest…)." }, 400);
+  if (findByName(name)) return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
+  if (typeof b.password !== "string" || b.password.length < 8 || b.password.length > 200) return c.json({ error: "A password of at least 8 characters." }, 400);
+  if (findByEmail(who2.email)) return c.json({ error: "That email has an account already." }, 409);
+  const token = randomUUID();
+  const role = who2.staff ? "staff" : "student";
+  createMember(name, token, role, who2.email, hashPassword(b.password));
+  forgetCode(who2.email);
+  log("signed-up", { name, token }, { role }, { ip: ipOf(c) });
+  return c.json({ name, token, role, spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn }, look: null }, 201);
+});
+
+app.post("/api/password/start", async (c) => {
+  const b = await body(c);
+  const who2 = anuEmail(b);
+  if ("error" in who2) return c.json({ error: who2.error }, 400);
+  // The same answer whether or not there's an account, so it can't be used to find who has one.
+  if (!findByEmail(who2.email)) return c.json({ sent: true, to: who2.email });
+  return sendCode(c, who2.email, "reset");
+});
+
+app.post("/api/password/finish", async (c) => {
+  const b = await body(c);
+  const who2 = anuEmail(b);
+  if ("error" in who2) return c.json({ error: who2.error }, 400);
+  const account = findByEmail(who2.email);
+  const stored = takeCode(who2.email, "reset");
+  if (!account || !stored || typeof b.code !== "string" || stored !== hashCode(who2.email, b.code.trim())) return c.json({ error: "That code is wrong or too old. Ask for a new one." }, 401);
+  if (typeof b.password !== "string" || b.password.length < 8 || b.password.length > 200) return c.json({ error: "A password of at least 8 characters." }, 400);
+  const token = randomUUID();
+  resetPassword(account.name, hashPassword(b.password), token);
+  forgetCode(who2.email);
+  log("password-reset", account, {}, { ip: ipOf(c) });
+  return c.json({ name: account.name, token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
+});
+
+// The spec's view of what was "sent" (MAIL_TEST_OUTBOX=1, the CI container only).
+app.get("/api/test/mail", (c) => {
+  if (!testOutbox()) return c.json({ error: "Not here." }, 404);
+  const m = lastMail(c.req.query("to") ?? "");
+  return m ? c.json(m) : c.json({ error: "Nothing sent there." }, 404);
 });
 
 // --- sticky notes ----------------------------------------------------------
@@ -266,6 +408,8 @@ app.post("/api/notes/:id/comments", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "comment");
+  if (guest) return guest;
   const note = findNote(Number(c.req.param("id")));
   if (!note) return c.json({ error: "That note is gone." }, 404);
   const barred = stopped(c, v, "notes", { action: "comment", space: note.space, note: note.id });
@@ -291,6 +435,8 @@ app.post("/api/notes/:id/comments", async (c) => {
 app.post("/api/comments/:id/heart", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "heart");
+  if (guest) return guest;
   const comment = findComment(Number(c.req.param("id")));
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
   if (comment.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "You can't heart your own comment." }, 400);
@@ -303,6 +449,8 @@ app.post("/api/comments/:id/heart", async (c) => {
 app.post("/api/board-comments/:id/heart", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "heart");
+  if (guest) return guest;
   const comment = findPostComment(Number(c.req.param("id")));
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
   if (comment.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "You can't heart your own comment." }, 400);
@@ -507,6 +655,8 @@ app.post("/api/board", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "post");
+  if (guest) return guest;
   const board = boardOf(b.space);
   if (!board) return c.json({ error: "There's no board here." }, 400);
   const tab = tabOf(board, b.tab);
@@ -545,6 +695,8 @@ app.post("/api/board", async (c) => {
 app.post("/api/board/:id/join", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "join group");
+  if (guest) return guest;
   const post = findPost(Number(c.req.param("id")));
   if (!post || !maySeePost(v, post)) return c.json({ error: "That post is gone." }, 404);
   if (post.capacity === null) return c.json({ error: "That isn't a study group." }, 400);
@@ -580,6 +732,8 @@ app.patch("/api/board/:id", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "edit post");
+  if (guest) return guest;
   const post = findPost(Number(c.req.param("id")));
   if (!post) return c.json({ error: "That post is gone." }, 404);
   const barred = stopped(c, v, "posts", { action: "edit post", space: post.space, post: post.id });
@@ -618,6 +772,8 @@ app.post("/api/board/:id/comments", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "post comment");
+  if (guest) return guest;
   const post = findPost(Number(c.req.param("id")));
   if (!post || !maySeePost(v, post)) return c.json({ error: "That post is gone." }, 404);
   const barred = stopped(c, v, "posts", { action: "post comment", space: post.space, post: post.id });
@@ -641,6 +797,8 @@ app.patch("/api/board-comments/:id", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "edit comment");
+  if (guest) return guest;
   const comment = findPostComment(Number(c.req.param("id")));
   if (!comment) return c.json({ error: "That comment is gone." }, 404);
   const post = findPost(comment.postId);
@@ -791,6 +949,10 @@ app.post("/api/bugs", async (c) => {
   const text = typeof b.text === "string" ? b.text.trim() : "";
   if (!text) return c.json({ error: "Say what went wrong." }, 400);
   if (text.length > MAX_BUG) return c.json({ error: `Up to ${MAX_BUG} characters.` }, 400);
+  if (typeof b.about === "string" && b.about.trim()) {
+    const guest = guestRefused(c, v, "person report");
+    if (guest) return guest;
+  }
   const space = typeof b.space === "string" && isSpace(b.space) ? b.space : null;
   const userAgent = (c.req.header("user-agent") ?? "").slice(0, 300) || null;
   // A report about someone (abuse in the chat) can carry the space's chat
@@ -835,6 +997,8 @@ app.post("/api/files", async (c) => {
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "upload");
+  if (guest) return guest;
   const kind = b.kind as FileKind;
   if (kind !== "bug" && kind !== "board" && kind !== "room") return c.json({ error: "Attach it to what?" }, 400);
   const name = cleanName(b.name);

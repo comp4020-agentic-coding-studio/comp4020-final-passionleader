@@ -19,6 +19,12 @@ import {
   createPostComment,
   deleteComment,
   heartComment,
+  joinAsGuest,
+  signupStart,
+  signupFinish,
+  resetStart,
+  resetFinish,
+  whenSignupNeeded,
   deleteNote,
   getClassrooms,
   getComments,
@@ -56,6 +62,7 @@ import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
+import { mountSignIn } from "./signin.ts";
 import { dogHappy } from "./spaces/dog.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
@@ -90,12 +97,6 @@ const $ = <T extends HTMLElement>(id: string): T => {
 
 const stage = $("stage");
 const joinDialog = $("join");
-const joinForm = $<HTMLFormElement>("join-form");
-const nameInput = $<HTMLInputElement>("name");
-const passwordRow = $("password-row");
-const passwordInput = $<HTMLInputElement>("password");
-const joinError = $("join-error");
-const enterBtn = $<HTMLButtonElement>("enter");
 const hud = $("hud");
 const hudName = $("hud-name");
 const hudOnline = $("hud-online");
@@ -124,7 +125,18 @@ const bugReport = mountBugReport({
 const highQuality = HIGH;
 // Mute (plan 33): someone's chat, bubbles and notes vanish from this screen only.
 const muteDialog = mountMute({ changed: () => syncMutedNotes() });
-mountSettings({ reportBug: () => bugReport.open(), reportPerson: () => bugReport.open(true), mute: () => muteDialog.open() });
+mountSettings({
+  reportBug: () => bugReport.open(),
+  reportPerson: () => bugReport.open(true),
+  mute: () => muteDialog.open(),
+  signOut() {
+    // This browser forgets who it was; the join screen offers signing up or in.
+    storage.set("campus.token", "");
+    storage.set("campus.role", "");
+    session = null;
+    showJoin();
+  },
+});
 
 // Customise look has its own button, a coat hanger just left of the gear (it
 // used to be a row in the settings dialog). The join screen keeps its button.
@@ -228,7 +240,7 @@ preloadCharacters();
 // How you look: what you picked (saved on the server once you've joined),
 // else a default from your name. Picked before joining, it waits here.
 let myLook: Look | null = null;
-const lookOfMine = (): Look => myLook ?? defaultLookFor(session?.name ?? nameInput.value.trim());
+const lookOfMine = (): Look => myLook ?? defaultLookFor(session?.name ?? storage.get("campus.name"));
 
 let me = new Avatar(defaultLookFor(""));
 let player = me.group;
@@ -252,7 +264,7 @@ function becomeAvatar(_name: string): void {
 
 const lookPicker = mountLookPicker({
   // Before joining, go by the name typed; after, by the name signed in with.
-  qaHats: () => RESERVED_RE.test(session?.name ?? typedName()),
+  qaHats: () => RESERVED_RE.test(session?.name ?? storage.get("campus.name")),
   preview(look) {
     previewAvatar?.setLook(look);
   },
@@ -324,7 +336,6 @@ function startPreview(look: Look): void {
     r.dispose();
   };
 }
-document.getElementById("customise")?.addEventListener("click", openLookPicker);
 
 /** A label floating over a figure; `kind` picks the CSS look. */
 function tag(group: THREE.Object3D, text: string, y: number, kind: string): CSS2DObject {
@@ -1063,19 +1074,58 @@ const storage = {
   },
 };
 
-nameInput.value = storage.get("campus.name");
-// Phone keyboards add spaces and lookalike characters (a full-width "＿"); the server does the same.
-const typedName = (): string => nameInput.value.normalize("NFKC").trim();
-// Shown for qa_ names, and for any name the server says has a password.
-let needsPassword = false;
-const syncPasswordRow = (): void => {
-  passwordRow.hidden = !needsPassword && !RESERVED_RE.test(typedName());
+// The join screen (signin.ts): sign in with name and password, sign up with
+// an ANU email, reset a forgotten password, or come in as a guest. Whatever
+// the way in, the session is kept the same way and the world opens.
+const asSession = async (p: Promise<Session>): Promise<Session | string> => {
+  try {
+    return await p;
+  } catch (err) {
+    return err instanceof ApiError ? err.message : "Something went wrong.";
+  }
 };
-nameInput.addEventListener("input", () => {
-  needsPassword = false;
-  syncPasswordRow();
+const errorOf = async (p: Promise<unknown>): Promise<string | null> => {
+  try {
+    await p;
+    return null;
+  } catch (err) {
+    return err instanceof ApiError ? err.message : "Something went wrong.";
+  }
+};
+const signIn = mountSignIn({
+  signIn: (name, password) => asSession(join(name.normalize("NFKC").trim(), undefined, password.trim())),
+  guest: () => asSession(joinAsGuest(storage.get("campus.role") === "guest" ? storage.get("campus.token") || undefined : undefined)),
+  signupStart: (who) => errorOf(signupStart(who)),
+  signupFinish: (who, code, name, password) => asSession(signupFinish(who, code, name.normalize("NFKC").trim(), password)),
+  resetStart: (who) => errorOf(resetStart(who)),
+  resetFinish: (who, code, password) => asSession(resetFinish(who, code, password)),
+  entered: (s) => void enterAs(s),
+  customise: () => openLookPicker(),
 });
-syncPasswordRow();
+
+/** In with a session: keep it in this browser, send up a look picked before, and open the world. */
+async function enterAs(s: Session): Promise<void> {
+  session = s;
+  // A look picked before joining goes up now; else the one saved last time.
+  if (myLook) void saveLook(s.token, myLook).catch(() => {});
+  else myLook = s.look;
+  storage.set("campus.name", s.name);
+  storage.set("campus.token", s.token);
+  storage.set("campus.role", s.role);
+  // Classrooms first, so a visitor who left one comes back into it.
+  await loadClassrooms();
+  enterWorld();
+}
+
+// Back again: this browser's guest, or a member still signed in here, goes
+// straight in; otherwise the join screen.
+async function returnIfKnown(): Promise<void> {
+  const token = storage.get("campus.token");
+  const name = storage.get("campus.name");
+  if (!token) return;
+  const back = storage.get("campus.role") === "guest" ? await asSession(joinAsGuest(token)) : name ? await asSession(join(name, token)) : null;
+  if (back && typeof back !== "string") await enterAs(back);
+}
 
 function showJoin(message = ""): void {
   playing = false;
@@ -1086,59 +1136,11 @@ function showJoin(message = ""): void {
   net?.close();
   net = null;
   for (const id of [...others.keys()]) removeOther(id);
-  joinError.textContent = message;
-  joinDialog.hidden = false;
+  signIn.show(message);
   hud.hidden = true;
   touch.hidden = true;
   hintEl.hidden = true;
-  nameInput.focus();
 }
-
-joinForm.addEventListener("submit", (e) => {
-  e.preventDefault();
-  const name = typedName();
-  if (!isValidName(name)) {
-    joinError.textContent = "Use letters, digits and underscore only, 1 to 8 characters.";
-    return;
-  }
-  const reserved = RESERVED_RE.test(name) || needsPassword;
-  // Phone keyboards add a space after a word; no account password has one.
-  const password = passwordInput.value.trim();
-  if (reserved && !password) {
-    joinError.textContent = "This account needs its password.";
-    return;
-  }
-  joinError.textContent = "";
-  enterBtn.disabled = true;
-  // Only reuse the stored token for the name it was issued to.
-  const token = storage.get("campus.name").toLowerCase() === name.toLowerCase() ? storage.get("campus.token") : "";
-  join(name, token || undefined, reserved ? password : undefined)
-    .then((s) => {
-      session = s;
-      // A look picked before joining goes up now; else the one saved last time.
-      if (myLook) void saveLook(s.token, myLook).catch(() => {});
-      else myLook = s.look;
-      passwordInput.value = "";
-      storage.set("campus.name", s.name);
-      storage.set("campus.token", s.token);
-      // Classrooms first, so a visitor who left one comes back into it.
-      return loadClassrooms().then(enterWorld);
-    })
-    .catch((err: unknown) => {
-      // A taken name that's a password account: ask for its password instead.
-      if (err instanceof ApiError && err.status === 409 && err.data.password) {
-        needsPassword = true;
-        syncPasswordRow();
-        joinError.textContent = "This account signs in with its password. Enter it below.";
-        passwordInput.focus();
-        return;
-      }
-      joinError.textContent = err instanceof ApiError ? err.message : "Something went wrong.";
-    })
-    .finally(() => {
-      enterBtn.disabled = false;
-    });
-});
 
 function enterWorld(): void {
   if (!session) return;
@@ -1762,3 +1764,11 @@ renderer.setAnimationLoop(() => {
 // Show the campus behind the join form.
 setSpace("outdoor", { x: -6, z: 10 }, false);
 showJoin();
+void returnIfKnown();
+// A guest who tries something that needs signing up: say so, once, with a way to it.
+let signupPromptAt = 0;
+whenSignupNeeded(() => {
+  if (Date.now() - signupPromptAt < 4000) return;
+  signupPromptAt = Date.now();
+  toast("Sign up with your ANU email to post, comment or share files: ⚙️ → Sign out (or sign up).");
+});

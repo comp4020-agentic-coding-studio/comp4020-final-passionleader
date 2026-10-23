@@ -16,8 +16,9 @@ class Player {
   name = "";
   token = "";
   async enrol(): Promise<this> {
-    this.name = freshName();
-    this.token = (await (await campus("/api/join", "POST", { name: this.name })).json()).token;
+    const g = (await (await campus("/api/guest", "POST", {})).json()) as { name: string; token: string };
+    this.name = g.name;
+    this.token = g.token;
     return this;
   }
   async post(action: string, extra: Record<string, unknown> = {}): Promise<Response> {

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { closeAll, connect, visitor, type Msg, type Socket } from "./helpers.ts";
+import { closeAll, connect, guest, visitor, type Msg, type Socket } from "./helpers.ts";
 
 // The meeting rooms (plan 21, 6a, 26a, 30): six people at most, and the
 // counselling rooms let in only whoever someone inside has invited. The
@@ -12,8 +12,8 @@ const opened = (space: string) => (m: Msg) => m.t === "action" && m.kind === "ro
 const refused = (space: string, reason: string) => (m: Msg) =>
   m.t === "action" && m.kind === "room-refused" && m.space === space && m.reason === reason;
 
-async function inRoom(space: string): Promise<{ name: string; s: Socket }> {
-  const v = await visitor();
+async function inRoom(space: string, who: () => Promise<{ name: string; token: string }> = visitor): Promise<{ name: string; s: Socket }> {
+  const v = await who();
   const s = await connect(v.token);
   await s.next((m) => m.t === "welcome");
   s.send({ t: "enter", space, x: 0, z: 0 });
@@ -22,11 +22,11 @@ async function inRoom(space: string): Promise<{ name: string; s: Socket }> {
 }
 
 describe("meeting rooms", () => {
-  it("lets anyone into a team room, and turns the seventh away", async () => {
+  it("lets anyone into a team room (guests too), and turns the seventh away", async () => {
     const room = "team-library-4";
     const six = [];
-    for (let i = 0; i < 6; i++) six.push(await inRoom(room));
-    const v = await visitor();
+    for (let i = 0; i < 6; i++) six.push(await inRoom(room, guest));
+    const v = await guest();
     const s = await connect(v.token);
     await s.next((m) => m.t === "welcome");
     s.send({ t: "enter", space: room, x: 0, z: 0 });

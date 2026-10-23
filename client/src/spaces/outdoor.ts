@@ -118,7 +118,7 @@ export function buildOutdoor(): SpaceDef {
     }
   };
   ring(-28, -10, -2, 16, (x, z) => (x > -11 && Math.abs(z - 7) < 3.6) || z > 16); // 155: door east, none at the sunken edge
-  ring(6, 26, -20, 14, (x, z) => x < 7 && Math.abs(z - 3) < 3.6); // 154: door west
+  ring(6, 26, -20, 14, (x, z) => x < 7 && (Math.abs(z - 3) < 3.6 || Math.abs(z + 5) < 3)); // 154: the Hub's door and the lounge's, both west
   scatter(g, "nature/Bush_Hedge.glb", 0.9, hedge);
 
   // Benches on the lawn's south side; its east side gets a seat wall.
@@ -184,8 +184,18 @@ export function buildOutdoor(): SpaceDef {
   // Lab Coffee, along 154's north side and round its north-west corner.
   buildLabCoffee(g, colliders);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
-  // North of the Hub's door, under the same colonnade: the ANUSA Student Lounge.
+  // North of the Hub's door, under the same colonnade: the ANUSA Student
+  // Lounge, with a canopy of its own (like the Hub's, a lip 1.3 m deep) and
+  // a green name board over it.
   doorway(g, 5.7, -5, -Math.PI / 2, "ANUSA Student Lounge");
+  const loungeCanopy = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.25, 4), mat(0xf4f3ef));
+  loungeCanopy.position.set(6 - 0.65, 3.3, -5);
+  loungeCanopy.castShadow = true;
+  g.add(loungeCanopy);
+  const loungeName = textPlane(["ANUSA Student Lounge"], 3.6, 0.45, { bg: "#1e6b52", fg: "#ffffff", font: 0.26 });
+  loungeName.position.set(6 - 1.31, 3.3, -5);
+  loungeName.rotation.y = -Math.PI / 2;
+  g.add(loungeName);
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 24.85, Math.PI, "Chifley Library");
 

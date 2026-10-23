@@ -1,44 +1,69 @@
 import { describe, expect, it } from "vitest";
-import { api, freshName, visitor } from "./helpers.ts";
+import { api, freshName, guest, visitor } from "./helpers.ts";
 
 // Names, sticky notes and comments, checked over HTTP against the running app.
 
 const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join(" ");
 
-describe("names", () => {
-  it("accepts letters, digits and underscores, up to eight", async () => {
-    expect((await api("/api/join", "POST", { name: freshName().slice(0, 5) + "_42" })).status).toBe(200);
+describe("guests and signing up", () => {
+  it("lets a guest in as guestNNN, and the same browser back as the same guest", async () => {
+    const g = await guest();
+    expect(g.name).toMatch(/^guest\d{3}$/);
+    const again = (await (await api("/api/guest", "POST", { token: g.token })).json()) as { name: string };
+    expect(again.name).toBe(g.name);
   });
 
-  it.each(["", "ninechars", "has space", "한글", "dot.dot"])("rejects %j", async (name) => {
-    expect((await api("/api/join", "POST", { name })).status).toBe(400);
-  });
-
-  it("can't be taken twice, whatever the case", async () => {
-    const name = freshName();
-    await api("/api/join", "POST", { name });
-    expect((await api("/api/join", "POST", { name: name.toUpperCase() })).status).toBe(409);
-  });
-
-  it("can be reclaimed by the browser that took it, back where it left", async () => {
-    const { name, token } = await visitor();
-    const res = await api("/api/join", "POST", { name, token });
-    expect(res.status).toBe(200);
-    expect((await res.json()).spawn).toMatchObject({ space: "outdoor" });
-  });
-
-  it("keeps qa_ names for the password accounts", async () => {
+  it("has no free names any more: you sign up, or come in as a guest", async () => {
+    expect((await api("/api/join", "POST", { name: freshName() })).status).toBe(404);
     expect((await api("/api/join", "POST", { name: "qa_" + freshName().slice(0, 5) })).status).toBe(403);
   });
 
-  it("never lets a password into an ordinary name, and reads a phone's name the same as a desk's", async () => {
-    const { name } = await visitor();
-    const taken = await api("/api/join", "POST", { name, password: "guess" });
-    expect(taken.status).toBe(409);
-    // An ordinary name has no password behind it, so the join screen won't ask for one.
-    expect((await taken.json()).password).toBe(false);
-    // A trailing space (a phone keyboard's) is the same name.
-    expect((await api("/api/join", "POST", { name: `${name} ` })).status).toBe(409);
+  it("signs a student up with a code sent to their ANU email, then lets them in with name and password", async () => {
+    const v = await visitor();
+    expect(v.email).toMatch(/^u\d{7}@anu\.edu\.au$/);
+    const back = await api("/api/join", "POST", { name: v.name, password: "correct horse 1" });
+    expect(back.status).toBe(200);
+    expect((await back.json()).role).toBe("student");
+    expect((await api("/api/join", "POST", { name: v.name, password: "wrong one!" })).status).toBe(401);
+    // The same email can't sign up twice.
+    expect((await api("/api/signup/start", "POST", { studentNo: v.studentNo })).status).toBe(409);
+  });
+
+  it("refuses a wrong code, a short password, a guest's or a qa_ name, and non-ANU addresses", async () => {
+    expect((await api("/api/signup/start", "POST", { studentNo: "1234567" })).status).toBe(400);
+    expect((await api("/api/signup/start", "POST", { staff: true, email: "someone@gmail.com" })).status).toBe(400);
+    expect((await api("/api/signup/start", "POST", { staff: true, email: "u1234567@anu.edu.au" })).status).toBe(400);
+    const studentNo = `u${Math.floor(1_000_000 + Math.random() * 8_999_999)}`;
+    expect((await api("/api/signup/start", "POST", { studentNo })).status).toBe(200);
+    expect((await api("/api/signup/start", "POST", { studentNo })).status).toBe(429); // one a minute
+    const mail = (await (await api(`/api/test/mail?to=${studentNo}@anu.edu.au`)).json()) as { text: string };
+    const code = /\b(\d{6})\b/.exec(mail.text)![1]!;
+    expect((await api("/api/signup/finish", "POST", { studentNo, code: code === "000000" ? "111111" : "000000", name: freshName(), password: "long enough" })).status).toBe(401);
+    expect((await api("/api/signup/finish", "POST", { studentNo, code, name: freshName(), password: "short" })).status).toBe(400);
+    expect((await api("/api/signup/finish", "POST", { studentNo, code, name: "guest123", password: "long enough" })).status).toBe(400);
+    expect((await api("/api/signup/finish", "POST", { studentNo, code, name: freshName(), password: "long enough" })).status).toBe(201);
+  });
+
+  it("resets a forgotten password by an emailed code, and the old browsers sign in again", async () => {
+    const v = await visitor();
+    expect((await api("/api/password/start", "POST", { studentNo: v.studentNo })).status).toBe(200);
+    const mail = (await (await api(`/api/test/mail?to=${v.email}`)).json()) as { text: string };
+    const code = /\b(\d{6})\b/.exec(mail.text)![1]!;
+    const res = await api("/api/password/finish", "POST", { studentNo: v.studentNo, code, password: "a new long one" });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { token: string }).token).not.toBe(v.token);
+    expect((await api("/api/join", "POST", { name: v.name, password: "a new long one" })).status).toBe(200);
+  });
+
+  it("lets a guest stick a note but not post, comment, heart or report someone", async () => {
+    const g = await guest();
+    expect((await api("/api/notes", "POST", { token: g.token, space: "comp8020", x: 2, z: 1, text: "a guest's note" })).status).toBe(201);
+    const post = await api("/api/board", "POST", { token: g.token, space: "comp8020", tab: "board", title: "Hi", text: "Hello" });
+    expect(post.status).toBe(403);
+    expect((await post.json()).signup).toBe(true);
+    expect((await api("/api/bugs", "POST", { token: g.token, text: "rude", about: "someone" })).status).toBe(403);
+    // A bug report is fine from anyone.
+    expect((await api("/api/bugs", "POST", { token: g.token, text: "the door sticks" })).status).toBe(201);
   });
 });
 

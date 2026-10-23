@@ -36,6 +36,9 @@ export type Event =
   | "post-expired"
   | "kicked"
   | "group-joined"
+  | "mail-code"
+  | "signed-up"
+  | "password-reset"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"
@@ -81,6 +84,8 @@ const KEPT: ReadonlySet<Event> = new Set<Event>([
   "restricted",
   "restriction-lifted",
   "kicked",
+  "signed-up",
+  "password-reset",
   "refused",
 ]);
 

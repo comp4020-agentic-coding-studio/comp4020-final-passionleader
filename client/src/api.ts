@@ -7,7 +7,8 @@ import type { SpaceId } from "./world.ts";
 export interface Session {
   name: string;
   token: string;
-  role: "user" | "admin";
+  /** guest: no sign-up; student and staff: signed up with an ANU email; user: a test account; admin. */
+  role: "guest" | "student" | "staff" | "user" | "admin";
   /** Where to stand on entering: the last space and spot, or the campus spawn. */
   spawn: { space: SpaceId; x: number; z: number };
   /** The look they saved last time, if any. */
@@ -54,6 +55,13 @@ const NAME_RE = /^[A-Za-z0-9_]{1,8}$/;
 export const RESERVED_RE = /^qa_/i;
 export const isValidName = (name: string): boolean => NAME_RE.test(name) || /^qa_[A-Za-z0-9_]{1,9}$/i.test(name);
 
+// When the server refuses a guest something that needs signing up (it says
+// `signup: true`), main shows one prompt for it, whichever panel asked.
+let onSignupNeeded: (() => void) | null = null;
+export const whenSignupNeeded = (f: () => void): void => {
+  onSignupNeeded = f;
+};
+
 async function request<T>(path: string, method = "GET", body?: unknown): Promise<T> {
   let res: Response;
   try {
@@ -73,6 +81,7 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
   }
   if (!res.ok) {
     const msg = (data as { error?: string } | null)?.error ?? `Server error (${res.status}).`;
+    if ((data as { signup?: boolean } | null)?.signup) onSignupNeeded?.();
     throw new ApiError(res.status, msg, (data as Record<string, unknown> | null) ?? {});
   }
   return data as T;
@@ -80,6 +89,20 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
 
 export const join = (name: string, token?: string, password?: string): Promise<Session> =>
   request<Session>("/api/join", "POST", { name, token, password });
+
+/** Who's signing up or resetting: a student number, or staff's @anu.edu.au address. */
+export type AnuWho = { studentNo: string } | { staff: true; email: string };
+/** In as a guest: this browser's guest back, or a new guestNNN. */
+export const joinAsGuest = (token?: string): Promise<Session> => request<Session>("/api/guest", "POST", { token });
+/** Emails a six-digit sign-up code to the ANU address. */
+export const signupStart = (who: AnuWho): Promise<{ sent: boolean; to: string }> => request("/api/signup/start", "POST", who);
+export const signupFinish = (who: AnuWho, code: string, name: string, password: string): Promise<Session> =>
+  request<Session>("/api/signup/finish", "POST", { ...who, code, name, password });
+/** Emails a code to reset a forgotten password (the same answer whether or not there's an account). */
+export const resetStart = (who: AnuWho): Promise<{ sent: boolean; to: string }> => request("/api/password/start", "POST", who);
+export const resetFinish = (who: AnuWho, code: string, password: string): Promise<Session> => request<Session>("/api/password/finish", "POST", { ...who, code, password });
+/** Signed up (or a test account): may post, comment, heart, attach files and report. */
+export const isMember = (s: { role: string } | null | undefined): boolean => !!s && s.role !== "guest";
 
 export const saveLook = (token: string, look: Look): Promise<unknown> => request("/api/look", "PUT", { token, look });
 

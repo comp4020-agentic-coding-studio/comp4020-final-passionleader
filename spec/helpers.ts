@@ -15,10 +15,31 @@ export function api(path: string, method = "GET", body?: unknown): Promise<Respo
   });
 }
 
-export async function visitor(): Promise<{ name: string; token: string }> {
+/** A random student number nobody has used (u + seven digits). */
+const freshStudentNo = (): string => `u${Math.floor(1_000_000 + Math.random() * 8_999_999)}`;
+
+/**
+ * A signed-up student: sign-up through the real flow, reading the emailed
+ * code from the server's test outbox (MAIL_TEST_OUTBOX=1: the CI container
+ * and a local spec server, never Fly). Most specs need a member, since
+ * guests can't post or comment.
+ */
+export async function visitor(): Promise<{ name: string; token: string; email: string; studentNo: string }> {
   const name = freshName();
-  const res = await api("/api/join", "POST", { name });
-  return { name, ...(await res.json()) };
+  const studentNo = freshStudentNo();
+  const start = await api("/api/signup/start", "POST", { studentNo });
+  if (start.status !== 200) throw new Error(`sign-up start ${start.status}: ${await start.text()} (is the server running with MAIL_TEST_OUTBOX=1?)`);
+  const email = `${studentNo}@anu.edu.au`;
+  const mail = (await (await api(`/api/test/mail?to=${email}`)).json()) as { text: string };
+  const code = /\b(\d{6})\b/.exec(mail.text)![1]!;
+  const res = await api("/api/signup/finish", "POST", { studentNo, code, name, password: "correct horse 1" });
+  if (res.status !== 201) throw new Error(`sign-up finish ${res.status}: ${await res.text()}`);
+  return { name, email, studentNo, ...((await res.json()) as { token: string }) };
+}
+
+/** A guest: came in without signing up (guestNNN). */
+export async function guest(): Promise<{ name: string; token: string }> {
+  return (await (await api("/api/guest", "POST", {})).json()) as { name: string; token: string };
 }
 
 export type Msg = { t: string; [k: string]: unknown };

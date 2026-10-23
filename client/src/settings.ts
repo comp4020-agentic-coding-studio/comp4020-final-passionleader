@@ -22,7 +22,7 @@ function read(): Quality {
 export const QUALITY: Quality = read();
 export const HIGH = QUALITY === "high";
 
-export function mountSettings(opts: { reportBug(): void; reportPerson(): void; mute(): void }): void {
+export function mountSettings(opts: { reportBug(): void; reportPerson(): void; mute(): void; signOut(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -121,8 +121,13 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
   mute.type = "button";
   mute.className = "settings-bug";
   mute.textContent = "🔇 Mute someone";
+  // Back to the join screen: to sign up (a guest), or sign in as someone else.
+  const out = document.createElement("button");
+  out.type = "button";
+  out.className = "settings-bug";
+  out.textContent = "🚪 Sign out (or sign up)";
 
-  card.append(title, sound, fieldset, note, bug, person, mute, actions);
+  card.append(title, sound, fieldset, note, bug, person, mute, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -146,6 +151,10 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
   mute.addEventListener("click", () => {
     dialog.hidden = true;
     opts.mute();
+  });
+  out.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.signOut();
   });
   dialog.addEventListener("keydown", (e) => {
     e.stopPropagation();

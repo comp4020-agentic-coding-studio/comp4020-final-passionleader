@@ -14,7 +14,13 @@ import { FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type Space
 // themselves are in S3, see files.ts; this is who sent what, and where).
 // Live positions never come here; they stay in server memory.
 
-export type Role = "user" | "admin";
+// guest: came in without signing up (guestNNN); student and staff: signed up
+// with an ANU email; admin: qa_master. "retired": a free-name account from
+// before sign-up (its posts stay, nobody can sign in as it). "user" is the
+// old ordinary role, kept for the qa_ test accounts.
+export type Role = "guest" | "student" | "staff" | "admin" | "retired" | "user";
+/** Signed up (or a test account): may post, comment, heart, attach files and report. */
+export const isMember = (v: { role: string }): boolean => v.role === "student" || v.role === "staff" || v.role === "admin" || v.role === "user";
 export interface Visitor {
   name: string;
   token: string;
@@ -116,12 +122,33 @@ const wanted: Record<string, string> = {
   last_comment_at: "TEXT",
   last_post_at: "TEXT",
   look: "TEXT",
+  email: "TEXT",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
 }
 for (const col of ["poop_x", "poop_z", "pooped_at"]) {
   if (columns().includes(col)) db.exec(`ALTER TABLE visitors DROP COLUMN ${col}`);
+}
+db.exec("CREATE UNIQUE INDEX IF NOT EXISTS visitors_by_email ON visitors (email COLLATE NOCASE) WHERE email IS NOT NULL");
+// Sign-up and password-reset codes: six digits, ten minutes, five tries; one
+// email per address a minute. Only a hash of the code is kept.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS mail_codes (
+    email     TEXT PRIMARY KEY COLLATE NOCASE,
+    purpose   TEXT NOT NULL,
+    code_hash TEXT NOT NULL,
+    sent_at   TEXT NOT NULL,
+    tries     INTEGER NOT NULL DEFAULT 0
+  );
+`);
+// Sign-up arrived (final project): every free-name account from before it,
+// except the test accounts, is retired once. Their notes and posts stay under
+// their names; nobody can sign in as them any more.
+if (!(db.prepare("SELECT 1 FROM visitors WHERE role = 'retired' LIMIT 1").get())) {
+  db.prepare(
+    "UPDATE visitors SET role = 'retired', token = 'retired:' || lower(hex(randomblob(16))), password_hash = NULL, last_space = NULL, last_x = NULL, last_z = NULL WHERE role = 'user' AND name NOT LIKE 'qa\\_%' ESCAPE '\\'",
+  ).run();
 }
 // The classroom was first created under the wrong course code (COMP8280);
 // it's COMP8020. Move anything saved under the old id.
@@ -262,6 +289,53 @@ export function findByToken(token: string): Visitor | undefined {
 export function createVisitor(name: string, token: string): void {
   db.prepare("INSERT INTO visitors (name, token) VALUES (?, ?)").run(name, token);
 }
+
+/** The account signed up with this email, if any. */
+export function findByEmail(email: string): Visitor | undefined {
+  return db.prepare(`SELECT ${visitorCols} FROM visitors WHERE email = ?`).get(email) as Visitor | undefined;
+}
+
+/** A new guest: the lowest free guestNNN (guest000-guest999); null if they're all taken. */
+export function createGuest(token: string): string | null {
+  const taken = new Set((db.prepare("SELECT lower(name) AS n FROM visitors WHERE name LIKE 'guest___'").all() as { n: string }[]).map((r) => r.n));
+  for (let i = 0; i < 1000; i++) {
+    const name = `guest${String(i).padStart(3, "0")}`;
+    if (taken.has(name)) continue;
+    db.prepare("INSERT INTO visitors (name, token, role) VALUES (?, ?, 'guest')").run(name, token);
+    return name;
+  }
+  return null;
+}
+
+/** A new member, signed up with a verified ANU email. */
+export function createMember(name: string, token: string, role: "student" | "staff", email: string, passwordHash: string): void {
+  db.prepare("INSERT INTO visitors (name, token, role, email, password_hash) VALUES (?, ?, ?, ?, ?)").run(name, token, role, email, passwordHash);
+}
+
+/** A new password (after a reset); every browser signed in before has to sign in again. */
+export function resetPassword(name: string, passwordHash: string, token: string): void {
+  db.prepare("UPDATE visitors SET password_hash = ?, token = ? WHERE name = ?").run(passwordHash, token, name);
+}
+
+/** Keeps a fresh code for `email`; false if one was sent less than a minute ago. */
+export function storeCode(email: string, purpose: "signup" | "reset", codeHash: string): boolean {
+  const recent = db.prepare("SELECT 1 FROM mail_codes WHERE email = ? AND sent_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-60 seconds')").get(email);
+  if (recent) return false;
+  db.prepare("INSERT OR REPLACE INTO mail_codes (email, purpose, code_hash, sent_at, tries) VALUES (?, ?, ?, strftime('%Y-%m-%dT%H:%M:%fZ', 'now'), 0)").run(email, purpose, codeHash);
+  return true;
+}
+
+/** The code for `email` and `purpose` if it's under ten minutes old and under five tries; each look counts a try. */
+export function takeCode(email: string, purpose: "signup" | "reset"): string | null {
+  const row = db
+    .prepare("SELECT code_hash AS hash, tries FROM mail_codes WHERE email = ? AND purpose = ? AND sent_at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-10 minutes')")
+    .get(email, purpose) as { hash: string; tries: number } | undefined;
+  if (!row || row.tries >= 5) return null;
+  db.prepare("UPDATE mail_codes SET tries = tries + 1 WHERE email = ?").run(email);
+  return row.hash;
+}
+
+export const forgetCode = (email: string): void => void db.prepare("DELETE FROM mail_codes WHERE email = ?").run(email);
 
 /** Creates or updates an account that signs in with a password (test and admin accounts). */
 export function upsertAccount(name: string, token: string, role: Role, passwordHash: string): void {
