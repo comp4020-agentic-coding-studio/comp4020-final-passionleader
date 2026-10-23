@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { api, closeAll, connect, visitor, wsUrl } from "./helpers.ts";
+import { api, closeAll, connect, guest, visitor, wsUrl } from "./helpers.ts";
 
 // Crit 9's contract, checked over real WebSockets against the running app:
 // what one visitor does reaches everyone else in the same space within a
@@ -78,6 +78,30 @@ describe("real time", () => {
     expect(await sb.seesNew((m) => m.t === "emote" && m.kind === "yes", 600)).toBe(false);
     sa.send({ t: "emote", kind: "dance" });
     await expect(sb.next((m) => m.t === "emote" && m.kind === "dance")).resolves.toBeTruthy();
+  });
+
+  it("keeps one poop per person in the Poop Room, five seconds apart, and nowhere else", async () => {
+    const [a, b] = await Promise.all([visitor(), guest()]);
+    const sa = await connect(a.token);
+    const sb = await connect(b.token);
+    await Promise.all([sa.next((m) => m.t === "welcome"), sb.next((m) => m.t === "welcome")]);
+    const poops = (m: { t: string; kind?: unknown }) => m.t === "action" && m.kind === "poops";
+    // Outside the room the server ignores it.
+    sa.send({ t: "poop" });
+    expect(await sa.seesNew(poops, 400)).toBe(false);
+    sa.send({ t: "enter", space: "poop", x: 1, z: 1 });
+    sb.send({ t: "enter", space: "poop", x: -1, z: 1 });
+    await Promise.all([sa.next(poops), sb.next(poops)]);
+    sa.send({ t: "poop" });
+    const first = await sb.next((m) => poops(m) && (m.poops as { name: string }[]).some((p) => p.name === a.name));
+    expect((first.poops as { name: string; x: number }[]).filter((p) => p.name === a.name)).toEqual([{ name: a.name, x: 1, z: 1 }]);
+    // A second inside five seconds is dropped.
+    sa.send({ t: "poop" });
+    expect(await sb.seesNew(poops, 500)).toBe(false);
+    // Guests may poop too; still one each.
+    sb.send({ t: "poop" });
+    const both = await sa.next((m) => poops(m) && (m.poops as unknown[]).length >= 2 && (m.poops as { name: string }[]).some((p) => p.name === b.name));
+    expect((both.poops as { name: string }[]).filter((p) => p.name === a.name || p.name === b.name)).toHaveLength(2);
   });
 
   it("shows an emote to the others in the space", async () => {

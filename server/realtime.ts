@@ -21,6 +21,12 @@ export type Player = { id: string; name: string; space: SpaceId; x: number; y: n
 const owners = new WeakMap<WebSocket, { name: string; token: string; role: string }>();
 
 const EMOTES = new Set(["wave", "yes", "no", "mate", "dance"]);
+// The Poop Room (plan 62): one poop each, in memory only, five seconds apart;
+// a new one replaces your last. Only in the poop space.
+// The Poop Room easter egg: one poop per person (keyed by lower-case name),
+// in memory only, five seconds apart; a new one replaces your last.
+const poops = new Map<string, { name: string; x: number; z: number; at: number }>();
+const poopList = (): { name: string; x: number; z: number }[] => [...poops.values()].map((p) => ({ name: p.name, x: p.x, z: p.z }));
 const MAX_JUMP = 3;
 // Positions go out ten times a second, only for spaces where someone moved.
 const TICK_MS = 100;
@@ -266,6 +272,7 @@ function onMessage(ws: WebSocket, raw: string): void {
       log("enter", owners.get(ws) ?? null, { from, space: to });
       roomLeft(from, player.name, owners.get(ws) ?? null);
       roomJoined(to, player.name);
+      if (to === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
     }
     // Into a meeting room, the client waits for this before it walks in.
     const view = roomView(to);
@@ -342,6 +349,12 @@ function onMessage(ws: WebSocket, raw: string): void {
     log("room-invite", owners.get(ws) ?? null, { space: player.space, invited: invitee.name });
     roomSay(player.space, { name: player.name, text: `${player.name} invited ${invitee.name}`, system: true });
     roomChanged(player.space);
+  } else if (msg.t === "poop" && player.space === "poop") {
+    const key = player.name.toLowerCase();
+    const now = Date.now();
+    if (now - (poops.get(key)?.at ?? 0) < 5000) return;
+    poops.set(key, { name: player.name, x: player.x, z: player.z, at: now });
+    broadcastSpace("poop", { t: "action", kind: "poops", poops: poopList() });
   } else if (msg.t === "emote" && typeof msg.kind === "string" && EMOTES.has(msg.kind)) {
     if (msg.kind !== "dance") {
       const now = Date.now();
@@ -365,6 +378,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   players.set(ws, player);
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
+  if (player.space === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
   send(ws, { t: "action", kind: "online", counts: onlineCounts() });
   dirty.add(player.space);
   log("connect", visitor, { space: player.space, online: players.size }, { ip });

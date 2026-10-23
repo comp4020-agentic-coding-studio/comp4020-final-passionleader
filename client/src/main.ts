@@ -79,6 +79,7 @@ import { mountQuests } from "./quests.ts";
 const quests = mountQuests();
 let walked = 0;
 import { dogHappy } from "./spaces/dog.ts";
+import { poopMesh } from "./spaces/poop.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
@@ -718,7 +719,8 @@ const radial = mountRadial(
     { id: "dance", label: "6 · 💃 Dance" },
   ],
   (id) => {
-    if (id === "note") void writeNote();
+    if (id === "note" && space?.id === "poop") doPoop();
+    else if (id === "note") void writeNote();
     else sendEmote(id as Emote);
     stage.focus();
   },
@@ -1144,6 +1146,8 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
     space.group.userData.shadowsOn = true;
   }
   scene.add(space.group);
+  radial.relabel("note", id === "poop" ? "1 · 💩 Poop" : "1 · 📝 Sticky note");
+  if (id !== "poop") showPoops([]);
   minimap.show(!!space.outdoor);
   if (id === "library") quests.done("library");
   if (meetingRoom(id)?.kind === "team") quests.done("room");
@@ -1193,6 +1197,29 @@ function noteSpotError(): string | null {
   const spots = [...(space.noteKeepClear ?? []), ...space.doors, ...(space.links ?? []), ...(space.spots ?? [])];
   if (spots.some((p) => Math.hypot(p.x - x, p.z - z) < 2)) return "Too close to a door or something you can use. Step away a little.";
   return null;
+}
+
+// The Poop Room (plan 62): the server keeps one poop per person and sends
+// the whole list whenever it changes; this just redraws it.
+const poopGroup = new THREE.Group();
+let lastPoop = 0;
+function doPoop(): void {
+  const now = Date.now();
+  if (now - lastPoop < 5000) return toast(`One poop every five seconds. Wait ${Math.ceil((5000 - (now - lastPoop)) / 1000)} s.`);
+  lastPoop = now;
+  net?.poop();
+}
+function showPoops(list: { name: string; x: number; z: number }[]): void {
+  removeTags(poopGroup);
+  poopGroup.clear();
+  if (space?.id !== "poop") return;
+  for (const p of list) {
+    const mesh = poopMesh();
+    mesh.position.set(p.x, 0, p.z);
+    tag(mesh, p.name, 0.55, "note-label");
+    poopGroup.add(mesh);
+  }
+  if (!poopGroup.parent) scene.add(poopGroup);
 }
 
 async function writeNote(): Promise<void> {
@@ -1363,6 +1390,9 @@ function goOnline(token: string): void {
         const view = notes.get(c.noteId);
         if (view) upsertNote({ ...view.note, comments: view.note.comments + 1 });
       }
+    },
+    poops(list) {
+      showPoops(list);
     },
     mail(unread) {
       showUnread(unread);

@@ -29,7 +29,7 @@ function nearestIndex(dx: number, dy: number, count: number): number {
 export function mountRadial(
   items: RadialItem[],
   onPick: (id: string) => void,
-): { open(): void; close(): void; isOpen(): boolean; highlight(index: number): void } {
+): { open(): void; close(): void; isOpen(): boolean; highlight(index: number): void; relabel(id: string, label: string): void } {
   const root = document.createElement("div");
   root.id = "radial";
   root.setAttribute("role", "menu");
@@ -105,6 +105,10 @@ export function mountRadial(
   }
 
   return {
+    relabel(id: string, label: string): void {
+      const i = items.findIndex((item) => item.id === id);
+      if (i >= 0) elements[i].textContent = label;
+    },
     open(): void {
       if (open) return;
       open = true;

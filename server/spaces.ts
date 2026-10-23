@@ -42,6 +42,9 @@ export const SPACES: Record<string, Space> = {
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
   anusa: { label: "ANUSA Student Lounge", halfX: 10, halfZ: 7, spawn: { x: 8.4, z: 3 } },
+  // An easter egg (plan 62): crit 8's Poop Room, behind a "Staff only" door
+  // at the far end of Lab Coffee (client/src/spaces/poop.ts).
+  poop: { label: "a small room", halfX: 3, halfZ: 3, spawn: { x: 0, z: 1.8 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
@@ -153,7 +156,7 @@ export function clampToAreas(areas: Area[], x: number, z: number): { x: number; 
 // first (client/src/main.ts noteSpotError), so people get told straight away.
 
 export const NOTE_CLEARANCE = 2;
-export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa"]);
+export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa", "poop"]);
 const BUILDINGS: Area[] = [
   { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
   { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
@@ -163,6 +166,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 4.6, z: 3 }, // 154's door
   { x: 4.6, z: -5 }, // the ANUSA Student Lounge's door, north of the Hub's
   { x: -8.6, z: 2.3 }, // the study-group board beside 155's door (client/src/spaces/outdoor.ts STUDY_BOARD)
+  { x: 24.5, z: -21 }, // a "Staff only" door at Lab Coffee's far end (the easter egg)
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
   { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
@@ -190,7 +194,7 @@ const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
 
 /** Why a note can't go here, or null if it can. */
 export function noteSpotError(space: SpaceId, x: number, z: number): string | null {
-  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : "No sticky notes in the Student Hub.";
+  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : space === "poop" ? "Not in here." : "No sticky notes in the Student Hub.";
   if (roomOf(space)) return "No sticky notes in meeting rooms.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";

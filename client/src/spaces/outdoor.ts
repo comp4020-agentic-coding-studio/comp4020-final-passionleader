@@ -188,6 +188,15 @@ export function buildOutdoor(): SpaceDef {
   // Lounge, with a canopy of its own (like the Hub's, a lip 1.3 m deep) and
   // a green name board over it.
   doorway(g, 5.7, -5, -Math.PI / 2, "ANUSA Student Lounge");
+  // A plain grey door on 154's north face past Lab Coffee, no label (it's a
+  // secret), just a small "Staff only" plate. The camera looks north, so
+  // it's seen from behind: a solid slab reads the same from both sides.
+  const staffDoor = new THREE.Mesh(new THREE.BoxGeometry(1.1, 2.2, 0.1), mat(0x9a9ea3));
+  staffDoor.position.set(24.5, 1.1, -20.05);
+  const plate = textPlane(["Staff only"], 0.7, 0.18, { bg: "#ffffff", fg: "#333333", font: 0.11 });
+  plate.position.set(24.5, 1.6, -20.11);
+  plate.rotation.y = Math.PI;
+  g.add(staffDoor, plate);
   const loungeCanopy = new THREE.Mesh(new THREE.BoxGeometry(1.3, 0.25, 4), mat(0xf4f3ef));
   loungeCanopy.position.set(6 - 0.65, 3.3, -5);
   loungeCanopy.castShadow = true;
@@ -209,6 +218,8 @@ export function buildOutdoor(): SpaceDef {
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
       // North of the Hub's door, on the ground floor: the ANUSA Student Lounge.
       { x: 4.6, z: -5, label: "Enter the ANUSA Student Lounge", to: "anusa", arrive: { x: 8.4, z: 5 } },
+      // An easter egg: an unmarked staff door at the far end of Lab Coffee.
+      { x: 24.5, z: -21, label: "A door marked \"Staff only\"…", to: "poop", arrive: { x: 0, z: 1.6 } },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],

@@ -5,6 +5,7 @@ import { buildHub } from "./hub.ts";
 import { buildLibrary } from "./library.ts";
 import { buildMeetingRoom, roomRef, type RoomRef } from "./meeting.ts";
 import { buildOutdoor } from "./outdoor.ts";
+import { buildPoop } from "./poop.ts";
 
 // Every space is built once, on first visit, and reused after that.
 // Bounds must match server/spaces.ts, which clamps positions to them.
@@ -18,6 +19,7 @@ const fixed: Record<string, () => SpaceDef> = {
   hub: buildHub,
   library: buildLibrary,
   anusa: buildAnusa,
+  poop: buildPoop,
 };
 const built = new Map<SpaceId, SpaceDef>();
 /** Space id -> course code, for the classrooms open right now. */

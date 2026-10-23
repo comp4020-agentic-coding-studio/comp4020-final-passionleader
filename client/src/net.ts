@@ -56,6 +56,8 @@ export interface NetHandlers {
   hearts(noteId: number): void;
   /** New mail arrived for us; this many unread. */
   mail(unread: number): void;
+  /** The Poop Room's poops, one per person (only sent in there). */
+  poops(list: { name: string; x: number; z: number }[]): void;
   /** The admin opened or closed a classroom. */
   classrooms(list: Classroom[]): void;
   /** Something on this classroom's board changed. */
@@ -89,6 +91,8 @@ export interface Net {
   enter(space: SpaceId, x: number, z: number): void;
   chat(text: string): void;
   emote(kind: Emote): void;
+  /** Poops where we stand (the Poop Room only; the server checks). */
+  poop(): void;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): void;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -148,6 +152,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
           if (m.kind === "hearts") return on.hearts(m.noteId as number);
           if (m.kind === "mail") return on.mail(m.unread as number);
+          if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
             return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[]);
           if (m.kind === "room") return on.room(m.room as RoomState);
@@ -193,6 +198,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     emote(kind) {
       sendNow({ t: "emote", kind });
+    },
+    poop() {
+      sendNow({ t: "poop" });
     },
     invite(name) {
       sendNow({ t: "invite", name });
