@@ -7,16 +7,16 @@ import { roomShell } from "./room.ts";
 // north of the Hub's door (it replaced COMMON, the "classroom for anyone"). A place for students
 // to come and rest, and for the association's people to meet: a reception
 // counter with a PC to ANUSA's site (it may be framed), where one of the AI
-// campus assistants will stand; the study-group board on the north wall; a
-// lounge of sofa corners, armchairs and a coffee bar; a long work table; and
+// campus assistants will stand; a sign pointing to the study-group board
+// (outside, beside 155's door); a lounge of sofa corners, armchairs and a coffee bar; a long work table; and
 // two meeting rooms off the west wall (meeting.ts: open, six people at most).
 // Not a copy of the real office, and not ANUSA's service.
 
 export const ANUSA = { halfX: 10, halfZ: 7 };
 /** The PC on the counter; E from the south of it. */
 export const ANUSA_PC = { x: -4, z: -4.9 };
-/** The study-group board on the north wall; E from in front of it. */
-export const STUDY_WALL = { x: 4.5, z: -6.7 };
+/** A sign on the north wall pointing to the study-group board outside. */
+const STUDY_SIGN = { x: 4.5, z: -6.7 };
 
 const GREEN = 0x1e6b52;
 
@@ -40,9 +40,9 @@ export function buildAnusa(): SpaceDef {
   place(g, "coatRackStanding.glb", 1.8, -8.8, -6.2);
   solid(colliders, 0.5, 0.5, -8.8, -6.2);
 
-  // The study-group board on the north wall: a green panel with its name.
-  const wall = textPlane(["Study groups", "find people to study with"], 3.4, 1.6, { bg: "#1e6b52", fg: "#ffffff", font: 0.3 });
-  wall.position.set(STUDY_WALL.x, 1.9, -halfZ + 0.02);
+  // A sign: the study-group board is outside, beside 155's door.
+  const wall = textPlane(["Study groups →", "board outside, beside 155's door"], 3.4, 1.2, { bg: "#1e6b52", fg: "#ffffff", font: 0.24 });
+  wall.position.set(STUDY_SIGN.x, 1.9, -halfZ + 0.02);
   g.add(wall);
   const art = poster("ai/poster_hub.jpg", 1.4, 2.1);
   art.position.set(halfX - 0.01, 2, -4.4);
