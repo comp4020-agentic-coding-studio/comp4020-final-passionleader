@@ -35,7 +35,7 @@ export function buildAnusa(): SpaceDef {
   g.add(pcTag);
 
   // The study-group wall, north-east: a green panel with its name.
-  const wall = textPlane(["Study groups", "find people to study with"], 3.2, 1.6, { bg: "#e7efe9", fg: "#1e6b52", font: 0.28 });
+  const wall = textPlane(["Study groups", "find people to study with"], 3.2, 1.6, { bg: "#1e6b52", fg: "#ffffff", font: 0.3 });
   wall.position.set(STUDY_WALL.x, 1.9, -halfZ + 0.02);
   g.add(wall);
 
