@@ -1904,6 +1904,10 @@ function update(dt: number, now: number): void {
   lookTarget.copy(player.position).setY(space.outdoor ? 1.8 : 1);
   camera.lookAt(lookTarget);
   skyDome.position.copy(camera.position);
+  // High quality (plan 35a): the clouds drift, the dome turning slowly about
+  // its axis (once in about 20 minutes), so the sky wraps round seamlessly.
+  // The light stays where it is, so shading doesn't move with it.
+  if (highQuality) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);
