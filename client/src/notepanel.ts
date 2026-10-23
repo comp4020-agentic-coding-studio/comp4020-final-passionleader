@@ -183,8 +183,9 @@ export function mountNotePanel(h: {
           .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
           .finally(() => {
             hearting.delete(c.id);
-            // The new count arrives through setComments; this only frees the button if it didn't.
-            if (heart.isConnected) heart.disabled = !c.canHeart;
+            // The refetch re-rendered the list while this was still in flight,
+            // so its new button came out disabled: draw it again, free.
+            if (current?.id === noteId) renderComments();
           });
       });
       rowHead.append(heart);
