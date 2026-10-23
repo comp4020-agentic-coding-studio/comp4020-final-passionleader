@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { api, closeAll, visitor } from "./helpers.ts";
+import { api, closeAll, guest, visitor } from "./helpers.ts";
 
 // Each classroom's board: Q&A, Notices and Board. Anyone posts in Q&A and
 // Board and comments anywhere; only lecturers and staff (the admin, for now)
@@ -197,5 +197,23 @@ describe("study groups: resizing", () => {
     const res = await api(`/api/board/${group.id}`, "PATCH", { token: w.token, title: "MATH1013", text: "Mondays", capacity: 2 });
     expect(res.status).toBe(200);
     expect(((await res.json()) as { capacity: number }).capacity).toBe(2);
+  });
+});
+
+// The AI campus assistants: where they stand comes from the server, anyone
+// joined may ask (guests too), one question every few seconds, and the
+// answer comes with their pages. Not connected to a model yet.
+describe("campus assistants", () => {
+  it("lists five, answers a guest with its pages, and slows down a rush", async () => {
+    const list = (await (await api("/api/npcs")).json()) as { id: string; space: string; links: unknown[] }[];
+    expect(list.map((n) => n.id).sort()).toEqual(["anusa", "careers", "course", "library", "sport"]);
+    const g = await guest();
+    const res = await api("/api/npc/library/ask", "POST", { token: g.token, text: "When are you open?" });
+    expect(res.status).toBe(200);
+    const body = (await res.json()) as { reply: string; links: { url: string }[] };
+    expect(body.reply.length).toBeGreaterThan(0);
+    expect(body.links.length).toBeGreaterThan(0);
+    expect((await api("/api/npc/library/ask", "POST", { token: g.token, text: "Again?" })).status).toBe(429);
+    expect((await api("/api/npc/nobody/ask", "POST", { token: g.token, text: "Hi" })).status).toBe(404);
   });
 });

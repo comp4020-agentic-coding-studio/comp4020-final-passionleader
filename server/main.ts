@@ -1,5 +1,6 @@
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import { MailFailure, lastMail, mailReady, sendMail, testOutbox } from "./mail.ts";
+import { NPCS, answer, npcById } from "./npcs.ts";
 import { existsSync, readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
@@ -318,6 +319,30 @@ app.post("/api/password/finish", async (c) => {
   forgetCode(who2.email);
   log("password-reset", account, {}, { ip: ipOf(c) });
   return c.json({ name: account.name, token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
+});
+
+// --- the AI campus assistants (plan 56) ---------------------------------------
+// Where they stand and what they cover (npcs.ts). Anyone joined may ask, guests
+// too, one question every three seconds, 500 characters; nothing is stored or
+// logged but that someone asked whom. Not connected to a model yet.
+app.get("/api/npcs", (c) => c.json(NPCS.map(({ id, name, role, space, x, z, rot, look, links, greeting }) => ({ id, name, role, space, x, z, rot, look, links, greeting }))));
+
+const lastAsked = new Map<string, number>();
+app.post("/api/npc/:id/ask", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const npc = npcById(c.req.param("id"));
+  if (!npc) return c.json({ error: "Nobody by that name here." }, 404);
+  const text = typeof b.text === "string" ? b.text.trim() : "";
+  if (!text) return c.json({ error: "Ask something first." }, 400);
+  if (text.length > 500) return c.json({ error: "Up to 500 characters." }, 400);
+  const now = Date.now();
+  const key = v.name.toLowerCase();
+  if (now - (lastAsked.get(key) ?? 0) < 3000) return c.json({ error: "One question every few seconds." }, 429);
+  lastAsked.set(key, now);
+  log("npc-asked", v, { npc: npc.id, chars: text.length });
+  return c.json({ reply: answer(npc, text), links: npc.links });
 });
 
 // The spec's view of what was "sent" (MAIL_TEST_OUTBOX=1, the CI container only).

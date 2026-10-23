@@ -39,6 +39,7 @@ export type Event =
   | "mail-code"
   | "signed-up"
   | "password-reset"
+  | "npc-asked"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

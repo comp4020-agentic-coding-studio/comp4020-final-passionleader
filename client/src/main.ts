@@ -20,6 +20,9 @@ import {
   deleteComment,
   heartComment,
   joinAsGuest,
+  getNpcs,
+  askNpc,
+  type NpcDef,
   signupStart,
   signupFinish,
   resetStart,
@@ -63,6 +66,7 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountSignIn } from "./signin.ts";
+import { mountNpcChat } from "./npcchat.ts";
 import { dogHappy } from "./spaces/dog.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
@@ -905,7 +909,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -961,6 +965,49 @@ function showBadges(target: Target | null): void {
   if (lit && nearest) nearest.obj.element.classList.add("on");
 }
 
+// The AI campus assistants (plan 56): fetched once, stood in their spaces as
+// figures with a name tag, an E spot in front of each ("Talk to …").
+let npcList: NpcDef[] = [];
+const npcFigures: Avatar[] = [];
+const npcChat = mountNpcChat({
+  async ask(id, text) {
+    if (!session) return "Join first.";
+    try {
+      return await askNpc(session.token, id, text);
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Something went wrong.";
+    }
+  },
+  openLink(label, url) {
+    // Most of these sites refuse to be framed, so a new tab.
+    webview.open({ label, url, embeddable: false });
+  },
+});
+void getNpcs()
+  .then((list) => {
+    npcList = list;
+    if (space) placeNpcs(space);
+  })
+  .catch(() => {});
+/** Puts a space's assistants in it, once: a figure in the space's group, and an E spot. */
+function placeNpcs(s: SpaceDef): void {
+  if (s.group.userData.npcsPlaced) return;
+  const here = npcList.filter((n) => n.space === s.id);
+  if (!here.length) return;
+  s.group.userData.npcsPlaced = true;
+  for (const n of here) {
+    const a = new Avatar(n.look);
+    a.group.position.set(n.x, 0, n.z);
+    a.group.rotation.y = n.rot;
+    tag(a.group, `${n.name} · ${n.role}`, 2.2, "player-label npc-label");
+    s.group.add(a.group);
+    npcFigures.push(a);
+    // You talk to them from in front (they face +z by default: so from +z).
+    s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * 1.6, z: n.z + Math.cos(n.rot) * 1.6, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
+  }
+  if (s === space) placeBadges();
+}
+
 function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): void {
   if (space) {
     scene.remove(space.group);
@@ -995,6 +1042,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
     space.group.userData.shadowsOn = true;
   }
   scene.add(space.group);
+  placeNpcs(space);
   placeBadges();
   if (space.outdoor) {
     applySky();
@@ -1591,6 +1639,10 @@ function interact(): void {
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "enquiries" && space) void openBoard(space.id, "hub-desk");
     else if (target.id === "study-groups" && space) void openBoard(space.id, "study-groups");
+    else if (target.id.startsWith("npc:")) {
+      const npc = npcList.find((n) => `npc:${n.id}` === target.id);
+      if (npc) npcChat.open(npc);
+    }
     else if (target.id === "projects") void openProjects();
     else if (target.id === "board-link") openStaffLink("board");
     else if (target.id === "side-link") openStaffLink("side");
@@ -1689,6 +1741,7 @@ function update(dt: number, now: number): void {
 
   const ease = 1 - Math.exp(-12 * dt);
   me.update(dt);
+  for (const a of npcFigures) a.update(dt);
   for (const view of others.values()) {
     const before = view.group.position.clone();
     view.group.position.lerp(view.target, ease);

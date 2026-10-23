@@ -168,6 +168,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
   { x: -26, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)
+  { x: -24.8, z: -28.8 }, // in front of ANU Sport's assistant (server/npcs.ts)
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 0, z: -9.9 }, // the way out, on the north wall
@@ -176,6 +177,7 @@ const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -11, z: -2.8 },
   { x: -9, z: -2.8 },
   { x: -7, z: -2.8 },
+  { x: -9, z: -5.7 }, // in front of the library's assistant (server/npcs.ts)
   ...LIBRARY_TEAM_DOORS,
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [

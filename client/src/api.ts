@@ -101,6 +101,22 @@ export const signupFinish = (who: AnuWho, code: string, name: string, password: 
 /** Emails a code to reset a forgotten password (the same answer whether or not there's an account). */
 export const resetStart = (who: AnuWho): Promise<{ sent: boolean; to: string }> => request("/api/password/start", "POST", who);
 export const resetFinish = (who: AnuWho, code: string, password: string): Promise<Session> => request<Session>("/api/password/finish", "POST", { ...who, code, password });
+/** An AI campus assistant (plan 56): where they stand and what they cover. */
+export interface NpcDef {
+  id: string;
+  name: string;
+  role: string;
+  space: SpaceId;
+  x: number;
+  z: number;
+  rot: number;
+  look: Look;
+  links: { label: string; url: string }[];
+  greeting: string;
+}
+export const getNpcs = (): Promise<NpcDef[]> => request<NpcDef[]>("/api/npcs");
+export const askNpc = (token: string, id: string, text: string): Promise<{ reply: string }> => request(`/api/npc/${id}/ask`, "POST", { token, text });
+
 /** Signed up (or a test account): may post, comment, heart, attach files and report. */
 export const isMember = (s: { role: string } | null | undefined): boolean => !!s && s.role !== "guest";
 
