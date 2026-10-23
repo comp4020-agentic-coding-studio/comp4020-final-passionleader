@@ -54,13 +54,16 @@ describe("classroom board", () => {
   });
 });
 
-// The Student Hub's board, where staff and students find each other, and the
-// lawn's noticeboard. Anyone posts in every tab (there's no staff role yet,
-// so "Labs looking for students" is open too); both say they're unofficial.
+// The Student Hub's lab matching board, where labs and students find each
+// other, and the lawn's noticeboard. Anyone posts in every tab (there's no
+// staff role yet, so "Labs looking for students" is open too); both say
+// they're unofficial, and the lawn's that its posts go after 30 days.
 describe("Hub and lawn boards", () => {
-  it("gives the Hub three tabs, open to anyone, and says it's unofficial", async () => {
-    const config = (await (await api("/api/board-config?space=hub")).json()) as { tabs: { id: string; staffOnly?: boolean }[]; notice: string };
-    expect(config.tabs.map((t) => t.id)).toEqual(["labs", "students", "ask"]);
+  it("gives the Hub's lab matching board two tabs, open to anyone, and says it's unofficial", async () => {
+    const config = (await (await api("/api/board-config?space=hub")).json()) as { title: string; tabs: { id: string; staffOnly?: boolean }[]; notice: string };
+    expect(config.title).toBe("Lab matching board");
+    expect(config.tabs.map((t) => t.id)).toEqual(["labs", "students"]);
+    expect((await api("/api/board?space=hub&tab=ask")).status).toBe(400);
     expect(config.tabs.some((t) => t.staffOnly)).toBe(false);
     expect(config.notice).toMatch(/Not an official ANU service.*identities aren't verified/);
     const v = await visitor();
@@ -70,10 +73,11 @@ describe("Hub and lawn boards", () => {
   });
 
   it("gives the lawn one noticeboard tab, unofficial too", async () => {
-    const config = (await (await api("/api/board-config?space=outdoor")).json()) as { tabs: { id: string }[]; notice: string; layout?: string };
+    const config = (await (await api("/api/board-config?space=outdoor")).json()) as { tabs: { id: string }[]; notice: string; layout?: string; keepDays?: number };
     expect(config.tabs.map((t) => t.id)).toEqual(["board"]);
-    expect(config).toMatchObject({ layout: "grid" });
+    expect(config).toMatchObject({ layout: "grid", keepDays: 30 });
     expect(config.notice).toMatch(/Not an official ANU service/);
+    expect(config.notice).toMatch(/removed after 30 days/);
     const v = await visitor();
     expect((await post(v.token, "board", "Club fair on Friday", "outdoor")).status).toBe(201);
   });

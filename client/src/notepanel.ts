@@ -150,7 +150,7 @@ export function mountNotePanel(h: {
         del.type = "button";
         del.className = "comment-delete";
         del.textContent = "Delete";
-        del.addEventListener("click", () => {
+        confirmDelete(del, () => {
           if (!current) return;
           const noteId = current.id;
           h.onDeleteComment(noteId, c.id)
@@ -159,7 +159,10 @@ export function mountNotePanel(h: {
               currentComments = currentComments.filter((x) => x.id !== c.id);
               renderComments();
             })
-            .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)));
+            .catch((err: unknown) => {
+              setError(err instanceof Error ? err.message : String(err));
+              renderComments();
+            });
         });
         rowHead.append(del);
       }
@@ -169,6 +172,37 @@ export function mountNotePanel(h: {
       row.append(rowHead, t);
       comments.append(row);
     }
+  }
+
+  /**
+   * Delete in two steps, as on the boards: the button turns into
+   * "Delete? Yes No" in place, and only Yes deletes.
+   */
+  function confirmDelete(button: HTMLButtonElement, onYes: () => void): void {
+    button.addEventListener("click", () => {
+      const ask = document.createElement("span");
+      ask.className = "note-confirm";
+      const text = document.createElement("span");
+      text.textContent = "Delete?";
+      const yes = document.createElement("button");
+      yes.type = "button";
+      yes.className = "is-danger";
+      yes.textContent = "Yes";
+      const no = document.createElement("button");
+      no.type = "button";
+      no.textContent = "No";
+      ask.append(text, yes, no);
+      yes.addEventListener("click", () => {
+        yes.disabled = true;
+        onYes();
+      });
+      no.addEventListener("click", () => {
+        ask.replaceWith(button);
+        button.focus();
+      });
+      button.replaceWith(ask);
+      no.focus();
+    });
   }
 
   function hide(): void {
@@ -191,7 +225,7 @@ export function mountNotePanel(h: {
     if (e.target === root) hide();
   });
 
-  deleteNoteBtn.addEventListener("click", () => {
+  confirmDelete(deleteNoteBtn, () => {
     if (!current) return;
     const noteId = current.id;
     h.onDeleteNote(noteId)
@@ -226,6 +260,8 @@ export function mountNotePanel(h: {
       date.textContent = `${canberraTime(note.createdAt)} · ${goneOn(note.expiresAt)}`;
       date.title = "Sticky notes disappear a month after they're stuck.";
       text.textContent = note.text;
+      // A "Delete?" left over from the last note goes back to its button.
+      card.querySelector(":scope > .note-confirm")?.replaceWith(deleteNoteBtn);
       deleteNoteBtn.hidden = !note.canDelete;
       textarea.value = "";
       setError("");

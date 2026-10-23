@@ -64,6 +64,31 @@
   padding: 2px 4px;
 }
 
+.note-confirm {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.note-confirm button {
+  min-height: 32px;
+  padding: 2px 10px;
+  border: 0;
+  border-radius: 6px;
+  background: #e6dcc0;
+  color: var(--ink, #3b2a12);
+  font-size: 0.8rem;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.note-confirm button.is-danger {
+  background: #b3412e;
+  color: #fff;
+}
+
 .note-comments {
   border-top: 2px dashed var(--accent, #6b3f1d);
   padding-top: 10px;

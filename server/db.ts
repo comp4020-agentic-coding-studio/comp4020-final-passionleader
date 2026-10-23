@@ -126,9 +126,11 @@ for (const col of ["poop_x", "poop_z", "pooped_at"]) {
 db.exec("UPDATE notes SET space = 'comp8020' WHERE space = 'comp8280'");
 db.exec("UPDATE visitors SET last_space = 'comp8020' WHERE last_space = 'comp8280'");
 // Each classroom's two links the admin sets (the whiteboard, and the board to
-// its right), added after crit 9.
+// its right), added after crit 9; whether each opens in a new tab instead of
+// the in-app window (1) was added for the final project.
 const classroomCols = (db.prepare("PRAGMA table_info(classrooms)").all() as { name: string }[]).map((c) => c.name);
 for (const col of ["board_url", "side_url"]) if (!classroomCols.includes(col)) db.exec(`ALTER TABLE classrooms ADD COLUMN ${col} TEXT`);
+for (const col of ["board_tab", "side_tab"]) if (!classroomCols.includes(col)) db.exec(`ALTER TABLE classrooms ADD COLUMN ${col} INTEGER NOT NULL DEFAULT 0`);
 db.exec(`
   CREATE TABLE IF NOT EXISTS audit (
     id      INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -353,21 +355,27 @@ export interface Classroom {
   boardUrl: string | null;
   /** What the board right of the whiteboard opens, if set. */
   sideUrl: string | null;
+  /** The whiteboard's page opens in a new tab rather than the in-app window. */
+  boardNewTab: boolean;
+  /** The right-hand board's page opens in a new tab. */
+  sideNewTab: boolean;
 }
 
 export type ClassroomLink = "board" | "side";
 
 export function classroomList(): Classroom[] {
   const rows = db
-    .prepare("SELECT code, created_at AS createdAt, board_url AS boardUrl, side_url AS sideUrl FROM classrooms ORDER BY code = 'COMMON' DESC, code")
-    .all() as unknown as Omit<Classroom, "space">[];
-  return rows.map((r) => ({ ...r, space: classroomSpace(r.code) }));
+    .prepare(
+      "SELECT code, created_at AS createdAt, board_url AS boardUrl, side_url AS sideUrl, board_tab AS boardTab, side_tab AS sideTab FROM classrooms ORDER BY code = 'COMMON' DESC, code",
+    )
+    .all() as unknown as (Omit<Classroom, "space" | "boardNewTab" | "sideNewTab"> & { boardTab: number; sideTab: number })[];
+  return rows.map(({ boardTab, sideTab, ...r }) => ({ ...r, space: classroomSpace(r.code), boardNewTab: boardTab === 1, sideNewTab: sideTab === 1 }));
 }
 
-/** Sets (or, with null, clears) one of a classroom's links. False if there's no such classroom. */
-export function setClassroomLink(code: string, which: ClassroomLink, url: string | null): boolean {
-  const col = which === "board" ? "board_url" : "side_url";
-  return db.prepare(`UPDATE classrooms SET ${col} = ? WHERE code = ?`).run(url, code).changes > 0;
+/** Sets (or, with null, clears) one of a classroom's links, and how it opens. False if there's no such classroom. */
+export function setClassroomLink(code: string, which: ClassroomLink, url: string | null, newTab = false): boolean {
+  const [col, tab] = which === "board" ? ["board_url", "board_tab"] : ["side_url", "side_tab"];
+  return db.prepare(`UPDATE classrooms SET ${col} = ?, ${tab} = ? WHERE code = ?`).run(url, url && newTab ? 1 : 0, code).changes > 0;
 }
 
 const syncClassrooms = (): void => setClassrooms(classroomList().map((c) => c.code));
@@ -401,7 +409,8 @@ export function removeClassroom(code: string): boolean {
 // --- boards ------------------------------------------------------------------
 // Classrooms, the Student Hub and the lawn have boards (boards.ts says which
 // tabs and who posts where; main.ts checks it). Posts stay until their author
-// or an admin removes them, or their classroom is closed.
+// or an admin removes them, or their classroom is closed; the lawn's go after
+// 30 days (`keepDays`): hidden from then, deleted with the hourly purge.
 
 export type BoardTab = string;
 export const POST_COOLDOWN_SECONDS = 30;
@@ -429,10 +438,22 @@ export interface PostComment {
 const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt, p.edited_at AS editedAt,
   (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments`;
 
-export function postsIn(space: SpaceId, tab: BoardTab): Post[] {
+export function postsIn(space: SpaceId, tab: BoardTab, keepDays?: number): Post[] {
+  const fresh = keepDays ? ` AND p.created_at > datetime('now', '-${Math.floor(keepDays)} days')` : "";
   return db
-    .prepare(`SELECT ${postCols} FROM posts p WHERE p.space = ? AND p.tab = ? ORDER BY p.created_at DESC, p.id DESC`)
+    .prepare(`SELECT ${postCols} FROM posts p WHERE p.space = ? AND p.tab = ?${fresh} ORDER BY p.created_at DESC, p.id DESC`)
     .all(space, tab) as unknown as Post[];
+}
+
+/** The ids of a board's posts in tabs it no longer has (to remove, files and all). */
+export function postsInGoneTabs(space: string, tabs: readonly string[]): number[] {
+  const marks = tabs.map(() => "?").join(", ");
+  return (db.prepare(`SELECT id FROM posts WHERE space = ? AND tab NOT IN (${marks})`).all(space, ...tabs) as { id: number }[]).map((r) => r.id);
+}
+
+/** The ids of a space's posts older than `days` (to remove, files and all). */
+export function expiredPosts(space: string, days: number): number[] {
+  return (db.prepare(`SELECT id FROM posts WHERE space = ? AND created_at <= datetime('now', '-${Math.floor(days)} days')`).all(space) as { id: number }[]).map((r) => r.id);
 }
 
 export function findPost(id: number): Post | undefined {

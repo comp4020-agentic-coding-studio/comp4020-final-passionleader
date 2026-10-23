@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, lightPool, mat, paperPile, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -20,8 +20,10 @@ const HALF = { halfX: 20, halfZ: 13 };
 const HUB_FABRIC = { carpet: 0x2f4f78 };
 /** The three PCs on reception's bar (north edge, 2.25 m apart): E works from the south of each. */
 const BOARD_PC = { x: -17, z: -4.15 };
-const AI_PC = { x: -14.75, z: -4.15 };
-const FIND_PC = { x: -12.5, z: -4.15 };
+// West to east along reception: the matching board, the researcher search,
+// then ANU's AI guide as a pile of papers.
+const FIND_PC = { x: -14.75, z: -4.15 };
+const AI_PC = { x: -12.5, z: -4.15 };
 /** Where you stand to use them: just south of the bar (its south edge is z -3.55). */
 const RECEPTION_SPOT_Z = -2.7;
 
@@ -49,22 +51,22 @@ export function buildHub(): SpaceDef {
   // east end (x -8.9..-8.0) up to z -8. Staff stand in the pocket west of the
   // leg and north of the bar (open to the north, the admin's desk in the
   // corner beyond); visitors come up from the west door (z 6) across the open
-  // floor to the bar's south side. The PCs stand on the bar's north edge,
-  // spread along it (the board, the AI guide and the researcher search), and
-  // are used from the south (the spots below).
+  // floor to the bar's south side. Along the bar's north edge, used from the
+  // south (the spots below): the matching board's PC, the researcher search's
+  // PC, and the AI guide as a pile of papers.
   const RECEPTION_WOOD = 0x8a5a32;
   block(g, colliders, [12, 0.9, 0.9], [-14, -4], RECEPTION_WOOD);
   block(g, colliders, [0.9, 0.9, 3.55], [-8.45, -6.225], RECEPTION_WOOD);
   place(g, "computerScreen.glb", 0.5, BOARD_PC.x, BOARD_PC.z, 0, true, 0.9);
-  const boardTag = textPlane(["Student Hub board", "read and post"], 1.9, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  const boardTag = textPlane(["Lab matching board", "labs and students"], 1.9, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   boardTag.position.set(BOARD_PC.x, 1.85, BOARD_PC.z);
   g.add(boardTag);
-  place(g, "computerScreen.glb", 0.5, AI_PC.x, AI_PC.z, 0, true, 0.9);
-  const aiTag = textPlane(["AI essentials", "ANU guide · new tab"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  paperPile(g, AI_PC.x, AI_PC.z, 0.9);
+  const aiTag = textPlane(["AI essentials", "ANU guide"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   aiTag.position.set(AI_PC.x, 1.85, AI_PC.z);
   g.add(aiTag);
   place(g, "computerScreen.glb", 0.5, FIND_PC.x, FIND_PC.z, 0, true, 0.9);
-  const findTag = textPlane(["Find a researcher", "opens a new tab"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  const findTag = textPlane(["Find a researcher"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   findTag.position.set(FIND_PC.x, 1.85, FIND_PC.z);
   g.add(findTag);
   // A poster on the west wall, in the reception pocket.
@@ -198,7 +200,7 @@ export function buildHub(): SpaceDef {
       { x: FIND_PC.x, z: RECEPTION_SPOT_Z, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
     ],
     // The board PC on reception's bar: you stand south of it.
-    spots: [{ x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the Student Hub board" }],
+    spots: [{ x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the lab matching board" }],
   };
 }
 

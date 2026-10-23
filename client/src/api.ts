@@ -105,6 +105,9 @@ export interface Classroom {
   boardUrl?: string | null;
   /** What the board right of the whiteboard opens, if set. */
   sideUrl?: string | null;
+  /** Each link opens in a new tab instead of the in-app window. */
+  boardNewTab?: boolean;
+  sideNewTab?: boolean;
 }
 
 export const getClassrooms = (): Promise<Classroom[]> => request<Classroom[]>("/api/classrooms");
@@ -115,8 +118,8 @@ export const createClassroom = (token: string, code: string): Promise<Classroom>
 export const removeClassroom = (token: string, code: string): Promise<unknown> =>
   request(`/api/classrooms/${encodeURIComponent(code)}`, "DELETE", { token });
 
-export const setClassroomLink = (token: string, code: string, which: "board" | "side", url: string | null): Promise<unknown> =>
-  request(`/api/classrooms/${encodeURIComponent(code)}/link`, "PUT", { token, which, url });
+export const setClassroomLink = (token: string, code: string, which: "board" | "side", url: string | null, newTab: boolean): Promise<unknown> =>
+  request(`/api/classrooms/${encodeURIComponent(code)}/link`, "PUT", { token, which, url, newTab });
 
 export const getProjects = (): Promise<{ projects: { name: string; url: string }[]; checkedAt: string | null }> =>
   request("/api/projects");

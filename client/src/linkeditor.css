@@ -6,10 +6,12 @@
 }
 .link-card { width: min(460px, 100%); }
 .link-hint { margin: 0 0 10px; font-size: 0.92rem; opacity: 0.8; }
-.link-card input {
+.link-card input[type="url"] {
   width: 100%; box-sizing: border-box; min-height: 44px; padding: 0 10px;
   border: 1px solid #8a6a50; border-radius: 8px; font: inherit;
 }
+.link-tab { display: flex; gap: 8px; align-items: flex-start; margin: 10px 0 0; font-size: 0.9rem; cursor: pointer; }
+.link-tab input { width: 20px; height: 20px; margin: 0; flex: none; }
 .link-error { min-height: 1.3em; margin: 6px 0 10px; font-size: 0.9rem; }
 .link-card .settings-actions { flex-wrap: wrap; }
 .link-card .settings-actions button { min-height: 44px; }

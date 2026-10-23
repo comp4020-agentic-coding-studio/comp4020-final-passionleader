@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, chalkboard, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
 import { CLASSROOM_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -41,10 +41,13 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   const guestbook = poster("ai/poster_classroom.jpg", 1.4, 2.1);
   guestbook.position.set(HALF.halfX - 0.01, 2, -3.2);
   guestbook.rotation.y = -Math.PI / 2;
-  // Left of the whiteboard: this classroom's board (Q&A, Notices, Board).
-  const cork = chalkboard([`${code} board`, "Q&A · Notices · Board"], 3.4, 2.2, 0.27);
-  cork.position.set(-6.4, 2.1, -HALF.halfZ + 0.04);
-  g.add(cork);
+  // Left of the whiteboard: this classroom's board (Q&A, Notices, Board), on
+  // a PC on a small desk, like the Hub's reception PCs.
+  block(g, colliders, [1.6, 0.9, 0.8], [-6.4, -HALF.halfZ + 0.6], texMat("ai/wood_tabletop.jpg", 1, 1, 0xb07a4a));
+  place(g, "computerScreen.glb", 0.5, -6.4, -HALF.halfZ + 0.55, 0, true, 0.9);
+  const boardTag = textPlane([`${code} board`, "Q&A · Notices · Board"], 2.2, 0.5, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  boardTag.position.set(-6.4, 2.0, -HALF.halfZ + 0.04);
+  g.add(boardTag);
   g.add(guestbook);
   block(g, colliders, [1, 1.2, 0.8], [3.8, -6], texMat("ai/wood_tabletop.jpg", 1, 1, 0xb07a4a)); // the lectern
 

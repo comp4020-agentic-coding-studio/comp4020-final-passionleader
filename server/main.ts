@@ -36,6 +36,8 @@ import {
   notesIn,
   postCommentsOn,
   postsIn,
+  expiredPosts,
+  postsInGoneTabs,
   purgeExpiredNotes,
   purgeOldAudit,
   addAudit,
@@ -71,7 +73,7 @@ import { browserTag, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, livePlayer, noticeRestriction, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
-import { boardOf, mayPostIn, tabOf } from "./boards.ts";
+import { boardOf, expiringBoards, mayPostIn, tabOf } from "./boards.ts";
 import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
@@ -365,8 +367,9 @@ app.put("/api/classrooms/:code/link", async (c) => {
       return c.json({ error: "Use a full https:// address." }, 400);
     }
   }
-  if (!setClassroomLink(code, which, url)) return c.json({ error: `${code} isn't open.` }, 404);
-  log("classroom-link", v, { code, which, url }, { ip: ipOf(c) });
+  const newTab = b.newTab === true;
+  if (!setClassroomLink(code, which, url, newTab)) return c.json({ error: `${code} isn't open.` }, 404);
+  log("classroom-link", v, { code, which, url, newTab }, { ip: ipOf(c) });
   broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
   return c.json({ ok: true });
 });
@@ -462,7 +465,7 @@ app.get("/api/board", (c) => {
   if (!board) return c.json({ error: "There's no board here." }, 404);
   const tab = tabOf(board, c.req.query("tab"));
   if (!tab) return c.json({ error: "No such tab." }, 400);
-  const posts = postsIn(space!, tab.id).map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
+  const posts = postsIn(space!, tab.id, board.keepDays).map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
   return c.json(tab.staffOnly ? [{ ...pinnedNotice(tab.label), tab: tab.id }, ...posts] : posts);
 });
 
@@ -870,9 +873,31 @@ sketchRoutes(app);
 
 // Notes past their month: hidden from every query already, deleted hourly.
 // The admin's log past its seven days goes the same way.
+// The Hub's board lost its "Ask the Hub" tab (questions for the Hub go to
+// the enquiry PC): its posts go too, files and all. Runs on every start, and
+// does nothing once they're gone.
+{
+  const hub = boardOf("hub")!;
+  const ids = postsInGoneTabs("hub", hub.tabs.map((t) => t.id));
+  for (const id of ids) {
+    removeObjects(filesOn("post", id, true).map((f) => f.key));
+    deletePost(id);
+  }
+  if (ids.length) log("post-removed", null, { space: "hub", count: ids.length, reason: "tab removed" });
+}
+
 const purge = (): void => {
   const gone = purgeExpiredNotes();
   if (gone) log("note-expired", null, { count: gone });
+  // The lawn's posts past their 30 days go, files and all.
+  for (const [space, days] of expiringBoards()) {
+    const ids = expiredPosts(space, days);
+    for (const id of ids) {
+      removeObjects(filesOn("post", id, true).map((f) => f.key));
+      deletePost(id);
+    }
+    if (ids.length) log("post-expired", null, { space, count: ids.length });
+  }
   purgeOldAudit();
   purgeOldChat();
   removeObjects(purgeFiles());

@@ -18,6 +18,8 @@ export interface BoardDef {
   notice?: string;
   /** "grid": posts as thumbnails (a post's first picture, else its title), two a row. */
   layout?: "grid";
+  /** Posts go after this many days (the lawn's, like the files in the bucket); unset: they stay. */
+  keepDays?: number;
 }
 
 const UNOFFICIAL = "Not an official ANU service. Posters' identities aren't verified.";
@@ -29,24 +31,30 @@ const CLASSROOM_TABS: readonly BoardTabDef[] = [
 ];
 
 const FIXED: Record<string, BoardDef> = {
-  // The Student Hub's back wall: where staff and students find each other.
+  // The Student Hub's reception: where labs and students find each other.
+  // Questions for the Hub itself go to the enquiry PC behind the desk.
   hub: {
-    title: "Student Hub board",
+    title: "Lab matching board",
     tabs: [
       { id: "labs", label: "Labs looking for students" },
       { id: "students", label: "Students looking for labs" },
-      { id: "ask", label: "Ask the Hub" },
     ],
     notice: UNOFFICIAL,
   },
-  // The noticeboard on the lawn: events, clubs, anything to promote.
+  // The noticeboard on the lawn: events, clubs, anything to promote. A
+  // poster is for now, so posts go after 30 days, the same as their files.
   outdoor: {
     title: "Lawn noticeboard",
     tabs: [{ id: "board", label: "Noticeboard" }],
-    notice: UNOFFICIAL,
+    notice: `${UNOFFICIAL} Posts are removed after 30 days.`,
     layout: "grid",
+    keepDays: 30,
   },
 };
+
+/** The boards whose posts expire, and after how many days. */
+export const expiringBoards = (): [string, number][] =>
+  Object.entries(FIXED).flatMap(([space, b]) => (b.keepDays ? [[space, b.keepDays] as [string, number]] : []));
 
 export function boardOf(space: unknown): BoardDef | undefined {
   if (typeof space !== "string") return undefined;

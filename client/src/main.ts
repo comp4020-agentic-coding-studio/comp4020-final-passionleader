@@ -658,17 +658,17 @@ async function openProjects(): Promise<void> {
 // goes straight there, except for the admin, who can change it.
 let editing: { code: string; which: "board" | "side" } | null = null;
 const linkEditor = mountLinkEditor({
-  async save(url) {
+  async save(url, newTab) {
     if (!session || !editing) return "Join first.";
     try {
-      await setClassroomLink(session.token, editing.code, editing.which, url);
+      await setClassroomLink(session.token, editing.code, editing.which, url, newTab);
       return null;
     } catch (err) {
       return err instanceof ApiError ? err.message : "Could not save it.";
     }
   },
-  visit(url) {
-    webview.open({ label: "Page from the staff", url, embeddable: true });
+  visit(url, newTab) {
+    webview.open({ label: "Page from the staff", url, embeddable: !newTab });
   },
 });
 function openStaffLink(which: "board" | "side"): void {
@@ -676,11 +676,12 @@ function openStaffLink(which: "board" | "side"): void {
   const room = classroomList.find((c) => c.space === space!.id);
   if (!room) return;
   const url = (which === "board" ? room.boardUrl : room.sideUrl) ?? null;
+  const newTab = (which === "board" ? room.boardNewTab : room.sideNewTab) ?? false;
   const name = which === "board" ? `${room.code} whiteboard` : `${room.code} board (right of the whiteboard)`;
   if (session?.role === "admin") {
     editing = { code: room.code, which };
-    linkEditor.open({ title: name, url });
-  } else if (url) webview.open({ label: name, url, embeddable: true });
+    linkEditor.open({ title: name, url, newTab });
+  } else if (url) webview.open({ label: name, url, embeddable: !newTab });
   else toast("Nothing here yet: the staff haven't put a page up.");
 }
 

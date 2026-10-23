@@ -156,7 +156,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 4.6, z: 3 }, // 154's door
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
-  { x: -19.5, z: -22.6 }, // the lawn noticeboard (client/src/spaces/outdoor.ts LAWN_BOARD)
+  { x: -7, z: -31.6 }, // the lawn noticeboard, south of Broger's bed (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [

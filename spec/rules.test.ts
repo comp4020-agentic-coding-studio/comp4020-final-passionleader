@@ -103,6 +103,41 @@ describe("classrooms the admin opens and closes", () => {
     expect(db.setClassroomLink("NOPE1234", "board", "https://example.com/")).toBe(false);
     db.removeClassroom("COMP6400");
   });
+
+  it("remembers whether a classroom link opens in a new tab, and forgets it with the link", () => {
+    db.addClassroom("COMP6500", "qa_master");
+    db.setClassroomLink("COMP6500", "board", "https://example.com/slides", true);
+    db.setClassroomLink("COMP6500", "side", "https://example.com/forms");
+    expect(db.classroomList().find((c) => c.code === "COMP6500")).toMatchObject({ boardNewTab: true, sideNewTab: false });
+    db.setClassroomLink("COMP6500", "board", null, true);
+    expect(db.classroomList().find((c) => c.code === "COMP6500")).toMatchObject({ boardUrl: null, boardNewTab: false });
+    db.removeClassroom("COMP6500");
+  });
+});
+
+describe("lawn posts last 30 days", () => {
+  it("hides a lawn post past 30 days at once, and lists it to purge; other boards keep theirs", () => {
+    db.createVisitor("poster", "t-poster");
+    const lawn = db.addPost("poster", "outdoor", "board", "Old fair", "long ago");
+    if (!lawn.ok) throw new Error("cooldown");
+    raw.prepare("UPDATE visitors SET last_post_at = NULL WHERE name = 'poster'").run();
+    const hub = db.addPost("poster", "hub", "labs", "Old lab", "long ago");
+    if (!hub.ok) throw new Error("cooldown");
+    raw.prepare("UPDATE posts SET created_at = datetime('now', '-31 days') WHERE id IN (?, ?)").run(lawn.post.id, hub.post.id);
+    expect(db.postsIn("outdoor", "board", 30).map((p) => p.id)).not.toContain(lawn.post.id);
+    expect(db.expiredPosts("outdoor", 30)).toContain(lawn.post.id);
+    expect(db.postsIn("hub", "labs").map((p) => p.id)).toContain(hub.post.id);
+  });
+});
+
+describe("a board's removed tab", () => {
+  it("lists the posts in tabs the board no longer has", () => {
+    db.createVisitor("asker", "t-asker");
+    const ask = db.addPost("asker", "hub", "ask", "A question", "for the Hub");
+    if (!ask.ok) throw new Error("cooldown");
+    expect(db.postsInGoneTabs("hub", ["labs", "students"])).toContain(ask.post.id);
+    expect(db.postsInGoneTabs("hub", ["labs", "students", "ask"])).not.toContain(ask.post.id);
+  });
 });
 
 describe("notes last a month", () => {
@@ -124,7 +159,8 @@ describe("where a note may go", () => {
     expect(noteSpotError("outdoor", -3, -14)).toBeNull();
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
     expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
-    expect(noteSpotError("outdoor", -19.5, -21.6)).not.toBeNull(); // on the lawn noticeboard
+    expect(noteSpotError("outdoor", -7, -30.6)).not.toBeNull(); // at the lawn noticeboard, south of Broger's bed
+    expect(noteSpotError("outdoor", -19.5, -21.6)).toBeNull(); // where it used to stand
     expect(noteSpotError("outdoor", 12, -22)).not.toBeNull(); // at Lab Coffee's menu board
     expect(noteSpotError("comp8020", 0, 2)).toBeNull();
     expect(noteSpotError("hub", 0, 0)).not.toBeNull();

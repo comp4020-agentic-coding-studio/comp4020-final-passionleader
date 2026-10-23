@@ -90,8 +90,9 @@ export function buildOutdoor(): SpaceDef {
     }
   }
   scatter(g, "nature/Bush_Common_Flowers.glb", 1.1, lawnBushes);
-  // On the lawn's north edge, facing it: the noticeboard, where anyone posts
-  // events, clubs and the like (one tab, unofficial). Notes keep 2 m off it.
+  // The noticeboard, where anyone posts events, clubs and the like (one tab,
+  // unofficial): against Broger's flower bed, facing the main road, so you
+  // see it walking between the lawn and 154. Notes keep 2 m off it.
   noticeboard(g, colliders);
   if (HIGH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
 
@@ -269,10 +270,10 @@ function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: num
   });
 }
 
-/** The lawn noticeboard, on its north edge (server/spaces.ts keeps notes off it too). */
-const LAWN_BOARD = { x: -19.5, z: -22.6 };
+/** The lawn noticeboard, just south of Broger's flower bed (server/spaces.ts keeps notes off it too). */
+const LAWN_BOARD = { x: -7, z: -31.6 };
 
-/** A chalkboard on two timber legs, facing the lawn (+z). */
+/** A chalkboard on two timber legs, facing the main road (+z). */
 function noticeboard(g: THREE.Group, colliders: Box[]): void {
   const { x, z } = LAWN_BOARD;
   for (const dx of [-1.6, 1.6]) {
