@@ -33,8 +33,8 @@ function lamp(g: THREE.Group, colliders: Box[], x: number, z: number, face: numb
   solid(colliders, 0.3, 0.3, x, z);
 }
 
-/** A timber picnic table with two benches, long side along z. */
-function picnicTable(g: THREE.Group, x: number, z: number): void {
+/** A timber picnic table with two benches, long side along z; `y` is the floor it stands on. */
+function picnicTable(g: THREE.Group, x: number, z: number, y = 0): void {
   const t = new THREE.Group();
   const top = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 1.8), timber());
   top.position.y = 0.74;
@@ -50,7 +50,7 @@ function picnicTable(g: THREE.Group, x: number, z: number): void {
       t.add(leg);
     }
   }
-  t.position.set(x, 0, z);
+  t.position.set(x, y, z);
   g.add(t);
 }
 
@@ -203,12 +203,14 @@ export function buildStreetscape(g: THREE.Group, colliders: Box[]): void {
 
   // Lamp posts down both sides of the path, clear of the doors.
   for (const z of [-20, -11, 0, 16]) lamp(g, colliders, -8.6, z, 0);
-  for (const z of [-15, -6, 12, 16]) lamp(g, colliders, 4.6, z, Math.PI);
+  // East side: clear of the Hub's door (z 3) and the ANUSA lounge's (z -5) and their canopies.
+  for (const z of [-15, -9.5, 12, 16]) lamp(g, colliders, 4.6, z, Math.PI);
 
   // Under 154's colonnade: picnic tables (inside the building's footprint,
   // so they're scenery), and planters either side of its door.
   // (The northern end, z -18..-13, is Lab Coffee: labcoffee.ts.)
-  for (const z of [-11, -6, 10, 14]) picnicTable(g, 7.2, z);
+  // On the colonnade's floor slab (0.42 m), not sunk into it.
+  for (const z of [-11, -6, 10, 14]) picnicTable(g, 7.2, z, 0.42);
   planter(g, colliders, 4.4, 0.2);
   planter(g, colliders, 4.4, 5.8);
 

@@ -22,7 +22,7 @@ export interface BuildingSpec {
   bay?: number;
   roofOverhang?: number;
   /** Entrance canopy: which side, and where along it (offset from centre). */
-  entrance?: { side: "north" | "south" | "east" | "west"; at: number; color?: number };
+  entrance?: { side: "north" | "south" | "east" | "west"; at: number; color?: number; depth?: number };
   /** Height this volume starts at, for volumes stacked on another. */
   y0?: number;
   /** Colour of the slab edges (e.g. timber showing at each level). */
@@ -184,11 +184,13 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
     const { side, at } = s.entrance;
     const ns = side === "north" || side === "south";
     const sign = side === "south" || side === "east" ? 1 : -1;
-    const canopy = new THREE.Mesh(new THREE.BoxGeometry(ns ? 5 : 2.6, 0.25, ns ? 2.6 : 5), mat(s.entrance.color ?? s.frame));
+    // 1.3 m out from the face: a lip over the door, not a porch.
+    const depth = s.entrance.depth ?? 1.3;
+    const canopy = new THREE.Mesh(new THREE.BoxGeometry(ns ? 5 : depth, 0.25, ns ? depth : 5), mat(s.entrance.color ?? s.frame));
     canopy.position.set(
-      s.cx + (ns ? at : sign * (s.w / 2 + 1.3)),
+      s.cx + (ns ? at : sign * (s.w / 2 + depth / 2)),
       3.3,
-      s.cz + (ns ? sign * (s.d / 2 + 1.3) : at),
+      s.cz + (ns ? sign * (s.d / 2 + depth / 2) : at),
     );
     b.add(canopy);
   }
