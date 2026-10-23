@@ -237,3 +237,5 @@ body.in-room #hud-help { display: none; }
   background: var(--accent); color: #fff; font-weight: 700;
 }
 .chooser-preview { font-size: 0.85rem; opacity: 0.8; overflow-wrap: anywhere; }
+/* An AI campus assistant's name tag: the same pill as a person's, a little greener. */
+.npc-label { background: rgba(30, 107, 82, 0.9); color: #fff; }

@@ -999,7 +999,8 @@ function placeNpcs(s: SpaceDef): void {
     const a = new Avatar(n.look);
     a.group.position.set(n.x, 0, n.z);
     a.group.rotation.y = n.rot;
-    tag(a.group, `${n.name} · ${n.role}`, 2.2, "player-label npc-label");
+    // Just the name over them (side by side, a role made the tags overlap); the E hint says the role.
+    tag(a.group, n.name, 2.2, "player-label npc-label");
     s.group.add(a.group);
     npcFigures.push(a);
     // You talk to them from in front (they face +z by default: so from +z).
