@@ -73,6 +73,7 @@ import { mountDogPrompt } from "./dogprompt.ts";
 import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
 import { mountMailbox } from "./mailbox.ts";
+import { mountMinimap } from "./minimap.ts";
 import { dogHappy } from "./spaces/dog.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
@@ -1076,6 +1077,32 @@ function placeNpcs(s: SpaceDef): void {
   if (s === space) placeBadges();
 }
 
+// The campus minimap (plan 53): the walkable ground and buildings outside,
+// and the places you can go in. Same bounds as spaces/outdoor.ts.
+const minimap = mountMinimap({
+  bounds: { minX: -31, maxX: 27, minZ: -41, maxZ: 25 },
+  areas: [
+    { minX: -29.5, maxX: 5, minZ: -39.4, maxZ: -2 },
+    { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
+    { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
+  ],
+  buildings: [
+    { name: "155", minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
+    { name: "154", minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
+    { name: "Library", minX: -9, maxX: 5, minZ: 23, maxZ: 25 },
+  ],
+  places: [
+    { x: -9.7, z: 7, name: "Classrooms" },
+    { x: 5.7, z: 3, name: "Hub" },
+    { x: 5.7, z: -5, name: "ANUSA" },
+    { x: -2, z: 22, name: "Library" },
+    { x: 12, z: -21, name: "Lab Coffee" },
+    { x: -26, z: -30, name: "ANU Sport" },
+    { x: 1.75, z: -31.6, name: "Noticeboard" },
+    { x: -8.6, z: 2.3, name: "Study groups" },
+  ],
+});
+
 function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): void {
   if (space) {
     scene.remove(space.group);
@@ -1110,6 +1137,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
     space.group.userData.shadowsOn = true;
   }
   scene.add(space.group);
+  minimap.show(!!space.outdoor);
   placeNpcs(space);
   placeBadges();
   if (space.outdoor) {
@@ -1256,6 +1284,7 @@ function showJoin(message = ""): void {
   net = null;
   for (const id of [...others.keys()]) removeOther(id);
   signIn.show(message);
+  minimap.show(false);
   hud.hidden = true;
   touch.hidden = true;
   hintEl.hidden = true;
@@ -1818,6 +1847,7 @@ function update(dt: number, now: number): void {
   const ease = 1 - Math.exp(-12 * dt);
   me.update(dt);
   for (const a of npcFigures) a.update(dt);
+  minimap.draw(player.position.x, player.position.z, player.rotation.y);
   for (const view of others.values()) {
     const before = view.group.position.clone();
     view.group.position.lerp(view.target, ease);
