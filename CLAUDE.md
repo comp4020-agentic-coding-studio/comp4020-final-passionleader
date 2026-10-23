@@ -43,9 +43,20 @@ Read before planning or building: `README.md` (what good means for this app),
 
 ## Product rules the code must keep
 
-- Names are 1–8 letters, digits or underscores, unique regardless of case. A
-  name can only be reclaimed by the browser holding the token issued when it
-  was taken. `qa_` names are reserved for the password accounts.
+- You come in by signing up with an ANU email, or as a guest. Students give
+  their student number (the code goes to uNNNNNNN@anu.edu.au); staff tick
+  "I'm ANU staff" and give their @anu.edu.au address (not a student number).
+  A six-digit code by SES: ten minutes, five tries, one email a minute, only
+  its hash kept. Then a name (1–8 letters, digits or underscores, unique
+  regardless of case, not `qa_…` or `guest…`) and a password (8+, scrypt
+  hash only). A forgotten password is reset by the same kind of code, and
+  every other browser signs in again. Guests are `guestNNN`, their browser's
+  token brings them back; they walk, chat, emote, stick notes and use team
+  rooms, but posting, commenting, hearts, joining study groups, files and
+  reporting someone are refused on the server (bug reports are open to
+  anyone). `qa_` names are reserved for the test accounts, which sign in
+  with a password. The free-name accounts from before sign-up are retired:
+  their notes and posts stay, nobody can sign in as them.
 - Sticky notes: up to 100 words (and 600 characters), one per person every
   30 seconds, five per person per space (a sixth replaces their oldest, after a
   warning). They disappear a month after they're stuck (the note says when);

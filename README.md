@@ -21,9 +21,12 @@ should feel at home in a virtual space shaped like the real campus they know.
 
 ## How to use it
 
-1. Type your student number (e.g. `u1234567`); staff and visitors use any name
-   of up to 8 letters, digits and underscores. Nothing checks a number is real.
-   Your browser remembers you, and you come back where you left.
+1. Sign up with your ANU email: your student number (e.g. `u1234567`), or
+   "I'm ANU staff" and your @anu.edu.au address. A code comes by email; then
+   pick a name of up to 8 letters, digits and underscores, and a password.
+   Or **continue as a guest** (`guest042`): walk, chat and stick notes, but
+   sign up to post or comment. Your browser remembers you, and you come back
+   where you left.
 2. **WASD** to walk, **Space** to jump, **E** at a door to go in or out
    (building 155's door asks which classroom). On a phone: the pad and the
    Menu, Jump and Use buttons.
@@ -119,7 +122,8 @@ community (Youssef et al., 2024).
 
 ### Which of these are checked
 
-Enforced by `spec/`: name rules (`campus.test.ts`); notes and comments
+Enforced by `spec/`: signing up with an ANU email, guests and what they
+may not do, password resets (`campus.test.ts`); notes and comments
 persist, stay in their space, keep their limits, and only their author or an
 admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
 and new notes reach the same space within a second, and no other
@@ -132,6 +136,10 @@ Judged by people: whether it feels familiar and restful, and whether talking
 gets easier.
 
 ### What the app keeps about you
+
+If you sign up: your ANU email address (to send codes and reset your
+password; never shown to anyone, not in the admin's log), your name and a
+hash of your password. A guest leaves only the name it was given.
 
 The server writes every action to its log (`flyctl logs`): your name, a
 short tag of your browser (never its secret token), the space and what you
