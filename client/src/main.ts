@@ -74,6 +74,10 @@ import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
 import { mountMailbox } from "./mailbox.ts";
 import { mountMinimap } from "./minimap.ts";
+import { mountQuests } from "./quests.ts";
+// The tutorial's six things to try (plan 72), ticked off as they happen.
+const quests = mountQuests();
+let walked = 0;
 import { dogHappy } from "./spaces/dog.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
@@ -342,6 +346,7 @@ const lookPicker = mountLookPicker({
   },
   async save(look) {
     myLook = look;
+    quests.done("look");
     me.setLook(look);
     if (!session) return null; // sent once you've joined
     try {
@@ -676,6 +681,7 @@ const composer = mountNoteComposer(async (text) => {
     upsertNote(note);
     sfx("note");
     toast(replaced !== null ? "Note stuck. Your oldest note here was removed." : "Note stuck.");
+    quests.done("note");
   } catch (err) {
     throw asError(err);
   }
@@ -724,6 +730,7 @@ const radial = mountRadial(
 const EMOTE_GAP_MS = 2000;
 let lastEmoteAt = 0;
 function sendEmote(kind: Emote): void {
+  if (kind === "wave") quests.done("wave");
   const now = Date.now();
   if (kind !== "dance") {
     if (now - lastEmoteAt < EMOTE_GAP_MS) return toast("One moment before the next one.");
@@ -1138,6 +1145,8 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   }
   scene.add(space.group);
   minimap.show(!!space.outdoor);
+  if (id === "library") quests.done("library");
+  if (meetingRoom(id)?.kind === "team") quests.done("room");
   placeNpcs(space);
   placeBadges();
   if (space.outdoor) {
@@ -1285,6 +1294,7 @@ function showJoin(message = ""): void {
   for (const id of [...others.keys()]) removeOther(id);
   signIn.show(message);
   minimap.show(false);
+  quests.show(false);
   hud.hidden = true;
   touch.hidden = true;
   hintEl.hidden = true;
@@ -1299,6 +1309,7 @@ function enterWorld(): void {
   touch.hidden = false;
   playing = true;
   keyGuide.show();
+  quests.show(true);
   chat.show();
   const spawn = session.spawn;
   setSpace(isSpaceId(spawn.space) ? spawn.space : "outdoor", spawn, false);
@@ -1798,6 +1809,8 @@ function update(dt: number, now: number): void {
         moving = true;
         move.normalize();
         player.position.addScaledVector(move, (running ? RUN_SPEED : SPEED) * dt);
+        walked += (running ? RUN_SPEED : SPEED) * dt;
+        if (walked > 8) quests.done("walk");
         // Turn smoothly toward the way we're going (the model faces +z).
         const want = Math.atan2(move.x, move.z);
         const turn = Math.atan2(Math.sin(want - player.rotation.y), Math.cos(want - player.rotation.y));
