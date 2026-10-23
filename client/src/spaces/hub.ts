@@ -101,6 +101,9 @@ export function buildHub(): SpaceDef {
     place(g, "bookcaseClosedWide.glb", 1.9, x, -HALF.halfZ + 0.4);
     solid(colliders, 2, 0.7, x, -HALF.halfZ + 0.4);
   }
+  // A big wall calendar over the bookcases (plan 66): this month, and E
+  // opens ANU's events listing (it won't be framed: a new tab).
+  wallCalendar(g, CALENDAR.x, -HALF.halfZ + 0.02);
   // A coffee bar on the back wall under the sign (the north-west corner is the admin's now).
   for (const x of [-0.5, 0.5]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
   place(g, "kitchenCoffeeMachine.glb", 0.4, -0.5, -HALF.halfZ + 0.5, 0, true, 0.95);
@@ -205,6 +208,8 @@ export function buildHub(): SpaceDef {
       // The research portal won't be framed, so a new tab. Used from the
       // south of reception's bar.
       { x: FIND_PC.x, z: RECEPTION_SPOT_Z, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
+      // ANU's events listing refuses to be framed: a new tab.
+      { x: CALENDAR.x, z: -HALF.halfZ + 1.9, label: "See what's on at ANU (events, new tab)", url: "https://www.anu.edu.au/events", embeddable: false },
     ],
     // The board PC on reception's bar: you stand south of it.
     spots: [
@@ -212,6 +217,59 @@ export function buildHub(): SpaceDef {
       { x: ASK_PC.x, z: RECEPTION_SPOT_Z, id: "enquiries", label: "Ask the Hub a question" },
     ],
   };
+}
+
+/** The wall calendar on the north wall, over the bookcases; E from in front. */
+const CALENDAR = { x: 13.75 };
+
+/** This month as a wall calendar: a header and a grid of days, today ringed (drawn once, on a canvas). */
+function wallCalendar(g: THREE.Group, x: number, z: number): void {
+  const now = new Date();
+  const month = now.toLocaleDateString("en-AU", { month: "long", year: "numeric", timeZone: "Australia/Canberra" });
+  const W = 1024;
+  const H = 640;
+  const c = document.createElement("canvas");
+  c.width = W;
+  c.height = H;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#fbfbf7";
+  ctx.fillRect(0, 0, W, H);
+  ctx.fillStyle = "#2f5d8a";
+  ctx.fillRect(0, 0, W, 120);
+  ctx.fillStyle = "#ffffff";
+  ctx.font = "700 56px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.fillText(`Campus events · ${month}`, W / 2, 80);
+  const days = ["Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun"];
+  ctx.fillStyle = "#3b2a12";
+  ctx.font = "600 30px system-ui, sans-serif";
+  days.forEach((d, i) => ctx.fillText(d, 80 + i * 144, 165));
+  const first = new Date(now.getFullYear(), now.getMonth(), 1);
+  const lead = (first.getDay() + 6) % 7;
+  const count = new Date(now.getFullYear(), now.getMonth() + 1, 0).getDate();
+  ctx.font = "500 34px system-ui, sans-serif";
+  for (let d = 1; d <= count; d++) {
+    const cell = lead + d - 1;
+    const cx = 80 + (cell % 7) * 144;
+    const cy = 215 + Math.floor(cell / 7) * 80;
+    if (d === now.getDate()) {
+      ctx.strokeStyle = "#c0392b";
+      ctx.lineWidth = 5;
+      ctx.beginPath();
+      ctx.arc(cx, cy - 12, 30, 0, Math.PI * 2);
+      ctx.stroke();
+    }
+    ctx.fillStyle = cell % 7 >= 5 ? "#8a8f96" : "#1f2d3d";
+    ctx.fillText(String(d), cx, cy);
+  }
+  ctx.fillStyle = "#6b3f1d";
+  ctx.font = "500 26px system-ui, sans-serif";
+  ctx.fillText("What's on at ANU: press E", W / 2, H - 22);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const board = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.75), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
+  board.position.set(x, 3.25, z);
+  g.add(board);
 }
 
 // Sketch & Guess runs on this server; the other two are my earlier course
