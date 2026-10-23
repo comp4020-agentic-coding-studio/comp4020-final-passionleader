@@ -9,6 +9,7 @@
 import "./board.css";
 import { renderMarkdown } from "./markdown.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
+import { canberraTime } from "./when.ts";
 
 export type BoardTab = string;
 
@@ -394,7 +395,7 @@ export function mountBoard(h: {
             const meta = document.createElement("span");
             meta.className = "board-post-meta";
             // The pinned notice has no date and no comments, so it shows just its author.
-            meta.textContent = p.pinned ? p.author : `${p.author} · ${p.createdAt} · ${p.comments} ${p.comments === 1 ? "comment" : "comments"}`;
+            meta.textContent = p.pinned ? p.author : `${p.author} · ${canberraTime(p.createdAt)} · ${p.comments} ${p.comments === 1 ? "comment" : "comments"}`;
             b.append(t, meta);
             // On a grid board (the lawn's posters) the first picture, if any,
             // stands for the post; without one the title shows, smaller.
@@ -439,7 +440,7 @@ export function mountBoard(h: {
             const who = document.createElement("strong");
             who.textContent = c.author;
             const when = document.createElement("span");
-            when.textContent = c.editedAt ? `${c.createdAt} · edited` : c.createdAt;
+            when.textContent = c.editedAt ? `${canberraTime(c.createdAt)} · edited` : canberraTime(c.createdAt);
             ch.append(who, when);
             if (editingCommentId === c.id) {
               row.append(ch, editWrap);
@@ -491,7 +492,7 @@ export function mountBoard(h: {
   function renderPostHead(): void {
     if (!current) return;
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
-    postMeta.textContent = (current.createdAt ? `${current.author} · ${current.createdAt}` : current.author) + (current.editedAt ? " · edited" : "");
+    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "");
     // Posts are Markdown (safe DOM only, markdown.ts); comments stay plain text.
     postText.replaceChildren(renderMarkdown(current.text));
     postFiles.replaceChildren(
@@ -856,7 +857,10 @@ export function mountBoard(h: {
       showView("list");
       renderPosts();
       updateCounters();
-      tabButtons.get(tab)?.focus();
+      // A one-tab board (the lawn's) hides its tab bar, so focus the close button
+      // instead; otherwise focus stays outside and Esc never reaches the board.
+      if (config.tabs.length < 2) closeBtn.focus();
+      else tabButtons.get(tab)?.focus();
       void loadPosts();
     },
     refresh() {

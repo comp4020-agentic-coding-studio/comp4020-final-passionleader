@@ -62,6 +62,7 @@ import {
   lookOf,
   saveLook,
   validLook,
+  QA_HAT,
   removeClassroom,
   setClassroomLink,
   type Visitor,
@@ -118,7 +119,8 @@ function stopped(c: Context, v: Visitor, what: Restrictable, details: Record<str
   const r = restrictionOn(v.name, what);
   if (!r) return null;
   log("refused", v, { ...details, reason: "restricted" }, { ip: ipOf(c) });
-  return c.json({ error: `The admin has stopped you ${RESTRICTED_WHAT[what]} until ${r.until.slice(0, 16).replace("T", " ")} UTC.`, until: r.until }, 403);
+  const when = new Date(r.until).toLocaleString("en-AU", { timeZone: "Australia/Canberra", dateStyle: "medium", timeStyle: "short" });
+  return c.json({ error: `The admin has stopped you ${RESTRICTED_WHAT[what]} until ${when} (Canberra time).`, until: r.until }, 403);
 }
 
 app.post("/api/join", async (c) => {
@@ -856,6 +858,8 @@ app.put("/api/look", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const look = validLook(b.look);
   if (!look) return c.json({ error: "That isn't a look." }, 400);
+  // The hard hat marks the test accounts, so nobody else can wear it.
+  if (look.hat === QA_HAT && !RESERVED.test(v.name)) return c.json({ error: "The hard hat is for the test accounts." }, 403);
   saveLook(v.name, look);
   setLook(v.name, look);
   return c.json({ ok: true });

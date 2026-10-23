@@ -47,6 +47,19 @@ describe("real time", () => {
     expect(await sc.sees((m) => m.t === "chat" && m.name === a.name, 600)).toBe(false);
   });
 
+  it("lets an emote through once every two seconds, but dance as often as you like", async () => {
+    const [a, b] = await Promise.all([visitor(), visitor()]);
+    const sa = await connect(a.token);
+    const sb = await connect(b.token);
+    await Promise.all([sa.next((m) => m.t === "welcome"), sb.next((m) => m.t === "welcome")]);
+    sa.send({ t: "emote", kind: "wave" });
+    await sb.next((m) => m.t === "emote" && m.kind === "wave");
+    sa.send({ t: "emote", kind: "yes" });
+    expect(await sb.seesNew((m) => m.t === "emote" && m.kind === "yes", 600)).toBe(false);
+    sa.send({ t: "emote", kind: "dance" });
+    await expect(sb.next((m) => m.t === "emote" && m.kind === "dance")).resolves.toBeTruthy();
+  });
+
   it("shows an emote to the others in the space", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
     const sa = await connect(a.token);

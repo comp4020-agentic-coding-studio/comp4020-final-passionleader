@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, chalkboard, doorway, floor, lightPool, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, chalkboard, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
 import { CLASSROOM_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -24,13 +24,13 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   const lounge = code === "COMMON";
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/carpet.jpg", 10, 8), { tint: 0xf4efe4, trim: 0x4a3a2a });
 
-  const board = textPlane([code, lounge ? "open to everyone · press E" : "press E here"], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
+  const board = textPlane([code, lounge ? "open to everyone" : "course page"], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
   board.position.set(0, 2.2, -HALF.halfZ + 0.01);
   g.add(board);
 
   // Right of the whiteboard: COMP8020's classmates' final projects, or a
   // page the staff choose.
-  const side = textPlane(page ? ["Classmates' final projects", "press E for the list"] : ["From the staff", "press E"], 3.4, 1.6, {
+  const side = textPlane(page ? ["Classmates' final projects", "the list"] : ["From the staff"], 3.4, 1.6, {
     bg: "#c8a26b",
     fg: "#3b2a12",
     font: 0.28,
@@ -42,7 +42,7 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   guestbook.position.set(HALF.halfX - 0.01, 2, -3.2);
   guestbook.rotation.y = -Math.PI / 2;
   // Left of the whiteboard: this classroom's board (Q&A, Notices, Board).
-  const cork = chalkboard([`${code} board`, "Q&A · Notices · Board", "press E to read and post"], 3.4, 2.2, 0.27);
+  const cork = chalkboard([`${code} board`, "Q&A · Notices · Board"], 3.4, 2.2, 0.27);
   cork.position.set(-6.4, 2.1, -HALF.halfZ + 0.04);
   g.add(cork);
   g.add(guestbook);
@@ -131,9 +131,9 @@ function furnishLounge(g: THREE.Group, colliders: Box[]): void {
     place(g, "loungeSofaLong.glb", 0.85, x, 0.6, 0, true, 0, fabric);
     place(g, "loungeSofa.glb", 0.85, x, 4.3, Math.PI, true, 0, fabric);
     place(g, "tableCoffeeGlass.glb", 0.45, x, 2.4);
-    solid(colliders, 3, 0.9, x, 0.6);
-    solid(colliders, 2.2, 0.9, x, 4.3);
-    solid(colliders, 1.4, 0.9, x, 2.4);
+    solid(colliders, 3, 0.9, x, 0.6, SOFA_TOP);
+    solid(colliders, 2.2, 0.9, x, 4.3, SOFA_TOP);
+    solid(colliders, 1.4, 0.9, x, 2.4, SOFA_TOP);
   }
   // The big reading table down the middle, stools along both sides.
   block(g, colliders, [2, 0.8, 6.2], [0, 0.6], texMat("ai/wood_tabletop.jpg", 1, 3, 0xd9b48a));

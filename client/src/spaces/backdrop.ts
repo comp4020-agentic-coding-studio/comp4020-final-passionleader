@@ -216,6 +216,9 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   road(68.5, 18, -5.75, -31); // x -40..28.5
   road(3, 91, 30, -29.5); // footpath x 28.5..31.5, z -75..16
   floor(backdrop, 9, 142, 36, -55, asphaltMat(9, 142), 0.008); // x 31.5..40.5, z -126..16
+  // The road's pale paving carries on east across the asphalt, as on campus:
+  // the asphalt cuts across it (drawn on top), rather than the road ending in grass.
+  road(60, 18, 70.5, -31); // x 40.5..100.5
 
   // The row of pale-brick buildings along the road's north side, with a
   // two-storey passage under it in line with 154's west side.
@@ -273,8 +276,10 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
 
   // Low red-brick buildings beyond the east road.
   const red = facadeTexture("#9b5a44", "#8a4d39", "#2f3a42", "#d8cfc2");
-  block(backdrop, red, 50, -40, 16, 12, 3, 0, 0x6f6a64);
-  block(backdrop, red, 52, -62, 20, 14, 4, 0, 0x6f6a64);
+  // North of the east-west road (which carries on past them), like the row
+  // on its west side.
+  block(backdrop, red, 50, -48, 16, 12, 3, 0, 0x6f6a64);
+  block(backdrop, red, 52, -66, 20, 14, 4, 0, 0x6f6a64);
 
   buildSouth(backdrop, colliders);
 

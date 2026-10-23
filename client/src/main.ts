@@ -53,6 +53,7 @@ import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
+import { dogHappy } from "./spaces/dog.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
@@ -64,6 +65,7 @@ import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, keepIn, pushOut, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { canberraTime } from "./when.ts";
 
 const SPEED = 4.2; // walking, world units per second
 const RUN_SPEED = 8; // with Shift held
@@ -116,7 +118,22 @@ const bugReport = mountBugReport({
 
 // Low (the default) vs High graphics: see settings.ts.
 const highQuality = HIGH;
-mountSettings({ reportBug: () => bugReport.open(), reportPerson: () => bugReport.open(true), customise: () => openLookPicker() });
+mountSettings({ reportBug: () => bugReport.open(), reportPerson: () => bugReport.open(true) });
+
+// Customise look has its own button, a coat hanger just left of the gear (it
+// used to be a row in the settings dialog). The join screen keeps its button.
+const hangerBtn = document.createElement("button");
+hangerBtn.type = "button";
+hangerBtn.id = "look-btn";
+// A coat hanger (there's no emoji for one): hook, shoulders and bar.
+hangerBtn.innerHTML =
+  '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
+  '<path d="M10 7a2 2 0 1 1 3 1.7c-.6.4-1 .9-1 1.6V11"/><path d="M12 11 3 17.5c-.6.5-.3 1.5.5 1.5h17c.8 0 1.1-1 .5-1.5L12 11"/></svg>';
+hangerBtn.title = "Customise look";
+hangerBtn.setAttribute("aria-label", "Customise look");
+hangerBtn.setAttribute("aria-haspopup", "dialog");
+hangerBtn.addEventListener("click", () => openLookPicker());
+document.body.append(hangerBtn);
 mountBgmPlayer();
 
 const scene = new THREE.Scene();
@@ -228,6 +245,8 @@ function becomeAvatar(_name: string): void {
 // saved on the server and everyone in the space sees it.
 
 const lookPicker = mountLookPicker({
+  // Before joining, go by the name typed; after, by the name signed in with.
+  qaHats: () => RESERVED_RE.test(session?.name ?? typedName()),
   preview(look) {
     previewAvatar?.setLook(look);
   },
@@ -577,10 +596,24 @@ const radial = mountRadial(
   ],
   (id) => {
     if (id === "note") void writeNote();
-    else net?.emote(id as Emote);
+    else sendEmote(id as Emote);
     stage.focus();
   },
 );
+
+// The server lets wave, yes, no and "mate" through once every two seconds
+// (dance as often as you like); a press inside that gap would just vanish, so
+// say so instead.
+const EMOTE_GAP_MS = 2000;
+let lastEmoteAt = 0;
+function sendEmote(kind: Emote): void {
+  const now = Date.now();
+  if (kind !== "dance") {
+    if (now - lastEmoteAt < EMOTE_GAP_MS) return toast("One moment before the next one.");
+    lastEmoteAt = now;
+  }
+  net?.emote(kind);
+}
 
 const chooser = mountNoteChooser((id) => void openNote(id));
 // Building 155's door asks which classroom; the admin can open and close
@@ -689,7 +722,14 @@ async function loadClassrooms(): Promise<void> {
 // the game when the site allows it, or in a new tab when it doesn't.
 const webview = mountWebView();
 // The dog in front of 154 asks for a feed: a link to my Buy Me a Coffee page.
-const dogPrompt = mountDogPrompt();
+// Woof woof, woof woof, woof: five barks in a happy rhythm, and a jump.
+const HAPPY_BARKS_MS = [0, 260, 700, 960, 1450];
+const dogPrompt = mountDogPrompt({
+  onFeed() {
+    dogHappy();
+    for (const at of HAPPY_BARKS_MS) window.setTimeout(() => sfx("bark"), at);
+  },
+});
 // Lab Coffee's menu board, north of 154: the cafés on campus.
 const cafeGuide = mountCafeGuide();
 
@@ -822,7 +862,7 @@ function placeBadges(): void {
     el.textContent = touchScreen.matches ? "Use" : "E";
     el.setAttribute("aria-hidden", "true");
     const obj = new CSS2DObject(el);
-    obj.position.set(x, 3.2, z); // over where you stand, raised so it reads beside what you use
+    obj.position.set(x, 2.3, z); // over where you stand, low enough to sit over what you use (3.2 floated behind it)
     obj.visible = false;
     scene.add(obj);
     badges.push({ obj, x, z });
@@ -1127,7 +1167,7 @@ function goOnline(token: string): void {
     },
     restricted(what, until) {
       sfx("error");
-      const when = new Date(until).toLocaleString([], { dateStyle: "medium", timeStyle: "short" });
+      const when = canberraTime(until);
       const doing: Record<string, string> = { chat: "chatting", notes: "sticking notes", posts: "posting on boards", join: "coming in" };
       toast(`The admin has stopped you ${doing[what] ?? what} until ${when}.`);
     },
@@ -1562,10 +1602,19 @@ function update(dt: number, now: number): void {
   // Door labels only near their door: a wall of them read as clutter, and
   // from afar they sat on top of the signs (outside, the buildings' names
   // stay visible from across the lawn).
+  // In a meeting room the dock and chat take the right-hand column, and the
+  // exit door's label sat half under it ("Leave the roo"): nudge any label
+  // that would run under it back to the left.
+  const columnLeft = roomPanel.isOpen() ? (document.getElementById("room-ui")?.getBoundingClientRect().left ?? Infinity) : Infinity;
   for (const label of doorLabels) {
     label.getWorldPosition(labelAt);
     const d = Math.hypot(labelAt.x - player.position.x, labelAt.z - player.position.z);
     label.visible = d <= (space.outdoor ? DOOR_LABEL_RANGE_OUT : DOOR_LABEL_RANGE);
+    // Measured without the nudge (the renderer sets only its transform), then nudged.
+    const el = label.element;
+    const nudge = parseFloat(el.style.marginLeft) || 0;
+    const over = label.visible && columnLeft !== Infinity ? el.getBoundingClientRect().right - nudge + 8 - columnLeft : 0;
+    el.style.marginLeft = over > 0 ? `${-over}px` : "";
   }
 
   // The sun's shadow box follows the player.

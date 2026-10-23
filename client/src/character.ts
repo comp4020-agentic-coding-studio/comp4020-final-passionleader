@@ -11,7 +11,7 @@ import { buildPlayer } from "./world.ts";
 // Until the model loads, or if it can't, a figure falls back to the old clay
 // one so nobody is invisible.
 
-import { CLOTH, DEFAULT_LOOK, HAIR, SKIN, type Look } from "./lookpicker.ts";
+import { CLOTH, DEFAULT_LOOK, HAIR, QA_HAT, SKIN, type Look } from "./lookpicker.ts";
 
 export type { Look };
 export type Motion = "idle" | "walk" | "run" | "sit";
@@ -135,6 +135,7 @@ function loadTemplate(v: Variant): Promise<Template | null> {
     .then((gltf) => {
       const scene = gltf.scene;
       if (v === "female-a") dropProp(scene);
+      keepFaceDark(scene);
       const box = new THREE.Box3().setFromObject(scene);
       scene.scale.multiplyScalar(CHARACTER.height / (box.max.y - box.min.y));
       scene.rotation.y = CHARACTER.yaw;
@@ -170,6 +171,96 @@ function dropProp(scene: THREE.Object3D): void {
   });
 }
 
+/**
+ * The eyes and mouth are painted from the hair's palette cells, so recolouring
+ * the hair recoloured them too: white hair gave white eyes, and black hair on
+ * dark skin hid them. Their vertices (the same rule on both bodies: hair
+ * column, rows 12-14, on the flat face plane at z ~0.16, below the fringe) now
+ * sample a dark cell no look repaints. Each eye and the mouth also get a thin
+ * light rim: a copy of their triangles, a little bigger around their centre
+ * and just behind them, so they read on dark skin too.
+ */
+const FACE_DARK_UV: [number, number] = [0.5 / 16, 13.5 / 16]; // cell (0,13), dark grey
+const FACE_RIM_UV: [number, number] = [12.5 / 16, 8.5 / 16]; // cell (12,8), off-white
+function keepFaceDark(scene: THREE.Object3D): void {
+  scene.traverse((o) => {
+    const mesh = o as THREE.SkinnedMesh;
+    if (!mesh.isSkinnedMesh || mesh.name !== "head-mesh") return;
+    const geo = mesh.geometry;
+    const uv = geo.getAttribute("uv");
+    const pos = geo.getAttribute("position");
+    const index = geo.getIndex();
+    if (!uv || !pos || !index) return;
+    const face = new Set<number>();
+    for (let i = 0; i < uv.count; i++) {
+      const col = Math.floor(uv.getX(i) * 16);
+      const row = Math.floor(uv.getY(i) * 16);
+      const z = pos.getZ(i);
+      if (col === 1 && row >= 12 && row <= 14 && z >= 0.155 && z <= 0.165 && pos.getY(i) < 0.52) face.add(i);
+    }
+    if (face.size === 0) return;
+    for (const i of face) uv.setXY(i, ...FACE_DARK_UV);
+    uv.needsUpdate = true;
+
+    // Group the face triangles into features (two eyes, a mouth) by shared corners.
+    const tris: number[][] = [];
+    for (let t = 0; t < index.count; t += 3) {
+      const tri = [index.getX(t), index.getX(t + 1), index.getX(t + 2)];
+      if (tri.every((i) => face.has(i))) tris.push(tri);
+    }
+    const group = new Map<number, number>();
+    const find = (i: number): number => {
+      while (group.has(i) && group.get(i) !== i) i = group.get(i)!;
+      return i;
+    };
+    for (const tri of tris) for (const i of tri) if (!group.has(i)) group.set(i, i);
+    for (const [a, b, c] of tris) {
+      group.set(find(b), find(a));
+      group.set(find(c), find(a));
+    }
+    const centre = new Map<number, THREE.Vector3>();
+    const count = new Map<number, number>();
+    for (const i of face) {
+      const g = find(i);
+      centre.set(g, (centre.get(g) ?? new THREE.Vector3()).add(new THREE.Vector3(pos.getX(i), pos.getY(i), 0)));
+      count.set(g, (count.get(g) ?? 0) + 1);
+    }
+    for (const [g, c] of centre) c.divideScalar(count.get(g)!);
+
+    // The rim: every face vertex copied, grown 35% out from its feature's
+    // centre and set 3 mm back, same bones and weights, so it moves with the head.
+    const extra = new Map<number, number>();
+    const attrs = Object.entries(geo.attributes) as [string, THREE.BufferAttribute][];
+    const grown = new Map<string, number[]>(attrs.map(([name, a]) => [name, Array.from(a.array as ArrayLike<number>)]));
+    for (const i of face) {
+      const n = pos.count + extra.size;
+      extra.set(i, n);
+      for (const [name, a] of attrs) {
+        const arr = grown.get(name)!;
+        for (let k = 0; k < a.itemSize; k++) arr.push(a.getComponent(i, k));
+        if (name === "position") {
+          const c = centre.get(find(i))!;
+          arr[n * 3] = c.x + (pos.getX(i) - c.x) * 1.35;
+          arr[n * 3 + 1] = c.y + (pos.getY(i) - c.y) * 1.35;
+          arr[n * 3 + 2] = pos.getZ(i) - 0.003;
+        } else if (name === "uv") {
+          arr[n * 2] = FACE_RIM_UV[0];
+          arr[n * 2 + 1] = FACE_RIM_UV[1];
+        }
+      }
+    }
+    for (const [name, a] of attrs) {
+      const Ctor = (a.array as Float32Array).constructor as new (xs: number[]) => THREE.TypedArray;
+      geo.setAttribute(name, new THREE.BufferAttribute(new Ctor(grown.get(name)!), a.itemSize, a.normalized));
+    }
+    const indices = Array.from(index.array as ArrayLike<number>);
+    for (const tri of tris) indices.push(...tri.map((i) => extra.get(i)!));
+    geo.setIndex(indices);
+    geo.computeBoundingBox();
+    geo.computeBoundingSphere();
+  });
+}
+
 /** Starts loading every body and the palette, so your own figure is ready by the time you've picked a name. */
 export function preloadCharacters(): void {
   for (const v of VARIANTS) void loadTemplate(v);
@@ -202,13 +293,15 @@ function dress(model: THREE.Object3D, variant: Variant, look: Look): void {
 }
 
 // --- hats -----------------------------------------------------------------------
-// Six hats built from simple shapes and pinned to the head bone, in the hair
-// colour's neighbourhood so they read as worn, not floating. Index 0 is none.
+// Hats built from simple shapes and pinned to the head bone, painted in one
+// of the hair colours you pick (lookpicker.ts). Index 0 is none; the hard
+// hat (QA_HAT, test accounts only) is always safety yellow.
 
-const HAT_COLOURS = [0, 0x8a2f2f, 0x2f5d8a, 0xc8b27a, 0x1f1f24, 0x6b3fa0, 0xe8e2d4];
-function hatMesh(kind: number): THREE.Object3D | null {
+const HARD_HAT_YELLOW = 0xf2c230;
+function hatMesh(kind: number, colour: number): THREE.Object3D | null {
   if (!kind) return null;
-  const m = new THREE.MeshStandardMaterial({ color: HAT_COLOURS[kind] ?? 0x333333, roughness: 0.8 });
+  const hard = kind === QA_HAT;
+  const m = new THREE.MeshStandardMaterial({ color: hard ? HARD_HAT_YELLOW : (HAIR[colour] ?? 0x333333), roughness: hard ? 0.45 : 0.8 });
   const g = new THREE.Group();
   const add = (geo: THREE.BufferGeometry, y: number, z = 0, rx = 0): void => {
     const mesh = new THREE.Mesh(geo, m);
@@ -241,6 +334,11 @@ function hatMesh(kind: number): THREE.Object3D | null {
       break;
     case 6: // helmet: a deeper dome down over the sides
       add(new THREE.SphereGeometry(0.66, 22, 12, 0, Math.PI * 2, 0, Math.PI / 1.8), -0.2);
+      break;
+    case QA_HAT: // hard hat: a high dome, a ridge over the top, and a brim all round, longer in front
+      add(new THREE.SphereGeometry(0.6, 22, 12, 0, Math.PI * 2, 0, Math.PI / 2), -0.1);
+      add(new THREE.BoxGeometry(0.14, 0.1, 0.9), 0.45); // the ridge, sitting on the dome's crown
+      add(new THREE.CylinderGeometry(0.76, 0.76, 0.04, 26), -0.1, 0.08);
       break;
   }
   return g;
@@ -318,7 +416,7 @@ export class Avatar {
   /** The hat goes on the head bone, so it nods and dances with the head. */
   private putHat(): void {
     if (this.hat) this.hat.removeFromParent();
-    this.hat = hatMesh(this.look.hat);
+    this.hat = hatMesh(this.look.hat, this.look.hatColour);
     const head = this.bones.head;
     if (!this.hat || !head) return;
     // The bone is scaled with the model: undo that so a hat is the same size on everyone.

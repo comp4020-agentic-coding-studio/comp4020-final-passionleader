@@ -28,10 +28,13 @@ const TICK_MS = 100;
 const PING_MS = 25_000;
 // A little breathing room between chat lines from one person.
 const CHAT_GAP_MS = 700;
+// Wave, yes, no and "mate" at most once every two seconds; dance isn't limited.
+const EMOTE_GAP_MS = 2000;
 
 const players = new Map<WebSocket, Player>();
 const alive = new WeakSet<WebSocket>();
 const lastChat = new WeakMap<WebSocket, number>();
+const lastEmote = new WeakMap<WebSocket, number>();
 const dirty = new Set<SpaceId>();
 // How many are where goes to everyone, at most every few seconds and only
 // when it changed, so nobody walks into an empty Hub without knowing.
@@ -298,6 +301,11 @@ function onMessage(ws: WebSocket, raw: string): void {
     roomSay(player.space, { name: player.name, text: `${player.name} invited ${invitee.name}`, system: true });
     roomChanged(player.space);
   } else if (msg.t === "emote" && typeof msg.kind === "string" && EMOTES.has(msg.kind)) {
+    if (msg.kind !== "dance") {
+      const now = Date.now();
+      if (now - (lastEmote.get(ws) ?? 0) < EMOTE_GAP_MS) return;
+      lastEmote.set(ws, now);
+    }
     broadcastSpace(player.space, { t: "emote", id: player.id, kind: msg.kind });
     log("emote", owners.get(ws) ?? null, { space: player.space, kind: msg.kind });
   }

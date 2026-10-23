@@ -280,7 +280,7 @@ function noticeboard(g: THREE.Group, colliders: Box[]): void {
     leg.position.set(x + dx, 1.25, z - 0.05);
     g.add(leg);
   }
-  const face = chalkboard(["Lawn noticeboard", "events · clubs · anything", "press E to read and post"], 3, 1.6, 0.22);
+  const face = chalkboard(["Lawn noticeboard", "events · clubs · anything"], 3, 1.6, 0.22);
   face.position.set(x, 1.6, z);
   g.add(face);
   solid(colliders, 3.4, 0.3, x, z);

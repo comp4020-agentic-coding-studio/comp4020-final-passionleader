@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, floor, lightPool, mat, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -56,7 +56,7 @@ export function buildHub(): SpaceDef {
   block(g, colliders, [12, 0.9, 0.9], [-14, -4], RECEPTION_WOOD);
   block(g, colliders, [0.9, 0.9, 3.55], [-8.45, -6.225], RECEPTION_WOOD);
   place(g, "computerScreen.glb", 0.5, BOARD_PC.x, BOARD_PC.z, 0, true, 0.9);
-  const boardTag = textPlane(["Student Hub board", "press E to read and post"], 1.9, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  const boardTag = textPlane(["Student Hub board", "read and post"], 1.9, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   boardTag.position.set(BOARD_PC.x, 1.85, BOARD_PC.z);
   g.add(boardTag);
   place(g, "computerScreen.glb", 0.5, AI_PC.x, AI_PC.z, 0, true, 0.9);
@@ -109,9 +109,9 @@ export function buildHub(): SpaceDef {
     place(g, "plantSmall1.glb", 0.4, x + 0.3, z, 0, true, 0.45);
     place(g, "lampRoundFloor.glb", 1.7, x + 1.9, z - 1.9);
     lightPool(g, x + 1.9, z - 1.9, 3.2, 3.2);
-    solid(colliders, 2.4, 0.9, x, z - 1.7);
-    solid(colliders, 2.4, 0.9, x, z + 1.7);
-    solid(colliders, 1.4, 0.9, x, z);
+    solid(colliders, 2.4, 0.9, x, z - 1.7, SOFA_TOP);
+    solid(colliders, 2.4, 0.9, x, z + 1.7, SOFA_TOP);
+    solid(colliders, 1.4, 0.9, x, z, SOFA_TOP);
   });
 
   // The counselling rooms' doors, 4 m apart down the east wall, signed on
@@ -206,9 +206,9 @@ export function buildHub(): SpaceDef {
 // games on GitHub Pages: Two-Tone (riff 5, made with my pod) and Retro Run &
 // Gun (my crit 5). Both let themselves be shown inside another page.
 const GAMES = [
-  { x: 4.5, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone", "press E"], marquee: 0x40c0ff },
-  { x: 7, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess", "press E"], marquee: 0xff5fa2 },
-  { x: 9.5, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun", "press E"], marquee: 0xffb030 },
+  { x: 4.5, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone"], marquee: 0x40c0ff },
+  { x: 7, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess"], marquee: 0xff5fa2 },
+  { x: 9.5, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun"], marquee: 0xffb030 },
 ];
 
 /**

@@ -17,6 +17,8 @@ export interface Box {
   maxX: number;
   minZ: number;
   maxZ: number;
+  /** How tall it is, for low things you can jump over (sofas). Unset: a wall. */
+  top?: number;
 }
 
 export interface Door {
@@ -106,10 +108,15 @@ export function keepIn(pos: THREE.Vector3, areas: Box[]): void {
   pos.z = bz;
 }
 
-/** Pushes a circle (the player) out of every collider. Two passes settle corners. */
+/**
+ * Pushes a circle (the player) out of every collider. Two passes settle
+ * corners. A collider with a `top` is skipped while the player is above it
+ * (mid-jump), so low furniture can be jumped over; land on it and you slide off.
+ */
 export function pushOut(pos: THREE.Vector3, radius: number, colliders: Box[]): void {
   for (let pass = 0; pass < 2; pass++) {
     for (const b of colliders) {
+      if (b.top !== undefined && pos.y > b.top) continue;
       const cx = THREE.MathUtils.clamp(pos.x, b.minX, b.maxX);
       const cz = THREE.MathUtils.clamp(pos.z, b.minZ, b.maxZ);
       const dx = pos.x - cx;
@@ -278,9 +285,12 @@ export function lightPool(g: THREE.Group, x: number, z: number, w: number, d: nu
 }
 
 /** A collision footprint with nothing drawn, for furniture drawn by a model. */
-export function solid(colliders: Box[], w: number, d: number, x: number, z: number): void {
-  colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2 });
+export function solid(colliders: Box[], w: number, d: number, x: number, z: number, top?: number): void {
+  colliders.push({ minX: x - w / 2, maxX: x + w / 2, minZ: z - d / 2, maxZ: z + d / 2, ...(top === undefined ? {} : { top }) });
 }
+
+/** Sofas and coffee tables: low enough to jump over (a jump peaks at about 1.2 m). */
+export const SOFA_TOP = 0.85;
 
 /**
  * Colours by the model's material name: Kenney's furniture calls its fabric
@@ -420,6 +430,26 @@ export function textPlane(lines: string[], w: number, h: number, opts: { bg?: st
  * classroom's, the Hub's, the lawn's) all use it, so they read as the same
  * kind of thing wherever they hang.
  */
+/**
+ * A pile of papers on a desk: a few loose sheets, slightly turned, with a
+ * folder on the bottom. For guides and forms (AI essentials, research ethics)
+ * that aren't a computer. `y` is the desk top.
+ */
+export function paperPile(g: THREE.Group, x: number, z: number, y: number): void {
+  const folder = new THREE.Mesh(new THREE.BoxGeometry(0.5, 0.03, 0.38), mat(0x2f5d8a));
+  folder.position.set(x, y + 0.015, z);
+  folder.castShadow = true;
+  g.add(folder);
+  const sheet = new THREE.MeshStandardMaterial({ color: 0xf7f4ea, roughness: 0.95 });
+  for (let i = 0; i < 6; i++) {
+    const p = new THREE.Mesh(new THREE.BoxGeometry(0.42, 0.012, 0.3), sheet);
+    p.position.set(x + Math.sin(i * 2.1) * 0.03, y + 0.036 + i * 0.013, z + Math.cos(i * 1.7) * 0.025);
+    p.rotation.y = Math.sin(i * 1.3) * 0.18;
+    p.castShadow = true;
+    g.add(p);
+  }
+}
+
 export function chalkboard(lines: string[], w: number, h: number, font = 0.26): THREE.Group {
   const board = new THREE.Group();
   const frame = new THREE.Mesh(new THREE.BoxGeometry(w + 0.2, h + 0.2, 0.06), mat(0x8a5a32));

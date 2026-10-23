@@ -9,7 +9,7 @@ import "./dogprompt.css";
 
 const PAGE = "https://buymeacoffee.com/sskim";
 
-export function mountDogPrompt(): { open(): void; isOpen(): boolean } {
+export function mountDogPrompt(opts: { onFeed(): void }): { open(): void; isOpen(): boolean } {
   const root = document.createElement("div");
   root.id = "dog-prompt";
   root.hidden = true;
@@ -61,7 +61,8 @@ export function mountDogPrompt(): { open(): void; isOpen(): boolean } {
     feed.focus();
   });
   feed.addEventListener("click", () => {
-    // The page opens in a new tab; the dialog can go.
+    // The page opens in a new tab; the dialog can go, and the dog is delighted.
+    opts.onFeed();
     window.setTimeout(hide, 0);
   });
   root.addEventListener("click", (e) => {

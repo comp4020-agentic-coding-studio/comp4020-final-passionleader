@@ -106,7 +106,7 @@ function umbrella(g: THREE.Group, x: number, z: number): void {
 function menuBoard(g: THREE.Group, colliders: Box[]): void {
   const { x, z } = CAFE_MENU;
   const b = new THREE.Group();
-  const face = textPlane(["Lab Coffee", "☕ cafés on campus", "press E"], 1.1, 1.4, { bg: "#2f4a3a", fg: "#f2f0e6", font: 0.15 });
+  const face = textPlane(["Lab Coffee", "☕ cafés on campus"], 1.1, 1.4, { bg: "#2f4a3a", fg: "#f2f0e6", font: 0.15 });
   face.position.set(0, 0.85, 0.12);
   face.rotation.x = -0.15;
   const frame = new THREE.Mesh(new THREE.BoxGeometry(1.24, 1.54, 0.05), mat(0x8a5a32));

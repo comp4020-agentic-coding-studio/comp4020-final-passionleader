@@ -1,10 +1,10 @@
-/* Small music box, top right, just left of the gear. Desktop only: phones
-   already have the touch controls in the corners. */
+/* Small music box, top right, just left of the coat hanger and the gear.
+   Desktop only: phones already have the touch controls in the corners. */
 
 #bgm-player {
   position: fixed;
   top: 10px;
-  right: 64px;
+  right: 116px;
   z-index: 20;
   box-sizing: border-box;
   height: 44px;

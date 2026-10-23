@@ -14,6 +14,14 @@ const HEIGHT = 0.85;
 const CLIP_PREFIX = /^.*\|/;
 
 /** Adds the dog to `g`; returns the per-frame update for its animation. */
+// Someone pressed "Buy me a feed": the dog jumps for joy a few times. Set by
+// dogHappy(), read by the dog's tick (there's only ever one dog).
+let happyFor = 0;
+/** The dog jumps for joy for a couple of seconds (its barks are played by the caller). */
+export function dogHappy(): void {
+  happyFor = 2.4;
+}
+
 export function addDog(g: THREE.Group, colliders: Box[]): (dt: number) => void {
   let mixer: THREE.AnimationMixer | null = null;
   let actions = new Map<string, THREE.AnimationAction>();
@@ -46,10 +54,31 @@ export function addDog(g: THREE.Group, colliders: Box[]): (dt: number) => void {
   return (dt) => {
     if (!mixer) return;
     mixer.update(dt);
+    if (happyFor > 0) {
+      const jump = actions.get("Jump_Loop");
+      if (jump && current !== jump) {
+        jump.reset().fadeIn(0.15).play();
+        current?.fadeOut(0.15);
+        current = jump;
+      }
+      happyFor -= dt;
+      // Back to standing once the joy runs out.
+      if (happyFor <= 0) nextSwitch = 0;
+      return;
+    }
     nextSwitch -= dt;
     if (nextSwitch > 0) return;
     // Mostly idle; every so often a few seconds of sniffing.
     const sniff = current === actions.get("Idle");
+    // After jumping, stand first rather than going straight to sniffing.
+    if (current !== actions.get("Idle") && current !== actions.get("Idle_Eating")) {
+      const idle = actions.get("Idle");
+      idle?.reset().fadeIn(0.3).play();
+      current?.fadeOut(0.3);
+      current = idle;
+      nextSwitch = 6;
+      return;
+    }
     const to = actions.get(sniff ? "Idle_Eating" : "Idle");
     if (to && to !== current) {
       to.reset().fadeIn(0.4).play();

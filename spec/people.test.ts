@@ -46,14 +46,31 @@ describe("looks", () => {
     await sb.next((m) => m.t === "welcome");
     const sa = await connect(a.token);
     await sa.next((m) => m.t === "welcome");
-    const look = { body: 1, skin: 3, hair: 7, top: 2, bottom: 5, hat: 4 };
+    const look = { body: 1, skin: 3, hair: 7, top: 2, bottom: 5, hat: 4, hatColour: 6 };
     expect((await api("/api/look", "PUT", { token: a.token, look })).status).toBe(200);
     await expect(sb.next(seen(a.name, (p) => p.look?.hat === 4 && p.look?.hair === 7))).resolves.toBeTruthy();
     expect((await api("/api/look", "PUT", { token: a.token, look: { ...look, hair: 10 } })).status).toBe(400);
     expect((await api("/api/look", "PUT", { token: a.token, look: { ...look, top: "#ff0000" } })).status).toBe(400);
+    expect((await api("/api/look", "PUT", { token: a.token, look: { ...look, hatColour: 10 } })).status).toBe(400);
     expect((await api("/api/look", "PUT", { look })).status).toBe(401);
     // It comes back with you next time.
     const again = await (await api("/api/join", "POST", { name: a.name, token: a.token })).json();
     expect(again.look).toEqual(look);
+  });
+
+  it("gives a look saved before hats had a colour the colour its hat had", async () => {
+    const a = await visitor();
+    const old = { body: 0, skin: 1, hair: 0, top: 0, bottom: 1, hat: 2 };
+    expect((await api("/api/look", "PUT", { token: a.token, look: old })).status).toBe(200);
+    const again = await (await api("/api/join", "POST", { name: a.name, token: a.token })).json();
+    // The cap was blue: the nearest hair colour, index 7.
+    expect(again.look).toEqual({ ...old, hatColour: 7 });
+  });
+
+  it("keeps the hard hat for the test accounts", async () => {
+    const a = await visitor();
+    const hard = { body: 0, skin: 1, hair: 0, top: 0, bottom: 1, hat: 7, hatColour: 1 };
+    expect((await api("/api/look", "PUT", { token: a.token, look: hard })).status).toBe(403);
+    expect((await api("/api/look", "PUT", { token: a.token, look: { ...hard, hat: 8 } })).status).toBe(400);
   });
 });

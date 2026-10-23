@@ -1,7 +1,7 @@
 // The "Customise look" window: how your figure looks. Two bodies (Figure A and
-// Figure B), and a colour for skin, hair, top and bottom, and a hat. A choice
-// is an index into the palettes below, so a look is six small numbers the
-// server can check. The window only collects the choice and reports it; the
+// Figure B), and a colour for skin, hair, top and bottom, and a hat and its
+// colour. A choice is an index into the palettes below, so a look is seven
+// small numbers the server can check. The window only collects the choice and reports it; the
 // 3D preview goes into `previewSlot` (filled by main) and the recolouring,
 // the saving and the wiring happen outside.
 
@@ -14,17 +14,23 @@ export interface Look {
   top: number;
   bottom: number;
   hat: number;
+  /** Which of the HAIR colours the hat (if any) is painted; ignored when hat is 0. */
+  hatColour: number;
 }
 
 // body 0 = "Figure A", 1 = "Figure B". skin 0-5, hair 0-9, top and bottom 0-9
-// index these palettes; hat 0 is none and 1-6 are the hats.
+// index these palettes; hat 0 is none and 1-6 are the hats, coloured from
+// the same HAIR palette (one fewer palette to keep straight, and a hat never
+// looks out of place next to the hair it's covering).
 export const SKIN = [0xf6d7b8, 0xe8b893, 0xd29a6c, 0xa86e45, 0x7a4a2c, 0x4e2f1d];
 export const HAIR = [0x2b2118, 0x5a3a22, 0x8c5a2b, 0xc79a4a, 0xe6d3a3, 0x8a8a8a, 0xb23b2e, 0x2f5d8a, 0x6b3fa0, 0x2e7d4f];
 export const CLOTH = [0x2f5d8a, 0x3a3f4a, 0x8a2f2f, 0x2e7d4f, 0xc58a12, 0x6b3fa0, 0xe8e2d4, 0x1f1f24, 0xd2691e, 0x4aa3c7];
-export const HATS = ["No hat", "Beanie", "Cap", "Bucket hat", "Graduation cap", "Beret", "Helmet"];
-export const DEFAULT_LOOK: Look = { body: 0, skin: 1, hair: 0, top: 0, bottom: 1, hat: 0 };
+export const HATS = ["No hat", "Beanie", "Cap", "Bucket hat", "Graduation cap", "Beret", "Helmet", "Hard hat"];
+/** The yellow hard hat is for the test accounts (`qa_`) only; the server checks too. */
+export const QA_HAT = 7;
+export const DEFAULT_LOOK: Look = { body: 0, skin: 1, hair: 0, top: 0, bottom: 1, hat: 0, hatColour: 1 };
 
-type Colour = "skin" | "hair" | "top" | "bottom";
+type Colour = "skin" | "hair" | "top" | "bottom" | "hatColour";
 const ROWS: { key: Colour; label: string; palette: number[] }[] = [
   { key: "skin", label: "Skin", palette: SKIN },
   { key: "hair", label: "Hair", palette: HAIR },
@@ -46,10 +52,13 @@ function clean(l: Look): Look {
     top: ok(l.top, CLOTH.length, DEFAULT_LOOK.top),
     bottom: ok(l.bottom, CLOTH.length, DEFAULT_LOOK.bottom),
     hat: ok(l.hat, HATS.length, DEFAULT_LOOK.hat),
+    hatColour: ok(l.hatColour, HAIR.length, DEFAULT_LOOK.hatColour),
   };
 }
 
 export function mountLookPicker(opts: {
+  /** Whether this visitor may wear the qa-only hard hat. */
+  qaHats(): boolean;
   /** Called on every change, so the main session can update a live preview (and on Save). */
   preview(look: Look): void;
   /** Save pressed: resolve to an error message or null. */
@@ -170,10 +179,32 @@ export function mountLookPicker(opts: {
       },
       (i) => {
         look.hat = i;
+        syncHatColourRow();
         changed();
       },
     ),
   );
+  const hatColourRow = row(
+    "hatColour",
+    "Hat colour",
+    HAIR.length,
+    (i, input, span) => {
+      span.className = "look-swatch";
+      span.style.background = hex(HAIR[i]!);
+      input.setAttribute("aria-label", `Hat colour ${i + 1} of ${HAIR.length}`);
+    },
+    (i) => {
+      look.hatColour = i;
+      changed();
+    },
+  );
+  rows.append(hatColourRow);
+  inputs.get("hat")?.[QA_HAT]?.closest("label")?.classList.add("look-qa-only");
+
+  /** Greys out the hat colour row with no hat, or the hard hat (always yellow). */
+  function syncHatColourRow(): void {
+    hatColourRow.disabled = look.hat === 0 || look.hat === QA_HAT;
+  }
 
   const error = document.createElement("p");
   error.className = "look-error";
@@ -199,8 +230,9 @@ export function mountLookPicker(opts: {
 
   /** Checks the radio for each part of a look. */
   function show(l: Look): void {
-    const at: Record<string, number> = { body: l.body, skin: l.skin, hair: l.hair, top: l.top, bottom: l.bottom, hat: l.hat };
+    const at: Record<string, number> = { body: l.body, skin: l.skin, hair: l.hair, top: l.top, bottom: l.bottom, hat: l.hat, hatColour: l.hatColour };
     for (const [group, list] of inputs) for (const [i, input] of list.entries()) input.checked = i === at[group];
+    syncHatColourRow();
   }
 
   function hide(): void {
@@ -219,7 +251,15 @@ export function mountLookPicker(opts: {
   }
 
   random.addEventListener("click", () => {
-    look = { body: pick(2) === 1 ? 1 : 0, skin: pick(SKIN.length), hair: pick(HAIR.length), top: pick(CLOTH.length), bottom: pick(CLOTH.length), hat: pick(HATS.length) };
+    look = {
+      body: pick(2) === 1 ? 1 : 0,
+      skin: pick(SKIN.length),
+      hair: pick(HAIR.length),
+      top: pick(CLOTH.length),
+      bottom: pick(CLOTH.length),
+      hat: pick(opts.qaHats() ? HATS.length : QA_HAT),
+      hatColour: pick(HAIR.length),
+    };
     show(look);
     error.textContent = "";
     changed();
@@ -266,6 +306,8 @@ export function mountLookPicker(opts: {
 
   return {
     open(current) {
+      // The hard hat only shows for the test accounts.
+      for (const el of root.querySelectorAll<HTMLElement>(".look-qa-only")) el.hidden = !opts.qaHats();
       look = clean(current);
       original = copy(look);
       show(look);

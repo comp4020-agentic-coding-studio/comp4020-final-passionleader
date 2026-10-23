@@ -2,6 +2,7 @@
 // A modal dialog over the scene — self-mounts to <body>, hidden until open().
 
 import "./notepanel.css";
+import { canberraDay, canberraTime, parseUtc, sameCanberraDay } from "./when.ts";
 
 export interface NoteView {
   id: number;
@@ -13,12 +14,11 @@ export interface NoteView {
   canDelete: boolean;
 }
 
-/** "Disappears on 16 Nov" (or "today"), in the reader's own time zone. */
+/** "Disappears on 16 Nov" (or "today"), in Canberra time. */
 function goneOn(utc: string): string {
-  const when = new Date(utc.replace(" ", "T") + "Z");
-  if (Number.isNaN(when.getTime())) return "";
-  const day = when.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
-  return when.toDateString() === new Date().toDateString() ? "Disappears today" : `Disappears on ${day}`;
+  const when = parseUtc(utc);
+  if (!when) return "";
+  return sameCanberraDay(when, new Date()) ? "Disappears today" : `Disappears on ${canberraDay(when)}`;
 }
 
 export interface CommentView {
@@ -143,7 +143,7 @@ export function mountNotePanel(h: {
       a.className = "note-comment-author";
       a.textContent = c.author;
       const d = document.createElement("span");
-      d.textContent = c.createdAt;
+      d.textContent = canberraTime(c.createdAt);
       rowHead.append(a, d);
       if (c.canDelete) {
         const del = document.createElement("button");
@@ -223,7 +223,7 @@ export function mountNotePanel(h: {
       current = note;
       currentComments = initialComments;
       author.textContent = note.author;
-      date.textContent = `${note.createdAt} · ${goneOn(note.expiresAt)}`;
+      date.textContent = `${canberraTime(note.createdAt)} · ${goneOn(note.expiresAt)}`;
       date.title = "Sticky notes disappear a month after they're stuck.";
       text.textContent = note.text;
       deleteNoteBtn.hidden = !note.canDelete;
@@ -233,7 +233,10 @@ export function mountNotePanel(h: {
       renderComments();
       root.classList.add("is-open");
       document.addEventListener("keydown", onKeydown);
-      textarea.focus();
+      // Open at the top, on the note itself: focusing the comment box at the
+      // bottom used to scroll the card down past the text.
+      textarea.focus({ preventScroll: true });
+      card.scrollTop = 0;
     },
     close(): void {
       hide();

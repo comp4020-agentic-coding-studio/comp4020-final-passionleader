@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, doorway, LIBRARY_BGM, lightPool, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { block, doorway, LIBRARY_BGM, lightPool, paperPile, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -48,7 +48,9 @@ export function buildLibrary(): SpaceDef {
   block(g, colliders, [6, 0.9, 1], [COMPUTERS.x, COMPUTERS.z], texMat("ai/wood_tabletop.jpg", 3, 1, 0xb08a64));
   for (const [i, label] of ["Book a room", "Catalogue", "Research ethics"].entries()) {
     const x = COMPUTERS.x - 2 + i * 2;
-    place(g, "computerScreen.glb", 0.45, x, COMPUTERS.z - 0.1, Math.PI, true, 0.9);
+    // Research ethics is a pile of forms, not a third computer.
+    if (label === "Research ethics") paperPile(g, x, COMPUTERS.z, 0.9);
+    else place(g, "computerScreen.glb", 0.45, x, COMPUTERS.z - 0.1, Math.PI, true, 0.9);
     const tag = textPlane([label], 1.7, 0.36, { bg: "#1f2d3d", fg: "#ffffff", font: 0.2 });
     tag.position.set(x, 1.75, COMPUTERS.z + 0.51);
     g.add(tag);

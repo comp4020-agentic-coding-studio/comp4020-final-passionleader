@@ -675,8 +675,10 @@ export function deleteBugReport(id: number): boolean {
 
 // --- how people look ------------------------------------------------------------
 // A figure (two bodies), skin, hair, top and bottom colours as indexes into
-// fixed palettes (client/src/lookpicker.ts), and a hat. Indexes, not colours,
-// so nobody can paint themselves an arbitrary colour or slip anything else in.
+// fixed palettes (client/src/lookpicker.ts), and a hat and its colour (from
+// the hair palette). Indexes, not colours, so nobody can paint themselves an
+// arbitrary colour or slip anything else in. Hat 7, the hard hat, is for the
+// test accounts (qa_) only.
 
 export interface Look {
   body: number;
@@ -685,15 +687,21 @@ export interface Look {
   top: number;
   bottom: number;
   hat: number;
+  hatColour: number;
 }
-const LOOK_LIMITS: Record<keyof Look, number> = { body: 2, skin: 6, hair: 10, top: 10, bottom: 10, hat: 7 };
+const LOOK_LIMITS: Record<keyof Look, number> = { body: 2, skin: 6, hair: 10, top: 10, bottom: 10, hat: 8, hatColour: 10 };
+export const QA_HAT = 7;
+// Looks saved before hats had a colour: each hat keeps (about) the colour it had.
+const OLD_HAT_COLOUR = [1, 6, 7, 3, 0, 8, 4];
 
 /** The look if every part is a whole number in its range, else null. */
 export function validLook(v: unknown): Look | null {
   if (typeof v !== "object" || v === null) return null;
+  const given = v as Record<string, unknown>;
   const out: Partial<Look> = {};
   for (const [k, n] of Object.entries(LOOK_LIMITS) as [keyof Look, number][]) {
-    const x = (v as Record<string, unknown>)[k];
+    let x = given[k];
+    if (k === "hatColour" && x === undefined && typeof given.hat === "number") x = OLD_HAT_COLOUR[given.hat] ?? 1;
     if (typeof x !== "number" || !Number.isInteger(x) || x < 0 || x >= n) return null;
     out[k] = x;
   }
