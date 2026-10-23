@@ -54,6 +54,7 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { dogHappy } from "./spaces/dog.ts";
+import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
@@ -118,7 +119,9 @@ const bugReport = mountBugReport({
 
 // Low (the default) vs High graphics: see settings.ts.
 const highQuality = HIGH;
-mountSettings({ reportBug: () => bugReport.open(), reportPerson: () => bugReport.open(true) });
+// Mute (plan 33): someone's chat, bubbles and notes vanish from this screen only.
+const muteDialog = mountMute({ changed: () => syncMutedNotes() });
+mountSettings({ reportBug: () => bugReport.open(), reportPerson: () => bugReport.open(true), mute: () => muteDialog.open() });
 
 // Customise look has its own button, a coat hanger just left of the gear (it
 // used to be a row in the settings dialog). The join screen keeps its button.
@@ -360,6 +363,7 @@ function speak(group: THREE.Object3D, text: string, ms: number): void {
 // Positions arrive ten times a second; each frame eases the figure toward the
 // latest one, so movement looks continuous rather than stepping.
 interface OtherView {
+  name: string;
   avatar: Avatar;
   /** Which figure they have (and so which voice). */
   variant: Variant;
@@ -388,7 +392,7 @@ function upsertOther(p: RemotePlayer): void {
     tag(group, p.name, 2.2, "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look) };
+    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look) };
     others.set(p.id, view);
   }
   // A new look (they changed it while here): recolour in place.
@@ -440,6 +444,8 @@ const EMOTE_TEXT: Record<Emote, string> = {
 function showEmote(id: string, kind: Emote): void {
   const figure = figureOf(id);
   if (!figure) return;
+  const other = others.get(id);
+  if (other && muteDialog.isMuted(other.name)) return;
   speak(figure, EMOTE_TEXT[kind], 3000);
   const avatar = id === selfId ? me : others.get(id)?.avatar;
   if (kind === "yes" || kind === "no") avatar?.gesture(kind);
@@ -482,6 +488,12 @@ function upsertNote(n: Note): void {
   }
   view.note = n;
   view.label.element.textContent = noteLabel(n);
+  view.group.visible = !muteDialog.isMuted(n.author);
+}
+
+/** Muted people's notes vanish (and come back on unmute). */
+function syncMutedNotes(): void {
+  for (const view of notes.values()) view.group.visible = !muteDialog.isMuted(view.note.author);
 }
 
 function removeNote(id: number): void {
@@ -831,12 +843,14 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
 
 let playing = false;
+/** When the admin's "coming in" restriction ends (Canberra time), for the join screen. */
+let stoppedUntil = "";
 let vy = 0;
 
 const doorLabels: CSS2DObject[] = [];
@@ -1108,13 +1122,25 @@ function goOnline(token: string): void {
       players.forEach(upsertOther);
     },
     leave: removeOther,
-    chat(id, name, text) {
+    chat(id, name, text, all) {
+      if (id !== selfId && muteDialog.isMuted(name)) return;
+      if (all) {
+        // To every space: in the chat log, marked; a bubble only if they're here.
+        chat.add({ name: `[all] ${name}`, text, self: id === selfId });
+        const figure = all.space === space?.id ? figureOf(id) : null;
+        if (figure) speak(figure, text, 5000);
+        return;
+      }
       // A ping for someone else's line in a meeting room: the window may be folded away on a phone.
       if (roomPanel.isOpen() && id !== selfId) sfx("message");
       if (roomPanel.isOpen()) roomPanel.add({ name, text, self: id === selfId });
       else chat.add({ name, text, self: id === selfId });
       const figure = figureOf(id);
       if (figure) speak(figure, text, 5000);
+    },
+    allWait(seconds) {
+      sfx("error");
+      toast(seconds ? `/all again in ${seconds} s (once every 30 seconds).` : "/all doesn't leave a meeting room.");
     },
     emote: showEmote,
     note: upsertNote,
@@ -1169,8 +1195,17 @@ function goOnline(token: string): void {
     restricted(what, until) {
       sfx("error");
       const when = canberraTime(until);
+      if (what === "join") stoppedUntil = when;
       const doing: Record<string, string> = { chat: "chatting", notes: "sticking notes", posts: "posting on boards", join: "coming in" };
       toast(`The admin has stopped you ${doing[what] ?? what} until ${when}.`);
+    },
+    removed(why) {
+      sfx("error");
+      showJoin(
+        why === "kicked"
+          ? "The admin has put you out of the campus. You can come back in."
+          : `The admin has stopped you coming in${stoppedUntil ? ` until ${stoppedUntil}` : " for now"}.`,
+      );
     },
     seatRefused() {
       mySeat = null;
@@ -1441,6 +1476,7 @@ function nearestTarget(): Target | null {
   const here: NoteChoice[] = [];
   let nearest: { id: number; author: string; d: number } | null = null;
   for (const [id, view] of notes) {
+    if (!view.group.visible) continue; // muted
     const d = Math.hypot(player.position.x - view.note.x, player.position.z - view.note.z);
     if (d >= NOTE_RANGE) continue;
     here.push({ id, author: view.note.author, text: view.note.text });
@@ -1598,7 +1634,7 @@ function update(dt: number, now: number): void {
   }
 
   for (const view of notes.values()) {
-    view.label.visible = view.group.position.distanceTo(player.position) <= NOTE_LABEL_RANGE;
+    view.label.visible = view.group.visible && view.group.position.distanceTo(player.position) <= NOTE_LABEL_RANGE;
   }
   // Door labels only near their door: a wall of them read as clutter, and
   // from afar they sat on top of the signs (outside, the buildings' names

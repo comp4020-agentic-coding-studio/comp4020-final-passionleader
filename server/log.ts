@@ -34,6 +34,7 @@ export type Event =
   | "post-edited"
   | "post-removed"
   | "post-expired"
+  | "kicked"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"
@@ -78,6 +79,7 @@ const KEPT: ReadonlySet<Event> = new Set<Event>([
   "file",
   "restricted",
   "restriction-lifted",
+  "kicked",
   "refused",
 ]);
 

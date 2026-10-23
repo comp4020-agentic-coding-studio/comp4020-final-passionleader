@@ -22,7 +22,7 @@ function read(): Quality {
 export const QUALITY: Quality = read();
 export const HIGH = QUALITY === "high";
 
-export function mountSettings(opts: { reportBug(): void; reportPerson(): void }): void {
+export function mountSettings(opts: { reportBug(): void; reportPerson(): void; mute(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -117,8 +117,12 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void })
   person.type = "button";
   person.className = "settings-bug";
   person.textContent = "🚩 Report someone";
+  const mute = document.createElement("button");
+  mute.type = "button";
+  mute.className = "settings-bug";
+  mute.textContent = "🔇 Mute someone";
 
-  card.append(title, sound, fieldset, note, bug, person, actions);
+  card.append(title, sound, fieldset, note, bug, person, mute, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -138,6 +142,10 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void })
   person.addEventListener("click", () => {
     dialog.hidden = true;
     opts.reportPerson();
+  });
+  mute.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.mute();
   });
   dialog.addEventListener("keydown", (e) => {
     e.stopPropagation();

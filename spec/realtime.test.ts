@@ -47,6 +47,26 @@ describe("real time", () => {
     expect(await sc.sees((m) => m.t === "chat" && m.name === a.name, 600)).toBe(false);
   });
 
+  it("sends /all to every space's chat log, once every 30 seconds, and keeps ordinary chat in its space", async () => {
+    const [a, b, c] = await Promise.all([visitor(), visitor(), visitor()]);
+    const sa = await connect(a.token);
+    const sb = await connect(b.token);
+    const sc = await connect(c.token);
+    await Promise.all([sa.next((m) => m.t === "welcome"), sb.next((m) => m.t === "welcome"), sc.next((m) => m.t === "welcome")]);
+    // c goes into the Hub; a and b stay outside.
+    sc.send({ t: "enter", space: "hub", x: 0, z: 6 });
+    await sc.next((m) => m.t === "players" && !(m.players as P[]).some((p) => p.name === a.name));
+    sa.send({ t: "chat", text: "just the lawn" });
+    await sb.next((m) => m.t === "chat" && m.text === "just the lawn");
+    expect(await sc.seesNew((m) => m.t === "chat" && m.text === "just the lawn", 800)).toBe(false); // also past the 0.7 s chat gap
+    sa.send({ t: "chat", text: "/all fire drill at noon" });
+    await expect(sc.next((m) => m.t === "chat" && m.text === "fire drill at noon")).resolves.toMatchObject({ all: true, space: "outdoor", name: a.name });
+    await new Promise((r) => setTimeout(r, 800)); // past the ordinary chat gap
+    sa.send({ t: "chat", text: "/all again" });
+    await expect(sa.next((m) => m.t === "action" && m.kind === "all-wait")).resolves.toBeTruthy();
+    expect(await sc.seesNew((m) => m.t === "chat" && m.text === "again", 400)).toBe(false);
+  });
+
   it("lets an emote through once every two seconds, but dance as often as you like", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
     const sa = await connect(a.token);

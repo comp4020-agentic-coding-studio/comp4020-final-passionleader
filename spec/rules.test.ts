@@ -115,6 +115,18 @@ describe("classrooms the admin opens and closes", () => {
   });
 });
 
+describe("classrooms last a semester", () => {
+  it("lists a classroom six months old to close, but never COMP8020 or COMMON", () => {
+    db.addClassroom("COMP6600", "qa_master");
+    raw.prepare("UPDATE classrooms SET created_at = datetime('now', '-7 months') WHERE code IN ('COMP6600', 'COMP8020', 'COMMON')").run();
+    const stale = db.staleClassrooms();
+    expect(stale).toContain("COMP6600");
+    expect(stale).not.toContain("COMP8020");
+    expect(stale).not.toContain("COMMON");
+    db.removeClassroom("COMP6600");
+  });
+});
+
 describe("lawn posts last 30 days", () => {
   it("hides a lawn post past 30 days at once, and lists it to purge; other boards keep theirs", () => {
     db.createVisitor("poster", "t-poster");

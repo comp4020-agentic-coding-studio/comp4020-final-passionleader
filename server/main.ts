@@ -38,6 +38,8 @@ import {
   postsIn,
   expiredPosts,
   postsInGoneTabs,
+  staleClassrooms,
+  postIdsIn,
   purgeExpiredNotes,
   purgeOldAudit,
   addAudit,
@@ -70,7 +72,7 @@ import {
   type Visitor,
 } from "./db.ts";
 import { browserTag, keepIn, log } from "./log.ts";
-import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, livePlayer, noticeRestriction, roomSessionOf, roomShare, setLook } from "./realtime.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, mayPostIn, tabOf } from "./boards.ts";
@@ -618,7 +620,7 @@ app.delete("/api/board-comments/:id", async (c) => {
 // every request; anyone joined may send a bug report.
 
 const AUDIT_GROUPS: Record<string, string[]> = {
-  admin: ["restricted", "restriction-lifted", "classroom-created", "classroom-removed", "classroom-link"],
+  admin: ["restricted", "restriction-lifted", "kicked", "classroom-created", "classroom-removed", "classroom-link"],
   content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "person-report", "file"],
   signin: ["join", "join-refused", "connect", "disconnect"],
   refused: ["refused", "join-refused"],
@@ -689,6 +691,21 @@ app.put("/api/admin/restrictions", async (c) => {
   log("restricted", v, { name: target.name, what, until }, { ip: ipOf(c), content: reason });
   noticeRestriction(target.name, what, until);
   return c.json({ ok: true, until });
+});
+
+// A plain kick: put someone out once, nothing stored, so they can come back
+// in. For a nuisance that doesn't need a restriction. Logged like the rest.
+app.post("/api/admin/kick", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const { v, b } = r;
+  const target = typeof b.name === "string" ? findByName(b.name.trim()) : undefined;
+  if (!target) return c.json({ error: "No one by that name." }, 404);
+  if (target.role === "admin") return c.json({ error: "The admin can't be kicked." }, 400);
+  const tabs = kick(target.name);
+  if (!tabs) return c.json({ error: `${target.name} isn't on the campus right now.` }, 404);
+  log("kicked", v, { name: target.name, tabs }, { ip: ipOf(c) });
+  return c.json({ ok: true, tabs });
 });
 
 app.delete("/api/admin/restrictions", async (c) => {
@@ -889,6 +906,18 @@ sketchRoutes(app);
 const purge = (): void => {
   const gone = purgeExpiredNotes();
   if (gone) log("note-expired", null, { count: gone });
+  // A classroom lasts a semester: six months after it opened it closes on its
+  // own (never COMP8020 or COMMON), as if the admin had closed it.
+  for (const code of staleClassrooms()) {
+    const space = classroomSpace(code);
+    let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
+    for (const room of teamRoomsOf(space)) moved += evictSpace(room, FIRST_SPACE, { x: -8.4, z: 7 });
+    for (const id of postIdsIn(space)) removeObjects(filesOn("post", id, true).map((f) => f.key));
+    if (removeClassroom(code)) {
+      log("classroom-removed", null, { code, space, moved, reason: "six months old" });
+      broadcastAll({ t: "action", kind: "classrooms", classrooms: classroomList() });
+    }
+  }
   // The lawn's posts past their 30 days go, files and all.
   for (const [space, days] of expiringBoards()) {
     const ids = expiredPosts(space, days);

@@ -30,11 +30,16 @@ const PING_MS = 25_000;
 const CHAT_GAP_MS = 700;
 // Wave, yes, no and "mate" at most once every two seconds; dance isn't limited.
 const EMOTE_GAP_MS = 2000;
+// "/all message" reaches every space's chat log (not meeting rooms', which are
+// private): once every 30 seconds each, so it can't be used to flood the campus.
+const ALL_PREFIX = /^\/all\s+/i;
+const ALL_GAP_MS = 30_000;
 
 const players = new Map<WebSocket, Player>();
 const alive = new WeakSet<WebSocket>();
 const lastChat = new WeakMap<WebSocket, number>();
 const lastEmote = new WeakMap<WebSocket, number>();
+const lastAll = new Map<string, number>(); // by name, so a second tab doesn't double it
 const dirty = new Set<SpaceId>();
 // How many are where goes to everyone, at most every few seconds and only
 // when it changed, so nobody walks into an empty Hub without knowing.
@@ -110,6 +115,17 @@ function closeRoom(space: SpaceId): void {
 }
 
 /** Where `name` is right now, if they're online (their newest tab). */
+/** Puts `name` out once (the admin's kick): closes their sockets; they may come straight back. Returns how many. */
+export function kick(name: string): number {
+  let n = 0;
+  for (const [ws, p] of players) {
+    if (p.name.toLowerCase() !== name.toLowerCase()) continue;
+    ws.close(4004, "kicked");
+    n++;
+  }
+  return n;
+}
+
 /** Tells everyone called `name` they've been stopped from `what`; for "join", closes their sockets too. */
 export function noticeRestriction(name: string, what: string, until: string): void {
   for (const [ws, p] of players) {
@@ -266,7 +282,9 @@ function onMessage(ws: WebSocket, raw: string): void {
     }
     dirty.add(player.space);
   } else if (msg.t === "chat" && typeof msg.text === "string") {
-    const text = msg.text.trim().slice(0, MAX_CHAT);
+    const raw = msg.text.trim();
+    const toAll = ALL_PREFIX.test(raw);
+    const text = (toAll ? raw.replace(ALL_PREFIX, "") : raw).trim().slice(0, MAX_CHAT);
     const now = Date.now();
     if (!text || now - (lastChat.get(ws) ?? 0) < CHAT_GAP_MS) return;
     lastChat.set(ws, now);
@@ -274,6 +292,25 @@ function onMessage(ws: WebSocket, raw: string): void {
     if (stopped) {
       log("refused", owners.get(ws) ?? null, { action: "chat", space: player.space, reason: "restricted" });
       send(ws, { t: "action", kind: "restricted", what: "chat", until: stopped.until });
+      return;
+    }
+    if (toAll) {
+      // A meeting room's chat stays in the room, both ways.
+      if (rooms.has(player.space)) {
+        send(ws, { t: "action", kind: "all-wait", seconds: 0 });
+        return;
+      }
+      const key = player.name.toLowerCase();
+      const wait = ALL_GAP_MS - (now - (lastAll.get(key) ?? 0));
+      if (wait > 0) {
+        send(ws, { t: "action", kind: "all-wait", seconds: Math.ceil(wait / 1000) });
+        return;
+      }
+      lastAll.set(key, now);
+      log("chat", owners.get(ws) ?? null, { space: player.space, chars: text.length, all: true });
+      // Everyone outside meeting rooms; the bubble only shows in the sender's space.
+      for (const [other, p] of players) if (!rooms.has(p.space)) send(other, { t: "chat", id: player.id, name: player.name, text, all: true, space: player.space });
+      keepChatLine(player.space, player.name, `[all] ${text}`);
       return;
     }
     // The log notes that someone spoke, and how much, not what they said.

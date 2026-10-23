@@ -33,6 +33,9 @@ export function mountWebView(): { open(link: WebLink): void; close(): void; isOp
   const newTab = document.createElement("button");
   newTab.type = "button";
   newTab.textContent = "Open in new tab";
+  // Another site's page in the frame can't be read (the browser keeps where
+  // you've got to private), so for those this opens the page you started on.
+  newTab.title = "Opens this page in a new tab. On other sites it starts again from the first page.";
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "webview-close";
@@ -54,6 +57,16 @@ export function mountWebView(): { open(link: WebLink): void; close(): void; isOp
   const openInTab = (url: string): void => {
     window.open(url, "_blank", "noopener");
   };
+  /** Where the frame is now, if it's our own page (others' are unreadable); else the page it opened on. */
+  const whereNow = (fallback: string): string => {
+    try {
+      const href = frame.contentWindow?.location.href;
+      if (href && href !== "about:blank") return href;
+    } catch {
+      // Another site: the browser won't say.
+    }
+    return fallback;
+  };
 
   const close = (): void => {
     if (root.hidden) return;
@@ -67,7 +80,7 @@ export function mountWebView(): { open(link: WebLink): void; close(): void; isOp
 
   closeBtn.addEventListener("click", close);
   newTab.addEventListener("click", () => {
-    if (current) openInTab(current.url);
+    if (current) openInTab(whereNow(current.url));
   });
   root.addEventListener("click", (e) => {
     if (e.target === root) close();

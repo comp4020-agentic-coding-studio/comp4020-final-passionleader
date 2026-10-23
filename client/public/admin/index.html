@@ -114,7 +114,7 @@
       <div id="bugs"></div>
     </section>
     <section id="limit-view" hidden>
-      <p class="hint">Stop one person sticking notes (and commenting on them), posting on boards (and commenting), chatting, or coming in at all, for a number of hours. The server checks before each; they're told until when. Every change goes in the log.</p>
+      <p class="hint">Stop one person sticking notes (and commenting on them), posting on boards (and commenting), chatting, or coming in at all, for a number of hours. The server checks before each; they're told until when. "Coming in" puts them out at once. "Kick now" puts them out once with no restriction, so they can come straight back. Every change goes in the log.</p>
       <form class="bar" id="limit-form">
         <input id="l-name" placeholder="name" aria-label="Name to restrict" size="10" autocomplete="off" required>
         <select id="l-what" aria-label="What to stop">
@@ -124,6 +124,7 @@
           <option value="join">Coming in (all)</option>
         </select>
         <select id="l-hours" aria-label="For how long">
+          <option value="kick">Kick now (no restriction)</option>
           <option value="1">1 hour</option>
           <option value="24" selected>1 day</option>
           <option value="168">7 days</option>
@@ -131,7 +132,7 @@
           <option value="8760">1 year</option>
         </select>
         <input id="l-reason" placeholder="reason (optional)" aria-label="Reason" size="24" maxlength="200">
-        <button type="submit" class="primary">Restrict</button>
+        <button type="submit" class="primary" id="l-go">Restrict</button>
       </form>
       <p class="error" id="limit-error" role="alert"></p>
       <table>
@@ -377,11 +378,22 @@
       $("limit-error").textContent = err.message;
     }
   }
+  // "Kick now" ignores what to stop: the button says what will happen.
+  $("l-hours").addEventListener("change", () => {
+    const kick = $("l-hours").value === "kick";
+    $("l-go").textContent = kick ? "Kick" : "Restrict";
+    $("l-what").disabled = kick;
+  });
   $("limit-form").addEventListener("submit", async (e) => {
     e.preventDefault();
     $("limit-error").textContent = "";
     try {
-      await api("/api/admin/restrictions", "PUT", { name: $("l-name").value.trim(), what: $("l-what").value, hours: Number($("l-hours").value), reason: $("l-reason").value });
+      if ($("l-hours").value === "kick") {
+        const { tabs } = await api("/api/admin/kick", "POST", { name: $("l-name").value.trim() });
+        $("limit-error").textContent = `Put out (${tabs} ${tabs === 1 ? "tab" : "tabs"}).`;
+      } else {
+        await api("/api/admin/restrictions", "PUT", { name: $("l-name").value.trim(), what: $("l-what").value, hours: Number($("l-hours").value), reason: $("l-reason").value });
+      }
       $("l-name").value = "";
       $("l-reason").value = "";
       loadLimits();

@@ -43,7 +43,10 @@ export interface NetHandlers {
   welcome(selfId: string, space: SpaceId, players: RemotePlayer[]): void;
   players(players: RemotePlayer[]): void;
   leave(id: string): void;
-  chat(id: string, name: string, text: string): void;
+  /** A chat line; `all` when it was sent with /all to every space (from `space`). */
+  chat(id: string, name: string, text: string, all?: { space: SpaceId }): void;
+  /** /all was refused: wait `seconds` (0: not from inside a meeting room). */
+  allWait(seconds: number): void;
   emote(id: string, kind: Emote): void;
   note(note: Note): void;
   noteRemoved(id: number): void;
@@ -69,6 +72,8 @@ export interface NetHandlers {
   seatRefused(): void;
   /** The admin stopped us doing `what` (chat, notes, posts, join) until `until`. */
   restricted(what: string, until: string): void;
+  /** The admin put us out: stopped from coming in ("restricted"), or a one-off kick ("kicked"). */
+  removed(why: "restricted" | "kicked"): void;
   status(online: boolean): void;
 }
 
@@ -124,7 +129,7 @@ export function connect(token: string, on: NetHandlers): Net {
         case "leave":
           return on.leave(m.id as string);
         case "chat":
-          return on.chat(m.id as string, m.name as string, m.text as string);
+          return on.chat(m.id as string, m.name as string, m.text as string, m.all ? { space: m.space as SpaceId } : undefined);
         case "emote":
           return on.emote(m.id as string, m.kind as Emote);
         case "moved":
@@ -144,12 +149,15 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
           if (m.kind === "seat-refused") return on.seatRefused();
           if (m.kind === "restricted") return on.restricted(m.what as string, m.until as string);
+          if (m.kind === "all-wait") return on.allWait(m.seconds as number);
       }
     };
     ws.onclose = (e) => {
       on.status(false);
-      // 4003: the admin has stopped us coming in; trying again won't help.
-      if (closed || e.code === 4003) return;
+      if (closed) return;
+      // 4003: the admin has stopped us coming in; 4004: the admin put us out
+      // once. Either way, back to the join screen rather than reconnecting.
+      if (e.code === 4003 || e.code === 4004) return on.removed(e.code === 4003 ? "restricted" : "kicked");
       // Back off up to 8s, so a sleeping server isn't hammered while it wakes.
       setTimeout(open, retry);
       retry = Math.min(retry * 2, 8000);

@@ -388,6 +388,20 @@ export function addClassroom(code: string, by: string): boolean {
   return changes > 0;
 }
 
+/** Classrooms opened more than `months` ago (never COMP8020 or COMMON): a course's room for one semester. */
+export function staleClassrooms(months = 6): string[] {
+  return (
+    db
+      .prepare(`SELECT code FROM classrooms WHERE code NOT IN ('COMP8020', ?) AND created_at <= datetime('now', '-${Math.floor(months)} months')`)
+      .all(COMMON) as { code: string }[]
+  ).map((r) => r.code);
+}
+
+/** The ids of a space's posts (to remove their files before the space goes). */
+export function postIdsIn(space: string): number[] {
+  return (db.prepare("SELECT id FROM posts WHERE space = ?").all(space) as { id: number }[]).map((r) => r.id);
+}
+
 /** Removes a classroom and the notes left in it; anyone saved there starts outside next time. */
 export function removeClassroom(code: string): boolean {
   const space = classroomSpace(code);

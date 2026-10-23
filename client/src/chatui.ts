@@ -43,9 +43,11 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
   const input = document.createElement("input");
   input.id = "chat-input";
   input.type = "text";
-  input.maxLength = opts.maxLength;
+  // Room for "/all " in front of a full-length line (the server counts the line itself).
+  input.maxLength = opts.maxLength + 5;
+  input.placeholder = "Say something · /all to every space";
   input.autocomplete = "off";
-  input.setAttribute("aria-label", "Chat message");
+  input.setAttribute("aria-label", "Chat message. Start with /all to reach every space.");
   inputRow.append(input);
 
   root.append(log, controls, inputRow);
