@@ -11,6 +11,10 @@ export interface BoardTabDef {
   label: string;
   staffOnly?: boolean;
 }
+
+// A board's posts are stored under its key, which is its space's id, except
+// the enquiry PC behind the Hub's desk: a second board in the Hub, kept as
+// "hub-desk" so its posts don't mix with the matching board's.
 export interface BoardDef {
   title: string;
   tabs: readonly BoardTabDef[];
@@ -20,6 +24,10 @@ export interface BoardDef {
   layout?: "grid";
   /** Posts go after this many days (the lawn's, like the files in the bucket); unset: they stay. */
   keepDays?: number;
+  /** Writers may mark a post private: only they and staff (for now the admin) see it, and its comments and files. */
+  allowPrivate?: boolean;
+  /** Where people stand to use it, for live updates (its key, unless set). */
+  space?: string;
 }
 
 const UNOFFICIAL = "Not an official ANU service. Posters' identities aren't verified.";
@@ -41,6 +49,17 @@ const FIXED: Record<string, BoardDef> = {
     ],
     notice: UNOFFICIAL,
   },
+  // Behind the Hub's desk: questions for the Hub, public or private. A
+  // private one is for the writer and staff only (until there's a staff
+  // role, the admin), checked on the server for the post, its comments and
+  // its files.
+  "hub-desk": {
+    title: "Ask the Hub",
+    tabs: [{ id: "ask", label: "Questions for the Hub" }],
+    notice: "Not an official ANU service. Tick \"Private\" and only you and the Hub's staff see your question and the answers.",
+    allowPrivate: true,
+    space: "hub",
+  },
   // The noticeboard on the lawn: events, clubs, anything to promote. A
   // poster is for now, so posts go after 30 days, the same as their files.
   outdoor: {
@@ -56,11 +75,18 @@ const FIXED: Record<string, BoardDef> = {
 export const expiringBoards = (): [string, number][] =>
   Object.entries(FIXED).flatMap(([space, b]) => (b.keepDays ? [[space, b.keepDays] as [string, number]] : []));
 
-export function boardOf(space: unknown): BoardDef | undefined {
-  if (typeof space !== "string") return undefined;
-  if (isClassroom(space)) return { title: `${space.toUpperCase()} board`, tabs: CLASSROOM_TABS };
-  return FIXED[space];
+export function boardOf(key: unknown): BoardDef | undefined {
+  if (typeof key !== "string") return undefined;
+  if (isClassroom(key)) return { title: `${key.toUpperCase()} board`, tabs: CLASSROOM_TABS };
+  return Object.hasOwn(FIXED, key) ? FIXED[key] : undefined;
 }
+
+/** The space whose people see a board's live updates. */
+export const spaceOfBoard = (key: string): string => boardOf(key)?.space ?? key;
+
+/** Whether `v` may see a post: anyone, unless it's private (then its author and the admin). */
+export const maySeePost = (v: { name: string; role: string } | null | undefined, post: { author: string; private?: boolean }): boolean =>
+  !post.private || (!!v && (v.role === "admin" || v.name.toLowerCase() === post.author.toLowerCase()));
 
 export const tabOf = (board: BoardDef, tab: unknown): BoardTabDef | undefined =>
   typeof tab === "string" ? board.tabs.find((t) => t.id === tab) : undefined;

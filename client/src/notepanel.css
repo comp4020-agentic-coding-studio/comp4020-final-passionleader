@@ -64,6 +64,57 @@
   padding: 2px 4px;
 }
 
+/* Heart and Report on comments, Report on a note: quiet text buttons, not red. */
+.note-report,
+.comment-report,
+.comment-heart {
+  border: 0;
+  background: none;
+  color: var(--accent, #6b3f1d);
+  font-size: 0.75rem;
+  font-weight: 700;
+  cursor: pointer;
+  padding: 2px 4px;
+}
+
+.note-report,
+.comment-report {
+  text-decoration: underline;
+}
+
+.comment-heart {
+  margin-left: auto;
+  min-width: 44px;
+  min-height: 32px;
+  font-size: 0.85rem;
+}
+
+.comment-heart.is-on {
+  color: var(--accent, #6b3f1d);
+}
+
+/* Your own comment's heart is disabled but its count still matters, so it looks normal. */
+.comment-heart:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+.comment-heart:focus-visible,
+.note-report:focus-visible,
+.comment-report:focus-visible {
+  outline: 2px solid var(--accent, #6b3f1d);
+  outline-offset: 1px;
+}
+
+@media (pointer: coarse) {
+  .note-report,
+  .comment-report,
+  .comment-heart {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
 .note-confirm {
   display: inline-flex;
   align-items: center;

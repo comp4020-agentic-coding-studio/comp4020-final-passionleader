@@ -24,6 +24,9 @@ const BOARD_PC = { x: -17, z: -4.15 };
 // then ANU's AI guide as a pile of papers.
 const FIND_PC = { x: -14.75, z: -4.15 };
 const AI_PC = { x: -12.5, z: -4.15 };
+// At the bar's east end, the visitors' right: questions for the Hub, public
+// or private. The Hub's AI staff will stand in the pocket behind it.
+const ASK_PC = { x: -10.1, z: -4.15 };
 /** Where you stand to use them: just south of the bar (its south edge is z -3.55). */
 const RECEPTION_SPOT_Z = -2.7;
 
@@ -69,6 +72,10 @@ export function buildHub(): SpaceDef {
   const findTag = textPlane(["Find a researcher"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   findTag.position.set(FIND_PC.x, 1.85, FIND_PC.z);
   g.add(findTag);
+  place(g, "computerScreen.glb", 0.5, ASK_PC.x, ASK_PC.z, 0, true, 0.9);
+  const askTag = textPlane(["Ask the Hub", "public or private"], 1.6, 0.42, { bg: "#2f5d8a", fg: "#ffffff", font: 0.17 });
+  askTag.position.set(ASK_PC.x, 1.85, ASK_PC.z);
+  g.add(askTag);
   // A poster on the west wall, in the reception pocket.
   const art = poster("ai/poster_hub.jpg", 1.6, 2.4);
   art.position.set(-HALF.halfX + 0.01, 2, -7.5);
@@ -200,7 +207,10 @@ export function buildHub(): SpaceDef {
       { x: FIND_PC.x, z: RECEPTION_SPOT_Z, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
     ],
     // The board PC on reception's bar: you stand south of it.
-    spots: [{ x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the lab matching board" }],
+    spots: [
+      { x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the lab matching board" },
+      { x: ASK_PC.x, z: RECEPTION_SPOT_Z, id: "enquiries", label: "Ask the Hub a question" },
+    ],
   };
 }
 

@@ -40,6 +40,7 @@ import {
   postsInGoneTabs,
   staleClassrooms,
   postIdsIn,
+  toggleHeart,
   purgeExpiredNotes,
   purgeOldAudit,
   addAudit,
@@ -75,7 +76,7 @@ import { browserTag, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
-import { boardOf, expiringBoards, mayPostIn, tabOf } from "./boards.ts";
+import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
 import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
@@ -283,6 +284,34 @@ app.post("/api/notes/:id/comments", async (c) => {
   return c.json(result.comment, 201);
 });
 
+// Hearts on comments: one each, a second press takes it back. Anyone joined
+// (the same people who may comment), never your own, nothing logged (it's
+// not something anyone wrote).
+app.post("/api/comments/:id/heart", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const comment = findComment(Number(c.req.param("id")));
+  if (!comment) return c.json({ error: "That comment is gone." }, 404);
+  if (comment.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "You can't heart your own comment." }, 400);
+  const hearted = toggleHeart("note", comment.id, v.name);
+  const note = findNote(comment.noteId);
+  if (note) broadcastSpace(note.space, { t: "action", kind: "hearts", noteId: note.id });
+  return c.json({ hearted, hearts: findComment(comment.id)!.heartedBy.length });
+});
+
+app.post("/api/board-comments/:id/heart", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const comment = findPostComment(Number(c.req.param("id")));
+  if (!comment) return c.json({ error: "That comment is gone." }, 404);
+  if (comment.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "You can't heart your own comment." }, 400);
+  const post = findPost(comment.postId);
+  if (post && !maySeePost(v, post)) return c.json({ error: "That comment is gone." }, 404);
+  const hearted = toggleHeart("post", comment.id, v.name);
+  if (post) broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  return c.json({ hearted, hearts: findPostComment(comment.id)!.heartedBy.length });
+});
+
 app.delete("/api/comments/:id", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
@@ -467,7 +496,10 @@ app.get("/api/board", (c) => {
   if (!board) return c.json({ error: "There's no board here." }, 404);
   const tab = tabOf(board, c.req.query("tab"));
   if (!tab) return c.json({ error: "No such tab." }, 400);
-  const posts = postsIn(space!, tab.id, board.keepDays).map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
+  const viewer = who({ token: c.req.query("token") });
+  const posts = postsIn(space!, tab.id, board.keepDays)
+    .filter((p) => maySeePost(viewer, p))
+    .map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
   return c.json(tab.staffOnly ? [{ ...pinnedNotice(tab.label), tab: tab.id }, ...posts] : posts);
 });
 
@@ -492,13 +524,13 @@ app.post("/api/board", async (c) => {
     log("refused", v, { action: "post", space, tab: tab.id, reason: bad }, { ip: ipOf(c), content });
     return c.json({ error: bad }, 400);
   }
-  const result = addPost(v.name, space, tab.id, (b.title as string).trim(), (b.text as string).trim());
+  const result = addPost(v.name, space, tab.id, (b.title as string).trim(), (b.text as string).trim(), board.allowPrivate === true && b.private === true);
   if (!result.ok) {
     log("refused", v, { action: "post", space, tab: tab.id, reason: "too soon", wait: result.wait }, { ip: ipOf(c), content });
     return c.json({ error: `One post every 30 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
   log("post", v, { space, tab: tab.id, post: result.post.id, words: wordCount(result.post.text) }, { ip: ipOf(c), content: `${result.post.title}\n\n${result.post.text}` });
-  broadcastSpace(space, { t: "action", kind: "board", tab: tab.id });
+  broadcastSpace(spaceOfBoard(space), { t: "action", kind: "board", tab: tab.id });
   return c.json(result.post, 201);
 });
 
@@ -514,7 +546,7 @@ app.delete("/api/board/:id", async (c) => {
   removeObjects(filesOn("post", post.id, true).map((f) => f.key));
   deletePost(post.id);
   log("post-removed", v, { space: post.space, tab: post.tab, post: post.id, owner: post.author }, { ip: ipOf(c), content: `${post.title}\n\n${post.text}` });
-  broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab });
+  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab });
   return c.json({ ok: true });
 });
 
@@ -541,13 +573,13 @@ app.patch("/api/board/:id", async (c) => {
   }
   const edited = editPost(post.id, (b.title as string).trim(), (b.text as string).trim());
   log("post-edited", v, { space: post.space, tab: post.tab, post: post.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: `${edited.title}\n\n${edited.text}` });
-  broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json({ ...edited, files: filesOn("post", edited.id).map(({ id, name, size }) => ({ id, name, size })) });
 });
 
 app.get("/api/board/:id/comments", (c) => {
   const post = findPost(Number(c.req.param("id")));
-  if (!post) return c.json({ error: "That post is gone." }, 404);
+  if (!post || !maySeePost(who({ token: c.req.query("token") }), post)) return c.json({ error: "That post is gone." }, 404);
   return c.json(postCommentsOn(post.id));
 });
 
@@ -556,7 +588,7 @@ app.post("/api/board/:id/comments", async (c) => {
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
   const post = findPost(Number(c.req.param("id")));
-  if (!post) return c.json({ error: "That post is gone." }, 404);
+  if (!post || !maySeePost(v, post)) return c.json({ error: "That post is gone." }, 404);
   const barred = stopped(c, v, "posts", { action: "post comment", space: post.space, post: post.id });
   if (barred) return barred;
   const bad = textError(b.text);
@@ -570,7 +602,7 @@ app.post("/api/board/:id/comments", async (c) => {
     return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
   log("post-comment", v, { space: post.space, tab: post.tab, post: post.id, comment: result.comment.id, words: wordCount(result.comment.text) }, { ip: ipOf(c), content: result.comment.text });
-  broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json(result.comment, 201);
 });
 
@@ -594,7 +626,7 @@ app.patch("/api/board-comments/:id", async (c) => {
   }
   const edited = editPostComment(comment.id, (b.text as string).trim());
   log("post-comment-edited", v, { space: post?.space, comment: comment.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: edited.text });
-  if (post) broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  if (post) broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json(edited);
 });
 
@@ -610,7 +642,7 @@ app.delete("/api/board-comments/:id", async (c) => {
   }
   deletePostComment(comment.id);
   log("post-comment-removed", v, { space: post?.space, comment: comment.id, owner: comment.author }, { ip: ipOf(c), content: comment.text });
-  if (post) broadcastSpace(post.space, { t: "action", kind: "board", tab: post.tab, post: post.id });
+  if (post) broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json({ ok: true });
 });
 
@@ -836,7 +868,7 @@ app.post("/api/files/:id/done", async (c) => {
     markFileReady(f.id);
     const space = f.kind === "room" ? livePlayer(v.name)?.space : f.kind === "board" ? findPost(f.postId!)?.space : null;
     log("file", v, { space, kind: f.kind, post: f.postId, report: f.bugId, size: f.size }, { ip: ipOf(c), content: f.name });
-    if (f.kind === "board" && space) broadcastSpace(space, { t: "action", kind: "board", tab: findPost(f.postId!)?.tab, post: f.postId });
+    if (f.kind === "board" && space) broadcastSpace(spaceOfBoard(space), { t: "action", kind: "board", tab: findPost(f.postId!)?.tab, post: f.postId });
     if (f.kind === "room" && space && roomSessionOf(v.name, space) === f.room) roomShare(space, v.name, { id: f.id, name: f.name, size: f.size });
   }
   return c.json({ ok: true });
@@ -849,7 +881,7 @@ app.post("/api/files/:id/link", async (c) => {
   const f = findFile(c.req.param("id"));
   if (!f || !f.ready) return c.json({ error: "That file is gone." }, 404);
   const allowed =
-    f.kind === "board" ||
+    (f.kind === "board" && maySeePost(v, findPost(f.postId!) ?? { author: "", private: true })) ||
     (f.kind === "bug" && v.role === "admin") ||
     (f.kind === "room" && (() => {
       const at = livePlayer(v.name)?.space;
@@ -857,7 +889,7 @@ app.post("/api/files/:id/link", async (c) => {
     })());
   if (!allowed) {
     log("refused", v, { action: "download", kind: f.kind, reason: f.kind === "room" ? "not in the room" : "not admin" }, { ip: ipOf(c), content: f.name });
-    return c.json({ error: f.kind === "room" ? "Only the people in the room can open its files." : "This is for the admin." }, 403);
+    return c.json({ error: f.kind === "room" ? "Only the people in the room can open its files." : f.kind === "board" ? "That post is private." : "This is for the admin." }, 403);
   }
   try {
     // Images may be shown in place (a post's picture, a bug's screenshot); everything else downloads.

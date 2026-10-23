@@ -18,6 +18,7 @@ import {
   createPost,
   createPostComment,
   deleteComment,
+  heartComment,
   deleteNote,
   getClassrooms,
   getComments,
@@ -39,6 +40,7 @@ import {
   saveLook,
   removePost,
   removePostComment,
+  heartPostComment,
   type Classroom,
   type Comment,
   type Note,
@@ -520,7 +522,13 @@ let session: Session | null = null;
 const mine = (author: string): boolean =>
   !!session && (session.role === "admin" || session.name.toLowerCase() === author.toLowerCase());
 
-const commentViews = (list: Comment[]): CommentView[] => list.map((c) => ({ ...c, canDelete: mine(c.author) }));
+/** Hearts on a comment, from me: how many, whether mine is one, and whether I may (not on my own). */
+const heartsOf = (c: { author: string; heartedBy?: string[] }): { hearts: number; hearted: boolean; canHeart: boolean } => {
+  const by = c.heartedBy ?? [];
+  const me = session?.name.toLowerCase();
+  return { hearts: by.length, hearted: !!me && by.some((n) => n.toLowerCase() === me), canHeart: !!session && !mine(c.author) };
+};
+const commentViews = (list: Comment[]): CommentView[] => list.map((c) => ({ ...c, canDelete: mine(c.author), ...heartsOf(c) }));
 
 async function refreshComments(noteId: number): Promise<void> {
   const list = await getComments(noteId);
@@ -560,6 +568,19 @@ const panel = mountNotePanel({
     } catch (err) {
       throw asError(err);
     }
+  },
+  async onHeart(noteId, commentId) {
+    if (!session) return;
+    try {
+      await heartComment(session.token, commentId);
+      await refreshComments(noteId);
+    } catch (err) {
+      throw asError(err);
+    }
+  },
+  onReport(about) {
+    panel.close();
+    bugReport.open(true, about);
   },
 });
 
@@ -750,19 +771,35 @@ const cafeGuide = mountCafeGuide();
 // lawn. The server decides who may post in a staff-only tab; the dialog only
 // hides the button from everyone else.
 const failed = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
+// Which board is open: its space's, or another in the same space (the Hub's
+// enquiry PC opens "hub-desk").
+let boardKey = "";
 const board = mountBoard({
   async list(tab) {
     if (!space) return [];
-    return (await getPosts(space.id, tab)).map((p) => ({ ...p, canDelete: !p.pinned && mine(p.author), canEdit: !p.pinned && mine(p.author) }));
+    return (await getPosts(boardKey || space.id, tab, session?.token)).map((p) => ({ ...p, canDelete: !p.pinned && mine(p.author), canEdit: !p.pinned && mine(p.author) }));
   },
   async comments(postId) {
-    return (await getPostComments(postId)).map((c) => ({ ...c, canDelete: mine(c.author), canEdit: mine(c.author) }));
+    return (await getPostComments(postId, session?.token)).map((c) => ({ ...c, canDelete: mine(c.author), canEdit: mine(c.author), ...heartsOf(c) }));
   },
-  async post(tab, title, text, files, progress) {
+  async heartComment(commentId) {
+    if (!session) return "Join first.";
+    try {
+      await heartPostComment(session.token, commentId);
+      return null;
+    } catch (err) {
+      return failed(err, "Could not heart that.");
+    }
+  },
+  report(about) {
+    board.close();
+    bugReport.open(true, about);
+  },
+  async post(tab, title, text, files, progress, isPrivate = false) {
     if (!session || !space) return "Join first.";
     let id: number;
     try {
-      id = (await createPost(session.token, space.id, tab, title, text)).id;
+      id = (await createPost(session.token, boardKey || space.id, tab, title, text, isPrivate)).id;
     } catch (err) {
       return failed(err, "Could not post that.");
     }
@@ -826,10 +863,12 @@ const board = mountBoard({
   },
 });
 
-// The space's board config (its tabs, who posts where) comes from the server.
-async function openBoard(id: SpaceId): Promise<void> {
+// The board's config (its tabs, who posts where) comes from the server.
+// `key` is the space's own board, or "hub-desk" for the Hub's enquiry PC.
+async function openBoard(id: SpaceId, key: string = id): Promise<void> {
   try {
-    const config = await getBoardConfig(id);
+    const config = await getBoardConfig(key);
+    boardKey = key;
     if (space?.id === id) board.open(config, session?.role === "admin");
   } catch (err) {
     toast(failed(err, "Could not open the board. Try again."));
@@ -1151,6 +1190,9 @@ function goOnline(token: string): void {
         const view = notes.get(c.noteId);
         if (view) upsertNote({ ...view.note, comments: view.note.comments + 1 });
       }
+    },
+    hearts(noteId) {
+      if (panel.openNoteId() === noteId) void refreshComments(noteId);
     },
     commentRemoved(_id, noteId) {
       if (panel.openNoteId() === noteId) void refreshComments(noteId);
@@ -1526,6 +1568,7 @@ function interact(): void {
     }
     else if (target.id === "cafes") cafeGuide.open();
     else if (target.id === "board" && space) void openBoard(space.id);
+    else if (target.id === "enquiries" && space) void openBoard(space.id, "hub-desk");
     else if (target.id === "projects") void openProjects();
     else if (target.id === "board-link") openStaffLink("board");
     else if (target.id === "side-link") openStaffLink("side");

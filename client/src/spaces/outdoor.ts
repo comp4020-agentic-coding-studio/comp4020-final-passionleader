@@ -3,6 +3,7 @@ import { chalkboard, doorway, floor, mat, scatter, solid, texMat, textPlane, typ
 import { HIGH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
+import { SPORT_PC, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { buildStreetscape } from "./streetscape.ts";
@@ -94,6 +95,8 @@ export function buildOutdoor(): SpaceDef {
   // unofficial): against Broger's flower bed, facing the main road, so you
   // see it walking between the lawn and 154. Notes keep 2 m off it.
   noticeboard(g, colliders);
+  // ANU Sport's blue tent at the north-west end, south of Symposium's bed.
+  sportsTent(g, colliders);
   if (HIGH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
 
   // Bushes every 3 m round each building, a metre out from the wall, with
@@ -201,13 +204,15 @@ export function buildOutdoor(): SpaceDef {
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
     ],
-    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU],
+    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC],
     tick: dog,
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
       { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the lawn noticeboard" },
       { x: CAFE_MENU.x, z: CAFE_MENU.z + 0.9, id: "cafes", label: "Read Lab Coffee's board (cafés on campus)" },
     ],
+    // ANU Sport's site won't be framed, so a new tab.
+    links: [{ x: SPORT_PC.x, z: SPORT_PC.z + 0.9, label: "Open ANU Sport (gym, clubs, classes; new tab)", url: "https://anu-sport.com.au/", embeddable: false }],
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),

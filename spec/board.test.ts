@@ -117,3 +117,49 @@ describe("editing posts and comments", () => {
     expect(list.find((c) => c.id === comment.id)?.editedAt).toBeTruthy();
   });
 });
+
+// Hearts: one per person per comment (a second press takes it back), never
+// on your own, and the most-hearted comment comes first.
+describe("hearts on comments", () => {
+  it("counts one heart each, takes it back on a second press, refuses your own, and puts the most-hearted first", async () => {
+    const [a, b, c] = await Promise.all([visitor(), visitor(), visitor()]);
+    const created = (await (await post(a.token, "board", "Anyone up for a study group?")).json()) as { id: number };
+    const first = (await (await api(`/api/board/${created.id}/comments`, "POST", { token: b.token, text: "Me!" })).json()) as { id: number };
+    await new Promise((r) => setTimeout(r, 50));
+    const second = (await (await api(`/api/board/${created.id}/comments`, "POST", { token: c.token, text: "Me too, Thursdays?" })).json()) as { id: number };
+    expect((await api(`/api/board-comments/${second.id}/heart`, "POST", { token: c.token })).status).toBe(400); // your own
+    expect(await (await api(`/api/board-comments/${second.id}/heart`, "POST", { token: a.token })).json()).toEqual({ hearted: true, hearts: 1 });
+    expect(await (await api(`/api/board-comments/${second.id}/heart`, "POST", { token: b.token })).json()).toEqual({ hearted: true, hearts: 2 });
+    const list = (await (await api(`/api/board/${created.id}/comments`)).json()) as { id: number; heartedBy: string[] }[];
+    expect(list.map((x) => x.id)).toEqual([second.id, first.id]); // most-hearted first
+    expect(list[0]!.heartedBy.map((n) => n.toLowerCase()).sort()).toEqual([a.name, b.name].map((n) => n.toLowerCase()).sort());
+    expect(await (await api(`/api/board-comments/${second.id}/heart`, "POST", { token: a.token })).json()).toEqual({ hearted: false, hearts: 1 });
+  });
+});
+
+// The Hub's enquiry board: a private question is for its writer and the
+// staff (the admin) only, its comments too; public ones are for anyone.
+describe("private enquiries", () => {
+  it("shows a private question only to its writer, and hides its comments from everyone else", async () => {
+    const [a, b] = await Promise.all([visitor(), visitor()]);
+    const config = (await (await api("/api/board-config?space=hub-desk")).json()) as { title: string; allowPrivate?: boolean };
+    expect(config).toMatchObject({ title: "Ask the Hub", allowPrivate: true });
+    const res = await api("/api/board", "POST", { token: a.token, space: "hub-desk", tab: "ask", title: "My visa", text: "Can I enrol part-time?", private: true });
+    expect(res.status).toBe(201);
+    const mine = (await res.json()) as { id: number; private: boolean };
+    expect(mine.private).toBe(true);
+    const asA = (await (await api(`/api/board?space=hub-desk&tab=ask&token=${a.token}`)).json()) as { id: number }[];
+    expect(asA.map((p) => p.id)).toContain(mine.id);
+    const asB = (await (await api(`/api/board?space=hub-desk&tab=ask&token=${b.token}`)).json()) as { id: number }[];
+    expect(asB.map((p) => p.id)).not.toContain(mine.id);
+    const anon = (await (await api("/api/board?space=hub-desk&tab=ask")).json()) as { id: number }[];
+    expect(anon.map((p) => p.id)).not.toContain(mine.id);
+    expect((await api(`/api/board/${mine.id}/comments?token=${b.token}`)).status).toBe(404);
+    expect((await api(`/api/board/${mine.id}/comments`, "POST", { token: b.token, text: "Peeking" })).status).toBe(404);
+    expect((await api(`/api/board/${mine.id}/comments?token=${a.token}`)).status).toBe(200);
+    // Elsewhere "private" is ignored: a lawn post is public whatever it says.
+    const c = await visitor();
+    const lawn = (await (await api("/api/board", "POST", { token: c.token, space: "outdoor", tab: "board", title: "Fair", text: "Friday", private: true })).json()) as { private: boolean };
+    expect(lawn.private).toBe(false);
+  });
+});

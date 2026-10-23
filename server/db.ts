@@ -39,6 +39,8 @@ export interface Comment {
   author: string;
   text: string;
   createdAt: string;
+  /** Who has hearted it (names are on everyone's name tags anyway). */
+  heartedBy: string[];
 }
 
 const path = process.env.DATABASE_PATH ?? "data/app.db";
@@ -200,11 +202,32 @@ db.exec(`
 `);
 const bugCols = (db.prepare("PRAGMA table_info(bug_reports)").all() as { name: string }[]).map((c) => c.name);
 for (const col of ["about", "chat"]) if (!bugCols.includes(col)) db.exec(`ALTER TABLE bug_reports ADD COLUMN ${col} TEXT`);
+// Whether a post is private (the Hub's enquiry board), added for the final project.
+{
+  const cols = (db.prepare("PRAGMA table_info(posts)").all() as { name: string }[]).map((c) => c.name);
+  if (!cols.includes("private")) db.exec("ALTER TABLE posts ADD COLUMN private INTEGER NOT NULL DEFAULT 0");
+}
 // When a post or a board comment was last edited (null if never), added for crit 10.
 for (const table of ["posts", "post_comments"]) {
   const cols = (db.prepare(`PRAGMA table_info(${table})`).all() as { name: string }[]).map((c) => c.name);
   if (!cols.includes("edited_at")) db.exec(`ALTER TABLE ${table} ADD COLUMN edited_at TEXT`);
 }
+// Hearts on comments (sticky notes' and boards'): one per person per
+// comment, so a second press takes it back. The most-hearted comment is shown
+// first. A comment's hearts go with it.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS hearts (
+    kind    TEXT NOT NULL,
+    target  INTEGER NOT NULL,
+    name    TEXT NOT NULL COLLATE NOCASE,
+    PRIMARY KEY (kind, target, name)
+  );
+  CREATE TRIGGER IF NOT EXISTS hearts_note_comment_gone AFTER DELETE ON comments
+    BEGIN DELETE FROM hearts WHERE kind = 'note' AND target = OLD.id; END;
+  CREATE TRIGGER IF NOT EXISTS hearts_post_comment_gone AFTER DELETE ON post_comments
+    BEGIN DELETE FROM hearts WHERE kind = 'post' AND target = OLD.id; END;
+`);
+
 // The first two classrooms: the one there's always been, and COMMON for anyone.
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
 
@@ -323,12 +346,42 @@ export function deleteNote(id: number): void {
 
 const commentCols = "id, note_id AS noteId, author, text, created_at AS createdAt";
 
+export type HeartKind = "note" | "post";
+
+/** Who hearted each of these comments. */
+function heartsFor(kind: HeartKind, ids: number[]): Map<number, string[]> {
+  const by = new Map<number, string[]>(ids.map((id) => [id, []]));
+  if (!ids.length) return by;
+  const rows = db
+    .prepare(`SELECT target, name FROM hearts WHERE kind = ? AND target IN (${ids.map(() => "?").join(", ")}) ORDER BY name`)
+    .all(kind, ...ids) as { target: number; name: string }[];
+  for (const r of rows) by.get(r.target)?.push(r.name);
+  return by;
+}
+
+/** Most-hearted first; the same number of hearts, oldest first. */
+function byHearts<T extends { id: number; heartedBy: string[] }>(list: T[]): T[] {
+  const order = new Map(list.map((c, i) => [c.id, i]));
+  return list.sort((a, b) => b.heartedBy.length - a.heartedBy.length || order.get(a.id)! - order.get(b.id)!);
+}
+
+/** Hearts a comment, or takes the heart back if `name` already gave one. Returns whether it's hearted now. */
+export function toggleHeart(kind: HeartKind, target: number, name: string): boolean {
+  const { changes } = db.prepare("DELETE FROM hearts WHERE kind = ? AND target = ? AND name = ?").run(kind, target, name);
+  if (changes) return false;
+  db.prepare("INSERT INTO hearts (kind, target, name) VALUES (?, ?, ?)").run(kind, target, name);
+  return true;
+}
+
 export function commentsOn(noteId: number): Comment[] {
-  return db.prepare(`SELECT ${commentCols} FROM comments WHERE note_id = ? ORDER BY created_at, id`).all(noteId) as unknown as Comment[];
+  const rows = db.prepare(`SELECT ${commentCols} FROM comments WHERE note_id = ? ORDER BY created_at, id`).all(noteId) as unknown as Omit<Comment, "heartedBy">[];
+  const hearts = heartsFor("note", rows.map((r) => r.id));
+  return byHearts(rows.map((r) => ({ ...r, heartedBy: hearts.get(r.id) ?? [] })));
 }
 
 export function findComment(id: number): Comment | undefined {
-  return db.prepare(`SELECT ${commentCols} FROM comments WHERE id = ?`).get(id) as Comment | undefined;
+  const row = db.prepare(`SELECT ${commentCols} FROM comments WHERE id = ?`).get(id) as Omit<Comment, "heartedBy"> | undefined;
+  return row && { ...row, heartedBy: heartsFor("note", [row.id]).get(row.id) ?? [] };
 }
 
 export type AddCommentResult = { ok: true; comment: Comment } | { ok: false; wait: number };
@@ -439,6 +492,8 @@ export interface Post {
   createdAt: string;
   editedAt: string | null;
   comments: number;
+  /** Only its author and staff see it (boards that allow it). */
+  private: boolean;
 }
 export interface PostComment {
   id: number;
@@ -447,16 +502,19 @@ export interface PostComment {
   text: string;
   createdAt: string;
   editedAt: string | null;
+  heartedBy: string[];
 }
 
 const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt, p.edited_at AS editedAt,
-  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments`;
+  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments, p.private`;
+const asPost = (r: unknown): Post => ({ ...(r as Post), private: (r as { private: number }).private === 1 });
 
 export function postsIn(space: SpaceId, tab: BoardTab, keepDays?: number): Post[] {
   const fresh = keepDays ? ` AND p.created_at > datetime('now', '-${Math.floor(keepDays)} days')` : "";
   return db
     .prepare(`SELECT ${postCols} FROM posts p WHERE p.space = ? AND p.tab = ?${fresh} ORDER BY p.created_at DESC, p.id DESC`)
-    .all(space, tab) as unknown as Post[];
+    .all(space, tab)
+    .map(asPost);
 }
 
 /** The ids of a board's posts in tabs it no longer has (to remove, files and all). */
@@ -471,17 +529,18 @@ export function expiredPosts(space: string, days: number): number[] {
 }
 
 export function findPost(id: number): Post | undefined {
-  return db.prepare(`SELECT ${postCols} FROM posts p WHERE p.id = ?`).get(id) as Post | undefined;
+  const row = db.prepare(`SELECT ${postCols} FROM posts p WHERE p.id = ?`).get(id);
+  return row ? asPost(row) : undefined;
 }
 
 export type AddPostResult = { ok: true; post: Post } | { ok: false; wait: number };
 
-export function addPost(author: string, space: SpaceId, tab: BoardTab, title: string, text: string): AddPostResult {
+export function addPost(author: string, space: SpaceId, tab: BoardTab, title: string, text: string, isPrivate = false): AddPostResult {
   const wait = cooldownLeft(author, "last_post_at", POST_COOLDOWN_SECONDS);
   if (wait > 0) return { ok: false, wait };
   const { lastInsertRowid } = db
-    .prepare("INSERT INTO posts (space, tab, author, title, text) VALUES (?, ?, ?, ?, ?)")
-    .run(space, tab, author, title, text);
+    .prepare("INSERT INTO posts (space, tab, author, title, text, private) VALUES (?, ?, ?, ?, ?, ?)")
+    .run(space, tab, author, title, text, isPrivate ? 1 : 0);
   db.prepare("UPDATE visitors SET last_post_at = datetime('now') WHERE name = ?").run(author);
   return { ok: true, post: findPost(Number(lastInsertRowid))! };
 }
@@ -505,13 +564,16 @@ export function deletePost(id: number): void {
 const postCommentCols = "id, post_id AS postId, author, text, created_at AS createdAt, edited_at AS editedAt";
 
 export function postCommentsOn(postId: number): PostComment[] {
-  return db
+  const rows = db
     .prepare(`SELECT ${postCommentCols} FROM post_comments WHERE post_id = ? ORDER BY created_at, id`)
-    .all(postId) as unknown as PostComment[];
+    .all(postId) as unknown as Omit<PostComment, "heartedBy">[];
+  const hearts = heartsFor("post", rows.map((r) => r.id));
+  return byHearts(rows.map((r) => ({ ...r, heartedBy: hearts.get(r.id) ?? [] })));
 }
 
 export function findPostComment(id: number): PostComment | undefined {
-  return db.prepare(`SELECT ${postCommentCols} FROM post_comments WHERE id = ?`).get(id) as PostComment | undefined;
+  const row = db.prepare(`SELECT ${postCommentCols} FROM post_comments WHERE id = ?`).get(id) as Omit<PostComment, "heartedBy"> | undefined;
+  return row && { ...row, heartedBy: heartsFor("post", [row.id]).get(row.id) ?? [] };
 }
 
 /** Comments on posts share the note comments' 10-second gap. */

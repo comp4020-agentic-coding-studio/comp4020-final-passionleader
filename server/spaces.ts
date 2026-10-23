@@ -158,6 +158,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
   { x: -7, z: -31.6 }, // the lawn noticeboard, south of Broger's bed (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
+  { x: -26, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 0, z: -9.9 }, // the way out, on the north wall

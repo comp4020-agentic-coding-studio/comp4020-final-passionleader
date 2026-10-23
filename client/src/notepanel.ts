@@ -27,7 +27,20 @@ export interface CommentView {
   text: string;
   createdAt: string;
   canDelete: boolean;
+  hearts: number;
+  hearted: boolean;
+  /** False on your own comment. */
+  canHeart: boolean;
 }
+
+/** What a report is about: who wrote it, and a short description of the item. */
+export interface ReportAbout {
+  name: string;
+  item: string;
+}
+
+/** The first 80 characters, for a report's description. */
+const snippet = (text: string): string => (text.length > 80 ? `${text.slice(0, 80)}…` : text);
 
 const MAX_CHARS = 600;
 const MAX_WORDS = 100;
@@ -41,6 +54,8 @@ export function mountNotePanel(h: {
   onComment(noteId: number, text: string): Promise<void>;
   onDeleteNote(noteId: number): Promise<void>;
   onDeleteComment(noteId: number, commentId: number): Promise<void>;
+  onHeart(noteId: number, commentId: number): Promise<void>;
+  onReport(about: ReportAbout): void;
 }): {
   open(note: NoteView, comments: CommentView[]): void;
   close(): void;
@@ -81,6 +96,11 @@ export function mountNotePanel(h: {
   deleteNoteBtn.className = "note-delete";
   deleteNoteBtn.textContent = "Delete note";
 
+  const reportNoteBtn = document.createElement("button");
+  reportNoteBtn.type = "button";
+  reportNoteBtn.className = "note-report";
+  reportNoteBtn.textContent = "Report";
+
   const comments = document.createElement("div");
   comments.className = "note-comments";
 
@@ -104,13 +124,15 @@ export function mountNotePanel(h: {
   const error = document.createElement("p");
   error.className = "note-error";
 
-  card.append(head, text, deleteNoteBtn, comments, compose, error);
+  card.append(head, text, deleteNoteBtn, reportNoteBtn, comments, compose, error);
   root.append(card);
   document.body.append(root);
 
   let open = false;
   let current: NoteView | null = null;
   let currentComments: CommentView[] = [];
+  /** Comments whose heart request is still going, so a double tap counts once. */
+  const hearting = new Set<number>();
 
   function setError(msg: string): void {
     error.textContent = msg;
@@ -145,6 +167,36 @@ export function mountNotePanel(h: {
       const d = document.createElement("span");
       d.textContent = canberraTime(c.createdAt);
       rowHead.append(a, d);
+      const heart = document.createElement("button");
+      heart.type = "button";
+      heart.className = "comment-heart" + (c.hearted ? " is-on" : "");
+      heart.textContent = `${c.hearted ? "♥" : "♡"} ${c.hearts}`;
+      heart.setAttribute("aria-pressed", String(c.hearted));
+      heart.setAttribute("aria-label", `Heart this comment, ${c.hearts} ${c.hearts === 1 ? "heart" : "hearts"}`);
+      heart.disabled = !c.canHeart || hearting.has(c.id);
+      heart.addEventListener("click", () => {
+        if (!current || hearting.has(c.id)) return;
+        const noteId = current.id;
+        hearting.add(c.id);
+        heart.disabled = true;
+        h.onHeart(noteId, c.id)
+          .catch((err: unknown) => setError(err instanceof Error ? err.message : String(err)))
+          .finally(() => {
+            hearting.delete(c.id);
+            // The new count arrives through setComments; this only frees the button if it didn't.
+            if (heart.isConnected) heart.disabled = !c.canHeart;
+          });
+      });
+      rowHead.append(heart);
+      if (!c.canDelete) {
+        const report = document.createElement("button");
+        report.type = "button";
+        report.className = "comment-report";
+        report.textContent = "Report";
+        report.setAttribute("aria-label", `Report ${c.author}'s comment`);
+        report.addEventListener("click", () => h.onReport({ name: c.author, item: `${c.author}'s comment on a sticky note: "${snippet(c.text)}"` }));
+        rowHead.append(report);
+      }
       if (c.canDelete) {
         const del = document.createElement("button");
         del.type = "button";
@@ -225,6 +277,10 @@ export function mountNotePanel(h: {
     if (e.target === root) hide();
   });
 
+  reportNoteBtn.addEventListener("click", () => {
+    if (current) h.onReport({ name: current.author, item: `${current.author}'s sticky note: "${snippet(current.text)}"` });
+  });
+
   confirmDelete(deleteNoteBtn, () => {
     if (!current) return;
     const noteId = current.id;
@@ -263,6 +319,8 @@ export function mountNotePanel(h: {
       // A "Delete?" left over from the last note goes back to its button.
       card.querySelector(":scope > .note-confirm")?.replaceWith(deleteNoteBtn);
       deleteNoteBtn.hidden = !note.canDelete;
+      reportNoteBtn.hidden = note.canDelete;
+      hearting.clear();
       textarea.value = "";
       setError("");
       updateCounter();

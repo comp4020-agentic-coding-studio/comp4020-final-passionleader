@@ -52,6 +52,8 @@ export interface NetHandlers {
   noteRemoved(id: number): void;
   comment(comment: Comment): void;
   commentRemoved(id: number, noteId: number): void;
+  /** Someone hearted (or un-hearted) a comment on this note. */
+  hearts(noteId: number): void;
   /** The admin opened or closed a classroom. */
   classrooms(list: Classroom[]): void;
   /** Something on this classroom's board changed. */
@@ -142,6 +144,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "note-removed") return on.noteRemoved(m.id as number);
           if (m.kind === "comment") return on.comment(m.comment as Comment);
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
+          if (m.kind === "hearts") return on.hearts(m.noteId as number);
           if (m.kind === "room-open")
             return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[]);
           if (m.kind === "room") return on.room(m.room as RoomState);

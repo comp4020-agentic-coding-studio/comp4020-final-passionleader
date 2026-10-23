@@ -512,6 +512,60 @@
   text-decoration: underline;
 }
 
+/* Heart on a comment, and a quiet Report link (not red) beside Delete. */
+.board-heart {
+  margin-left: auto;
+  min-height: 44px;
+  min-width: 44px;
+  padding: 2px 8px;
+  border: 0;
+  background: none;
+  color: var(--accent, #6b3f1d);
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+/* Your own comment's heart is disabled but its count still matters, so it looks normal. */
+.board-heart:disabled {
+  opacity: 1;
+  cursor: default;
+}
+
+/* "Private" tick box in the write form. */
+.board-private {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
+.board-private input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.board-link-report {
+  min-height: 44px;
+  min-width: 44px;
+  padding: 2px 8px;
+  border: 0;
+  background: none;
+  color: var(--accent, #6b3f1d);
+  font-size: 0.85rem;
+  text-decoration: underline;
+}
+
+.board-heart + .board-link-danger,
+.board-heart + .board-link-report,
+.board-heart + .board-link-edit,
+.board-heart + .board-confirm,
+.board-link-report + .board-link-danger,
+.board-link-report + .board-confirm {
+  margin-left: 0;
+}
+
 .board-link-edit + .board-link-danger,
 .board-link-edit + .board-confirm {
   margin-left: 0;

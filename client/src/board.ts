@@ -20,6 +20,8 @@ export interface BoardConfig {
   notice?: string;
   /** "grid": posts as thumbnails (first picture, else the title), two a row. */
   layout?: "grid";
+  /** Writers may mark a post private (the Hub's enquiry board). */
+  allowPrivate?: boolean;
 }
 
 export interface BoardPost {
@@ -37,6 +39,8 @@ export interface BoardPost {
   canEdit: boolean;
   /** Set once the author has changed the post. */
   editedAt?: string | null;
+  /** Only the author, the staff and the admin see it. */
+  private?: boolean;
 }
 
 export interface BoardComment {
@@ -47,7 +51,20 @@ export interface BoardComment {
   canDelete: boolean;
   canEdit: boolean;
   editedAt?: string | null;
+  hearts: number;
+  hearted: boolean;
+  /** False on your own comment. */
+  canHeart: boolean;
 }
+
+/** What a report is about: who wrote it, and a short description of the item. */
+export interface ReportAbout {
+  name: string;
+  item: string;
+}
+
+/** The first 80 characters, for a report's description. */
+const snippet = (text: string): string => (text.length > 80 ? `${text.slice(0, 80)}…` : text);
 
 // The same limits as sticky notes.
 const POST_WORDS = 500;
@@ -72,7 +89,7 @@ export function mountBoard(h: {
    * Posts, then uploads `files` onto it; resolves to an error message, or
    * null. `progress` names the file uploading and how far it has got (0..1).
    */
-  post(tab: BoardTab, title: string, text: string, files: File[], progress: (name: string, done: number) => void): Promise<string | null>;
+  post(tab: BoardTab, title: string, text: string, files: File[], progress: (name: string, done: number) => void, isPrivate: boolean): Promise<string | null>;
   /** Opens (downloads) one of a post's files; resolves to an error message, or null. */
   openFile(id: string): Promise<string | null>;
   /** A link that shows one of a post's pictures in place, or null. */
@@ -84,6 +101,10 @@ export function mountBoard(h: {
   editComment(commentId: number, text: string): Promise<string | null>;
   removePost(postId: number): Promise<string | null>;
   removeComment(commentId: number): Promise<string | null>;
+  /** Hearts (or un-hearts) a comment; resolves to an error message, or null. */
+  heartComment(commentId: number): Promise<string | null>;
+  /** Opens the report form about a person's post or comment. */
+  report(about: ReportAbout): void;
 }): {
   open(config: BoardConfig, canPostStaffOnly: boolean): void;
   /** A post or comment arrived or went, live: re-fetch whatever is on screen. */
@@ -234,6 +255,13 @@ export function mountBoard(h: {
   const uploadStatus = document.createElement("p");
   uploadStatus.className = "board-muted";
   uploadStatus.setAttribute("role", "status");
+  // Only on a board that allows it (the Hub's enquiries); a new post only, not an edit.
+  const privateLabel = document.createElement("label");
+  privateLabel.className = "board-private";
+  privateLabel.hidden = true;
+  const privateBox = document.createElement("input");
+  privateBox.type = "checkbox";
+  privateLabel.append(privateBox, document.createTextNode(" Private: only you and the Hub's staff see it, and the answers"));
   const writeRow = document.createElement("div");
   writeRow.className = "board-row";
   const writeCount = document.createElement("span");
@@ -247,7 +275,7 @@ export function mountBoard(h: {
   submitBtn.className = "board-primary";
   submitBtn.textContent = "Post";
   writeRow.append(writeCount, cancelBtn, submitBtn);
-  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, writeRow);
+  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, privateLabel, writeRow);
 
   let isOpen = false;
   let config: BoardConfig = { title: "", tabs: [] };
@@ -396,6 +424,7 @@ export function mountBoard(h: {
             meta.className = "board-post-meta";
             // The pinned notice has no date and no comments, so it shows just its author.
             meta.textContent = p.pinned ? p.author : `${p.author} · ${canberraTime(p.createdAt)} · ${p.comments} ${p.comments === 1 ? "comment" : "comments"}`;
+            if (p.private) meta.textContent += " · 🔒 Private";
             b.append(t, meta);
             // On a grid board (the lawn's posters) the first picture, if any,
             // stands for the post; without one the title shows, smaller.
@@ -465,6 +494,25 @@ export function mountBoard(h: {
               });
               ch.append(edit);
             }
+            const heart = document.createElement("button");
+            heart.type = "button";
+            heart.className = "board-heart" + (c.hearted ? " is-on" : "");
+            heart.textContent = `${c.hearted ? "♥" : "♡"} ${c.hearts}`;
+            heart.setAttribute("aria-pressed", String(c.hearted));
+            heart.setAttribute("aria-label", `Heart this comment, ${c.hearts} ${c.hearts === 1 ? "heart" : "hearts"}`);
+            heart.disabled = !c.canHeart || busy;
+            heart.addEventListener("click", () => void run(() => h.heartComment(c.id), () => void loadComments()));
+            ch.append(heart);
+            if (!c.canDelete) {
+              const report = document.createElement("button");
+              report.type = "button";
+              report.className = "board-link-report";
+              report.textContent = "Report";
+              report.setAttribute("aria-label", `Report comment by ${c.author}`);
+              const postTitleText = current?.title ?? "";
+              report.addEventListener("click", () => h.report({ name: c.author, item: `${c.author}'s comment on "${postTitleText}": "${snippet(c.text)}"` }));
+              ch.append(report);
+            }
             if (c.canDelete) {
               ch.append(
                 deleteControl(
@@ -492,7 +540,7 @@ export function mountBoard(h: {
   function renderPostHead(): void {
     if (!current) return;
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
-    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "");
+    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "") + (current.private ? " · 🔒 Private" : "");
     // Posts are Markdown (safe DOM only, markdown.ts); comments stay plain text.
     postText.replaceChildren(renderMarkdown(current.text));
     postFiles.replaceChildren(
@@ -540,6 +588,16 @@ export function mountBoard(h: {
       editBtn.setAttribute("aria-label", "Edit this post");
       editBtn.addEventListener("click", startEditPost);
       postActions.append(editBtn);
+    }
+    if (!current.canDelete && !current.pinned) {
+      const post = current;
+      const report = document.createElement("button");
+      report.type = "button";
+      report.className = "board-link-report";
+      report.textContent = "Report";
+      report.setAttribute("aria-label", "Report this post");
+      report.addEventListener("click", () => h.report({ name: post.author, item: `${post.author}'s post "${post.title}" on ${config.title}` }));
+      postActions.append(report);
     }
     if (current.canDelete) {
       const post = current;
@@ -598,6 +656,7 @@ export function mountBoard(h: {
     filesLabel.hidden = editing;
     filesInput.hidden = editing;
     uploadStatus.hidden = editing;
+    privateLabel.hidden = editing || !config.allowPrivate;
     submitBtn.textContent = editing ? "Save" : "Post";
   }
 
@@ -775,11 +834,12 @@ export function mountBoard(h: {
       () =>
         h.post(tab, t, x, files, (name, done) => {
           uploadStatus.textContent = `Uploading ${name}… ${Math.round(done * 100)}%`;
-        }),
+        }, !!config.allowPrivate && privateBox.checked),
       () => {
         titleInput.value = "";
         textInput.value = "";
         filesInput.value = "";
+        privateBox.checked = false;
         uploadStatus.textContent = "";
         void goBack();
       },
@@ -849,6 +909,7 @@ export function mountBoard(h: {
       titleInput.value = "";
       textInput.value = "";
       filesInput.value = "";
+      privateBox.checked = false;
       uploadStatus.textContent = "";
       commentBox.value = "";
       isOpen = true;

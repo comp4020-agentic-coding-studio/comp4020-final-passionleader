@@ -33,6 +33,8 @@ export interface Comment {
   author: string;
   text: string;
   createdAt: string;
+  /** Who has hearted it; the server sends the most-hearted first. */
+  heartedBy?: string[];
 }
 
 export class ApiError extends Error {
@@ -97,6 +99,9 @@ export const postComment = (token: string, noteId: number, text: string): Promis
   request<Comment>(`/api/notes/${noteId}/comments`, "POST", { token, text });
 
 export const deleteComment = (token: string, id: number): Promise<unknown> => request(`/api/comments/${id}`, "DELETE", { token });
+/** Hearts a note's comment, or takes the heart back. */
+export const heartComment = (token: string, id: number): Promise<{ hearted: boolean; hearts: number }> =>
+  request(`/api/comments/${id}/heart`, "POST", { token });
 
 export interface Classroom {
   code: string;
@@ -134,9 +139,13 @@ export interface BoardConfig {
   notice?: string;
   /** "grid": posts as thumbnails (first picture, else the title), two a row. */
   layout?: "grid";
+  /** Posts go after this many days (the lawn's). */
+  keepDays?: number;
+  /** Writers may mark a post private (the Hub's enquiry board). */
+  allowPrivate?: boolean;
 }
-/** A space's board: its title, tabs and who posts where (404 if it has none). */
-export const getBoardConfig = (space: SpaceId): Promise<BoardConfig> => request<BoardConfig>(`/api/board-config?space=${space}`);
+/** A board's title, tabs and who posts where (404 if there's none). Its key is its space, or "hub-desk". */
+export const getBoardConfig = (key: string): Promise<BoardConfig> => request<BoardConfig>(`/api/board-config?space=${encodeURIComponent(key)}`);
 /** A file attached to a post, a bug report or a room's chat. */
 export interface FileInfo {
   id: string;
@@ -155,6 +164,8 @@ export interface Post {
   /** The fixed note at the top of a staff-only tab like Notices (not a real post: id 0, no comments). */
   pinned?: boolean;
   files?: FileInfo[];
+  /** Only its author and staff see it. */
+  private?: boolean;
 }
 export interface PostComment {
   id: number;
@@ -163,20 +174,27 @@ export interface PostComment {
   text: string;
   createdAt: string;
   editedAt?: string | null;
+  heartedBy?: string[];
 }
 
-export const getPosts = (space: SpaceId, tab: BoardTab): Promise<Post[]> => request<Post[]>(`/api/board?space=${space}&tab=${tab}`);
-export const createPost = (token: string, space: SpaceId, tab: BoardTab, title: string, text: string): Promise<Post> =>
-  request<Post>("/api/board", "POST", { token, space, tab, title, text });
+/** A board's posts; with a token, private ones of yours (or all of them, for the admin) too. */
+export const getPosts = (key: string, tab: BoardTab, token?: string): Promise<Post[]> =>
+  request<Post[]>(`/api/board?space=${encodeURIComponent(key)}&tab=${tab}${token ? `&token=${encodeURIComponent(token)}` : ""}`);
+export const createPost = (token: string, key: string, tab: BoardTab, title: string, text: string, isPrivate = false): Promise<Post> =>
+  request<Post>("/api/board", "POST", { token, space: key, tab, title, text, private: isPrivate });
 export const removePost = (token: string, id: number): Promise<unknown> => request(`/api/board/${id}`, "DELETE", { token });
 export const editPost = (token: string, id: number, title: string, text: string): Promise<Post> =>
   request<Post>(`/api/board/${id}`, "PATCH", { token, title, text });
-export const getPostComments = (id: number): Promise<PostComment[]> => request<PostComment[]>(`/api/board/${id}/comments`);
+export const getPostComments = (id: number, token?: string): Promise<PostComment[]> =>
+  request<PostComment[]>(`/api/board/${id}/comments${token ? `?token=${encodeURIComponent(token)}` : ""}`);
 export const createPostComment = (token: string, id: number, text: string): Promise<PostComment> =>
   request<PostComment>(`/api/board/${id}/comments`, "POST", { token, text });
 export const editPostComment = (token: string, id: number, text: string): Promise<PostComment> =>
   request<PostComment>(`/api/board-comments/${id}`, "PATCH", { token, text });
 export const removePostComment = (token: string, id: number): Promise<unknown> => request(`/api/board-comments/${id}`, "DELETE", { token });
+/** Hearts a board comment, or takes the heart back. */
+export const heartPostComment = (token: string, id: number): Promise<{ hearted: boolean; hearts: number }> =>
+  request(`/api/board-comments/${id}/heart`, "POST", { token });
 
 // --- files (see uploads.ts) ---------------------------------------------------
 

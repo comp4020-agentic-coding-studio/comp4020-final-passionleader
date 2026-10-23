@@ -19,7 +19,11 @@ export function mountBugReport(opts: {
    * `progress` gets 0..1 while the image uploads.
    */
   send(text: string, shot: File | null, progress: (done: number) => void, about: { name: string; withChat: boolean } | null): Promise<{ sent: boolean; error: string | null }>;
-}): { open(person?: boolean): void; isOpen(): boolean } {
+}): {
+  /** Opens the bug form, or with `person` the person form; `about` fills in who and what (a post, note or comment). */
+  open(person?: boolean, about?: { name: string; item: string }): void;
+  isOpen(): boolean;
+} {
   const root = document.createElement("div");
   root.id = "bug-report";
   root.hidden = true;
@@ -132,8 +136,8 @@ export function mountBugReport(opts: {
 
   let person = false;
   return {
-    open(aboutPerson = false) {
-      person = aboutPerson;
+    open(aboutPerson = false, about) {
+      person = aboutPerson || !!about;
       title.textContent = person ? "🚩 Report someone" : "🐞 Report a bug";
       hint.textContent = person
         ? "What did they do? Only the admin reads this, and can stop someone chatting, posting or coming in. Your name and the place you're in are sent with it."
@@ -142,8 +146,16 @@ export function mountBugReport(opts: {
       whoLabel.hidden = !person;
       chatLabel.hidden = !person;
       status.textContent = "";
+      if (about) {
+        // Reporting something they wrote: who, and a quote of it, filled in.
+        who.value = about.name;
+        text.value = `About ${about.item}\n\n`;
+      }
       root.hidden = false;
-      (person ? who : text).focus();
+      if (about) {
+        text.focus();
+        text.setSelectionRange(text.value.length, text.value.length);
+      } else (person ? who : text).focus();
     },
     isOpen: () => !root.hidden,
   };
