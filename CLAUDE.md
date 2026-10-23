@@ -50,9 +50,15 @@ Read before planning or building: `README.md` (what good means for this app),
   30 seconds, five per person per space (a sixth replaces their oldest, after a
   warning). They disappear a month after they're stuck (the note says when);
   until then only the author or an admin removes one. Never in the Student
-  Hub, never inside a building's footprint outside, never within 2 m of a door
-  or anything else you press E at; the server checks it.
+  Hub or the ANUSA office, never inside a building's footprint outside, never
+  within 2 m of a door or anything else you press E at; the server checks it.
   Comments: same text limits, one every 10 seconds, same removal rule.
+  Deleting a note or a comment asks first.
+- Hearts on comments (notes' and every board's): one per person, a second
+  press takes it back, never on your own, checked on the server; the
+  most-hearted comment is listed first (ties: the older first). A
+  comment's hearts go with it. Anyone may report someone's note, post or
+  comment (the person report, with who and a quote filled in).
 - Classroom boards (Q&A, Notices, Board): posts up to 500 words (and 3000
   characters) with a title of up to 80, one every 30 seconds; comments as
   for notes. Authors edit their own posts and comments (same limits; they
@@ -63,15 +69,28 @@ Read before planning or building: `README.md` (what good means for this app),
   remove; closing a classroom removes its board. Outside COMP8020, what the
   whiteboard and the board to its right open is set by the admin only
   (https addresses), checked on the server.
-- The Student Hub's board (Labs looking for students, Students looking for
-  labs, Ask the Hub) and the lawn noticeboard (one tab) keep the same post
-  and comment rules; anyone posts in every tab until there's a staff role.
-  Which spaces have a board, their tabs and which tabs are staff-only live in
-  `server/boards.ts` alone; the client draws what it's sent. Both say
-  they're unofficial and that posters aren't verified. Notes keep 2 m off
-  the lawn noticeboard, which lists posts as thumbnails, two a row (a
-  post's first picture, or its title).
+- The Student Hub's lab matching board (Labs looking for students,
+  Students looking for labs), its "Ask the Hub" enquiry board, the ANUSA
+  office's board and the lawn noticeboard keep the same post and comment
+  rules; anyone posts in every tab until there's a staff role. On "Ask the
+  Hub" a writer may mark a question private: then only they and staff (for
+  now the admin) see it, its comments and its files, checked on the server
+  for each; no other board takes private posts. Lawn posts go after 30 days
+  (hidden at once, deleted by the hourly purge, files and all), and the
+  board says so. Which boards exist, their tabs, which tabs are staff-only,
+  and which allow private posts or expire live in `server/boards.ts` alone;
+  the client draws what it's sent. All say they're unofficial and that
+  posters aren't verified. Notes keep 2 m off the lawn noticeboard (south of
+  Broger's flower bed), which lists posts as thumbnails, two a row (a post's
+  first picture, or its title).
 - Chat: 200 characters, the space only, gone from screens after a minute.
+  The one exception: "/all message" reaches the chat log in every space
+  outside meeting rooms (its bubble only where the sender is), once every
+  30 seconds per person, never from or into a meeting room; same chat
+  restriction. Mute hides someone's chat, bubbles, emotes and notes on your
+  own screen only (kept in your browser; the server never knows).
+  Wave, yes, no and "mate" go once every two seconds at most (dance as
+  often as you like), checked on the server.
   Map chat (not meeting rooms') is kept one day in `chat_lines`, read only
   when someone reports a person: the server then attaches that space's last
   five minutes to the report (never text from the browser). Only the admin
@@ -79,7 +98,9 @@ Read before planning or building: `README.md` (what good means for this app),
 - The admin can stop one person (never the admin) from sticky notes and
   their comments, board posts and their comments, chat, or coming in at
   all, for 1 hour to a year; the server checks before each, tells them
-  until when, closes their sockets for "coming in", and logs every change.
+  until when, and logs every change. "Coming in" puts them out at once (back
+  to the join screen, told until when). The admin can also kick someone
+  once, with nothing stored, so they may come straight back; logged too.
 - Meeting rooms (counselling rooms off the Hub, team rooms off classrooms
   and the library) hold six people at most. Team rooms are open; a
   counselling room lets in only those someone inside has invited. Both are

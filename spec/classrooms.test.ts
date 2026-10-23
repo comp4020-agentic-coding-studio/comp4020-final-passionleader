@@ -9,10 +9,15 @@ import { api, closeAll, visitor } from "./helpers.ts";
 afterAll(closeAll);
 
 describe("classrooms", () => {
-  it("lists COMMON first, then COMP8020", async () => {
+  it("lists COMP8020 first, and COMMON no more (the ANUSA office replaced it)", async () => {
     const list = (await (await api("/api/classrooms")).json()) as { code: string; space: string }[];
-    expect(list[0]).toEqual(expect.objectContaining({ code: "COMMON", space: "common" }));
-    expect(list.map((c) => c.code)).toContain("COMP8020");
+    expect(list[0]).toEqual(expect.objectContaining({ code: "COMP8020", space: "comp8020" }));
+    expect(list.map((c) => c.code)).not.toContain("COMMON");
+    // The office is a space of its own, with its own board, and no notes in it.
+    const config = (await (await api("/api/board-config?space=anusa")).json()) as { title: string };
+    expect(config.title).toBe("ANUSA board");
+    const v = await visitor();
+    expect((await api("/api/notes", "POST", { token: v.token, space: "anusa", x: 0, z: 0, text: "hi" })).status).toBe(400);
   });
 
   it("refuses to let an ordinary visitor open or close one", async () => {
@@ -27,11 +32,11 @@ describe("classrooms", () => {
 
   it("lets only the admin set what a classroom's boards open", async () => {
     const v = await visitor();
-    const res = await api("/api/classrooms/COMMON/link", "PUT", { token: v.token, which: "board", url: "https://example.com/" });
+    const res = await api("/api/classrooms/COMP8020/link", "PUT", { token: v.token, which: "board", url: "https://example.com/" });
     expect(res.status).toBe(403);
-    expect((await api("/api/classrooms/COMMON/link", "PUT", { which: "board", url: "https://example.com/" })).status).toBe(401);
-    const common = ((await (await api("/api/classrooms")).json()) as { code: string; boardUrl: string | null }[]).find((c) => c.code === "COMMON");
-    expect(common?.boardUrl).not.toBe("https://example.com/");
+    expect((await api("/api/classrooms/COMP8020/link", "PUT", { which: "board", url: "https://example.com/" })).status).toBe(401);
+    const room = ((await (await api("/api/classrooms")).json()) as { code: string; boardUrl: string | null }[]).find((c) => c.code === "COMP8020");
+    expect(room?.boardUrl).not.toBe("https://example.com/");
   });
 
   it("serves the classmates' projects list in its shape", async () => {
@@ -40,12 +45,12 @@ describe("classrooms", () => {
     expect(body).toHaveProperty("checkedAt");
   });
 
-  it("keeps notes per classroom: one in COMMON isn't in COMP8020", async () => {
+  it("keeps notes per space: one in COMP8020 isn't outside", async () => {
     const v = await visitor();
-    const res = await api("/api/notes", "POST", { token: v.token, space: "common", x: 0, z: 0, text: "hello common" });
+    const res = await api("/api/notes", "POST", { token: v.token, space: "comp8020", x: 0, z: 0, text: "hello class" });
     expect(res.status).toBe(201);
     const { note } = await res.json();
-    const there = (await (await api("/api/notes?space=comp8020")).json()) as { id: number }[];
+    const there = (await (await api("/api/notes?space=outdoor")).json()) as { id: number }[];
     expect(there.map((n) => n.id)).not.toContain(note.id);
   });
 });

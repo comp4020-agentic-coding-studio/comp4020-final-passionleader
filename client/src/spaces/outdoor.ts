@@ -182,6 +182,9 @@ export function buildOutdoor(): SpaceDef {
   // Lab Coffee, along 154's north side and round its north-west corner.
   buildLabCoffee(g, colliders);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
+  // North of the Hub's door, white stairs up 154's west face to the
+  // colonnade's upper level and the ANUSA office (as in the real building).
+  stairsUp(g, 5.3, -3.4);
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 24.85, Math.PI, "Chifley Library");
 
@@ -193,6 +196,8 @@ export function buildOutdoor(): SpaceDef {
     doors: [
       { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
+      // Up the stairs north of the Hub's door, on the colonnade: the ANUSA office.
+      { x: 4.6, z: -3.4, label: "Up the stairs to the ANUSA office", to: "anusa", arrive: { x: 5.5, z: 2.5 } },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
@@ -273,6 +278,27 @@ function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: num
     minZ: z - (across ? 1.15 : 0.4),
     maxZ: z + (across ? 1.15 : 0.4),
   });
+}
+
+/**
+ * A flight of white stairs against 154's west face, climbing north from
+ * (x, z) to a landing with a door, and the door's label. Scenery you walk up
+ * to, not on: E at its foot takes you up.
+ */
+function stairsUp(g: THREE.Group, x: number, z: number): void {
+  const white = mat(0xeef0f2);
+  const steps = 8;
+  for (let i = 0; i < steps; i++) {
+    const step = new THREE.Mesh(new THREE.BoxGeometry(1.4, 0.36 * (i + 1), 0.45), white);
+    step.position.set(x + 0.2, (0.36 * (i + 1)) / 2, z - 0.4 - i * 0.45);
+    step.castShadow = true;
+    g.add(step);
+  }
+  const rail = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, steps * 0.45 + 0.4), mat(0x8a8f96));
+  rail.position.set(x - 0.5, 3.0, z - 0.4 - (steps * 0.45) / 2 + 0.2);
+  rail.rotation.x = Math.atan2(0.36, 0.45) * 0.98;
+  g.add(rail);
+  doorway(g, x + 0.45, z - 0.4 - steps * 0.45, -Math.PI / 2, "ANUSA office (upstairs)");
 }
 
 /** The lawn noticeboard, just south of Broger's flower bed (server/spaces.ts keeps notes off it too). */

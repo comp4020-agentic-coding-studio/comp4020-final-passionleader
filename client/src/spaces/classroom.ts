@@ -1,12 +1,11 @@
 import * as THREE from "three";
-import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
+import { block, doorway, place, poster, SHARED_BGM, solid, texMat, textPlane, type Box, type SpaceDef, type SpaceId } from "../world.ts";
 import { CLASSROOM_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
 // A classroom inside building 155: rows of desks facing a whiteboard, a
-// centre aisle, and a lectern; COMMON, the room for anyone, is a lounge
-// instead. Every classroom the admin opens (COMP8020, COMMON, ...) is this
-// same room with its own code on the board. In COMP8020 the whiteboard opens
+// centre aisle, and a lectern. Every classroom the admin opens (COMP8020,
+// COMP6300, ...) is this same room with its own code on the board. In COMP8020 the whiteboard opens
 // the course page and the board to its right lists classmates' final
 // projects; in every other classroom both open whatever page the admin has
 // set for them (main.ts, with the links from GET /api/classrooms).
@@ -21,10 +20,9 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   const page = COURSE_PAGES[code];
   const g = new THREE.Group();
   const colliders: Box[] = [];
-  const lounge = code === "COMMON";
   roomShell(g, colliders, HALF.halfX, HALF.halfZ, texMat("ai/carpet.jpg", 10, 8), { tint: 0xf4efe4, trim: 0x4a3a2a });
 
-  const board = textPlane([code, lounge ? "open to everyone" : "course page"], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
+  const board = textPlane([code, "course page"], 7, 2.2, { bg: "#fbfbf7", fg: "#1f2d3d", font: 0.55 });
   board.position.set(0, 2.2, -HALF.halfZ + 0.01);
   g.add(board);
 
@@ -51,16 +49,13 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   g.add(guestbook);
   block(g, colliders, [1, 1.2, 0.8], [3.8, -6], texMat("ai/wood_tabletop.jpg", 1, 1, 0xb07a4a)); // the lectern
 
-  if (lounge) furnishLounge(g, colliders);
-  else {
-    // Four rows of desks either side of the centre aisle, a chair behind
-    // each, facing the board (Kenney models, CC0).
-    for (const z of [-3.5, -1, 1.5, 4]) {
-      for (const x of [-6.5, -3.5, 3.5, 6.5]) {
-        place(g, "desk.glb", 0.75, x, z, Math.PI);
-        place(g, "chairDesk.glb", 1, x, z + 0.8, Math.PI, true, 0, { carpet: 0x34495e });
-        solid(colliders, 2, 0.8, x, z);
-      }
+  // Four rows of desks either side of the centre aisle, a chair behind
+  // each, facing the board (Kenney models, CC0).
+  for (const z of [-3.5, -1, 1.5, 4]) {
+    for (const x of [-6.5, -3.5, 3.5, 6.5]) {
+      place(g, "desk.glb", 0.75, x, z, Math.PI);
+      place(g, "chairDesk.glb", 1, x, z + 0.8, Math.PI, true, 0, { carpet: 0x34495e });
+      solid(colliders, 2, 0.8, x, z);
     }
   }
   place(g, "pottedPlant.glb", 1.3, -9.2, 6.8);
@@ -89,7 +84,7 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
     bgm: SHARED_BGM,
     floor: "carpet",
     links: page ? [{ x: 0, z: -6.7, label: `Open the ${code} course page`, url: page, embeddable: true }] : [],
-    seats: lounge ? LOUNGE_SEATS : DESK_SEATS,
+    seats: DESK_SEATS,
     spots: [
       { x: -6.4, z: -6.7, id: "board", label: `Open the ${code} board` },
       page
@@ -100,62 +95,6 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   };
 }
 
-// Chairs at the desks face the board (-z); in COMMON, the sofas face each
-// other, the stools face the table, the armchairs face the shelves.
+// Chairs at the desks face the board (-z).
 const DESK_SEATS = [-3.5, -1, 1.5, 4].flatMap((z) => [-6.5, -3.5, 3.5, 6.5].map((x) => ({ x, z: z + 0.8, rot: Math.PI, y: 0.45 })));
-const LOUNGE_SEATS = [
-  ...[-5.6, 5.6].flatMap((x) =>
-    [-0.7, 0.7].flatMap((dx) => [
-      { x: x + dx, z: 0.65, rot: 0, y: 0.42 },
-      { x: x + dx, z: 4.25, rot: Math.PI, y: 0.42 },
-    ]),
-  ),
-  ...[-1.8, -0.2, 1.4, 3].flatMap((z) => [
-    { x: -1.45, z, rot: Math.PI / 2, y: 0.7 },
-    { x: 1.45, z, rot: -Math.PI / 2, y: 0.7 },
-  ]),
-  ...[-4.6, -2].map((z) => ({ x: 7.4, z, rot: Math.PI / 2, y: 0.42 })),
-];
 
-/**
- * COMMON, the room for anyone: a lounge rather than a lecture room. Two
- * sofa corners on rugs, a long reading table with stools down the middle,
- * and a reading corner of open shelves, armchairs and a lamp on the right
- * (the left wall has the team rooms' doors). Kenney models, CC0.
- */
-function furnishLounge(g: THREE.Group, colliders: Box[]): void {
-  // Sofa corners either side, facing each other across a coffee table.
-  for (const [x, rug] of [
-    [-5.6, 0x3f6f73],
-    [5.6, 0xb5654a],
-  ] as const) {
-    floor(g, 4.2, 4.6, x, 2.4, rug, 0.015);
-    const fabric = { carpet: x < 0 ? 0x2f7d7a : 0xc8912a };
-    place(g, "loungeSofaLong.glb", 0.85, x, 0.6, 0, true, 0, fabric);
-    place(g, "loungeSofa.glb", 0.85, x, 4.3, Math.PI, true, 0, fabric);
-    place(g, "tableCoffeeGlass.glb", 0.45, x, 2.4);
-    solid(colliders, 3, 0.9, x, 0.6, SOFA_TOP);
-    solid(colliders, 2.2, 0.9, x, 4.3, SOFA_TOP);
-    solid(colliders, 1.4, 0.9, x, 2.4, SOFA_TOP);
-  }
-  // The big reading table down the middle, stools along both sides.
-  block(g, colliders, [2, 0.8, 6.2], [0, 0.6], texMat("ai/wood_tabletop.jpg", 1, 3, 0xd9b48a));
-  for (const z of [-1.8, -0.2, 1.4, 3]) {
-    for (const x of [-1.45, 1.45]) place(g, "stoolBar.glb", 0.75, x, z, 0, true, 0, { carpet: 0x3a3f4a });
-  }
-  solid(colliders, 3.6, 6.4, 0, 0.6);
-  for (const z of [-1.3, 2.2]) place(g, "plantSmall1.glb", 0.35, 0, z, 0, true, 0.8);
-  // The reading corner, right-hand wall: shelves, two armchairs, a lamp.
-  for (const z of [-4.4, -2.2]) {
-    place(g, "bookcaseOpen.glb", 1.9, 9.55, z, -Math.PI / 2);
-    solid(colliders, 0.7, 2, 9.55, z);
-  }
-  for (const z of [-4.6, -2]) {
-    place(g, "loungeChair.glb", 0.8, 7.4, z, Math.PI / 2, true, 0, { carpet: 0x8a2f2f });
-    solid(colliders, 1, 1, 7.4, z);
-  }
-  place(g, "lampRoundFloor.glb", 1.7, 8.9, -0.6);
-  lightPool(g, 8.4, -1.6, 3.6, 3.6);
-  for (const z of [-1.3, 2.2]) lightPool(g, 0, z, 2.4, 2.2, 0xfff0c8, 0.22);
-  solid(colliders, 0.5, 0.5, 8.9, -0.6);
-}

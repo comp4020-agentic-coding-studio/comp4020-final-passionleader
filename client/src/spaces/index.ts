@@ -1,4 +1,5 @@
 import type { SpaceDef, SpaceId } from "../world.ts";
+import { buildAnusa } from "./anusa.ts";
 import { buildClassroom } from "./classroom.ts";
 import { buildHub } from "./hub.ts";
 import { buildLibrary } from "./library.ts";
@@ -16,6 +17,7 @@ const fixed: Record<string, () => SpaceDef> = {
   outdoor: buildOutdoor,
   hub: buildHub,
   library: buildLibrary,
+  anusa: buildAnusa,
 };
 const built = new Map<SpaceId, SpaceDef>();
 /** Space id -> course code, for the classrooms open right now. */

@@ -5,9 +5,9 @@ people you wouldn't otherwise, in a campus you already know.
 
 A small 3D, real-time space for the ANU community: a stretch of campus between
 building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
-Centre), the Student Hub inside 154, classrooms inside 155 (COMMON for
-anyone, COMP8020, and any course the admin opens), and Chifley Library across
-the bridge to the south.
+Centre), the Student Hub inside 154 and the ANUSA office up its stairs,
+classrooms inside 155 (COMP8020, and any course the admin opens), and Chifley
+Library across the bridge to the south.
 Everyone in a space sees everyone else walk, chat, wave, dance and leave sticky
 notes, live. It is not an official ANU service.
 
@@ -39,12 +39,15 @@ should feel at home in a virtual space shaped like the real campus they know.
    opens the course page in a window over the campus, and the board to its
    right lists classmates' final-project apps that are up (each opens in a
    new tab). In other classrooms both open whatever page the staff set (for
-   now the admin). COMMON is a lounge, not a lecture room.
-   The Student Hub has a board too, on a PC at the reception desk by its
-   entrance (Labs looking for students, Students looking for labs, Ask the
-   Hub); the desk's other PCs open ANU's AI essentials guide and its
-   researcher search in new tabs. The lawn has a noticeboard at its north
-   edge. Both boards say they're unofficial.
+   now the admin), in the window or a new tab as they choose.
+   The Student Hub's reception has the lab matching board (Labs looking for
+   students, Students looking for labs), the researcher search, ANU's AI
+   essentials guide, and "Ask the Hub", where a question can be private: only
+   you and the staff see it. The ANUSA office, up 154's stairs, has a board
+   for study groups and notices. The lawn noticeboard stands by the north
+   road; its posts go after 30 days. All the boards say they're unofficial.
+   Comments take hearts (the most-hearted first), and anything someone wrote
+   can be reported. Type "/all" before a chat line to reach every space.
    Under your name, how many people are on campus, in the Hub, the
    library, the classrooms and the meeting rooms (numbers only, never who),
    and the classroom picker shows how many are in each.

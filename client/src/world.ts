@@ -149,7 +149,7 @@ export const boxFrom = (o: THREE.Object3D, pad = 0): Box => {
 
 /** Where the sun sits relative to whatever it follows: the sky shader uses the same direction. */
 /**
- * The playlist the Student Hub, the classrooms (COMMON too) and their meeting
+ * The playlist the Student Hub, the classrooms, the ANUSA office and their meeting
  * rooms share: walking between them keeps the song playing, and each visit
  * starts on one of the four at random.
  */

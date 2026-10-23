@@ -77,7 +77,7 @@ import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePla
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
-import { CLASSROOM_CODE, COMMON, FIRST_SPACE, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
+import { CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
 keepIn(addAudit);
@@ -359,7 +359,6 @@ app.delete("/api/classrooms/:code", async (c) => {
     log("refused", v, { action: "remove classroom", code, reason: "not admin" }, { ip: ipOf(c) });
     return c.json({ error: "Only the admin can close a classroom." }, 403);
   }
-  if (code === COMMON) return c.json({ error: "COMMON stays open." }, 400);
   const space = classroomSpace(code);
   // Anyone inside is sent back out first, so nobody is left in a room that's gone.
   let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
@@ -935,11 +934,23 @@ sketchRoutes(app);
   if (ids.length) log("post-removed", null, { space: "hub", count: ids.length, reason: "tab removed" });
 }
 
+// COMMON, the "classroom for anyone", is gone: the ANUSA office (its own
+// space, up 154's stairs) does that job now. Close it as the admin would, its
+// notes, posts and their files with it, and anyone saved inside starts
+// outside. Runs on every start and does nothing once it's gone.
+if (classroomList().some((c) => c.code === OLD_COMMON)) {
+  const space = classroomSpace(OLD_COMMON);
+  let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });
+  for (const room of teamRoomsOf(space)) moved += evictSpace(room, FIRST_SPACE, { x: -8.4, z: 7 });
+  for (const id of postIdsIn(space)) removeObjects(filesOn("post", id, true).map((f) => f.key));
+  if (removeClassroom(OLD_COMMON)) log("classroom-removed", null, { code: OLD_COMMON, space, moved, reason: "replaced by the ANUSA office" });
+}
+
 const purge = (): void => {
   const gone = purgeExpiredNotes();
   if (gone) log("note-expired", null, { count: gone });
   // A classroom lasts a semester: six months after it opened it closes on its
-  // own (never COMP8020 or COMMON), as if the admin had closed it.
+  // own (never COMP8020), as if the admin had closed it.
   for (const code of staleClassrooms()) {
     const space = classroomSpace(code);
     let moved = evictSpace(space, FIRST_SPACE, { x: -8.4, z: 7 });

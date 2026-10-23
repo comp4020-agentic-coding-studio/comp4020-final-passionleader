@@ -1,9 +1,9 @@
 // Choosing a classroom: the door in building 155 opens this list instead of
 // one fixed room. Entering is two steps: a click or tap on a row only selects
-// it (COMMON is selected to begin with), and the "Enter classroom" button, the
+// it (COMP8020 is selected to begin with), and the "Enter classroom" button, the
 // Enter key or a double click goes in, so a stray tap can't send you anywhere.
-// Every classroom is the same room (COMMON and the course
-// codes only differ in name, and in whose notes they hold). An admin also sees
+// Every classroom is the same room (the course codes only differ in name,
+// and in whose notes they hold). An admin also sees
 // a form to open a new classroom and a Close button beside each one. That is
 // only a convenience: the server checks who is an admin on every create and
 // remove, and this just hides the controls from everyone else.
@@ -16,8 +16,6 @@ export interface ClassroomItem {
   /** How many are in it now, if known. */
   online?: number;
 }
-
-const COMMON = "COMMON";
 
 export function mountClassPicker(h: {
   /** The visitor chose a classroom to enter. */
@@ -143,7 +141,8 @@ export function mountClassPicker(h: {
         });
         li.append(pick);
 
-        if (admin && item.code !== COMMON) {
+        // COMP8020 is the course's own room: always open.
+        if (admin && item.code !== "COMP8020") {
           if (confirming === item.code) {
             const ask = document.createElement("div");
             ask.className = "class-confirm";
@@ -268,7 +267,7 @@ export function mountClassPicker(h: {
       items = next;
       admin = isAdmin;
       confirming = null;
-      // COMMON (the server sends it first) is selected to begin with.
+      // COMP8020 (the server sends it first) is selected to begin with.
       selected = items[0]?.code ?? null;
       form.hidden = !isAdmin;
       error.textContent = "";

@@ -60,6 +60,13 @@ const FIXED: Record<string, BoardDef> = {
     allowPrivate: true,
     space: "hub",
   },
+  // The ANUSA office's wall: study groups and notices. (A board of its own
+  // shape, showing who has joined each group, comes next: plan 68a.)
+  anusa: {
+    title: "ANUSA board",
+    tabs: [{ id: "groups", label: "Study groups & notices" }],
+    notice: UNOFFICIAL,
+  },
   // The noticeboard on the lawn: events, clubs, anything to promote. A
   // poster is for now, so posts go after 30 days, the same as their files.
   outdoor: {

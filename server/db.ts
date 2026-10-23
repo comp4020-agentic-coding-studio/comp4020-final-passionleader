@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { COMMON, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
+import { FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
 
 // Four tables. Visitors: a name, the secret that reclaims it, a role, and
 // where they last stood. Notes: sticky notes on a space's floor, kept until
@@ -228,8 +228,9 @@ db.exec(`
     BEGIN DELETE FROM hearts WHERE kind = 'post' AND target = OLD.id; END;
 `);
 
-// The first two classrooms: the one there's always been, and COMMON for anyone.
-db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?), (?)").run("COMP8020", COMMON);
+// The classroom there's always been. (COMMON, the room for anyone, was the
+// second until the ANUSA office replaced it; main.ts clears it out.)
+db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?)").run("COMP8020");
 
 // --- visitors --------------------------------------------------------------
 
@@ -419,7 +420,7 @@ export type ClassroomLink = "board" | "side";
 export function classroomList(): Classroom[] {
   const rows = db
     .prepare(
-      "SELECT code, created_at AS createdAt, board_url AS boardUrl, side_url AS sideUrl, board_tab AS boardTab, side_tab AS sideTab FROM classrooms ORDER BY code = 'COMMON' DESC, code",
+      "SELECT code, created_at AS createdAt, board_url AS boardUrl, side_url AS sideUrl, board_tab AS boardTab, side_tab AS sideTab FROM classrooms ORDER BY code = 'COMP8020' DESC, code",
     )
     .all() as unknown as (Omit<Classroom, "space" | "boardNewTab" | "sideNewTab"> & { boardTab: number; sideTab: number })[];
   return rows.map(({ boardTab, sideTab, ...r }) => ({ ...r, space: classroomSpace(r.code), boardNewTab: boardTab === 1, sideNewTab: sideTab === 1 }));
@@ -441,12 +442,12 @@ export function addClassroom(code: string, by: string): boolean {
   return changes > 0;
 }
 
-/** Classrooms opened more than `months` ago (never COMP8020 or COMMON): a course's room for one semester. */
+/** Classrooms opened more than `months` ago (never COMP8020): a course's room for one semester. */
 export function staleClassrooms(months = 6): string[] {
   return (
-    db
-      .prepare(`SELECT code FROM classrooms WHERE code NOT IN ('COMP8020', ?) AND created_at <= datetime('now', '-${Math.floor(months)} months')`)
-      .all(COMMON) as { code: string }[]
+    db.prepare(`SELECT code FROM classrooms WHERE code != 'COMP8020' AND created_at <= datetime('now', '-${Math.floor(months)} months')`).all() as {
+      code: string;
+    }[]
   ).map((r) => r.code);
 }
 

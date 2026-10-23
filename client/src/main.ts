@@ -738,6 +738,7 @@ function showOnline(): void {
     `Campus ${n("outdoor")}`,
     `Hub ${n("hub")}`,
     `${short ? "Lib" : "Library"} ${n("library")}`,
+    `ANUSA ${n("anusa")}`,
     `${short ? "Class" : "Classrooms"} ${inClassrooms}`,
     `Rooms ${n("rooms")}`,
   ];

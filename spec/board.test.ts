@@ -33,10 +33,10 @@ describe("classroom board", () => {
     expect((await post(v.token, "board", words(500))).status).toBe(201);
   });
 
-  it("keeps each classroom's board to itself", async () => {
+  it("keeps each board to itself: a COMP8020 post isn't on the ANUSA board", async () => {
     const v = await visitor();
-    const created = await (await post(v.token, "board", "Only in COMMON", "common")).json();
-    const there = (await (await api("/api/board?space=comp8020&tab=board")).json()) as { id: number }[];
+    const created = (await (await post(v.token, "board", "Only in COMP8020")).json()) as { id: number };
+    const there = (await (await api("/api/board?space=anusa&tab=groups")).json()) as { id: number }[];
     expect(there.map((p) => p.id)).not.toContain(created.id);
   });
 

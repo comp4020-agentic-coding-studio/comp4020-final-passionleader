@@ -40,15 +40,17 @@ export const SPACES: Record<string, Space> = {
   outdoor: { label: "ANU campus", halfX: 30, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
+  // Up the stairs on 154's colonnade, north of the Hub's door (client/src/spaces/anusa.ts).
+  anusa: { label: "ANUSA office", halfX: 7, halfZ: 5, spawn: { x: 5.5, z: 2.5 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
 export const CLASSROOM: Omit<Space, "label"> = { halfX: 10, halfZ: 8, spawn: { x: 0, z: 5.5 } };
 
-// Course codes like COMP6300 or MGMP2222 (four letters, four digits), and
-// COMMON, the room for anyone, which can't be removed.
-export const CLASSROOM_CODE = /^([A-Z]{4}[0-9]{4}|COMMON)$/;
-export const COMMON = "COMMON";
+// Course codes like COMP6300 or MGMP2222 (four letters, four digits). The
+// old COMMON "classroom for anyone" is gone: the ANUSA office took its place.
+export const CLASSROOM_CODE = /^[A-Z]{4}[0-9]{4}$/;
+export const OLD_COMMON = "COMMON";
 
 const classrooms = new Map<SpaceId, string>(); // space id -> course code
 
@@ -146,7 +148,7 @@ export function clampToAreas(areas: Area[], x: number, z: number): { x: number; 
 // first (client/src/main.ts noteSpotError), so people get told straight away.
 
 export const NOTE_CLEARANCE = 2;
-export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub"]);
+export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa"]);
 const BUILDINGS: Area[] = [
   { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
   { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
@@ -154,6 +156,7 @@ const BUILDINGS: Area[] = [
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door
   { x: 4.6, z: 3 }, // 154's door
+  { x: 4.6, z: -3.4 }, // the stairs up to the ANUSA office
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
   { x: -7, z: -31.6 }, // the lawn noticeboard, south of Broger's bed (client/src/spaces/outdoor.ts LAWN_BOARD)
@@ -182,7 +185,7 @@ const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
 
 /** Why a note can't go here, or null if it can. */
 export function noteSpotError(space: SpaceId, x: number, z: number): string | null {
-  if (NO_NOTE_SPACES.has(space)) return "No sticky notes in the Student Hub.";
+  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA office." : "No sticky notes in the Student Hub.";
   if (roomOf(space)) return "No sticky notes in meeting rooms.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
