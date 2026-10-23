@@ -187,3 +187,15 @@ describe("study groups", () => {
     expect(list.find((p) => p.id === group.id)?.members.map((m) => m.toLowerCase())).toEqual([w.name, b.name].map((n) => n.toLowerCase()));
   });
 });
+
+describe("study groups: resizing", () => {
+  it("lets the writer change a group's size on edit, never below who's in it", async () => {
+    const [w, a] = await Promise.all([visitor(), visitor()]);
+    const group = (await (await api("/api/board", "POST", { token: w.token, space: "study-groups", tab: "groups", title: "MATH1013", text: "Mondays", capacity: 4 })).json()) as { id: number };
+    await api(`/api/board/${group.id}/join`, "POST", { token: a.token });
+    expect((await api(`/api/board/${group.id}`, "PATCH", { token: w.token, title: "MATH1013", text: "Mondays", capacity: 1 })).status).toBe(400);
+    const res = await api(`/api/board/${group.id}`, "PATCH", { token: w.token, title: "MATH1013", text: "Mondays", capacity: 2 });
+    expect(res.status).toBe(200);
+    expect(((await res.json()) as { capacity: number }).capacity).toBe(2);
+  });
+});

@@ -184,9 +184,8 @@ export function buildOutdoor(): SpaceDef {
   // Lab Coffee, along 154's north side and round its north-west corner.
   buildLabCoffee(g, colliders);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
-  // North of the Hub's door, white stairs up 154's west face to the
-  // colonnade's upper level and the ANUSA Student Lounge (as in the real building).
-  stairsUp(g, colliders, 5.3, -3.4);
+  // North of the Hub's door, under the same colonnade: the ANUSA Student Lounge.
+  doorway(g, 5.7, -5, -Math.PI / 2, "ANUSA Student Lounge");
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 24.85, Math.PI, "Chifley Library");
 
@@ -198,8 +197,8 @@ export function buildOutdoor(): SpaceDef {
     doors: [
       { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
-      // Up the stairs north of the Hub's door, on the colonnade: the ANUSA Student Lounge.
-      { x: 4.6, z: -3.4, label: "Up the stairs to the ANUSA Student Lounge", to: "anusa", arrive: { x: 5.5, z: 2.5 } },
+      // North of the Hub's door, on the ground floor: the ANUSA Student Lounge.
+      { x: 4.6, z: -5, label: "Enter the ANUSA Student Lounge", to: "anusa", arrive: { x: 8.4, z: 5 } },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
@@ -281,53 +280,6 @@ function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: num
     minZ: z - (across ? 1.15 : 0.4),
     maxZ: z + (across ? 1.15 : 0.4),
   });
-}
-
-/**
- * White stairs on 154's west side, as on the real building: a solid flight
- * rising north from (x, z) beside the colonnade up to the first floor (3.8 m,
- * where 154's cladding starts), a landing there under the cladding, and the
- * ANUSA Student Lounge's door on the landing. The open side has a low white wall, not
- * a rail. Scenery you walk up to, not on: E at its foot takes you up.
- */
-const FIRST_FLOOR = 3.8;
-function stairsUp(g: THREE.Group, colliders: Box[], x: number, z: number): void {
-  const white = mat(0xeef0f2);
-  const steps = 11;
-  const rise = FIRST_FLOOR / steps;
-  const run = 0.42;
-  const width = 1.5;
-  // Each step a solid block down to the ground: the flight reads as one mass.
-  for (let i = 0; i < steps; i++) {
-    const h = rise * (i + 1);
-    const step = new THREE.Mesh(new THREE.BoxGeometry(width, h, run), white);
-    step.position.set(x, h / 2, z - run / 2 - i * run);
-    step.castShadow = true;
-    g.add(step);
-  }
-  const top = z - steps * run;
-  // The landing, back to 154's west face (x 6.15) and 2 m deep.
-  const landW = 6.15 - (x - width / 2);
-  const landing = new THREE.Mesh(new THREE.BoxGeometry(landW, FIRST_FLOOR, 2), white);
-  landing.position.set(x - width / 2 + landW / 2, FIRST_FLOOR / 2, top - 1);
-  landing.castShadow = true;
-  g.add(landing);
-  // A low wall on the open (west) side: sloping with the flight, level on the landing.
-  const flight = new THREE.Mesh(new THREE.BoxGeometry(0.15, 0.9, Math.hypot(steps * run, FIRST_FLOOR)), white);
-  flight.position.set(x - width / 2 - 0.075, FIRST_FLOOR / 2 + 0.45, z - (steps * run) / 2);
-  flight.rotation.x = Math.atan2(FIRST_FLOOR, steps * run);
-  const landWall = new THREE.Mesh(new THREE.BoxGeometry(0.15, 1, 2), white);
-  landWall.position.set(x - width / 2 - 0.075, FIRST_FLOOR + 0.5, top - 1);
-  g.add(flight, landWall);
-  // Solid from the second step to the landing's far end (the foot stays clear for E).
-  const southEnd = z - 2 * run;
-  const northEnd = top - 2;
-  solid(colliders, width + 0.3, southEnd - northEnd, x, (southEnd + northEnd) / 2);
-  // The office's door on the landing, in 154's face, its label above.
-  const door = new THREE.Group();
-  doorway(door, 0, 0, -Math.PI / 2, "ANUSA Student Lounge");
-  door.position.set(6.1, FIRST_FLOOR, top - 1);
-  g.add(door);
 }
 
 /** The lawn noticeboard, south of the flower bed east of Broger's (server/spaces.ts keeps notes off it too). */

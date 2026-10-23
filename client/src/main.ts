@@ -837,10 +837,10 @@ const board = mountBoard({
       return failed(err, "Could not add that comment.");
     }
   },
-  async editPost(postId, title, text) {
+  async editPost(postId, title, text, capacity) {
     if (!session) return "Join first.";
     try {
-      await editPost(session.token, postId, title, text);
+      await editPost(session.token, postId, title, text, capacity);
       return null;
     } catch (err) {
       return failed(err, "Could not save that.");

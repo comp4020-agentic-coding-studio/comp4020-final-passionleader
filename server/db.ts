@@ -591,8 +591,9 @@ export function addPost(author: string, space: SpaceId, tab: BoardTab, title: st
 }
 
 /** Rewrites a post's title and text (its author only, which main.ts checks). */
-export function editPost(id: number, title: string, text: string): Post {
+export function editPost(id: number, title: string, text: string, capacity?: number): Post {
   db.prepare("UPDATE posts SET title = ?, text = ?, edited_at = datetime('now') WHERE id = ?").run(title, text, id);
+  if (capacity !== undefined) db.prepare("UPDATE posts SET capacity = ? WHERE id = ? AND capacity IS NOT NULL").run(capacity, id);
   return findPost(id)!;
 }
 

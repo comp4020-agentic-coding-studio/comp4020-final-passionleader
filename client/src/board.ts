@@ -109,7 +109,7 @@ export function mountBoard(h: {
   imageLink(id: string): Promise<string | null>;
   comment(postId: number, text: string): Promise<string | null>;
   /** Changes the visitor's own post's title and text (files stay); resolves to an error message, or null. */
-  editPost(postId: number, title: string, text: string): Promise<string | null>;
+  editPost(postId: number, title: string, text: string, capacity?: number): Promise<string | null>;
   /** Changes the visitor's own comment; resolves to an error message, or null. */
   editComment(commentId: number, text: string): Promise<string | null>;
   removePost(postId: number): Promise<string | null>;
@@ -713,7 +713,8 @@ export function mountBoard(h: {
     filesInput.hidden = editing;
     uploadStatus.hidden = editing;
     privateLabel.hidden = editing || !config.allowPrivate;
-    groupSize.hidden = editing || !config.groups;
+    // A study group's size shows when writing one, and when editing one.
+    groupSize.hidden = !config.groups || (editing && !current?.capacity);
     submitBtn.textContent = editing ? "Save" : "Post";
   }
 
@@ -722,6 +723,7 @@ export function mountBoard(h: {
     draftStash = { title: titleInput.value, text: textInput.value };
     titleInput.value = current.title;
     textInput.value = current.text;
+    if (current.capacity) sizeInput.value = String(current.capacity);
     setWriteMode(true);
     showView("write");
     updateCounters();
@@ -869,11 +871,14 @@ export function mountBoard(h: {
     if (editingPost) {
       if (!current) return;
       const post = current;
+      const newSize = post.capacity ? Number(sizeInput.value) : undefined;
+      if (newSize !== undefined && !(Number.isInteger(newSize) && newSize >= 2 && newSize <= 20)) return setError("How many people? Between 2 and 20.");
       void run(
-        () => h.editPost(post.id, t, x),
+        () => h.editPost(post.id, t, x, newSize),
         () => {
           post.title = t;
           post.text = x;
+          if (newSize !== undefined) post.capacity = newSize;
           post.editedAt = new Date().toISOString();
           backToPost();
           // The list's copy comes from the server too, so the next visit to it is current.

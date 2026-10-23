@@ -190,8 +190,8 @@ export const createPost = (token: string, key: string, tab: BoardTab, title: str
 /** Joins a study group, or leaves it. */
 export const joinGroup = (token: string, id: number): Promise<{ joined: boolean; members: string[] }> => request(`/api/board/${id}/join`, "POST", { token });
 export const removePost = (token: string, id: number): Promise<unknown> => request(`/api/board/${id}`, "DELETE", { token });
-export const editPost = (token: string, id: number, title: string, text: string): Promise<Post> =>
-  request<Post>(`/api/board/${id}`, "PATCH", { token, title, text });
+export const editPost = (token: string, id: number, title: string, text: string, capacity?: number): Promise<Post> =>
+  request<Post>(`/api/board/${id}`, "PATCH", { token, title, text, capacity });
 export const getPostComments = (id: number, token?: string): Promise<PostComment[]> =>
   request<PostComment[]>(`/api/board/${id}/comments${token ? `?token=${encodeURIComponent(token)}` : ""}`);
 export const createPostComment = (token: string, id: number, text: string): Promise<PostComment> =>

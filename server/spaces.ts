@@ -40,7 +40,7 @@ export const SPACES: Record<string, Space> = {
   outdoor: { label: "ANU campus", halfX: 30, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
-  // Up the stairs on 154's colonnade, north of the Hub's door (client/src/spaces/anusa.ts).
+  // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
   anusa: { label: "ANUSA Student Lounge", halfX: 10, halfZ: 7, spawn: { x: 8.4, z: 3 } },
 };
 
@@ -161,7 +161,7 @@ const BUILDINGS: Area[] = [
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door
   { x: 4.6, z: 3 }, // 154's door
-  { x: 4.6, z: -3.4 }, // the stairs up to the ANUSA Student Lounge
+  { x: 4.6, z: -5 }, // the ANUSA Student Lounge's door, north of the Hub's
   { x: -8.6, z: 2.3 }, // the study-group board beside 155's door (client/src/spaces/outdoor.ts STUDY_BOARD)
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)

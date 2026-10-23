@@ -594,7 +594,15 @@ app.patch("/api/board/:id", async (c) => {
     log("refused", v, { action: "edit post", space: post.space, post: post.id, reason: bad }, { ip: ipOf(c), content });
     return c.json({ error: bad }, 400);
   }
-  const edited = editPost(post.id, (b.title as string).trim(), (b.text as string).trim());
+  // A study group's writer may change its size, never below who's in it now.
+  let capacity: number | undefined;
+  if (post.capacity !== null && b.capacity !== undefined) {
+    const n = typeof b.capacity === "number" && Number.isInteger(b.capacity) ? b.capacity : NaN;
+    if (!(n >= 2 && n <= 20)) return c.json({ error: "How many people? Between 2 and 20." }, 400);
+    if (n < post.members.length) return c.json({ error: `${post.members.length} people are in it already: it can't be smaller than that.` }, 400);
+    capacity = n;
+  }
+  const edited = editPost(post.id, (b.title as string).trim(), (b.text as string).trim(), capacity);
   log("post-edited", v, { space: post.space, tab: post.tab, post: post.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: `${edited.title}\n\n${edited.text}` });
   broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
   return c.json({ ...edited, files: filesOn("post", edited.id).map(({ id, name, size }) => ({ id, name, size })) });
@@ -959,7 +967,7 @@ sketchRoutes(app);
 }
 
 // COMMON, the "classroom for anyone", is gone: the ANUSA Student Lounge (its own
-// space, up 154's stairs) does that job now. Close it as the admin would, its
+// space, on 154's ground floor) does that job now. Close it as the admin would, its
 // notes, posts and their files with it, and anyone saved inside starts
 // outside. Runs on every start and does nothing once it's gone.
 if (classroomList().some((c) => c.code === OLD_COMMON)) {

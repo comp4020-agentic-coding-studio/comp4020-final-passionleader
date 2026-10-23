@@ -150,8 +150,9 @@ won't fit is dropped from the end of bundle 3 (below), not cut in advance.
     as a pile of papers
 66. A large wall calendar of campus events in the Hub
 67. Classroom boards as PCs
-68. COMMON is replaced by the ANUSA Student Lounge, up the stairs left of the Hub's
-    entrance; 68a. a study-group board there showing who has joined
+68. COMMON is replaced by the ANUSA Student Lounge, on the ground floor left of the Hub's
+    entrance, a place to rest with two meeting rooms; 68a. a study-group board
+    beside 155's door: a size, and who has joined
 69. The admin picks "new tab" or "in-app window" for a classroom link
 70. Research Ethics in the library as a pile of papers
 

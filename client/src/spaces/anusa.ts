@@ -3,8 +3,8 @@ import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, 
 import { ANUSA_TEAM_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
-// The ANUSA Student Lounge: the students' association, up the stairs on 154's west
-// side (it replaced COMMON, the "classroom for anyone"). A place for students
+// The ANUSA Student Lounge: the students' association, on 154's ground floor
+// north of the Hub's door (it replaced COMMON, the "classroom for anyone"). A place for students
 // to come and rest, and for the association's people to meet: a reception
 // counter with a PC to ANUSA's site (it may be framed), where one of the AI
 // campus assistants will stand; the study-group board on the north wall; a
@@ -107,8 +107,8 @@ export function buildAnusa(): SpaceDef {
     solid(colliders, 0.7, 0.7, x, z);
   }
 
-  // The way out: back down the stairs, on the east wall.
-  doorway(g, halfX - 0.05, 5, -Math.PI / 2, "Down to campus");
+  // The way out, on the east wall.
+  doorway(g, halfX - 0.05, 5, -Math.PI / 2, "Out to campus");
   // The two meeting rooms, on the west wall.
   ANUSA_TEAM_DOORS.forEach((d, i) => doorway(g, -halfX + 0.05, d.z, Math.PI / 2, `Meeting room ${i + 1}`));
 
@@ -128,7 +128,7 @@ export function buildAnusa(): SpaceDef {
     group: g,
     colliders,
     doors: [
-      { x: halfX - 1.1, z: 5, label: "Go back down to campus", to: "outdoor", arrive: { x: 4.6, z: -2.6 } },
+      { x: halfX - 1.1, z: 5, label: "Go out to campus", to: "outdoor", arrive: { x: 3.6, z: -5 } },
       ...roomDoors("team-anusa", ANUSA_TEAM_DOORS, (n) => `Enter meeting room ${n}`),
     ],
     halfX,
