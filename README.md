@@ -59,6 +59,12 @@ should feel at home in a virtual space shaped like the real campus they know.
    Lab Coffee wraps round 154's north-west corner, with a terrace; its menu
    board (**E**) lists the cafés on campus, where each is and roughly what
    it sells, gathered from public pages (not an official list).
+   The Student Hub's wall calendar shows this month and opens what's on at
+   ANU. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
+   careers) stand in their places: **E** to ask one. They aren't connected to
+   a model yet, so for now they say so and point to their pages.
+   Signed up, the 📮 button writes to someone by name and keeps your mail
+   for 30 days; it lights up when something arrives.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier
    course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
@@ -85,7 +91,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    error code (`S3-…`) to tell the admin.
 10. The gear (top right) sets the music and sound-effect volumes and switches
    graphics between Low and High. On a computer, the box beside it shows the
-   track playing, with pause and next.
+   track playing, with pause and next; outside, a minimap shows where you
+   are, and "Things to try" ticks off six first steps (skip it if you like).
+11. Somewhere on campus is a door the project started behind. Find it.
 
 ## What good means for this app
 
@@ -127,7 +135,10 @@ may not do, password resets (`campus.test.ts`); notes and comments
 persist, stay in their space, keep their limits, and only their author or an
 admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
 and new notes reach the same space within a second, and no other
-(`realtime.test.ts`); only the admin reads the seven-day log and the bug
+(`realtime.test.ts`, with the hidden room's one-poop-each rule); study
+groups never fill past their size, private questions reach only their
+writer and staff, mail only its reader, guests can't send it, and the
+assistants answer one question every three seconds (`board.test.ts`); only the admin reads the seven-day log and the bug
 reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
 meeting room holds six and a counselling room only
 the invited (`rooms.test.ts`); files are checked by type, size and who may

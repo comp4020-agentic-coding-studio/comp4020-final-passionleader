@@ -119,6 +119,11 @@ Read before planning or building: `README.md` (what good means for this app),
   too, one question every three seconds, 500 characters; nothing asked is
   stored, and their window says so and that the campus is unofficial. Until
   a model is connected they say they aren't, and point to their pages.
+- The Poop Room (an easter egg behind the "Staff only" door at the far end
+  of Lab Coffee): in there the Q menu's first item poops instead of sticking
+  a note. One poop per person, anyone joined (guests too), five seconds
+  apart, a new one replacing their last; server memory only, sent only to
+  whoever is in the room. No notes in it. Its door is never signposted.
 - The admin can stop one person (never the admin) from sticky notes and
   their comments, board posts and their comments, chat, or coming in at
   all, for 1 hour to a year; the server checks before each, tells them
