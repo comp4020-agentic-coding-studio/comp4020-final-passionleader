@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { block, doorway, LIBRARY_BGM, lightPool, paperPile, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
-import { roomShell } from "./room.ts";
+import { patchTexture, roomShell, shaftTexture } from "./room.ts";
 
 // Inside Chifley Library. You come in through the north wall (the front
 // door at the end of the bridge). Reception is in the north-west corner, with
@@ -14,8 +14,8 @@ import { roomShell } from "./room.ts";
 // room booking in a window over the game; the catalogue and the research
 // ethics system in a new tab, because those two refuse to be shown inside
 // another page. Arched windows high on the
-// north wall; the sun comes in from the south: shafts of light across the
-// room, bright patches on the floor, dust drifting in them. The room itself is lit a little dimmer
+// north wall let the sun in: shafts of light across the room, bright patches
+// on the floor, dust drifting in them. The room itself is lit a little dimmer
 // than the others, so the windows glow.
 
 const HALF = { halfX: 16, halfZ: 11 };
@@ -215,10 +215,9 @@ function archShape(w: number, h: number): THREE.Shape {
 }
 
 /**
- * Four arched windows on the north wall, either side of the sign; the light
- * comes in from the south instead (the user's choice), through windows over
- * the south wall, which is cut low so the camera sees in: shafts falling
- * north across the room onto bright patches of floor, dust drifting in them. All unlit, additive materials:
+ * Four arched windows on the north wall, either side of the sign, each with a
+ * shaft of light falling south-east across the room onto a bright patch of
+ * floor, and dust motes drifting in the light. All unlit, additive materials:
  * no real lights, so it costs next to nothing on Low. Returns the per-frame tick.
  */
 function windows(g: THREE.Group): (dt: number) => void {
@@ -243,10 +242,9 @@ function windows(g: THREE.Group): (dt: number) => void {
     blending: THREE.AdditiveBlending,
     depthWrite: false,
   });
-  // From the south wall, high, a little from the west: the light runs down
-  // and away from the camera, north into the room.
-  const south = HALF.halfZ - 0.02;
-  const drop = 4.2; // how far north the light lands from the wall at floor level
+  // The sun comes from the north (we're south of the equator), high and a
+  // little from the west: the light runs down and towards the camera.
+  const drop = 4.2; // how far south the light lands from the wall at floor level
   const lean = 1.4; // how far east it drifts on the way
   const shape = archShape(WIN_W, WIN_H);
   const glassGeo = new THREE.ShapeGeometry(shape, 16);
@@ -270,12 +268,10 @@ function windows(g: THREE.Group): (dt: number) => void {
     bar(WIN_W, 0.06, 0, WIN_H * 0.62);
     bars.position.set(x, WIN_Y, wall + 0.01);
     g.add(f, pane, bars);
-  }
 
-  for (const x of [-12.5, -8.5, 8.5, 12.5]) {
-    // The shaft: a quad from over the south wall down to its patch on the floor.
-    const top = [x, WIN_Y + WIN_H * 0.8, south];
-    const bottom = [x + lean, 0.02, south - drop - WIN_Y * 0.9];
+    // The shaft: a quad from the window down to its patch on the floor.
+    const top = [x, WIN_Y + WIN_H * 0.8, wall];
+    const bottom = [x + lean, 0.02, wall + drop + WIN_Y * 0.9];
     const geo = new THREE.BufferGeometry();
     const hw = WIN_W / 2;
     geo.setAttribute(
@@ -295,7 +291,7 @@ function windows(g: THREE.Group): (dt: number) => void {
     // Where it lands: a long, soft, window-shaped patch on the floor.
     const spot = new THREE.Mesh(new THREE.PlaneGeometry(WIN_W * 1.5, drop * 0.9), patch);
     spot.rotation.x = -Math.PI / 2;
-    spot.position.set(x + lean * 0.75, 0.015, south - drop * 0.75 - 0.6);
+    spot.position.set(x + lean * 0.75, 0.015, wall + drop * 0.75 + 0.6);
     spot.userData.noShadow = true;
     spot.renderOrder = 1;
     g.add(spot);
@@ -307,7 +303,7 @@ function windows(g: THREE.Group): (dt: number) => void {
       const t = Math.random();
       pos[i * 3] = x + lean * t + (Math.random() - 0.5) * WIN_W;
       pos[i * 3 + 1] = top[1]! * (1 - t) + 0.2;
-      pos[i * 3 + 2] = south - 0.3 - (drop + WIN_Y) * t * 0.9;
+      pos[i * 3 + 2] = wall + 0.3 + (drop + WIN_Y) * t * 0.9;
     }
     const dustGeo = new THREE.BufferGeometry();
     dustGeo.setAttribute("position", new THREE.BufferAttribute(pos, 3));
@@ -334,40 +330,4 @@ function windows(g: THREE.Group): (dt: number) => void {
       p.needsUpdate = true;
     }
   };
-}
-
-/** Soft at the edges, fading towards the floor: the look of a shaft of light. */
-function shaftTexture(): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
-  c.width = 64;
-  c.height = 128;
-  const ctx = c.getContext("2d")!;
-  for (let x = 0; x < 64; x++) {
-    const edge = Math.sin((x / 63) * Math.PI) ** 1.5;
-    const grad = ctx.createLinearGradient(0, 0, 0, 128);
-    grad.addColorStop(0, `rgba(255,255,255,${edge})`);
-    grad.addColorStop(1, `rgba(255,255,255,${edge * 0.25})`);
-    ctx.fillStyle = grad;
-    ctx.fillRect(x, 0, 1, 128);
-  }
-  return new THREE.CanvasTexture(c);
-}
-
-/** A soft-edged rectangle with the window's bars as darker lines. */
-function patchTexture(): THREE.CanvasTexture {
-  const c = document.createElement("canvas");
-  c.width = 64;
-  c.height = 128;
-  const ctx = c.getContext("2d")!;
-  const grad = ctx.createRadialGradient(32, 64, 4, 32, 64, 64);
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.7, "rgba(255,255,255,0.6)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 64, 128);
-  ctx.fillStyle = "rgba(0,0,0,0.55)";
-  ctx.fillRect(31, 10, 2, 108);
-  ctx.fillRect(10, 50, 44, 2);
-  ctx.fillRect(10, 82, 44, 2);
-  return new THREE.CanvasTexture(c);
 }

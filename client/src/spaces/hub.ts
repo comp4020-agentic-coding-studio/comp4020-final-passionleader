@@ -2,7 +2,7 @@ import * as THREE from "three";
 import { block, doorway, floor, lightPool, mat, paperPile, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { BOOKCASE_H, fillShelves } from "./library.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
-import { roomShell } from "./room.ts";
+import { roomShell, westWindows } from "./room.ts";
 
 // The Student Hub, inside building 154: an office at the back and a lounge
 // at the front, to run into people in. Not a copy of the real one, and not
@@ -97,6 +97,8 @@ export function buildHub(): SpaceDef {
   art.position.set(-HALF.halfX + 0.01, 2, -7.5);
   art.rotation.y = Math.PI / 2;
   g.add(art);
+  // Square windows down the west wall, between the poster and the way out, the afternoon sun coming in.
+  const sunlight = westWindows(g, -HALF.halfX, [-2.5, 1.5, 10]);
 
   // The office half, at the back: two pods of three desks facing each
   // other, one in the middle and one to the east, each with a monitor and a chair, and closed bookcases on the wall
@@ -206,6 +208,7 @@ export function buildHub(): SpaceDef {
     ],
     ...HALF,
     background: 0xd9d4c6,
+    tick: sunlight,
     camera: new THREE.Vector3(0, 6.5, 7.5),
     bgm: SHARED_BGM,
     floor: "wood",

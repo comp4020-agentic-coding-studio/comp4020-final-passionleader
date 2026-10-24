@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { block, doorway, floor, lightPool, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { ANUSA_TEAM_DOORS, roomDoors } from "./meeting.ts";
-import { roomShell } from "./room.ts";
+import { roomShell, westWindows } from "./room.ts";
 
 // The ANUSA Student Lounge: the students' association, on 154's ground floor
 // north of the Hub's door (it replaced COMMON, the "classroom for anyone"). A place for students
@@ -116,6 +116,8 @@ export function buildAnusa(): SpaceDef {
 
   // The way out, on the west wall: you came in heading east from campus.
   doorway(g, -halfX + 0.05, 5, Math.PI / 2, "Out to campus");
+  // Square windows either side of it, the afternoon sun coming in.
+  const sunlight = westWindows(g, -halfX, [-3.6, 0.6]);
   // The two meeting rooms, on the east wall.
   ANUSA_TEAM_DOORS.forEach((d, i) => doorway(g, halfX - 0.05, d.z, -Math.PI / 2, `Meeting room ${i + 1}`));
 
@@ -141,6 +143,7 @@ export function buildAnusa(): SpaceDef {
     halfX,
     halfZ,
     background: 0xe4ebe6,
+    tick: sunlight,
     camera: new THREE.Vector3(0, 7, 8.5),
     bgm: SHARED_BGM,
     floor: "carpet",
