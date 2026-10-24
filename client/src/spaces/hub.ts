@@ -112,17 +112,19 @@ export function buildHub(): SpaceDef {
     }
     solid(colliders, 4.6, 2.3, cx, -7.55);
   }
-  for (const x of [12.5, 15]) {
+  // The bookcases, west of the calendar (the coffee bar, arcades and these
+  // all moved west so it hangs at eye level instead of up through the ceiling).
+  for (const x of [8.75, 11.25]) {
     place(g, "bookcaseClosedWide.glb", 1.9, x, -HALF.halfZ + 0.4);
     solid(colliders, 2, 0.7, x, -HALF.halfZ + 0.4);
   }
-  // A big wall calendar over the bookcases (plan 66): this month, and E
-  // opens ANU's events listing (it won't be framed: a new tab).
+  // A big wall calendar (plan 66): this month, and E opens ANU's university
+  // calendar for this year (it won't be framed: a new tab).
   wallCalendar(g, CALENDAR.x, -HALF.halfZ + 0.02);
   // A coffee bar on the back wall under the sign (the north-west corner is the admin's now).
-  for (const x of [-0.5, 0.5]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
-  place(g, "kitchenCoffeeMachine.glb", 0.4, -0.5, -HALF.halfZ + 0.5, 0, true, 0.95);
-  solid(colliders, 2.2, 0.8, 0, -HALF.halfZ + 0.5);
+  for (const x of [-2, -1]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
+  place(g, "kitchenCoffeeMachine.glb", 0.4, -2, -HALF.halfZ + 0.5, 0, true, 0.95);
+  solid(colliders, 2.2, 0.8, -1.5, -HALF.halfZ + 0.5);
 
   // The lounge half, at the front: three corners of two sofas facing each
   // other across a glass coffee table, on a rug, with a floor lamp.
@@ -224,7 +226,7 @@ export function buildHub(): SpaceDef {
       // south of reception's bar.
       { x: FIND_PC.x, z: RECEPTION_SPOT_Z, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
       // ANU's events listing refuses to be framed: a new tab.
-      { x: CALENDAR.x, z: -HALF.halfZ + 1.9, label: "See what's on at ANU (events, new tab)", url: "https://www.anu.edu.au/events", embeddable: false },
+      { x: CALENDAR.x, z: -HALF.halfZ + 1.9, label: "Open ANU's university calendar (new tab)", url: `https://www.anu.edu.au/directories/university-calendar?audience=All&year=${new Date().getFullYear()}`, embeddable: false },
     ],
     // The board PC on reception's bar: you stand south of it.
     spots: [
@@ -234,8 +236,8 @@ export function buildHub(): SpaceDef {
   };
 }
 
-/** The wall calendar on the north wall, over the bookcases; E from in front. */
-const CALENDAR = { x: 13.75 };
+/** The wall calendar on the north wall; E from in front. */
+const CALENDAR = { x: 15.5 };
 
 /** This month as a wall calendar: a header and a grid of days, today ringed (drawn once, on a canvas). */
 function wallCalendar(g: THREE.Group, x: number, z: number): void {
@@ -283,7 +285,7 @@ function wallCalendar(g: THREE.Group, x: number, z: number): void {
   const tex = new THREE.CanvasTexture(c);
   tex.colorSpace = THREE.SRGBColorSpace;
   const board = new THREE.Mesh(new THREE.PlaneGeometry(4.4, 2.75), new THREE.MeshBasicMaterial({ map: tex, toneMapped: false }));
-  board.position.set(x, 3.25, z);
+  board.position.set(x, 2.1, z);
   g.add(board);
 }
 
@@ -291,9 +293,9 @@ function wallCalendar(g: THREE.Group, x: number, z: number): void {
 // games on GitHub Pages: Two-Tone (riff 5, made with my pod) and Retro Run &
 // Gun (my crit 5). Both let themselves be shown inside another page.
 const GAMES = [
-  { x: 4.5, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone"], marquee: 0x40c0ff },
-  { x: 7, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess"], marquee: 0xff5fa2 },
-  { x: 9.5, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun"], marquee: 0xffb030 },
+  { x: 1.5, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone"], marquee: 0x40c0ff },
+  { x: 4, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess"], marquee: 0xff5fa2 },
+  { x: 6.5, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun"], marquee: 0xffb030 },
 ];
 
 /**
