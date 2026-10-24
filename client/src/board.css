@@ -218,7 +218,7 @@
 .board-text h4, .board-text h5, .board-text h6 { margin: 14px 0 6px; }
 .board-text h4 { font-size: 1.1rem; }
 .board-text h5 { font-size: 1rem; }
-.board-text h6 { font-size: 0.9rem; }
+.board-text h6 { font-size: 0.95rem; }
 .board-text ul, .board-text ol { margin: 0 0 10px; padding-left: 22px; }
 .board-text blockquote {
   margin: 0 0 10px;

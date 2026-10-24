@@ -16,3 +16,8 @@
 #room-pad .pad-preview { font-family: system-ui, sans-serif; }
 #room-pad .pad-foot { margin: 0; font-size: 0.8rem; opacity: 0.75; min-height: 1em; }
 @media (max-width: 700px) { #room-pad { top: 56px; bottom: 50%; } }
+/* The note's Markdown headings (# ## ###, drawn as h4..h6): from large down to body size, never smaller than the text. */
+#room-pad .pad-preview h4 { font-size: 1.4rem; margin: 14px 0 6px; }
+#room-pad .pad-preview h5 { font-size: 1.2rem; margin: 12px 0 6px; }
+#room-pad .pad-preview h6 { font-size: 1.05rem; margin: 10px 0 4px; }
+#room-pad .pad-preview > :first-child { margin-top: 0; }
