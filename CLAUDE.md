@@ -147,7 +147,9 @@ Read before planning or building: `README.md` (what good means for this app),
   only, kept 30 days in SQLite and then purged, at most 50 each; everyone
   inside is told in the room that they saved it. Only its owner lists,
   reads or deletes a saved chat, checked on the server. No notes in
-  meeting rooms.
+  meeting rooms. A room also has one shared Markdown note (5000
+  characters, last write wins, in server memory with the room's chat, gone
+  when it empties; a saved chat takes a copy).
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

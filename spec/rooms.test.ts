@@ -80,6 +80,30 @@ describe("meeting rooms", () => {
     expect((await g.s.next((m) => m.t === "action" && m.kind === "chat-saved")).ok).toBe(false);
   });
 
+  it("shares one set of notes in a room, last write wins, and drops them when the room empties", async () => {
+    const room = "team-library-3";
+    const a = await inRoom(room);
+    const b = await inRoom(room);
+    a.s.send({ t: "pad", text: "# Plan\n- slides: Kim" });
+    await expect(b.s.next((m) => m.t === "action" && m.kind === "pad")).resolves.toMatchObject({ text: "# Plan\n- slides: Kim", by: a.name });
+    // Someone coming in gets them on the way in.
+    const cv = await visitor();
+    const cs = await connect(cv.token);
+    await cs.next((m) => m.t === "welcome");
+    cs.send({ t: "enter", space: room, x: 0, z: 0 });
+    expect(((await cs.next(opened(room))).pad as { text: string }).text).toBe("# Plan\n- slides: Kim");
+    const c = { s: cs };
+    a.s.ws.close();
+    b.s.ws.close();
+    c.s.ws.close();
+    await new Promise((r) => setTimeout(r, 300));
+    const d = await connect((await visitor()).token);
+    await d.next((m) => m.t === "welcome");
+    d.send({ t: "enter", space: room, x: 0, z: 0 });
+    const opened2 = await d.next(opened(room));
+    expect((opened2.pad as { text: string }).text).toBe("");
+  });
+
   it("refuses an invite from outside a counselling room", async () => {
     const a = await inRoom("team-library-3");
     const b = await visitor();

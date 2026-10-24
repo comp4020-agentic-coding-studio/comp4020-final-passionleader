@@ -1,0 +1,18 @@
+/* The meeting room's shared notes: a panel on the left, the chat's on the right. */
+#room-pad {
+  position: fixed; left: 16px; top: 64px; bottom: 120px; z-index: 12; width: min(380px, calc(100vw - 32px));
+  display: flex; flex-direction: column; gap: 6px;
+  padding: 10px 12px; border-radius: 12px; background: var(--paper, #f3e7a6);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); color: var(--ink, #3b2a12);
+}
+#room-pad[hidden] { display: none; }
+#room-pad .pad-head { display: flex; align-items: center; gap: 6px; }
+#room-pad h2 { flex: 1; margin: 0; font-size: 1rem; }
+#room-pad button { min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #6b3f1d; background: #fffaf0; color: inherit; cursor: pointer; }
+#room-pad textarea, #room-pad .pad-preview {
+  flex: 1; min-height: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: 8px;
+  border: 1px solid #6b3f1d; background: #fffdf5; font: 0.9rem/1.4 ui-monospace, monospace; resize: none; overflow-y: auto;
+}
+#room-pad .pad-preview { font-family: system-ui, sans-serif; }
+#room-pad .pad-foot { margin: 0; font-size: 0.8rem; opacity: 0.75; min-height: 1em; }
+@media (max-width: 700px) { #room-pad { top: 56px; bottom: 50%; } }

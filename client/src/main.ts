@@ -76,6 +76,7 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountSignupPrompt } from "./signupprompt.ts";
+import { mountRoomPad } from "./roompad.ts";
 import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
 import { mountMailbox } from "./mailbox.ts";
@@ -735,10 +736,13 @@ const chat = mountChat({
 });
 
 // In a meeting room, its group-chat window takes the place of the corner chat.
+// The room's shared notes (plan 39): sent as you type, the others' edits arrive by net.
+const roomPad = mountRoomPad({ onChange: (text) => net?.pad(text) });
 const roomPanel = mountRoomPanel({
   onSend: (text) => net?.chat(text),
   onInvite: (name) => net?.invite(name),
   onSaveChat: () => (isMember(session) ? net?.saveChat() : signupPrompt.open("save a chat")),
+  onNotes: () => roomPad.toggle(),
   onLeave: () => {
     const out = space?.doors[0];
     if (out) setSpace(out.to, out.arrive, true);
@@ -1033,7 +1037,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || roomPad.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -1178,6 +1182,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   for (const oid of [...others.keys()]) removeOther(oid);
   noteRequest++;
   if (roomPanel.isOpen() && !meetingRoom(id)) {
+    roomPad.close();
     roomPanel.close();
     document.body.classList.remove("in-room");
     if (playing) chat.show();
@@ -1521,7 +1526,11 @@ function goOnline(token: string): void {
       setSpace(to, { x, z }, false);
       players.forEach(upsertOther);
     },
-    roomOpen(id, x, z, room, lines, players) {
+    pad(text, by) {
+      roomPad.set(text, by);
+    },
+    roomOpen(id, x, z, room, lines, players, pad) {
+      roomPad.set(pad.text, pad.by);
       if (space?.id !== id) setSpace(id, { x, z }, false);
       players.forEach(upsertOther);
       chat.hide();

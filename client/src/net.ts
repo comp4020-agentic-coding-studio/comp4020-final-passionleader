@@ -71,7 +71,9 @@ export interface NetHandlers {
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   /** The server let us into a meeting room: what's in it and what's been said. */
-  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[]): void;
+  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }): void;
+  /** Someone else changed the room's shared notes. */
+  pad(text: string, by: string): void;
   /** Who's in the room, or who's invited, changed. */
   room(room: RoomState): void;
   /** A line for the room's window from the room itself ("… joined"). */
@@ -101,6 +103,8 @@ export interface Net {
   poop(): void;
   /** Keeps this meeting room's chat so far for us, 30 days (members only; the server checks). */
   saveChat(): void;
+  /** The room's shared notes, as we now have them. */
+  pad(text: string): void;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): void;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -166,7 +170,8 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
-            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[]);
+            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null });
+          if (m.kind === "pad") return on.pad(m.text as string, m.by as string);
           if (m.kind === "room") return on.room(m.room as RoomState);
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
@@ -216,6 +221,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     saveChat() {
       sendNow({ t: "save-chat" });
+    },
+    pad(text) {
+      sendNow({ t: "pad", text });
     },
     invite(name) {
       sendNow({ t: "invite", name });

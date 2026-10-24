@@ -89,7 +89,11 @@ interface RoomState {
   session: string;
   invited: Set<string>; // lower-cased names
   lines: RoomLine[];
+  /** The shared notes (plan 39): one Markdown text, last write wins; goes with the room. */
+  pad: string;
+  padBy: string | null;
 }
+const PAD_MAX = 5000;
 const rooms = new Map<SpaceId, RoomState>();
 
 function roomView(space: SpaceId): Record<string, unknown> | null {
@@ -179,7 +183,7 @@ function roomRefusal(space: SpaceId, name: string): string | null {
 /** Someone came into a meeting room: the first one sets it up, everyone else is announced. */
 function roomJoined(space: SpaceId, name: string): void {
   if (!roomOf(space)) return;
-  if (!rooms.has(space)) rooms.set(space, { host: name, session: randomUUID(), invited: new Set([name.toLowerCase()]), lines: [] });
+  if (!rooms.has(space)) rooms.set(space, { host: name, session: randomUUID(), invited: new Set([name.toLowerCase()]), lines: [], pad: "", padBy: null });
   roomSay(space, { name, text: `${name} joined`, system: true });
   roomChanged(space);
 }
@@ -278,7 +282,7 @@ function onMessage(ws: WebSocket, raw: string): void {
     }
     // Into a meeting room, the client waits for this before it walks in.
     const view = roomView(to);
-    if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], players: inSpace(to) });
+    if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], pad: { text: rooms.get(to)?.pad ?? "", by: rooms.get(to)?.padBy ?? null }, players: inSpace(to) });
     send(ws, { t: "players", players: inSpace(to) });
     dirty.add(to);
   } else if (msg.t === "sit" && (msg.seat === null || typeof msg.seat === "string")) {
@@ -352,6 +356,14 @@ function onMessage(ws: WebSocket, raw: string): void {
     // about abuse can carry the last few minutes (db.ts, recentChat).
     if (rooms.has(player.space)) rooms.get(player.space)!.lines.push({ name: player.name, text });
     else keepChatLine(player.space, player.name, text);
+  } else if (msg.t === "pad" && typeof msg.text === "string") {
+    // The room's shared notes: whoever is inside writes, everyone inside
+    // sees it; the last write wins. Not logged (like the room's chat).
+    const state = rooms.get(player.space);
+    if (!state) return;
+    state.pad = msg.text.slice(0, PAD_MAX);
+    state.padBy = player.name;
+    for (const [other, p] of players) if (p.space === player.space && other !== ws) send(other, { t: "action", kind: "pad", text: state.pad, by: player.name });
   } else if (msg.t === "save-chat") {
     // Keep this room's chat so far, for this member, 30 days (db.ts saveChat);
     // everyone inside is told, since it's their words too.
@@ -361,6 +373,8 @@ function onMessage(ws: WebSocket, raw: string): void {
       return;
     }
     const lines = state.lines.map((l) => ({ name: l.name, text: l.text, ...(l.system ? { system: true } : {}) }));
+    // The shared notes go with it, as a last line.
+    if (state.pad.trim()) lines.push({ name: "Notes", text: state.pad });
     const id = saveChat(player.name, player.space, lines);
     log("chat-saved", owners.get(ws) ?? null, { space: player.space, lines: lines.length });
     send(ws, { t: "action", kind: "chat-saved", ok: true, id });

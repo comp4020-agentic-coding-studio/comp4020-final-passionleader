@@ -76,9 +76,11 @@ should feel at home in a virtual space shaped like the real campus they know.
    off every classroom and four off the library. Up to six people each. Team
    rooms are open to anyone; a counselling room lets in only whoever someone
    inside has invited by name. Inside, a group chat shows what's been said
-   since the room last emptied, and the 📎 button shares a file with the
-   people inside; when the last person leaves the chat, the files and the
-   invites are gone.
+   since the room last emptied, 📝 Notes is one shared Markdown page for
+   everyone inside, and the 📎 button shares a file with the people inside;
+   when the last person leaves the chat, the notes, the files and the
+   invites are gone. 💾 Save chat keeps the chat and the notes for you alone,
+   30 days (✉️ → Saved chats); the room is told you saved it.
 8. Something broken? The gear's dialog has **Report a bug**: a short note,
    with a screenshot if you like, that only the admin reads. Someone being
    abusive? **Report someone** sends their name and, if you like, the last

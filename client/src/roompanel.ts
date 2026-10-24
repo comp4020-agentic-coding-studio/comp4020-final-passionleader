@@ -48,6 +48,8 @@ export function mountRoomPanel(opts: {
   onImageLink(id: string): Promise<string | null>;
   /** Keeps the chat so far for this person (30 days; everyone inside is told). */
   onSaveChat(): void;
+  /** Opens or closes the room's shared notes. */
+  onNotes(): void;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -105,6 +107,7 @@ export function mountRoomPanel(opts: {
   }
 
   const chatBtn = addButton("", () => setChat(!chatOpen));
+  addButton("📝 Notes", () => opts.onNotes()).title = "Shared notes for everyone in the room (Markdown)";
   addButton("💾 Save chat", () => opts.onSaveChat()).title = "Keep this chat for 30 days (only you can read it; everyone here is told)";
   const chatLabel = document.createElement("span");
   chatLabel.textContent = "💬 Chat";
