@@ -73,6 +73,9 @@ export function sportsTent(g: THREE.Group, colliders: Box[]): void {
   const tableD = 0.7;
   block(g, colliders, [2.4, 0.75, tableD], [cx, tableZ], 0xe9ecef);
   place(g, "computerScreen.glb", 0.5, SPORT_PC.x, cz - 0.65, 0, true, 0.75);
+  // Kai's end of the table: a laptop and a box of flyers (Kenney, CC0).
+  place(g, "laptop.glb", 0.22, cx + 0.9, cz - 0.55, Math.PI, true, 0.75);
+  place(g, "cardboardBoxClosed.glb", 0.35, cx + 1.6, cz - 1.2, 0.3);
   const tag = textPlane(["ANU Sport", "gym · clubs · classes"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   tag.position.set(SPORT_PC.x, 1.7, cz - 0.95);
   g.add(tag);

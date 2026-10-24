@@ -37,6 +37,13 @@ export function buildAnusa(): SpaceDef {
   pcTag.position.set(ANUSA_PC.x, 1.95, ANUSA_PC.z - 0.77);
   g.add(pcTag);
   place(g, "plantSmall2.glb", 0.4, ANUSA_PC.x + 1.8, ANUSA_PC.z - 0.4, 0, true, 1);
+  // Sam's side, behind the counter's east end: a laptop, a lamp, and a
+  // cupboard and boxes against the wall (Kenney, CC0).
+  place(g, "laptop.glb", 0.22, -2.4, ANUSA_PC.z - 0.3, Math.PI, true, 1);
+  place(g, "lampSquareTable.glb", 0.45, -2.2 + 1.1, ANUSA_PC.z - 0.45, 0, true, 1);
+  place(g, "bookcaseClosedDoors.glb", 1.9, -0.6, -6.6, 0);
+  solid(colliders, 1, 0.6, -0.6, -6.6);
+  place(g, "cardboardBoxClosed.glb", 0.35, 0.6, -6.5, 0.3);
   place(g, "coatRackStanding.glb", 1.8, -8.8, -6.2);
   solid(colliders, 0.5, 0.5, -8.8, -6.2);
 
