@@ -131,7 +131,8 @@ describe("editing posts and comments", () => {
 });
 
 // Hearts: one per person per comment (a second press takes it back), never
-// on your own, and the most-hearted comment comes first.
+// on your own, and only the most-hearted comment is pinned first (hot); the
+// rest stay oldest first.
 describe("hearts on comments", () => {
   it("counts one heart each, takes it back on a second press, refuses your own, and puts the most-hearted first", async () => {
     const [a, b, c] = await Promise.all([visitor(), visitor(), visitor()]);
@@ -143,7 +144,9 @@ describe("hearts on comments", () => {
     expect(await (await api(`/api/board-comments/${second.id}/heart`, "POST", { token: a.token })).json()).toEqual({ hearted: true, hearts: 1 });
     expect(await (await api(`/api/board-comments/${second.id}/heart`, "POST", { token: b.token })).json()).toEqual({ hearted: true, hearts: 2 });
     const list = (await (await api(`/api/board/${created.id}/comments`)).json()) as { id: number; heartedBy: string[] }[];
-    expect(list.map((x) => x.id)).toEqual([second.id, first.id]); // most-hearted first
+    expect(list.map((x) => x.id)).toEqual([second.id, first.id]); // most-hearted pinned first
+    expect((list[0] as { hot?: boolean }).hot).toBe(true);
+    expect((list[1] as { hot?: boolean }).hot).toBeUndefined();
     expect(list[0]!.heartedBy.map((n) => n.toLowerCase()).sort()).toEqual([a.name, b.name].map((n) => n.toLowerCase()).sort());
     expect(await (await api(`/api/board-comments/${second.id}/heart`, "POST", { token: a.token })).json()).toEqual({ hearted: false, hearts: 1 });
   });

@@ -31,6 +31,8 @@ export interface CommentView {
   hearted: boolean;
   /** False on your own comment. */
   canHeart: boolean;
+  /** The most-hearted comment, pinned on top. */
+  hot?: boolean;
 }
 
 /** What a report is about: who wrote it, and a short description of the item. */
@@ -167,6 +169,7 @@ export function mountNotePanel(h: {
       const d = document.createElement("span");
       d.textContent = canberraTime(c.createdAt);
       rowHead.append(a, d);
+      if (c.hot) rowHead.append(hotBadge());
       const heart = document.createElement("button");
       heart.type = "button";
       heart.className = "comment-heart" + (c.hearted ? " is-on" : "");
@@ -351,4 +354,13 @@ export function mountNotePanel(h: {
       setError(msg);
     },
   };
+}
+
+/** 🔥 HOT, on the most-hearted comment (pinned on top). */
+export function hotBadge(): HTMLElement {
+  const b = document.createElement("span");
+  b.className = "comment-hot";
+  b.textContent = "🔥 HOT";
+  b.title = "Most hearted";
+  return b;
 }

@@ -8,6 +8,7 @@
 
 import "./board.css";
 import { renderMarkdown } from "./markdown.ts";
+import { hotBadge } from "./notepanel.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 import { canberraTime } from "./when.ts";
 
@@ -64,6 +65,8 @@ export interface BoardComment {
   hearted: boolean;
   /** False on your own comment. */
   canHeart: boolean;
+  /** The most-hearted comment, pinned on top. */
+  hot?: boolean;
 }
 
 /** What a report is about: who wrote it, and a short description of the item. */
@@ -497,6 +500,7 @@ export function mountBoard(h: {
             ch.className = "board-comment-head";
             const who = document.createElement("strong");
             who.textContent = c.author;
+            if (c.hot) ch.append(hotBadge());
             const when = document.createElement("span");
             when.textContent = c.editedAt ? `${canberraTime(c.createdAt)} · edited` : canberraTime(c.createdAt);
             ch.append(who, when);

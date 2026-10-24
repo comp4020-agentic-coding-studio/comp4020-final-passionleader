@@ -51,7 +51,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    study-group board: start a group, say how many people, and others join
    until it's full. The advertising board stands by the lawn on the north road; its
    posts go after 30 days. All the boards say they're unofficial.
-   Comments take hearts (the most-hearted first), and anything someone wrote
+   Comments take hearts (the most-hearted is pinned on top, 🔥 HOT), and anything someone wrote
    can be reported. Type "/all" before a chat line to reach every space, or "/w name" to
    whisper to one signed-up person wherever they are (only the two of you
    see it, and it isn't kept).

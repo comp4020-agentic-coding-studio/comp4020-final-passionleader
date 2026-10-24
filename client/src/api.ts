@@ -34,8 +34,10 @@ export interface Comment {
   author: string;
   text: string;
   createdAt: string;
-  /** Who has hearted it; the server sends the most-hearted first. */
+  /** Who has hearted it; the server pins the most-hearted on top. */
   heartedBy?: string[];
+  /** The most-hearted comment, pinned on top. */
+  hot?: boolean;
 }
 
 export class ApiError extends Error {

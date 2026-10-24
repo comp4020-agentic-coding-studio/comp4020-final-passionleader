@@ -66,8 +66,9 @@ Read before planning or building: `README.md` (what good means for this app),
   Comments: same text limits, one every 10 seconds, same removal rule.
   Deleting a note or a comment asks first.
 - Hearts on comments (notes' and every board's): one per person, a second
-  press takes it back, never on your own, checked on the server; the
-  most-hearted comment is listed first (ties: the older first). A
+  press takes it back, never on your own, checked on the server; only the
+  most-hearted comment is pinned first and marked 🔥 HOT (ties: the older),
+  the rest stay oldest first. A
   comment's hearts go with it. Anyone may report someone's note, post or
   comment (the person report, with who and a quote filled in).
 - Classroom boards (Q&A, Notices, Board): posts up to 500 words (and 3000

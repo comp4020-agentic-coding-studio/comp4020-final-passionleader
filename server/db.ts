@@ -482,10 +482,18 @@ function heartsFor(kind: HeartKind, ids: number[]): Map<number, string[]> {
   return by;
 }
 
-/** Most-hearted first; the same number of hearts, oldest first. */
-function byHearts<T extends { id: number; heartedBy: string[] }>(list: T[]): T[] {
-  const order = new Map(list.map((c, i) => [c.id, i]));
-  return list.sort((a, b) => b.heartedBy.length - a.heartedBy.length || order.get(a.id)! - order.get(b.id)!);
+/**
+ * Oldest first, with one exception: the most-hearted comment (at least one
+ * heart; a tie goes to the older) is pinned on top and marked hot. The rest
+ * keep their order, however many hearts they have.
+ */
+function byHearts<T extends { id: number; heartedBy: string[] }>(list: T[]): (T & { hot?: true })[] {
+  let top = -1;
+  list.forEach((c, i) => {
+    if (c.heartedBy.length > 0 && (top < 0 || c.heartedBy.length > list[top]!.heartedBy.length)) top = i;
+  });
+  if (top < 0) return list;
+  return [{ ...list[top]!, hot: true }, ...list.filter((_, i) => i !== top)];
 }
 
 export interface Mail {
