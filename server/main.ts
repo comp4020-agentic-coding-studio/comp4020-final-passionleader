@@ -199,8 +199,8 @@ app.post("/api/join", async (c) => {
   if (RESERVED.test(name)) {
     const account = RESERVED_RULE.test(name) ? findByName(name) : undefined;
     if (!account?.passwordHash) {
-      log("join-refused", { name }, { reason: "reserved name" }, { ip: ipOf(c) });
-      return c.json({ error: "Names starting with qa_ are reserved." }, 403);
+      log("join-refused", { name }, { reason: "no such account" }, { ip: ipOf(c) });
+      return c.json({ error: "No account with that name or student number. Sign up with your ANU email, or come in as a guest." }, 404);
     }
     // Trimmed: a phone keyboard's trailing space shouldn't lock a test account out (none has a space).
     if (typeof password !== "string" || !checkPassword(password.trim(), account.passwordHash)) {
@@ -213,12 +213,10 @@ app.post("/api/join", async (c) => {
     return c.json({ name: account.name, token: account.token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
   }
 
-  if (!NAME_RULE.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores." }, 400);
-  const existing = findByName(name);
-  // Since sign-up, a name without a password is a guest's: guests come in
-  // with { guest: true } (below), members with their name and password.
-  if (existing?.role === "retired")
-    return c.json({ error: /^u\d{7}$/i.test(name) ? "No account signed up with that student number yet. Sign up with your ANU email." : `"${name}" belonged to someone from before sign-up; it can't be signed into.` }, 409);
+  // Signing in doesn't judge names (sign-up does): a name that isn't an
+  // account you can sign into, retired ones included, just isn't found.
+  const existing = NAME_RULE.test(name) ? findByName(name) : undefined;
+  if (!existing || existing.role === "retired") return c.json({ error: "No account with that name or student number. Sign up with your ANU email, or come in as a guest." }, 404);
   // A name with a password behind it signs in with that password from any device.
   if (existing?.passwordHash && typeof password === "string" && password.trim()) {
     if (!checkPassword(password.trim(), existing.passwordHash)) {
@@ -238,11 +236,12 @@ app.post("/api/join", async (c) => {
       log("join", existing, { how: "returning" }, { ip: ipOf(c) });
       return c.json({ name: existing.name, token: existing.token, role: existing.role, spawn: lastSpot(existing.name), look: lookOf(existing.name) });
     }
-    log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: "name taken" }, { ip: ipOf(c) });
-    // `password` says whether this name could be signed into with one instead.
-    return c.json({ error: `"${name}" is taken. Pick another name.`, password: !!existing.passwordHash }, 409);
+    log("join-refused", { name: existing.name, token: typeof token === "string" ? token : undefined }, { reason: existing.passwordHash ? "no password" : "guest's name" }, { ip: ipOf(c) });
+    // A member's name with no password typed: ask for it. A guest's, from another browser: not found.
+    if (existing.passwordHash) return c.json({ error: "Type your password.", password: true }, 401);
+    return c.json({ error: "No account with that name or student number. Sign up with your ANU email, or come in as a guest." }, 404);
   }
-  return c.json({ error: "Sign up with your ANU email to pick a name, or come in as a guest." }, 404);
+  return c.json({ error: "No account with that name or student number. Sign up with your ANU email, or come in as a guest." }, 404);
 });
 
 // Coming in as a guest: your browser's guest back if it has one, else the

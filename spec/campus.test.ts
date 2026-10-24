@@ -15,7 +15,8 @@ describe("guests and signing up", () => {
 
   it("has no free names any more: you sign up, or come in as a guest", async () => {
     expect((await api("/api/join", "POST", { name: freshName() })).status).toBe(404);
-    expect((await api("/api/join", "POST", { name: "qa_" + freshName().slice(0, 5) })).status).toBe(403);
+    // Signing in doesn't judge names: an unknown qa_ name is just not found.
+    expect((await api("/api/join", "POST", { name: "qa_" + freshName().slice(0, 5), password: "whatever 1" })).status).toBe(404);
   });
 
   it("signs a student up with a code sent to their ANU email, then lets them in with name and password", async () => {
