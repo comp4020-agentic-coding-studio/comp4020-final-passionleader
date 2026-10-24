@@ -2,8 +2,8 @@ import { isClassroom } from "./spaces.ts";
 
 // Every board in one place: which spaces have one, its tabs, and who posts in
 // each. Anyone reads every tab and comments anywhere; a tab marked staffOnly
-// takes posts from lecturers and staff only (until there's a staff role, the
-// admin), checked in main.ts. The client draws its tabs from this
+// takes posts from staff (signed up as ANU staff) and the admin only,
+// checked in main.ts. The client draws its tabs from this
 // (GET /api/board-config), so a new board is a new entry here.
 
 export interface BoardTabDef {
@@ -24,7 +24,7 @@ export interface BoardDef {
   layout?: "grid";
   /** Posts go after this many days (the lawn's, like the files in the bucket); unset: they stay. */
   keepDays?: number;
-  /** Writers may mark a post private: only they and staff (for now the admin) see it, and its comments and files. */
+  /** Writers may mark a post private: only they and staff (and the admin) see it, and its comments and files. */
   allowPrivate?: boolean;
   /** Where people stand to use it, for live updates (its key, unless set). */
   space?: string;
@@ -52,8 +52,7 @@ const FIXED: Record<string, BoardDef> = {
     notice: UNOFFICIAL,
   },
   // Behind the Hub's desk: questions for the Hub, public or private. A
-  // private one is for the writer and staff only (until there's a staff
-  // role, the admin), checked on the server for the post, its comments and
+  // private one is for the writer and staff (and the admin) only, checked on the server for the post, its comments and
   // its files.
   "hub-desk": {
     title: "Ask the Hub",
@@ -96,11 +95,14 @@ export function boardOf(key: unknown): BoardDef | undefined {
 /** The space whose people see a board's live updates. */
 export const spaceOfBoard = (key: string): string => boardOf(key)?.space ?? key;
 
-/** Whether `v` may see a post: anyone, unless it's private (then its author and the admin). */
+/** Staff and the admin (same as db.ts isStaff; kept here so this file needs no database). */
+const isStaff = (v: { role: string } | null | undefined): boolean => !!v && (v.role === "staff" || v.role === "admin");
+
+/** Whether `v` may see a post: anyone, unless it's private (then its author and staff). */
 export const maySeePost = (v: { name: string; role: string } | null | undefined, post: { author: string; private?: boolean }): boolean =>
-  !post.private || (!!v && (v.role === "admin" || v.name.toLowerCase() === post.author.toLowerCase()));
+  !post.private || isStaff(v) || (!!v && v.name.toLowerCase() === post.author.toLowerCase());
 
 export const tabOf = (board: BoardDef, tab: unknown): BoardTabDef | undefined =>
   typeof tab === "string" ? board.tabs.find((t) => t.id === tab) : undefined;
 
-export const mayPostIn = (v: { role: string }, tab: BoardTabDef): boolean => !tab.staffOnly || v.role === "admin";
+export const mayPostIn = (v: { role: string }, tab: BoardTabDef): boolean => !tab.staffOnly || isStaff(v);

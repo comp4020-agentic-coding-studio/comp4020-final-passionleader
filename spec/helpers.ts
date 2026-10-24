@@ -37,6 +37,19 @@ export async function visitor(): Promise<{ name: string; token: string; email: s
   return { name, email, studentNo, ...((await res.json()) as { token: string }) };
 }
 
+/** A member of staff: signed up with "I'm ANU staff" and an @anu.edu.au address (not a student number). */
+export async function staffMember(): Promise<{ name: string; token: string }> {
+  const name = freshName();
+  const email = `staff.${name.toLowerCase()}@anu.edu.au`;
+  const start = await api("/api/signup/start", "POST", { staff: true, email });
+  if (start.status !== 200) throw new Error(`staff sign-up start ${start.status}: ${await start.text()}`);
+  const mail = (await (await api(`/api/test/mail?to=${email}`)).json()) as { text: string };
+  const code = /\b(\d{6})\b/.exec(mail.text)![1]!;
+  const res = await api("/api/signup/finish", "POST", { staff: true, email, code, name, password: "correct horse 1" });
+  if (res.status !== 201) throw new Error(`staff sign-up finish ${res.status}: ${await res.text()}`);
+  return { name, ...((await res.json()) as { token: string }) };
+}
+
 /** A guest: came in without signing up (guestNNN). */
 export async function guest(): Promise<{ name: string; token: string }> {
   return (await (await api("/api/guest", "POST", {})).json()) as { name: string; token: string };

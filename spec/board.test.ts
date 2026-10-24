@@ -1,9 +1,9 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { api, closeAll, connect, guest, visitor } from "./helpers.ts";
+import { api, closeAll, connect, guest, staffMember, visitor } from "./helpers.ts";
 
 // Each classroom's board: Q&A, Notices and Board. Anyone posts in Q&A and
-// Board and comments anywhere; only lecturers and staff (the admin, for now)
-// post in Notices, and the server refuses everyone else whatever the page
+// Board and comments anywhere; only staff (signed up as ANU staff) and the
+// admin post in Notices, and the server refuses everyone else whatever the page
 // shows. Posts run to 500 words; only authors and the admin remove them.
 
 afterAll(closeAll);
@@ -25,6 +25,18 @@ describe("classroom board", () => {
     expect((await post(v.token, "notices")).status).toBe(403);
     const notices = (await (await api("/api/board?space=comp8020&tab=notices")).json()) as { author: string }[];
     expect(notices.map((p) => p.author)).not.toContain(v.name);
+  });
+
+  it("lets staff post a notice, open a classroom and read private questions; a student none of these", async () => {
+    const [s, v] = await Promise.all([staffMember(), visitor()]);
+    expect((await post(s.token, "notices", "Lab moved to Thursday")).status).toBe(201);
+    const code = `STAF${Math.floor(1000 + Math.random() * 8999)}`;
+    expect((await api("/api/classrooms", "POST", { token: v.token, code })).status).toBe(403);
+    expect((await api("/api/classrooms", "POST", { token: s.token, code })).status).toBe(201);
+    expect((await api(`/api/classrooms/${code}`, "DELETE", { token: s.token })).status).toBe(200);
+    const asked = (await (await api("/api/board", "POST", { token: v.token, space: "hub-desk", tab: "ask", title: "Fees", text: "Can I pay later?", private: true })).json()) as { id: number };
+    const seen = (await (await api(`/api/board?space=hub-desk&tab=ask&token=${s.token}`)).json()) as { id: number }[];
+    expect(seen.map((p) => p.id)).toContain(asked.id);
   });
 
   it("keeps posts to 500 words", async () => {

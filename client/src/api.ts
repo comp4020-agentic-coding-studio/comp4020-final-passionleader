@@ -133,6 +133,8 @@ export const readMail = (token: string, id: number): Promise<{ unread: number }>
 export const deleteMail = (token: string, id: number): Promise<{ unread: number }> => request(`/api/mail/${id}`, "DELETE", { token });
 
 /** Signed up (or a test account): may post, comment, heart, attach files and report. */
+/** ANU staff and the admin: Notices, opening classrooms, what their boards open, private questions. */
+export const isStaff = (s: { role: string } | null | undefined): boolean => !!s && (s.role === "staff" || s.role === "admin");
 export const isMember = (s: { role: string } | null | undefined): boolean => !!s && s.role !== "guest";
 
 export const saveLook = (token: string, look: Look): Promise<unknown> => request("/api/look", "PUT", { token, look });

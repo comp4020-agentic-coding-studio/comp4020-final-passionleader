@@ -58,6 +58,7 @@ import {
   findByEmail,
   forgetCode,
   isMember,
+  isStaff,
   resetPassword,
   storeCode,
   takeCode,
@@ -612,8 +613,8 @@ app.delete("/api/comments/:id", async (c) => {
 });
 
 // --- classrooms -------------------------------------------------------------
-// Anyone may list them (the picker at 155's door); only the admin opens or
-// closes one. The check is here on the server, so a request crafted outside
+// Anyone may list them (the picker at 155's door); only staff and the admin
+// open or close one. The check is here on the server, so a request crafted outside
 // the app gets the same answer as a click in it.
 
 app.get("/api/classrooms", (c) => c.json(classroomList()));
@@ -623,9 +624,9 @@ app.post("/api/classrooms", async (c) => {
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
   const code = typeof b.code === "string" ? b.code.trim().toUpperCase() : "";
-  if (v.role !== "admin") {
-    log("refused", v, { action: "create classroom", code, reason: "not admin" }, { ip: ipOf(c) });
-    return c.json({ error: "Only the admin can open a classroom." }, 403);
+  if (!isStaff(v)) {
+    log("refused", v, { action: "create classroom", code, reason: "not staff" }, { ip: ipOf(c) });
+    return c.json({ error: "Only staff can open a classroom." }, 403);
   }
   if (!CLASSROOM_CODE.test(code)) return c.json({ error: "Use a course code like COMP6300." }, 400);
   if (!addClassroom(code, v.name)) return c.json({ error: `${code} is already open.` }, 409);
@@ -638,9 +639,9 @@ app.delete("/api/classrooms/:code", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
   const code = c.req.param("code").toUpperCase();
-  if (v.role !== "admin") {
-    log("refused", v, { action: "remove classroom", code, reason: "not admin" }, { ip: ipOf(c) });
-    return c.json({ error: "Only the admin can close a classroom." }, 403);
+  if (!isStaff(v)) {
+    log("refused", v, { action: "remove classroom", code, reason: "not staff" }, { ip: ipOf(c) });
+    return c.json({ error: "Only staff can close a classroom." }, 403);
   }
   const space = classroomSpace(code);
   // Anyone inside is sent back out first, so nobody is left in a room that's gone.
@@ -665,9 +666,9 @@ app.put("/api/classrooms/:code/link", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const code = c.req.param("code").toUpperCase();
   const which = b.which;
-  if (v.role !== "admin") {
-    log("refused", v, { action: "set classroom link", code, reason: "not admin" }, { ip: ipOf(c) });
-    return c.json({ error: "Only the admin can set what the boards open." }, 403);
+  if (!isStaff(v)) {
+    log("refused", v, { action: "set classroom link", code, reason: "not staff" }, { ip: ipOf(c) });
+    return c.json({ error: "Only staff can set what the boards open." }, 403);
   }
   if (which !== "board" && which !== "side") return c.json({ error: "Which board?" }, 400);
   let url: string | null = null;
@@ -749,8 +750,8 @@ app.get("/api/projects", (c) => c.json({ projects, checkedAt: projectsCheckedAt 
 // --- boards ------------------------------------------------------------------
 // Classrooms (Q&A, Notices, Board), the Student Hub and the lawn each have a
 // board; boards.ts lists their tabs. Anyone reads everything, posts in most
-// tabs and comments anywhere. Only lecturers and staff post in a staff-only
-// tab like Notices (until there's a staff role, the admin): checked here,
+// tabs and comments anywhere. Only staff and the admin post in a staff-only
+// tab like Notices: checked here,
 // refused with a 403 and a log line. Authors and the admin remove posts and
 // comments.
 

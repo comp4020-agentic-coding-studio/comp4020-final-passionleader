@@ -20,6 +20,8 @@ import { FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type Space
 // old ordinary role, kept for the qa_ test accounts.
 export type Role = "guest" | "student" | "staff" | "admin" | "retired" | "user";
 /** Signed up (or a test account): may post, comment, heart, attach files and report. */
+/** ANU staff (signed up with a staff address) and the admin: Notices, classrooms, private questions. */
+export const isStaff = (v: { role: string } | null | undefined): boolean => !!v && (v.role === "staff" || v.role === "admin");
 export const isMember = (v: { role: string }): boolean => v.role === "student" || v.role === "staff" || v.role === "admin" || v.role === "user";
 export interface Visitor {
   name: string;

@@ -25,6 +25,7 @@ import {
   deleteMail as deleteMailItem,
   sendMailTo,
   isMember,
+  isStaff,
   getNpcs,
   askNpc,
   type NpcDef,
@@ -823,7 +824,7 @@ function openStaffLink(which: "board" | "side"): void {
   const url = (which === "board" ? room.boardUrl : room.sideUrl) ?? null;
   const newTab = (which === "board" ? room.boardNewTab : room.sideNewTab) ?? false;
   const name = which === "board" ? `${room.code} whiteboard` : `${room.code} board (right of the whiteboard)`;
-  if (session?.role === "admin") {
+  if (isStaff(session)) {
     editing = { code: room.code, which };
     linkEditor.open({ title: name, url, newTab });
   } else if (url) webview.open({ label: name, url, embeddable: !newTab });
@@ -996,7 +997,7 @@ async function openBoard(id: SpaceId, key: string = id): Promise<void> {
   try {
     const config = await getBoardConfig(key);
     boardKey = key;
-    if (space?.id === id) board.open(config, session?.role === "admin");
+    if (space?.id === id) board.open(config, isStaff(session));
   } catch (err) {
     toast(failed(err, "Could not open the board. Try again."));
   }
@@ -1816,7 +1817,7 @@ function interact(): void {
     if (target.door.to === "classroom") {
       stopMoving();
       if (classroomList.length === 0) void loadClassrooms();
-      picker.open(withOnline(classroomList), session?.role === "admin");
+      picker.open(withOnline(classroomList), isStaff(session));
     } else if (meetingRoom(target.door.to)) {
       // The server decides whether there's room and whether we're invited;
       // we walk in when it says yes (roomOpen below).

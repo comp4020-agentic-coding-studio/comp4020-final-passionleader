@@ -75,20 +75,19 @@ Read before planning or building: `README.md` (what good means for this app),
   for notes. Authors edit their own posts and comments (same limits; they
   then say "edited"); nobody else does, not even the admin. Post text is
   Markdown, rendered without innerHTML; comments are plain text.
-  Only lecturers and staff post in Notices (for now the admin),
+  Only staff (signed up as ANU staff) and the admin post in Notices,
   checked on the server; anyone reads and comments. Authors or the admin
-  remove; closing a classroom removes its board. Outside COMP8020, what the
-  whiteboard and the board to its right open is set by the admin only
-  (https addresses), checked on the server.
+  remove; closing a classroom removes its board. Staff and the admin open
+  and close classrooms, and outside COMP8020 set what the whiteboard and
+  the board to its right open (https addresses), checked on the server.
 - The Student Hub's lab matching board (Labs looking for students,
   Students looking for labs), its "Ask the Hub" enquiry board, the
   study-group board beside 155's door and the advertising board keep the same
-  post and comment rules; anyone posts in every tab until there's a staff
-  role. A study group's writer sets how many people (2 to 20, them
+  post and comment rules; anyone signed up posts in every tab. A study group's writer sets how many people (2 to 20, them
   included); others join or leave with a button, never past that, checked on
   the server; the writer stays in until they remove the post. On "Ask the
-  Hub" a writer may mark a question private: then only they and staff (for
-  now the admin) see it, its comments and its files, checked on the server
+  Hub" a writer may mark a question private: then only they and staff (and the
+  admin) see it, its comments and its files, checked on the server
   for each; no other board takes private posts. Ads go after 30 days
   (hidden at once, deleted by the hourly purge, files and all), and the
   board says so. Which boards exist, their tabs, which tabs are staff-only,
