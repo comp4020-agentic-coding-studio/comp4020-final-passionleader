@@ -120,7 +120,7 @@ Read before planning or building: `README.md` (what good means for this app),
   went and to whom, never what it said. Guests neither send nor receive it.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
   too, one question every three seconds and thirty a day each, 500
-  characters; 150 a day in all (`NPC_PER_DAY`). A cheap model answers:
+  characters; 200 a day in all (`NPC_PER_DAY`). A cheap model answers:
   on Amazon Bedrock when the Fly secret `NPC_MODEL` names a Bedrock model
   (the S3 keys, no new one), else Claude by the Fly secret
   `ANTHROPIC_API_KEY`; no key is ever in the repo. 400 tokens at most,

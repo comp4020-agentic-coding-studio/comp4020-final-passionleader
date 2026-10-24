@@ -134,7 +134,7 @@ export const npcById = (id: unknown): Npc | undefined => NPCS.find((n) => n.id =
 // key), or Claude by the API key in the Fly secret ANTHROPIC_API_KEY. Neither
 // key is ever in the repo. Short answers to short questions, so cheap. To keep
 // a bill from running away: 400 output tokens, 30 questions a person a day and
-// NPC_PER_DAY (150 by default) in all. main.ts checks the per-person part and
+// NPC_PER_DAY (200 by default) in all. main.ts checks the per-person part and
 // `budgetLeft` the total. With no model, the honest "not connected" answer
 // stays. What's asked goes to the model and nowhere else: not stored, not
 // logged (only that someone asked, and how long).
@@ -144,7 +144,7 @@ const MODEL = process.env.NPC_MODEL || "claude-haiku-5-5";
 const ON_BEDROCK = /^((au|apac|us|eu|global)\.)?(anthropic|amazon|meta|mistral)\./.test(MODEL);
 const bedrock = ON_BEDROCK && process.env.AWS_ACCESS_KEY_ID ? new BedrockRuntimeClient({ region: process.env.AWS_REGION }) : null;
 const client = !ON_BEDROCK && process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
-const PER_DAY = Number(process.env.NPC_PER_DAY) || 150;
+const PER_DAY = Number(process.env.NPC_PER_DAY) || 200;
 let today = "";
 let askedToday = 0;
 /** False once today's questions (all assistants, everyone) are used up. */
