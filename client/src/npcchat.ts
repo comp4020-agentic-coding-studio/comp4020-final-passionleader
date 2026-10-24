@@ -1,4 +1,5 @@
 import "./npcchat.css";
+import { renderMarkdown } from "./markdown.ts";
 
 // Talking to one of the AI campus assistants: a small window with what they
 // said, a box to ask, and the pages they draw on. Nothing typed here is
@@ -11,6 +12,15 @@ export interface NpcInfo {
   role: string;
   greeting: string;
   links: { label: string; url: string }[];
+}
+
+/** Wraps bare http(s) addresses as Markdown links, leaving ones already in [text](url) alone and trailing punctuation outside. */
+function linkBareUrls(text: string): string {
+  return text.replace(/\[[^\]]+\]\([^)]+\)|https?:\/\/[^\s)<>\]]+/g, (m) => {
+    if (m.startsWith("[")) return m;
+    const url = m.replace(/[.,;:!?]+$/, "");
+    return `[${url}](${url})${m.slice(url.length)}`;
+  });
 }
 
 export function mountNpcChat(opts: {
@@ -61,11 +71,13 @@ export function mountNpcChat(opts: {
 
   let current: NpcInfo | null = null;
   const say = (who: "you" | "them", text: string): void => {
-    const p = document.createElement("p");
+    const p = document.createElement(who === "you" ? "p" : "div");
     p.className = `npc-line is-${who}`;
     const name = document.createElement("strong");
     name.textContent = who === "you" ? "You" : current?.name ?? "";
-    p.append(name, document.createTextNode(` ${text}`));
+    if (who === "you") p.append(name, document.createTextNode(` ${text}`));
+    // The assistant's answer is Markdown (bold, lists, links), drawn without innerHTML; a bare address becomes a link too.
+    else p.append(name, renderMarkdown(linkBareUrls(text)));
     log.append(p);
     log.scrollTop = log.scrollHeight;
   };

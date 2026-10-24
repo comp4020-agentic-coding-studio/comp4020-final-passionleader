@@ -13,6 +13,10 @@
 .npc-log { flex: 1; min-height: 120px; max-height: 40vh; overflow-y: auto; padding: 8px; border-radius: 8px; background: #fffaf0; }
 .npc-line { margin: 0 0 8px; line-height: 1.4; }
 .npc-line.is-you { text-align: right; }
+.npc-line > p, .npc-line > ul, .npc-line > ol { margin: 2px 0 6px; }
+.npc-line ul, .npc-line ol { padding-left: 20px; }
+.npc-line a { color: inherit; text-decoration: underline; overflow-wrap: anywhere; }
+.npc-line > strong { display: block; font-size: 0.85em; opacity: 0.75; }
 .npc-links { list-style: none; display: flex; flex-wrap: wrap; gap: 6px; margin: 10px 0; padding: 0; }
 .npc-link { min-height: 36px; padding: 4px 10px; border: 1px solid #8a6a50; border-radius: 18px; background: #fff; cursor: pointer; font: inherit; font-size: 0.85rem; }
 .npc-form { display: flex; gap: 8px; }
