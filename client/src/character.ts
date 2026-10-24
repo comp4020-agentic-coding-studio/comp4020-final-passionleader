@@ -182,6 +182,9 @@ function dropProp(scene: THREE.Object3D): void {
  */
 const FACE_DARK_UV: [number, number] = [0.5 / 16, 13.5 / 16]; // cell (0,13), dark grey
 const FACE_RIM_UV: [number, number] = [12.5 / 16, 8.5 / 16]; // cell (12,8), off-white
+/** How much bigger the light rim is than its eye or mouth: a thin line, not a halo (1.35 looked thick once all of it showed). */
+const RIM_GROW = 1.12;
+
 function keepFaceDark(scene: THREE.Object3D): void {
   scene.traverse((o) => {
     const mesh = o as THREE.SkinnedMesh;
@@ -234,7 +237,7 @@ function keepFaceDark(scene: THREE.Object3D): void {
     }
     for (const [g, c] of centre) c.divideScalar(count.get(g)!);
 
-    // The rim: every face vertex copied, grown 35% out from its feature's
+    // The rim: every face vertex copied, grown a little (RIM_GROW) out from its feature's
     // centre and set 2 mm behind the (lifted) feature, same bones and weights, so it moves with the head.
     const extra = new Map<number, number>();
     const attrs = Object.entries(geo.attributes) as [string, THREE.BufferAttribute][];
@@ -247,8 +250,8 @@ function keepFaceDark(scene: THREE.Object3D): void {
         for (let k = 0; k < a.itemSize; k++) arr.push(a.getComponent(i, k));
         if (name === "position") {
           const c = centre.get(find(i))!;
-          arr[n * 3] = c.x + (pos.getX(i) - c.x) * 1.35;
-          arr[n * 3 + 1] = c.y + (pos.getY(i) - c.y) * 1.35;
+          arr[n * 3] = c.x + (pos.getX(i) - c.x) * RIM_GROW;
+          arr[n * 3 + 1] = c.y + (pos.getY(i) - c.y) * RIM_GROW;
           arr[n * 3 + 2] = pos.getZ(i) - 0.002;
         } else if (name === "uv") {
           arr[n * 2] = FACE_RIM_UV[0];
