@@ -63,8 +63,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    it sells, gathered from public pages (not an official list).
    The Student Hub's wall calendar shows this month and opens what's on at
    ANU. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
-   careers) stand in their places: **E** to ask one. They aren't connected to
-   a model yet, so for now they say so and point to their pages.
+   careers) stand in their places: **E** to ask one. Claude answers in
+   their name, briefly, from what their pages cover; it can be wrong, so
+   each points to its pages too. What you ask isn't kept.
    Signed up, the ✉️ button writes to someone by name and keeps your mail
    for 30 days; it lights up when something arrives.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:

@@ -428,6 +428,7 @@ app.delete("/api/mail/:id", async (c) => {
 app.get("/api/npcs", (c) => c.json(NPCS.map(({ id, name, role, space, x, z, rot, look, links, greeting }) => ({ id, name, role, space, x, z, rot, look, links, greeting }))));
 
 const lastAsked = new Map<string, number>();
+const askedBy = new Map<string, { day: string; n: number }>();
 app.post("/api/npc/:id/ask", async (c) => {
   const b = await body(c);
   const v = who(b);
@@ -440,9 +441,15 @@ app.post("/api/npc/:id/ask", async (c) => {
   const now = Date.now();
   const key = v.name.toLowerCase();
   if (now - (lastAsked.get(key) ?? 0) < 3000) return c.json({ error: "One question every few seconds." }, 429);
+  // Thirty a person a day (a paid model answers): kept in memory, by day.
+  const day = new Date().toISOString().slice(0, 10);
+  const asked = askedBy.get(key);
+  const count = asked?.day === day ? asked.n : 0;
+  if (count >= 30) return c.json({ error: "That's thirty questions today. The assistants are back tomorrow." }, 429);
+  askedBy.set(key, { day, n: count + 1 });
   lastAsked.set(key, now);
   log("npc-asked", v, { npc: npc.id, chars: text.length });
-  return c.json({ reply: answer(npc, text), links: npc.links });
+  return c.json({ reply: await answer(npc, text), links: npc.links });
 });
 
 // The spec's view of what was "sent" (MAIL_TEST_OUTBOX=1, the CI container only).
