@@ -40,11 +40,11 @@ export function buildOutdoor(): SpaceDef {
   const grass = (w: number, d: number, x: number, z: number): void => {
     floor(g, w, d, x, z, texMat("ai/grass.jpg", w / 3.9, d / 3.9, 0xb4c49c), -0.02);
   };
-  // The creek's channel (x -60.4..-51.6, z -40..14, creek.ts) is left open: its water lies below the grass.
-  grass(289.6, 367, -205.2, -166.5); // x -350..-60.4
+  // The creek's channel (x -69.2..-51.6, z -40..14, creek.ts) is left open: its water lies below the grass.
+  grass(280.8, 367, -209.6, -166.5); // x -350..-69.2
   grass(401.6, 367, 149.2, -166.5); // x -51.6..350
-  grass(8.8, 310, -56, -195); // between them, north of the channel (z -350..-40)
-  grass(8.8, 2.5, -56, 15.25); // and the sliver south of it (z 14..16.5)
+  grass(17.6, 310, -60.4, -195); // between them, north of the channel (z -350..-40)
+  grass(17.6, 2.5, -60.4, 15.25); // and the sliver south of it (z 14..16.5)
   grass(700, 327, 0, 186.5);
   grass(315, 6, -192.5, 20);
   grass(315, 6, 192.5, 20);
@@ -231,7 +231,7 @@ export function buildOutdoor(): SpaceDef {
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
-    halfX: 73,
+    halfX: 83,
     halfZ: 40,
     areas: OUTDOOR_AREAS,
     // Same as server/spaces.ts: no notes in 155, 154 or Badger & Co's footprint, or on the dog.

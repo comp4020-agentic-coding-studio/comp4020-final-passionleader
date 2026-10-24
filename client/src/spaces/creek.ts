@@ -3,31 +3,32 @@ import { block, enableShadows, floor, loadModel, mat, scatter, solid, texMat, te
 import { HIGH } from "../settings.ts";
 import { markOccluderGroup } from "./occluders.ts";
 
-// West of the lawn: the lawn carries on, University Avenue runs on past Badger
-// & Co and crosses Sullivans Creek on a flat road bridge, with a short stretch
-// of path on the far bank. Laid out from a written description of the place
-// (not surveyed; the reference photos stay out of the repo): simple shapes and
-// the lawn's tree models, so Low stays smooth.
+// West of the lawn: the lawn carries on, and the white road north of it
+// (University Avenue, z -40..-22) runs on west and crosses Sullivans Creek on
+// a flat bridge as wide as the road, with a stretch of it on the far bank.
+// Checked against OpenStreetMap (the avenue goes straight over the creek, the
+// creek a good 15 m across); squeezed like the rest of the map, not surveyed.
+// Simple shapes and the lawn's tree models, so Low stays smooth.
 
 /** The creek: its centre line, how far from it the bank's top edge is, the water's width and how far below the grass it lies. */
-const CREEK = { x: -56, bankTop: 4.4, water: 4, depth: 1.8 };
-/** The creek runs from the building north of the avenue (z -40) to z 14. */
+const CREEK = { x: -60.4, bankTop: 8.8, water: 8, depth: 2.2 };
+/** The creek runs from the road's north edge (z -40, out from under the bridge; buildings beyond) to z 14. */
 export const CREEK_Z = { from: -40, to: 14 };
-/** The avenue and its bridge: centre z, and the width of the paving. */
-const AVE = { z: -34.5, w: 6 };
+/** The avenue and its bridge: centre z, and the width of the paving (the north road's, backdrop.ts). */
+const AVE = { z: -31, w: 18 };
 /** The top edges of the banks: nobody walks past them (areas stop short of them). */
 const EAST_TOP = CREEK.x + CREEK.bankTop; // -51.6
-const WEST_TOP = CREEK.x - CREEK.bankTop; // -60.4
+const WEST_TOP = CREEK.x - CREEK.bankTop; // -69.2
 
 /**
  * What can be walked on out here, besides the lawn's extension (which outdoor.ts
  * and server/spaces.ts widen to x -51.8, 0.2 m short of the east bank's top
- * edge): the bridge's deck (4.6 m wide between the rails) and the far bank's
- * path. Same numbers as the end of OUTDOOR_AREAS in server/spaces.ts.
+ * edge): the bridge's deck (between the rails) and the road on the far bank.
+ * Same numbers as the end of OUTDOOR_AREAS in server/spaces.ts.
  */
 export const CREEK_AREAS: Box[] = [
-  { minX: -61.4, maxX: -50.8, minZ: -36.8, maxZ: -32.2 },
-  { minX: -73, maxX: -60.4, minZ: -38, maxZ: -31 },
+  { minX: -70.2, maxX: -50.8, minZ: -39.3, maxZ: -22.7 },
+  { minX: -82, maxX: -69.2, minZ: -39.4, maxZ: -22.6 },
 ];
 /** The lawn's new west limit. */
 export const LAWN_WEST_X = -51.8;
@@ -98,31 +99,30 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   mouth.position.set(cx, -depth + 0.75, CREEK_Z.from + 0.04);
   g.add(wall, mouth);
 
-  // ---- The avenue: grey paving from the north road west to the far bank, planters and lamps ----
+  // ---- The avenue: the north road's paving carried west to the far bank, a planter row and lamps ----
   const paving = (x0: number, x1: number): void => {
-    floor(g, x1 - x0, AVE.w, (x0 + x1) / 2, AVE.z, texMat("ai/paving.jpg", (x1 - x0) / 2, AVE.w / 2, 0xc9c6bf), 0.012);
+    floor(g, x1 - x0, AVE.w, (x0 + x1) / 2, AVE.z, texMat("ai/paving.jpg", (x1 - x0) / 2, AVE.w / 2), 0.012);
   };
   paving(EAST_TOP + 1.4, -40); // from the bridge's east end to the north road at -40
-  paving(-73, WEST_TOP - 1.4);
+  paving(-84, WEST_TOP - 1.4);
+  // A planter row along the road's south edge, where it meets the grass.
   const shrubs: Spot[] = [];
-  for (const side of [-1, 1]) {
-    const z = AVE.z + side * (AVE.w / 2 + 0.35);
-    for (const [x0, x1] of [
-      [-48.5, -40],
-      [-72, -63.5],
-    ] as const) {
-      block(g, null, [x1 - x0, 0.4, 0.5], [(x0 + x1) / 2, z], CONCRETE);
-      for (let x = x0 + 0.8; x < x1; x += 2.4) shrubs.push({ x, z, rotY: x * 2.3 });
-    }
+  const z = AVE.z + AVE.w / 2 + 0.35;
+  for (const [x0, x1] of [
+    [-48.5, -42],
+    [-81, -72.5],
+  ] as const) {
+    block(g, null, [x1 - x0, 0.4, 0.5], [(x0 + x1) / 2, z], CONCRETE);
+    for (let x = x0 + 0.8; x < x1; x += 2.4) shrubs.push({ x, z, rotY: x * 2.3 });
   }
   scatter(g, "nature/Bush_Hedge.glb", 0.9, shrubs, false);
-  lamp(g, colliders, -45.5, AVE.z - 4.1);
-  lamp(g, colliders, -67.5, AVE.z + 4.1);
+  lamp(g, colliders, -45.5, AVE.z - 7.5);
+  lamp(g, colliders, -76, AVE.z + 7.5);
 
   // ---- The bridge: the avenue's paving over the creek, dark rails, white end pillars ----
   const bx0 = WEST_TOP - 1.4;
   const bx1 = EAST_TOP + 1.4;
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0, 0.5, AVE.w), texMat("ai/paving.jpg", (bx1 - bx0) / 2, AVE.w / 2, 0xc9c6bf));
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0, 0.5, AVE.w), texMat("ai/paving.jpg", (bx1 - bx0) / 2, AVE.w / 2));
   deck.position.set((bx0 + bx1) / 2, -0.25 + 0.01, AVE.z);
   g.add(deck);
   const steel = mat(RAIL);
@@ -147,13 +147,13 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
 
   // ---- The far bank: the path stops at a low hedge ----
   const hedge: Spot[] = [];
-  for (let z = -39; z <= -29.5; z += 1.2) hedge.push({ x: -73.6, z, rotY: z });
+  for (let z = -39; z <= -22.5; z += 1.2) hedge.push({ x: -82.6, z, rotY: z });
   scatter(g, "nature/Bush_Hedge.glb", 1.2, hedge, false);
 
   // ---- Trees ----
   // Big ones on the lawn's extension (the models the lawn's edge uses).
   const big: [string, number, Spot[]][] = [
-    ["CommonTree_3.glb", 8, [{ x: -36, z: -27, rotY: 0.4, scale: 1.1 }, { x: -49.5, z: -25, rotY: 2, scale: 1.0 }]],
+    ["CommonTree_3.glb", 8, [{ x: -36, z: -27, rotY: 0.4, scale: 1.1 }, { x: -49.5, z: -18, rotY: 2, scale: 1.0 }]],
     ["CommonTree_5.glb", 8.5, [{ x: -42, z: -23.5, rotY: 1, scale: 1.1 }, { x: -48.5, z: -6.5, rotY: 3, scale: 1.0 }, { x: -31, z: -14, rotY: 5, scale: 0.9 }]],
     ["CommonTree_4.glb", 7.5, [{ x: -38, z: -16, rotY: 4, scale: 1.0 }]],
   ];
@@ -165,17 +165,17 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   const willows = [
     { x: EAST_TOP + 0.7, z: -22 },
     { x: EAST_TOP + 0.9, z: -10 },
-    { x: WEST_TOP - 0.7, z: -27 },
-    { x: WEST_TOP - 0.9, z: -12 },
+    { x: WEST_TOP - 0.7, z: -17 },
+    { x: WEST_TOP - 0.9, z: -5 },
   ];
   const poplars = [
-    { x: EAST_TOP + 0.5, z: -28 },
+    { x: EAST_TOP + 0.5, z: -19 },
     { x: EAST_TOP + 0.5, z: -16 },
     { x: EAST_TOP + 0.5, z: -5 },
-    { x: WEST_TOP - 0.5, z: -21 },
-    { x: WEST_TOP - 0.5, z: -6 },
-    { x: -66, z: -22 },
-    { x: -69, z: -9 },
+    { x: WEST_TOP - 0.5, z: -11 },
+    { x: WEST_TOP - 0.5, z: 1 },
+    { x: -75, z: -14 },
+    { x: -78, z: -3 },
   ];
   // The lawn's own tree models, so they sit with the rest: willows a wide
   // CommonTree_4 with golden leaves, poplars a CommonTree_5 squeezed narrow

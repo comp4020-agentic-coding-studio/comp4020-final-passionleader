@@ -1144,13 +1144,13 @@ function placeNpcs(s: SpaceDef): void {
 // The campus minimap (plan 53): the walkable ground and buildings outside,
 // and the places you can go in. Same bounds as spaces/outdoor.ts.
 const minimap = mountMinimap({
-  bounds: { minX: -75, maxX: 27, minZ: -41, maxZ: 25 },
+  bounds: { minX: -84, maxX: 27, minZ: -41, maxZ: 25 },
   areas: [
     { minX: -51.8, maxX: 5, minZ: -39.4, maxZ: -2 },
     { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
     { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
-    { minX: -61.4, maxX: -50.8, minZ: -36.8, maxZ: -32.2 },
-    { minX: -73, maxX: -60.4, minZ: -38, maxZ: -31 },
+    { minX: -70.2, maxX: -50.8, minZ: -39.3, maxZ: -22.7 },
+    { minX: -82, maxX: -69.2, minZ: -39.4, maxZ: -22.6 },
   ],
   buildings: [
     { name: "Badger", minX: -45, maxX: -33, minZ: -2, maxZ: 16 },
@@ -1166,7 +1166,7 @@ const minimap = mountMinimap({
     { x: 12, z: -21, name: "Lab Coffee" },
     { x: -26, z: -30, name: "ANU Sport" },
     { x: 1.75, z: -31.6, name: "Ad board" },
-    { x: -56, z: -26, name: "Creek" },
+    { x: -60.4, z: -12, name: "Creek" },
     { x: -8.6, z: 2.3, name: "Study groups" },
   ],
 });

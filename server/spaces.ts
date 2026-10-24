@@ -35,12 +35,12 @@ const OUTDOOR_AREAS: Area[] = [
   { minX: -51.8, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
-  { minX: -61.4, maxX: -50.8, minZ: -36.8, maxZ: -32.2 }, // the footbridge's deck
-  { minX: -73, maxX: -60.4, minZ: -38, maxZ: -31 }, // the far bank's path
+  { minX: -70.2, maxX: -50.8, minZ: -39.3, maxZ: -22.7 }, // the bridge's deck, as wide as the road
+  { minX: -82, maxX: -69.2, minZ: -39.4, maxZ: -22.6 }, // the road on the far bank
 ];
 
 export const SPACES: Record<string, Space> = {
-  outdoor: { label: "ANU campus", halfX: 73, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
+  outdoor: { label: "ANU campus", halfX: 83, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
