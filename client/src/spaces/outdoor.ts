@@ -6,7 +6,7 @@ import { DOG_SPOT, addDog } from "./dog.ts";
 import { SPORT_PC, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
-import { buildStreetscape } from "./streetscape.ts";
+import { SEAT_WALL_SEATS, buildStreetscape } from "./streetscape.ts";
 import { CREEK_AREAS, LAWN_WEST_X, buildCreek } from "./creek.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
@@ -40,11 +40,10 @@ export function buildOutdoor(): SpaceDef {
   const grass = (w: number, d: number, x: number, z: number): void => {
     floor(g, w, d, x, z, texMat("ai/grass.jpg", w / 3.9, d / 3.9, 0xb4c49c), -0.02);
   };
-  // The creek's channel (x -69.2..-51.6, z -40..14, creek.ts) is left open: its water lies below the grass.
-  grass(280.8, 367, -209.6, -166.5); // x -350..-69.2
-  grass(401.6, 367, 149.2, -166.5); // x -51.6..350
-  grass(17.6, 310, -60.4, -195); // between them, north of the channel (z -350..-40)
-  grass(17.6, 2.5, -60.4, 15.25); // and the sliver south of it (z 14..16.5)
+  // The creek's channel (x -75.2..-57.6, z -160..60, creek.ts) is left open: its water lies below the grass.
+  grass(274.8, 367, -212.6, -166.5); // x -350..-75.2
+  grass(407.6, 367, 146.2, -166.5); // x -57.6..350
+  grass(17.6, 190, -66.4, -255); // between them, north of the channel (z -350..-160)
   grass(700, 327, 0, 186.5);
   grass(315, 6, -192.5, 20);
   grass(315, 6, 192.5, 20);
@@ -231,14 +230,14 @@ export function buildOutdoor(): SpaceDef {
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
-    halfX: 83,
+    halfX: 89,
     halfZ: 40,
     areas: OUTDOOR_AREAS,
     // Same as server/spaces.ts: no notes in 155, 154 or Badger & Co's footprint, or on the dog.
     noteBuildings: [
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
-      { minX: -45, maxX: -33, minZ: -2, maxZ: 16 },
+      { minX: -50, maxX: -38, minZ: -2, maxZ: 16 },
     ],
     noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, STUDY_BOARD],
     tick: dog,
@@ -259,7 +258,7 @@ export function buildOutdoor(): SpaceDef {
     bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3"],
     outdoor: true,
     // The two lawn benches, two people each.
-    seats: [-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))),
+    seats: [...[-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))), ...SEAT_WALL_SEATS],
   };
 }
 

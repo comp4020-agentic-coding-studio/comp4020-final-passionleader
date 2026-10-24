@@ -32,15 +32,17 @@ export interface Space {
 // to the library's door, and west along University Avenue over the creek's
 // bridge. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts (creek.ts).
 const OUTDOOR_AREAS: Area[] = [
-  { minX: -51.8, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
+  { minX: -57.8, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
-  { minX: -70.2, maxX: -50.8, minZ: -39.3, maxZ: -22.7 }, // the bridge's deck, as wide as the road
-  { minX: -82, maxX: -69.2, minZ: -39.4, maxZ: -22.6 }, // the road on the far bank
+  { minX: -76.2, maxX: -56.8, minZ: -39.3, maxZ: -22.7 }, // the bridge's deck, as wide as the road
+  { minX: -88, maxX: -75.2, minZ: -39.4, maxZ: -22.6 }, // the road on the far bank
+  { minX: -57.2, maxX: -50.2, minZ: -22.8, maxZ: 22 }, // the boardwalk past Badger & Co, and the strip beside it
+  { minX: -57.2, maxX: -54.4, minZ: -90, maxZ: -39.2 }, // the boardwalk north past the white buildings
 ];
 
 export const SPACES: Record<string, Space> = {
-  outdoor: { label: "ANU campus", halfX: 83, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
+  outdoor: { label: "ANU campus", halfX: 89, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
@@ -163,7 +165,7 @@ export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa", "po
 const BUILDINGS: Area[] = [
   { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
   { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
-  { minX: -45, maxX: -33, minZ: -2, maxZ: 16 }, // Badger & Co (client/src/spaces/creek.ts)
+  { minX: -50, maxX: -38, minZ: -2, maxZ: 16 }, // Badger & Co (client/src/spaces/creek.ts)
 ];
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door

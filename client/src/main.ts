@@ -152,12 +152,12 @@ mountSettings({
   reportBug: () => bugReport.open(),
   reportPerson: () => bugReport.open(true),
   mute: () => muteDialog.open(),
-  signOut,
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
 });
 function signOut(): void {
   // This browser forgets who it was; the join screen offers signing up or in.
+  // (Only a guest going to sign up does this now: the settings' Sign out went, the user's call.)
   storage.set("campus.token", "");
   storage.set("campus.role", "");
   session = null;
@@ -1144,16 +1144,18 @@ function placeNpcs(s: SpaceDef): void {
 // The campus minimap (plan 53): the walkable ground and buildings outside,
 // and the places you can go in. Same bounds as spaces/outdoor.ts.
 const minimap = mountMinimap({
-  bounds: { minX: -84, maxX: 27, minZ: -41, maxZ: 25 },
+  bounds: { minX: -90, maxX: 27, minZ: -41, maxZ: 25 },
   areas: [
-    { minX: -51.8, maxX: 5, minZ: -39.4, maxZ: -2 },
+    { minX: -57.8, maxX: 5, minZ: -39.4, maxZ: -2 },
     { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
     { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
-    { minX: -70.2, maxX: -50.8, minZ: -39.3, maxZ: -22.7 },
-    { minX: -82, maxX: -69.2, minZ: -39.4, maxZ: -22.6 },
+    { minX: -76.2, maxX: -56.8, minZ: -39.3, maxZ: -22.7 },
+    { minX: -88, maxX: -75.2, minZ: -39.4, maxZ: -22.6 },
+    { minX: -57.2, maxX: -50.2, minZ: -22.8, maxZ: 22 },
+    { minX: -57.2, maxX: -54.4, minZ: -90, maxZ: -39.2 },
   ],
   buildings: [
-    { name: "Badger", minX: -45, maxX: -33, minZ: -2, maxZ: 16 },
+    { name: "Badger", minX: -50, maxX: -38, minZ: -2, maxZ: 16 },
     { name: "155", minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
     { name: "154", minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
     { name: "Library", minX: -9, maxX: 5, minZ: 23, maxZ: 25 },
@@ -1166,7 +1168,7 @@ const minimap = mountMinimap({
     { x: 12, z: -21, name: "Lab Coffee" },
     { x: -26, z: -30, name: "ANU Sport" },
     { x: 1.75, z: -31.6, name: "Ad board" },
-    { x: -60.4, z: -12, name: "Creek" },
+    { x: -66.4, z: -12, name: "Creek" },
     { x: -8.6, z: 2.3, name: "Study groups" },
   ],
 });

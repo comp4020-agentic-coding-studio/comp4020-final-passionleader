@@ -11,34 +11,44 @@ import { markOccluderGroup } from "./occluders.ts";
 // Simple shapes and the lawn's tree models, so Low stays smooth.
 
 /** The creek: its centre line, how far from it the bank's top edge is, the water's width and how far below the grass it lies. */
-const CREEK = { x: -60.4, bankTop: 8.8, water: 8, depth: 2.2 };
-/** The creek runs from the road's north edge (z -40, out from under the bridge; buildings beyond) to z 14. */
-export const CREEK_Z = { from: -40, to: 14 };
+const CREEK = { x: -66.4, bankTop: 8.8, water: 8, depth: 2.2 };
+/** The creek runs on out of sight both ways: north past the white buildings (z -160) and south (z 60). */
+export const CREEK_Z = { from: -160, to: 60 };
 /** The avenue and its bridge: centre z, and the width of the paving (the north road's, backdrop.ts). */
 const AVE = { z: -31, w: 18 };
 /** The top edges of the banks: nobody walks past them (areas stop short of them). */
-const EAST_TOP = CREEK.x + CREEK.bankTop; // -51.6
-const WEST_TOP = CREEK.x - CREEK.bankTop; // -69.2
+const EAST_TOP = CREEK.x + CREEK.bankTop; // -57.6
+const WEST_TOP = CREEK.x - CREEK.bankTop; // -75.2
 
 /**
  * What can be walked on out here, besides the lawn's extension (which outdoor.ts
  * and server/spaces.ts widen to x -51.8, 0.2 m short of the east bank's top
- * edge): the bridge's deck (between the rails) and the road on the far bank.
+ * edge): the bridge's deck (between the rails), the road on the far bank, and
+ * the timber boardwalk south along the east bank, between Badger & Co and the
+ * creek's fence.
  * Same numbers as the end of OUTDOOR_AREAS in server/spaces.ts.
  */
 export const CREEK_AREAS: Box[] = [
-  { minX: -70.2, maxX: -50.8, minZ: -39.3, maxZ: -22.7 },
-  { minX: -82, maxX: -69.2, minZ: -39.4, maxZ: -22.6 },
+  { minX: -76.2, maxX: -56.8, minZ: -39.3, maxZ: -22.7 },
+  { minX: -88, maxX: -75.2, minZ: -39.4, maxZ: -22.6 },
+  { minX: -57.2, maxX: -50.2, minZ: -22.8, maxZ: 22 },
+  { minX: -57.2, maxX: -54.4, minZ: -90, maxZ: -39.2 },
 ];
 /** The lawn's new west limit. */
-export const LAWN_WEST_X = -51.8;
+export const LAWN_WEST_X = -57.8;
+/** The boardwalks: from the avenue south past Badger & Co, and north past the white buildings, each between the building and the creek's fence. */
+const BOARDWALKS = [
+  { minX: -57.4, maxX: -54.2, minZ: -22, maxZ: 22 },
+  { minX: -57.4, maxX: -54.2, minZ: -90, maxZ: -40 },
+];
 
 /**
  * Badger & Co, at the north-east corner of the Health and Well-Being Centre:
- * per OpenStreetMap it stands just west of 155 across a lane, level with
- * 155, its rounded corner facing the lawn (a solid, not enterable).
+ * per OpenStreetMap it stands west of 155 across a lane (10 m here, the
+ * user's call), level with 155, its rounded corner facing the lawn (a solid,
+ * not enterable).
  */
-export const BADGER = { minX: -45, maxX: -33, minZ: -2, maxZ: 16 };
+export const BADGER = { minX: -50, maxX: -38, minZ: -2, maxZ: 16 };
 
 const WATER = 0x5d7568;
 const CONCRETE = 0xe6e4de;
@@ -104,20 +114,20 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     floor(g, x1 - x0, AVE.w, (x0 + x1) / 2, AVE.z, texMat("ai/paving.jpg", (x1 - x0) / 2, AVE.w / 2), 0.012);
   };
   paving(EAST_TOP + 1.4, -40); // from the bridge's east end to the north road at -40
-  paving(-84, WEST_TOP - 1.4);
+  paving(-90, WEST_TOP - 1.4);
   // A planter row along the road's south edge, where it meets the grass.
   const shrubs: Spot[] = [];
   const z = AVE.z + AVE.w / 2 + 0.35;
   for (const [x0, x1] of [
-    [-48.5, -42],
-    [-81, -72.5],
+    [-54.5, -42],
+    [-87, -78.5],
   ] as const) {
     block(g, null, [x1 - x0, 0.4, 0.5], [(x0 + x1) / 2, z], CONCRETE);
     for (let x = x0 + 0.8; x < x1; x += 2.4) shrubs.push({ x, z, rotY: x * 2.3 });
   }
   scatter(g, "nature/Bush_Hedge.glb", 0.9, shrubs, false);
   lamp(g, colliders, -45.5, AVE.z - 7.5);
-  lamp(g, colliders, -76, AVE.z + 7.5);
+  lamp(g, colliders, -82, AVE.z + 7.5);
 
   // ---- The bridge: the avenue's paving over the creek, dark rails, white end pillars ----
   const bx0 = WEST_TOP - 1.4;
@@ -147,14 +157,14 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
 
   // ---- The far bank: the path stops at a low hedge ----
   const hedge: Spot[] = [];
-  for (let z = -39; z <= -22.5; z += 1.2) hedge.push({ x: -82.6, z, rotY: z });
+  for (let z = -39; z <= -22.5; z += 1.2) hedge.push({ x: -88.6, z, rotY: z });
   scatter(g, "nature/Bush_Hedge.glb", 1.2, hedge, false);
 
   // ---- Trees ----
   // Big ones on the lawn's extension (the models the lawn's edge uses).
   const big: [string, number, Spot[]][] = [
-    ["CommonTree_3.glb", 8, [{ x: -36, z: -27, rotY: 0.4, scale: 1.1 }, { x: -49.5, z: -18, rotY: 2, scale: 1.0 }]],
-    ["CommonTree_5.glb", 8.5, [{ x: -42, z: -23.5, rotY: 1, scale: 1.1 }, { x: -48.5, z: -6.5, rotY: 3, scale: 1.0 }, { x: -31, z: -14, rotY: 5, scale: 0.9 }]],
+    ["CommonTree_3.glb", 8, [{ x: -36, z: -27, rotY: 0.4, scale: 1.1 }, { x: -52, z: -17, rotY: 2, scale: 1.0 }]],
+    ["CommonTree_5.glb", 8.5, [{ x: -42, z: -23.5, rotY: 1, scale: 1.1 }, { x: -53, z: -8, rotY: 3, scale: 1.0 }, { x: -31, z: -14, rotY: 5, scale: 0.9 }]],
     ["CommonTree_4.glb", 7.5, [{ x: -38, z: -16, rotY: 4, scale: 1.0 }]],
   ];
   for (const [file, h, spots] of big) {
@@ -163,19 +173,19 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   }
   // Willows (golden, wide, drooping) and Lombardy poplars (tall narrow columns) along the banks.
   const willows = [
-    { x: EAST_TOP + 0.7, z: -22 },
-    { x: EAST_TOP + 0.9, z: -10 },
+    { x: WEST_TOP - 0.8, z: 8 },
+    { x: WEST_TOP - 0.9, z: 20 },
     { x: WEST_TOP - 0.7, z: -17 },
     { x: WEST_TOP - 0.9, z: -5 },
   ];
   const poplars = [
-    { x: EAST_TOP + 0.5, z: -19 },
-    { x: EAST_TOP + 0.5, z: -16 },
-    { x: EAST_TOP + 0.5, z: -5 },
+    { x: -52, z: 4 },
+    { x: -52, z: 14 },
+    { x: WEST_TOP - 0.5, z: 14 },
     { x: WEST_TOP - 0.5, z: -11 },
     { x: WEST_TOP - 0.5, z: 1 },
-    { x: -75, z: -14 },
-    { x: -78, z: -3 },
+    { x: -81, z: -14 },
+    { x: -84, z: -3 },
   ];
   // The lawn's own tree models, so they sit with the rest: willows a wide
   // CommonTree_4 with golden leaves, poplars a CommonTree_5 squeezed narrow
@@ -184,7 +194,38 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   for (const [i, p] of poplars.entries()) tree(g, "CommonTree_5.glb", p, 9, 0.45, 1.35, 0x5f8a3c, i * 1.3);
   for (const p of [...willows, ...poplars]) if (p.x > EAST_TOP - 1) solid(colliders, 0.8, 0.8, p.x, p.z);
 
+  for (const b of BOARDWALKS) boardwalk(g, colliders, b);
+
   buildBadger(g, colliders);
+}
+
+/**
+ * A timber boardwalk along the east bank: slatted decking, a fence of dark posts and rails along its creek
+ * side so nobody steps off the bank.
+ */
+function boardwalk(g: THREE.Group, colliders: Box[], { minX, maxX, minZ, maxZ }: Box): void {
+  const w = maxX - minX;
+  const len = maxZ - minZ;
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(w, 0.12, len), texMat("ai/wood_tabletop.jpg", w / 1.2, len / 1.2, 0xa8784c));
+  deck.position.set((minX + maxX) / 2, 0.06, (minZ + maxZ) / 2);
+  deck.receiveShadow = HIGH;
+  g.add(deck);
+  // Joints across the boards every 1.2 m, so it reads as decking.
+  const joints: Inst[] = [];
+  for (let z = minZ + 1.2; z < maxZ; z += 1.2) joints.push({ x: (minX + maxX) / 2, y: 0.125, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  instanced(g, new THREE.BoxGeometry(w, 0.01, 0.04), mat(0x6b4a2e), joints);
+  // The fence on the creek side.
+  const fx = minX + 0.1;
+  const steel = mat(RAIL);
+  for (const y of [1.0, 0.55]) {
+    const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, len), steel);
+    r.position.set(fx, y, (minZ + maxZ) / 2);
+    g.add(r);
+  }
+  const posts: Inst[] = [];
+  for (let z = minZ + 0.3; z <= maxZ; z += 2) posts.push({ x: fx, y: 0.55, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  instanced(g, new THREE.BoxGeometry(0.08, 1.1, 0.08), steel, posts);
+  colliders.push({ minX: fx - 0.1, maxX: fx + 0.1, minZ, maxZ });
 }
 
 /** A tall black lamp post, like the campus's (streetscape.ts), arm over the avenue. */
