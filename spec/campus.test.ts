@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { api, freshName, guest, visitor } from "./helpers.ts";
+import { api, closeAll, connect, freshName, guest, visitor } from "./helpers.ts";
 
 // Names, sticky notes and comments, checked over HTTP against the running app.
 
@@ -41,11 +41,16 @@ describe("guests and signing up", () => {
     expect((await api("/api/signup/finish", "POST", { studentNo, code: code === "000000" ? "111111" : "000000", name: freshName(), password: "long enough" })).status).toBe(401);
     expect((await api("/api/signup/finish", "POST", { studentNo, code, name: freshName(), password: "short" })).status).toBe(400);
     expect((await api("/api/signup/finish", "POST", { studentNo, code, name: "guest123", password: "long enough" })).status).toBe(400);
+    expect((await api("/api/signup/finish", "POST", { studentNo, code, name: "Guest_1", password: "long enough" })).status).toBe(400);
     expect((await api("/api/signup/finish", "POST", { studentNo, code, name: freshName(), password: "long enough" })).status).toBe(201);
   });
 
   it("resets a forgotten password by an emailed code, and the old browsers sign in again", async () => {
     const v = await visitor();
+    // A tab already open on the old token is put out at once.
+    const open = await connect(v.token);
+    await open.next((m) => m.t === "welcome");
+    const closed = new Promise<number>((r) => open.ws.addEventListener("close", (e) => r(e.code)));
     expect((await api("/api/password/start", "POST", { studentNo: v.studentNo })).status).toBe(200);
     const mail = (await (await api(`/api/test/mail?to=${v.email}`)).json()) as { text: string };
     const code = /\b(\d{6})\b/.exec(mail.text)![1]!;
@@ -53,11 +58,15 @@ describe("guests and signing up", () => {
     expect(res.status).toBe(200);
     expect(((await res.json()) as { token: string }).token).not.toBe(v.token);
     expect((await api("/api/join", "POST", { name: v.name, password: "a new long one" })).status).toBe(200);
+    expect(await closed).toBe(4004);
+    closeAll();
   });
 
-  it("lets a guest stick a note but not post, comment, heart or report someone", async () => {
+  it("refuses a guest notes, posts and reports about someone, but takes their bug report", async () => {
     const g = await guest();
-    expect((await api("/api/notes", "POST", { token: g.token, space: "comp8020", x: 2, z: 1, text: "a guest's note" })).status).toBe(201);
+    const note = await api("/api/notes", "POST", { token: g.token, space: "comp8020", x: 2, z: 1, text: "a guest's note" });
+    expect(note.status).toBe(403);
+    expect((await note.json()).signup).toBe(true);
     const post = await api("/api/board", "POST", { token: g.token, space: "comp8020", tab: "board", title: "Hi", text: "Hello" });
     expect(post.status).toBe(403);
     expect((await post.json()).signup).toBe(true);

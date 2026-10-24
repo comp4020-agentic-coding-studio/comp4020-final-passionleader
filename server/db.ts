@@ -123,6 +123,7 @@ const wanted: Record<string, string> = {
   last_post_at: "TEXT",
   look: "TEXT",
   email: "TEXT",
+  last_seen: "TEXT",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
@@ -269,6 +270,9 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS mail_by_reader ON mail (reader, sent_at);
 `);
+if (!(db.prepare("PRAGMA table_info(mail)").all() as { name: string }[]).some((c) => c.name === "reader_deleted")) {
+  db.exec("ALTER TABLE mail ADD COLUMN reader_deleted INTEGER NOT NULL DEFAULT 0");
+}
 
 // Hearts on comments (sticky notes' and boards'): one per person per
 // comment, so a second press takes it back. The most-hearted comment is shown
@@ -310,6 +314,17 @@ export function createVisitor(name: string, token: string): void {
 export function findByEmail(email: string): Visitor | undefined {
   return db.prepare(`SELECT ${visitorCols} FROM visitors WHERE email = ?`).get(email) as Visitor | undefined;
 }
+
+/**
+ * Guests not seen for 30 days go, freeing their guestNNN (there are only a
+ * thousand). Guests can't write anything that stays (notes, posts, comments,
+ * mail), so nothing of theirs goes with them but their saved spot and look;
+ * the few notes from before guests were refused them go too.
+ */
+export const purgeIdleGuests = (): number =>
+  Number(db.prepare("DELETE FROM visitors WHERE role = 'guest' AND coalesce(last_seen, created_at) < datetime('now', '-30 days')").run().changes);
+/** Marks someone as seen now (when their socket connects). */
+export const seen = (name: string): void => void db.prepare("UPDATE visitors SET last_seen = datetime('now') WHERE name = ?").run(name);
 
 /** A new guest: the lowest free guestNNN (guest000-guest999); null if they're all taken. */
 export function createGuest(token: string): string | null {
@@ -492,12 +507,13 @@ export function sendMailTo(sender: string, reader: string, subject: string, body
   return db.prepare(`SELECT ${mailCols} FROM mail WHERE id = ?`).get(Number(lastInsertRowid)) as unknown as Mail;
 }
 /** Someone's inbox (newest first), and what they've sent. */
-export const inboxOf = (name: string): Mail[] => db.prepare(`SELECT ${mailCols} FROM mail WHERE reader = ? AND ${freshMail} ORDER BY id DESC LIMIT 200`).all(name) as unknown as Mail[];
+export const inboxOf = (name: string): Mail[] => db.prepare(`SELECT ${mailCols} FROM mail WHERE reader = ? AND reader_deleted = 0 AND ${freshMail} ORDER BY id DESC LIMIT 200`).all(name) as unknown as Mail[];
 export const sentBy = (name: string): Mail[] => db.prepare(`SELECT ${mailCols} FROM mail WHERE sender = ? AND ${freshMail} ORDER BY id DESC LIMIT 200`).all(name) as unknown as Mail[];
 export const findMail = (id: number): Mail | undefined => db.prepare(`SELECT ${mailCols} FROM mail WHERE id = ?`).get(id) as Mail | undefined;
 export const markRead = (id: number): void => void db.prepare("UPDATE mail SET read_at = datetime('now') WHERE id = ? AND read_at IS NULL").run(id);
-export const deleteMail = (id: number): void => void db.prepare("DELETE FROM mail WHERE id = ?").run(id);
-export const unreadCount = (name: string): number => (db.prepare(`SELECT COUNT(*) AS n FROM mail WHERE reader = ? AND read_at IS NULL AND ${freshMail}`).get(name) as { n: number }).n;
+/** The reader throws it away; the sender keeps their copy in Sent until the 30 days are up. */
+export const deleteMail = (id: number, reader: string): void => void db.prepare("UPDATE mail SET reader_deleted = 1 WHERE id = ? AND reader = ?").run(id, reader);
+export const unreadCount = (name: string): number => (db.prepare(`SELECT COUNT(*) AS n FROM mail WHERE reader = ? AND reader_deleted = 0 AND read_at IS NULL AND ${freshMail}`).get(name) as { n: number }).n;
 export const purgeOldMail = (): number => Number(db.prepare(`DELETE FROM mail WHERE NOT (${freshMail})`).run().changes);
 
 export type JoinResult = { ok: true; joined: boolean; members: string[] } | { ok: false; why: "full" | "writer" };

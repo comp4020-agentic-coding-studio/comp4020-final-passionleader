@@ -42,6 +42,7 @@ export type Event =
   | "npc-asked"
   | "mail-sent"
   | "whisper"
+  | "guests-purged"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

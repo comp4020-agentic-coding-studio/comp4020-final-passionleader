@@ -52,6 +52,7 @@ import {
   deleteMail,
   unreadCount,
   purgeOldMail,
+  purgeIdleGuests,
   createGuest,
   createMember,
   findByEmail,
@@ -138,15 +139,23 @@ function who(b: Body): Visitor | null {
 }
 
 /**
- * Guests (came in without signing up) may walk, chat, emote, stick notes and
- * use team rooms; posting, commenting, hearts, joining groups, files and
- * reporting someone need an ANU sign-up. Refused here (403, logged), not
+ * Guests (came in without signing up) may walk, chat, emote and use team
+ * rooms; sticky notes, posting, commenting, hearts, joining groups, files
+ * and reporting someone need an ANU sign-up. Refused here (403, logged), not
  * only hidden in the browser; the client shows a sign-up prompt.
  */
+/**
+ * What a board's watchers are told when a post changes: the tab, and which
+ * post, so an open one reloads. Never a private post's id: others mustn't
+ * learn that it exists or when it's busy.
+ */
+const boardChanged = (post: { tab: string; id: number; private: boolean }): Record<string, unknown> =>
+  post.private ? { t: "action", kind: "board", tab: post.tab } : { t: "action", kind: "board", tab: post.tab, post: post.id };
+
 function guestRefused(c: Context, v: Visitor, action: string): Response | null {
   if (isMember(v)) return null;
   log("refused", v, { action, reason: "guest" }, { ip: ipOf(c) });
-  return c.json({ error: "Sign up with your ANU email to do that (⚙️ → Sign out, then Sign up).", signup: true }, 403);
+  return c.json({ error: "Sign up with your ANU email to do that (⚙️ → Verify my ANU email).", signup: true }, 403);
 }
 
 const RESTRICTED_WHAT: Record<Restrictable, string> = { notes: "sticking notes or commenting on them", posts: "posting or commenting on boards", chat: "chatting", join: "coming in" };
@@ -218,6 +227,7 @@ app.post("/api/join", async (c) => {
 // Coming in as a guest: your browser's guest back if it has one, else the
 // next free guestNNN. Guests walk, chat, emote, stick notes and use team
 // rooms; posting, commenting, hearts, files and reports need signing up.
+const newGuests: { ip: string | null; at: number }[] = [];
 app.post("/api/guest", async (c) => {
   const b = await body(c);
   const known = typeof b.token === "string" ? findByToken(b.token) : undefined;
@@ -227,6 +237,13 @@ app.post("/api/guest", async (c) => {
     log("join", known, { how: "guest returning" }, { ip: ipOf(c) });
     return c.json({ name: known.name, token: known.token, role: "guest", spawn: lastSpot(known.name), look: lookOf(known.name) });
   }
+  // A new guest name each time is cheap to ask for and there are only a
+  // thousand: twenty new guests an hour from one IP.
+  const ip = ipOf(c);
+  const hourAgo = Date.now() - 3_600_000;
+  while (newGuests.length && newGuests[0]!.at < hourAgo) newGuests.shift();
+  if (!testOutbox() && newGuests.filter((g) => g.ip === ip).length >= 20) return c.json({ error: "Too many new guests from here. Try again in an hour, or sign up." }, 429);
+  newGuests.push({ ip, at: Date.now() });
   const fresh = randomUUID();
   const name = createGuest(fresh);
   if (!name) return c.json({ error: "The campus is full of guests right now. Sign up, or try later." }, 503);
@@ -259,8 +276,27 @@ function anuEmail(b: Body): { email: string; staff: boolean } | { error: string 
   return { email: `${no}@anu.edu.au`, staff: false };
 }
 
+// Codes by email cost money and reputation (bounces from made-up staff
+// addresses), and each one is five guesses at a code: at most 5 an hour
+// from one IP, and 200 an hour in all.
+const codeMailed: { ip: string | null; at: number }[] = [];
+const CODES_PER_IP_HOUR = 5;
+const CODES_PER_HOUR = 200;
+function codeQuotaLeft(ip: string | null): boolean {
+  // The spec signs up a hundred visitors from one address; its outbox sends nothing.
+  if (testOutbox()) return true;
+  const hourAgo = Date.now() - 3_600_000;
+  while (codeMailed.length && codeMailed[0]!.at < hourAgo) codeMailed.shift();
+  return codeMailed.length < CODES_PER_HOUR && codeMailed.filter((m) => m.ip === ip).length < CODES_PER_IP_HOUR;
+}
+
 async function sendCode(c: Context, email: string, purpose: "signup" | "reset"): Promise<Response> {
   if (!mailReady()) return c.json({ error: "Email isn't available right now. Please tell the admin. Error code: MAIL-CONFIG" }, 503);
+  if (!codeQuotaLeft(ipOf(c))) {
+    log("refused", null, { action: "mail-code", reason: "too many codes" }, { ip: ipOf(c) });
+    return c.json({ error: "Too many codes asked for. Try again in an hour." }, 429);
+  }
+  codeMailed.push({ ip: ipOf(c), at: Date.now() });
   const code = code6();
   if (!storeCode(email, purpose, hashCode(email, code))) return c.json({ error: "A code went to that address under a minute ago. Check your inbox (and junk)." }, 429);
   const subject = purpose === "signup" ? `${code} is your ANU Crossing sign-up code` : `${code} resets your ANU Crossing password`;
@@ -293,7 +329,7 @@ app.post("/api/signup/finish", async (c) => {
     return c.json({ error: "That code is wrong or too old. Ask for a new one." }, 401);
   }
   const name = typeof b.name === "string" ? b.name.normalize("NFKC").trim() : "";
-  if (!NAME_RULE.test(name) || RESERVED.test(name) || /^guest\d{3}$/i.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores (not qa_ or guest…)." }, 400);
+  if (!NAME_RULE.test(name) || RESERVED.test(name) || /^guest/i.test(name)) return c.json({ error: "Names are 1–8 letters, digits or underscores (not qa_ or guest…)." }, 400);
   if (findByName(name)) return c.json({ error: `"${name}" is taken. Pick another name.` }, 409);
   if (typeof b.password !== "string" || b.password.length < 8 || b.password.length > 200) return c.json({ error: "A password of at least 8 characters." }, 400);
   if (findByEmail(who2.email)) return c.json({ error: "That email has an account already." }, 409);
@@ -309,7 +345,8 @@ app.post("/api/password/start", async (c) => {
   const b = await body(c);
   const who2 = anuEmail(b);
   if ("error" in who2) return c.json({ error: who2.error }, 400);
-  // The same answer whether or not there's an account, so it can't be used to find who has one.
+  // No account, no email; the answer looks the same, though sign-up's own
+  // "has an account already" says as much anyway (a student number isn't secret).
   if (!findByEmail(who2.email)) return c.json({ sent: true, to: who2.email });
   return sendCode(c, who2.email, "reset");
 });
@@ -325,6 +362,8 @@ app.post("/api/password/finish", async (c) => {
   const token = randomUUID();
   resetPassword(account.name, hashPassword(b.password), token);
   forgetCode(who2.email);
+  // Open tabs were let in by the old token: put them out too.
+  kick(account.name);
   log("password-reset", account, {}, { ip: ipOf(c) });
   return c.json({ name: account.name, token, role: account.role, spawn: lastSpot(account.name), look: lookOf(account.name) });
 });
@@ -378,7 +417,7 @@ app.delete("/api/mail/:id", async (c) => {
   if (!v) return c.json({ error: "Join first." }, 401);
   const m = findMail(Number(c.req.param("id")));
   if (!m || m.reader.toLowerCase() !== v.name.toLowerCase()) return c.json({ error: "That message is gone." }, 404);
-  deleteMail(m.id);
+  deleteMail(m.id, v.name);
   return c.json({ unread: unreadCount(v.name) });
 });
 
@@ -426,6 +465,8 @@ app.post("/api/notes", async (c) => {
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
   if (!isSpace(b.space)) return c.json({ error: "No such place." }, 400);
+  const guestNo = guestRefused(c, v, "note");
+  if (guestNo) return guestNo;
   const barred = stopped(c, v, "notes", { action: "note", space: b.space });
   if (barred) return barred;
   if (typeof b.x !== "number" || typeof b.z !== "number" || !Number.isFinite(b.x) || !Number.isFinite(b.z)) {
@@ -543,7 +584,7 @@ app.post("/api/board-comments/:id/heart", async (c) => {
   const post = findPost(comment.postId);
   if (post && !maySeePost(v, post)) return c.json({ error: "That comment is gone." }, 404);
   const hearted = toggleHeart("post", comment.id, v.name);
-  if (post) broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  if (post) broadcastSpace(spaceOfBoard(post.space), boardChanged(post));
   return c.json({ hearted, hearts: findPostComment(comment.id)!.heartedBy.length });
 });
 
@@ -791,7 +832,7 @@ app.post("/api/board/:id/join", async (c) => {
   const r = toggleMember(post, v.name);
   if (!r.ok) return c.json({ error: r.why === "full" ? "That group is full." : "It's your group: remove the post to close it." }, 409);
   log("group-joined", v, { space: post.space, post: post.id, joined: r.joined, members: r.members.length, capacity: post.capacity });
-  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  broadcastSpace(spaceOfBoard(post.space), boardChanged(post));
   return c.json({ joined: r.joined, members: r.members });
 });
 
@@ -844,7 +885,7 @@ app.patch("/api/board/:id", async (c) => {
   }
   const edited = editPost(post.id, (b.title as string).trim(), (b.text as string).trim(), capacity);
   log("post-edited", v, { space: post.space, tab: post.tab, post: post.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: `${edited.title}\n\n${edited.text}` });
-  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  broadcastSpace(spaceOfBoard(post.space), boardChanged(post));
   return c.json({ ...edited, files: filesOn("post", edited.id).map(({ id, name, size }) => ({ id, name, size })) });
 });
 
@@ -875,7 +916,7 @@ app.post("/api/board/:id/comments", async (c) => {
     return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
   log("post-comment", v, { space: post.space, tab: post.tab, post: post.id, comment: result.comment.id, words: wordCount(result.comment.text) }, { ip: ipOf(c), content: result.comment.text });
-  broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  broadcastSpace(spaceOfBoard(post.space), boardChanged(post));
   return c.json(result.comment, 201);
 });
 
@@ -901,7 +942,7 @@ app.patch("/api/board-comments/:id", async (c) => {
   }
   const edited = editPostComment(comment.id, (b.text as string).trim());
   log("post-comment-edited", v, { space: post?.space, comment: comment.id, words: wordCount(edited.text) }, { ip: ipOf(c), content: edited.text });
-  if (post) broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  if (post) broadcastSpace(spaceOfBoard(post.space), boardChanged(post));
   return c.json(edited);
 });
 
@@ -917,7 +958,7 @@ app.delete("/api/board-comments/:id", async (c) => {
   }
   deletePostComment(comment.id);
   log("post-comment-removed", v, { space: post?.space, comment: comment.id, owner: comment.author }, { ip: ipOf(c), content: comment.text });
-  if (post) broadcastSpace(spaceOfBoard(post.space), { t: "action", kind: "board", tab: post.tab, post: post.id });
+  if (post) broadcastSpace(spaceOfBoard(post.space), boardChanged(post));
   return c.json({ ok: true });
 });
 
@@ -1149,7 +1190,8 @@ app.post("/api/files/:id/done", async (c) => {
     markFileReady(f.id);
     const space = f.kind === "room" ? livePlayer(v.name)?.space : f.kind === "board" ? findPost(f.postId!)?.space : null;
     log("file", v, { space, kind: f.kind, post: f.postId, report: f.bugId, size: f.size }, { ip: ipOf(c), content: f.name });
-    if (f.kind === "board" && space) broadcastSpace(spaceOfBoard(space), { t: "action", kind: "board", tab: findPost(f.postId!)?.tab, post: f.postId });
+    const filed = f.kind === "board" ? findPost(f.postId!) : undefined;
+    if (filed) broadcastSpace(spaceOfBoard(filed.space), boardChanged(filed));
     if (f.kind === "room" && space && roomSessionOf(v.name, space) === f.room) roomShare(space, v.name, { id: f.id, name: f.name, size: f.size });
   }
   return c.json({ ok: true });
@@ -1255,6 +1297,8 @@ const purge = (): void => {
   purgeOldAudit();
   purgeOldChat();
   purgeOldMail();
+  const guestsGone = purgeIdleGuests();
+  if (guestsGone) log("guests-purged", null, { count: guestsGone });
   removeObjects(purgeFiles());
 };
 purge();

@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, restrictionOn, saveLastSpot, type Look } from "./db.ts";
+import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, restrictionOn, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -388,6 +388,7 @@ function onMessage(ws: WebSocket, raw: string): void {
 function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: string }, ip: string | null): void {
   const name = visitor.name;
   owners.set(ws, visitor);
+  seen(name);
   const spot = lastSpot(name);
   // Nobody wakes up inside a meeting room: it may be full, closed to them,
   // or gone. They come back outside its door instead.

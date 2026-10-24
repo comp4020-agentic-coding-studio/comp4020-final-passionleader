@@ -1,5 +1,5 @@
 import { afterAll, describe, expect, it } from "vitest";
-import { api, closeAll, guest, visitor } from "./helpers.ts";
+import { api, closeAll, connect, guest, visitor } from "./helpers.ts";
 
 // Each classroom's board: Q&A, Notices and Board. Anyone posts in Q&A and
 // Board and comments anywhere; only lecturers and staff (the admin, for now)
@@ -55,7 +55,7 @@ describe("classroom board", () => {
 });
 
 // The Student Hub's lab matching board, where labs and students find each
-// other, and the lawn's noticeboard. Anyone posts in every tab (there's no
+// other, and the advertising board by the lawn. Anyone posts in every tab (there's no
 // staff role yet, so "Labs looking for students" is open too); both say
 // they're unofficial, and the lawn's that its posts go after 30 days.
 describe("Hub and lawn boards", () => {
@@ -72,7 +72,7 @@ describe("Hub and lawn boards", () => {
     expect(labs.map((p) => p.author)).toContain(v.name);
   });
 
-  it("gives the lawn one noticeboard tab, unofficial too", async () => {
+  it("gives the advertising board by the lawn one tab, unofficial too", async () => {
     const config = (await (await api("/api/board-config?space=outdoor")).json()) as { tabs: { id: string }[]; notice: string; layout?: string; keepDays?: number };
     expect(config.tabs.map((t) => t.id)).toEqual(["board"]);
     expect(config).toMatchObject({ layout: "grid", keepDays: 30 });
@@ -157,6 +157,15 @@ describe("private enquiries", () => {
     expect((await api(`/api/board/${mine.id}/comments?token=${b.token}`)).status).toBe(404);
     expect((await api(`/api/board/${mine.id}/comments`, "POST", { token: b.token, text: "Peeking" })).status).toBe(404);
     expect((await api(`/api/board/${mine.id}/comments?token=${a.token}`)).status).toBe(200);
+    // Activity on it tells the Hub only that the tab changed, never which post.
+    const watcher = await connect(b.token);
+    await watcher.next((m) => m.t === "welcome");
+    watcher.send({ t: "enter", space: "hub", x: 0, z: 0 });
+    await watcher.next((m) => m.t === "players");
+    await api(`/api/board/${mine.id}/comments`, "POST", { token: a.token, text: "Anyone from the Hub?" });
+    const told = await watcher.next((m) => m.t === "action" && m.kind === "board");
+    expect(told).not.toHaveProperty("post");
+    closeAll();
     // Elsewhere "private" is ignored: a lawn post is public whatever it says.
     const c = await visitor();
     const lawn = (await (await api("/api/board", "POST", { token: c.token, space: "outdoor", tab: "board", title: "Fair", text: "Friday", private: true })).json()) as { private: boolean };
@@ -236,5 +245,9 @@ describe("mail", () => {
     expect((await (await api(`/api/mail/${id}/read`, "POST", { token: b.token })).json()).unread).toBe(0);
     expect((await api(`/api/mail/${id}`, "DELETE", { token: c.token })).status).toBe(404);
     expect((await api(`/api/mail/${id}`, "DELETE", { token: b.token })).status).toBe(200);
+    // Gone from the reader's inbox, still in the sender's Sent.
+    expect(((await (await api("/api/mail/box", "POST", { token: b.token })).json()) as { inbox: unknown[] }).inbox).toHaveLength(0);
+    const sentBox = (await (await api("/api/mail/box", "POST", { token: a.token })).json()) as { sent: { id: number }[] };
+    expect(sentBox.sent.map((m) => m.id)).toContain(id);
   });
 });
