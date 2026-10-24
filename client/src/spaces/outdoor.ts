@@ -238,7 +238,7 @@ export function buildOutdoor(): SpaceDef {
     noteBuildings: [
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
-      { minX: -47, maxX: -33, minZ: -20, maxZ: -6 },
+      { minX: -45, maxX: -33, minZ: -2, maxZ: 16 },
     ],
     noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, STUDY_BOARD],
     tick: dog,

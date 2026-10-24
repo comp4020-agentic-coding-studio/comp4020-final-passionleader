@@ -32,8 +32,12 @@ export const CREEK_AREAS: Box[] = [
 /** The lawn's new west limit. */
 export const LAWN_WEST_X = -51.8;
 
-/** Badger & Co, the white curved building south-west of the lawn (a solid, not enterable). */
-export const BADGER = { minX: -47, maxX: -33, minZ: -20, maxZ: -6 };
+/**
+ * Badger & Co, at the north-east corner of the Health and Well-Being Centre:
+ * per OpenStreetMap it stands just west of 155 across a lane, level with
+ * 155, its rounded corner facing the lawn (a solid, not enterable).
+ */
+export const BADGER = { minX: -45, maxX: -33, minZ: -2, maxZ: 16 };
 
 const WATER = 0x5d7568;
 const CONCRETE = 0xe6e4de;
@@ -150,8 +154,8 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   // Big ones on the lawn's extension (the models the lawn's edge uses).
   const big: [string, number, Spot[]][] = [
     ["CommonTree_3.glb", 8, [{ x: -36, z: -27, rotY: 0.4, scale: 1.1 }, { x: -49.5, z: -25, rotY: 2, scale: 1.0 }]],
-    ["CommonTree_5.glb", 8.5, [{ x: -42, z: -23.5, rotY: 1, scale: 1.1 }, { x: -48.5, z: -3.6, rotY: 3, scale: 1.0 }, { x: -31, z: -3.5, rotY: 5, scale: 0.9 }]],
-    ["CommonTree_4.glb", 7.5, [{ x: -37, z: -3.8, rotY: 4, scale: 1.0 }]],
+    ["CommonTree_5.glb", 8.5, [{ x: -42, z: -23.5, rotY: 1, scale: 1.1 }, { x: -48.5, z: -6.5, rotY: 3, scale: 1.0 }, { x: -31, z: -14, rotY: 5, scale: 0.9 }]],
+    ["CommonTree_4.glb", 7.5, [{ x: -38, z: -16, rotY: 4, scale: 1.0 }]],
   ];
   for (const [file, h, spots] of big) {
     scatter(g, `nature/${file}`, h, spots);
@@ -243,13 +247,20 @@ function buildBadger(g: THREE.Group, colliders: Box[]): void {
   const arc = new THREE.Mesh(new THREE.CylinderGeometry(R, R, h, 16, 1, false, Math.PI / 2, Math.PI / 2), [panel(R * (Math.PI / 2)), roofMat, roofMat]);
   arc.position.set(cutX, h / 2, cutZ);
   b.add(arc);
-  // The dark café front along the east face's ground floor, with its name over it.
-  const frontLen = maxZ - cutZ - 1.5;
-  const front = new THREE.Mesh(new THREE.BoxGeometry(0.12, floorH - 0.5, frontLen), mat(0x23282c));
-  front.position.set(maxX + 0.05, (floorH - 0.5) / 2, cutZ + 0.75 + frontLen / 2);
+  // The dark café front along the north face's ground floor (toward the
+  // lawn, where you see it from), with its name over it.
+  const frontLen = cutX - minX - 1.5;
+  const front = new THREE.Mesh(new THREE.BoxGeometry(frontLen, floorH - 0.5, 0.12), mat(0x23282c));
+  front.position.set(minX + 0.75 + frontLen / 2, (floorH - 0.5) / 2, minZ - 0.05);
   const sign = textPlane(["BADGER & CO."], 5.5, 0.6, { bg: "#23282c", fg: "#e8e4d8", font: 0.36 });
-  sign.position.set(maxX + 0.13, floorH - 0.28, cutZ + 0.75 + frontLen / 2);
-  sign.rotation.y = Math.PI / 2;
+  sign.position.set(minX + 0.75 + frontLen / 2, floorH - 0.28, minZ - 0.13);
+  sign.rotation.y = Math.PI;
+  // The camera faces north, so the lane by 155 (the east face) is where
+  // people see it from: its name there too, on the curve's side.
+  const side = textPlane(["BADGER & CO."], 4, 0.5, { bg: "#23282c", fg: "#e8e4d8", font: 0.3 });
+  side.position.set(maxX + 0.13, floorH - 0.28, cutZ + 3);
+  side.rotation.y = Math.PI / 2;
+  b.add(side);
   const roof = new THREE.Mesh(new THREE.BoxGeometry(maxX - minX + 0.5, 0.3, maxZ - minZ + 0.5), roofMat);
   roof.position.set((minX + maxX) / 2, h + 0.15, (minZ + maxZ) / 2);
   b.add(front, sign, roof);

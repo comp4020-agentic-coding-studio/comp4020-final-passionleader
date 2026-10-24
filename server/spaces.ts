@@ -163,7 +163,7 @@ export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa", "po
 const BUILDINGS: Area[] = [
   { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
   { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
-  { minX: -47, maxX: -33, minZ: -20, maxZ: -6 }, // Badger & Co (client/src/spaces/creek.ts)
+  { minX: -45, maxX: -33, minZ: -2, maxZ: 16 }, // Badger & Co (client/src/spaces/creek.ts)
 ];
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door

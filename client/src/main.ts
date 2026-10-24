@@ -1153,7 +1153,7 @@ const minimap = mountMinimap({
     { minX: -73, maxX: -60.4, minZ: -38, maxZ: -31 },
   ],
   buildings: [
-    { name: "Badger", minX: -47, maxX: -33, minZ: -20, maxZ: -6 },
+    { name: "Badger", minX: -45, maxX: -33, minZ: -2, maxZ: 16 },
     { name: "155", minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
     { name: "154", minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
     { name: "Library", minX: -9, maxX: 5, minZ: 23, maxZ: 25 },
