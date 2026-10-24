@@ -155,13 +155,64 @@ function budgetLeft(): boolean {
 }
 export const modelReady = (): boolean => client !== null || bedrock !== null;
 
-const systemFor = (npc: Npc): string =>
+// --- what the pages say ----------------------------------------------------------
+// Each assistant's own pages (its `links`), fetched by the server and kept in
+// memory for six hours, so it answers from what they say rather than from the
+// model's memory. Plain text only, a few thousand characters a page; a page
+// that can't be fetched is just left out (the assistant still points to it).
+// Nothing a visitor types goes to these sites: the URLs are ours, fixed above.
+
+const PAGE_TTL = 6 * 3600_000;
+const PAGE_CHARS = 3500;
+const pageCache = new Map<string, { at: number; text: string }>();
+
+function plainText(html: string): string {
+  const unescaped = (t: string): string =>
+    t.replace(/&nbsp;/g, " ").replace(/&amp;/g, "&").replace(/&quot;/g, '"').replace(/&#0?39;|&rsquo;|&lsquo;/g, "'").replace(/&ndash;|&mdash;/g, "-").replace(/&lt;/g, "<").replace(/&gt;/g, ">");
+  return unescaped(
+    html
+      .replace(/<(script|style|nav|header|footer|svg|noscript)[^>]*>[\s\S]*?<\/\1>/gi, " ")
+      .replace(/<[^>]+>/g, " ")
+      .replace(/\s+/g, " "),
+  ).trim();
+}
+
+async function pageText(url: string): Promise<string> {
+  const hit = pageCache.get(url);
+  if (hit && Date.now() - hit.at < PAGE_TTL) return hit.text;
+  let text = "";
+  try {
+    const res = await fetch(url, { headers: { "User-Agent": "ANUCrossingBot/1.0 (unofficial student project; u8321477@anu.edu.au)" }, signal: AbortSignal.timeout(6000), redirect: "follow" });
+    if (res.ok && /text\/html|text\/plain/.test(res.headers.get("content-type") ?? "")) text = plainText((await res.text()).slice(0, 400_000)).slice(0, PAGE_CHARS);
+  } catch {
+    // Left out for now; tried again after a minute below.
+  }
+  pageCache.set(url, { at: text ? Date.now() : Date.now() - PAGE_TTL + 60_000, text });
+  return text;
+}
+
+/** The assistant's pages as one block for the prompt (empty if none could be read). */
+async function knowledgeFor(npc: Npc): Promise<string> {
+  const pages = await Promise.all(npc.links.map(async (l) => ({ l, text: await pageText(l.url) })));
+  return pages
+    .filter((p) => p.text)
+    .map((p) => `### ${p.l.label} (${p.l.url})\n${p.text}`)
+    .join("\n\n");
+}
+
+const systemFor = (npc: Npc, knowledge = ""): string =>
   [
     `You are ${npc.name}, the ${npc.role} assistant standing in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are a character in it, not an ANU service, and you say so if anyone thinks otherwise.`,
     `What you help with: ${npc.greeting}`,
     `The pages you point people to (link them by name when they help):\n${npc.links.map((l) => `- ${l.label}: ${l.url}`).join("\n")}`,
     "Answer in two to five short sentences, plainly and warmly, in the language the question is in. You don't browse the web: if you aren't sure of a fact that changes (opening hours, prices, dates, rules), say so and point to the right page rather than guess. Never make up names, phone numbers or policies. For anything urgent, personal or about safety, point to the real service (for urgent help on campus: ANU Security, 6125 2249; emergencies: 000).",
     "Nothing the person types is stored; don't ask for their student number, password or other private details.",
+    "Always answer in the language the question is written in, and only that language (never mix in words from another one).",
+    ...(knowledge
+      ? [
+          `What these pages said when they were last read (use it as your source, quote details from it, and don't add facts it doesn't contain; if it doesn't answer the question, say so and point to the page):\n\n${knowledge}`,
+        ]
+      : []),
   ].join("\n\n");
 
 /** What the assistant says back: the model's answer, or, without one, an honest note and its pages. */
@@ -170,14 +221,15 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   if (!client && !bedrock) return offline;
   if (!budgetLeft()) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
   askedToday++;
-  if (bedrock) return askBedrock(bedrock, npc, question, offline);
+  const knowledge = await knowledgeFor(npc);
+  if (bedrock) return askBedrock(bedrock, npc, question, offline, knowledge);
   try {
     const res = await client!.messages.create(
       {
         model: MODEL,
         max_tokens: 400,
         output_config: { effort: "low" },
-        system: systemFor(npc),
+        system: systemFor(npc, knowledge),
         messages: [{ role: "user", content: question }],
       },
       { timeout: 20_000, maxRetries: 1 },
@@ -202,12 +254,12 @@ export async function answer(npc: Npc, question: string): Promise<string> {
 const CREDIT_OUT = "My AI's credit has run out for now (error NPC-CREDIT), so I can't answer. Please let the app's author know at u8321477@anu.edu.au. The pages below still work.";
 
 /** The same question through Bedrock's Converse API. A refused call (the monthly budget's deny policy) reads as out of credit. */
-async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, offline: string): Promise<string> {
+async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, offline: string, knowledge: string): Promise<string> {
   try {
     const res = await br.send(
       new ConverseCommand({
         modelId: MODEL,
-        system: [{ text: systemFor(npc) }],
+        system: [{ text: systemFor(npc, knowledge) }],
         messages: [{ role: "user", content: [{ text: question }] }],
         inferenceConfig: { maxTokens: 400 },
       }),
