@@ -154,10 +154,14 @@ mountSettings({
   mute: () => muteDialog.open(),
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
+  signOut: () => {
+    board.close();
+    signOut();
+  },
 });
 function signOut(): void {
   // This browser forgets who it was; the join screen offers signing up or in.
-  // (Only a guest going to sign up does this now: the settings' Sign out went, the user's call.)
+  // (A guest going to sign up, or a member's Sign out in the settings.)
   storage.set("campus.token", "");
   storage.set("campus.role", "");
   session = null;
