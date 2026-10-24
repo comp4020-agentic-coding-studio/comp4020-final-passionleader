@@ -179,6 +179,13 @@ export async function answer(npc: Npc, question: string): Promise<string> {
     const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
     return text || offline;
   } catch (err) {
+    // Out of credit (or past the account's spend limit): say so plainly, so a
+    // marker knows it's the bill, not the app, and whom to tell (the course's
+    // rule for outside AI services).
+    if (err instanceof Anthropic.APIError && /credit|billing|spend limit/i.test(err.message)) {
+      console.error(JSON.stringify({ at: new Date().toISOString(), event: "npc-error", npc: npc.id, code: "NPC-CREDIT" }));
+      return "My AI's credit has run out for now (error NPC-CREDIT), so I can't answer. Please let the app's author know at u8321477@anu.edu.au. The pages below still work.";
+    }
     const code = err instanceof Anthropic.RateLimitError ? "NPC-BUSY" : err instanceof Anthropic.AuthenticationError ? "NPC-KEY" : err instanceof Anthropic.APIError ? `NPC-${err.status ?? "API"}` : "NPC-NET";
     console.error(JSON.stringify({ at: new Date().toISOString(), event: "npc-error", npc: npc.id, code }));
     return `I couldn't think just now (error ${code}). Try again in a moment, or use the pages below.`;

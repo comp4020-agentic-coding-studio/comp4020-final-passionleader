@@ -124,7 +124,9 @@ Read before planning or building: `README.md` (what good means for this app),
   unofficial character, to say when it isn't sure and point to its pages.
   What's asked goes to the API only: not stored, not logged (the log notes
   who asked which assistant and how long it was). Without the key, or past
-  the day's limit, they say so and point to their pages.
+  the day's limit, they say so and point to their pages; out of API
+  credit, they say that plainly with the author's email (NPC-CREDIT), so a
+  marker knows whom to tell.
 - The Poop Room (an easter egg behind the "Staff only" door at the far end
   of Lab Coffee): in there the Q menu's first item poops instead of sticking
   a note. One poop per person, anyone joined (guests too), five seconds
