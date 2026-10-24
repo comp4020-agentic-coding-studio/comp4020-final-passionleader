@@ -146,7 +146,7 @@ function who(b: Body): Visitor | null {
 function guestRefused(c: Context, v: Visitor, action: string): Response | null {
   if (isMember(v)) return null;
   log("refused", v, { action, reason: "guest" }, { ip: ipOf(c) });
-  return c.json({ error: "Sign up with your ANU email to do that.", signup: true }, 403);
+  return c.json({ error: "Sign up with your ANU email to do that (⚙️ → Sign out, then Sign up).", signup: true }, 403);
 }
 
 const RESTRICTED_WHAT: Record<Restrictable, string> = { notes: "sticking notes or commenting on them", posts: "posting or commenting on boards", chat: "chatting", join: "coming in" };
