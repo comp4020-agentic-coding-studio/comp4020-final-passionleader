@@ -45,6 +45,21 @@ export function buildHub(): SpaceDef {
   const pcTag = textPlane(["Admin PC", "staff only"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
   pcTag.position.set(-18.4, 1.85, -HALF.halfZ + 0.82);
   g.add(pcTag);
+  // The staff's side looks like an office: a laptop, keyboard and lamp along
+  // the back desk, a cupboard and archive boxes beyond it, and on reception's
+  // short leg a laptop and keyboard facing the two advisers behind it.
+  place(g, "laptop.glb", 0.22, -15.5, -HALF.halfZ + 1.4, 0, true, 1.1);
+  place(g, "computerKeyboard.glb", 0.03, -16.8, -HALF.halfZ + 1.6, 0, true, 1.1);
+  place(g, "computerMouse.glb", 0.03, -16.1, -HALF.halfZ + 1.6, 0, true, 1.1);
+  place(g, "lampSquareTable.glb", 0.45, -12.6, -HALF.halfZ + 1.2, 0, true, 1.1);
+  place(g, "bookcaseClosedDoors.glb", 1.9, -10.6, -HALF.halfZ + 0.45, 0);
+  solid(colliders, 1, 0.6, -10.6, -HALF.halfZ + 0.45);
+  place(g, "cardboardBoxClosed.glb", 0.35, -9.4, -HALF.halfZ + 0.5, 0.2);
+  place(g, "cardboardBoxClosed.glb", 0.35, -9.4, -HALF.halfZ + 0.5, -0.3, true, 0.35);
+  for (const z of [-5.2, -7.2]) {
+    place(g, "laptop.glb", 0.22, -8.6, z + 0.35, -Math.PI / 2, true, 0.9);
+    place(g, "computerKeyboard.glb", 0.03, -8.7, z - 0.35, -Math.PI / 2, true, 0.9);
+  }
   const sign = textPlane(["Student Hub", "an unofficial, fan-made space"], 6, 1.4, { bg: "#2f5d8a", fg: "#ffffff", font: 0.42 });
   sign.position.set(0, 2.9, back);
   g.add(sign);

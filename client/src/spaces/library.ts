@@ -42,6 +42,15 @@ export function buildLibrary(): SpaceDef {
   // desk), and the search computers on their own desk south of it, between
   // reception and team room 1's door (west wall, z -1.5), which stays clear.
   block(g, colliders, [4, 1.1, 1.2], [RECEPTION.x, RECEPTION.z], texMat("ai/wood_tabletop.jpg", 2, 1, 0x9a6438));
+  // The staff side: a laptop, keyboard and lamp on the desk, facing Robin
+  // behind it; a cupboard and archive boxes against the north wall.
+  place(g, "laptop.glb", 0.22, RECEPTION.x - 0.9, RECEPTION.z - 0.2, Math.PI, true, 1.1);
+  place(g, "computerKeyboard.glb", 0.03, RECEPTION.x + 0.4, RECEPTION.z - 0.3, Math.PI, true, 1.1);
+  place(g, "lampSquareTable.glb", 0.45, RECEPTION.x + 1.6, RECEPTION.z - 0.3, 0, true, 1.1);
+  place(g, "bookcaseClosedDoors.glb", 1.9, RECEPTION.x - 1.2, -10.6, 0);
+  solid(colliders, 1, 0.5, RECEPTION.x - 1.2, -10.6);
+  place(g, "cardboardBoxClosed.glb", 0.35, RECEPTION.x + 1.2, -10.5, 0.3);
+  place(g, "cardboardBoxClosed.glb", 0.35, RECEPTION.x + 1.2, -10.5, -0.2, true, 0.35);
   const reception = textPlane(["Reception"], 2.4, 0.5, { bg: "#7a4e2e", fg: "#ffffff", font: 0.32 });
   reception.position.set(RECEPTION.x, 1.75, RECEPTION.z + 0.61);
   g.add(reception);

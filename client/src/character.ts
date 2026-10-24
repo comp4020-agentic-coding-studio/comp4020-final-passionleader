@@ -176,14 +176,11 @@ function dropProp(scene: THREE.Object3D): void {
  * the hair recoloured them too: white hair gave white eyes, and black hair on
  * dark skin hid them. Their vertices (the same rule on both bodies: hair
  * column, rows 12-14, on the flat face plane at z ~0.16, below the fringe) now
- * sample a dark cell no look repaints. Each eye and the mouth also get a thin
- * light rim: a copy of their triangles, a little bigger around their centre
- * and just behind them, so they read on dark skin too.
+ * sample a slate-grey cell no look repaints: dark on pale skin, still
+ * visible on dark skin (a light rim around them, tried in October, looked
+ * unsettling; the user preferred a softer grey).
  */
-const FACE_DARK_UV: [number, number] = [0.5 / 16, 13.5 / 16]; // cell (0,13), dark grey
-const FACE_RIM_UV: [number, number] = [12.5 / 16, 8.5 / 16]; // cell (12,8), off-white
-/** How much bigger the light rim is than its eye or mouth: a thin line, not a halo (1.35 looked thick once all of it showed). */
-const RIM_GROW = 1.12;
+const FACE_DARK_UV: [number, number] = [4.5 / 16, 13.5 / 16]; // cell (4,13), #4f5260
 
 function keepFaceDark(scene: THREE.Object3D): void {
   scene.traverse((o) => {
@@ -202,72 +199,8 @@ function keepFaceDark(scene: THREE.Object3D): void {
       if (col === 1 && row >= 12 && row <= 14 && z >= 0.155 && z <= 0.165 && pos.getY(i) < 0.52) face.add(i);
     }
     if (face.size === 0) return;
-    // The eyes sat exactly on the skin's plane (z 0.160), and the rim 3 mm behind them,
-    // i.e. behind the skin: only its corners peeked out. Lift the features 4 mm and the
-    // rim 2 mm, both in front of the skin, so the rim shows all the way round.
-    for (const i of face) {
-      uv.setXY(i, ...FACE_DARK_UV);
-      pos.setZ(i, pos.getZ(i) + 0.004);
-    }
-    pos.needsUpdate = true;
+    for (const i of face) uv.setXY(i, ...FACE_DARK_UV);
     uv.needsUpdate = true;
-
-    // Group the face triangles into features (two eyes, a mouth) by shared corners.
-    const tris: number[][] = [];
-    for (let t = 0; t < index.count; t += 3) {
-      const tri = [index.getX(t), index.getX(t + 1), index.getX(t + 2)];
-      if (tri.every((i) => face.has(i))) tris.push(tri);
-    }
-    const group = new Map<number, number>();
-    const find = (i: number): number => {
-      while (group.has(i) && group.get(i) !== i) i = group.get(i)!;
-      return i;
-    };
-    for (const tri of tris) for (const i of tri) if (!group.has(i)) group.set(i, i);
-    for (const [a, b, c] of tris) {
-      group.set(find(b), find(a));
-      group.set(find(c), find(a));
-    }
-    const centre = new Map<number, THREE.Vector3>();
-    const count = new Map<number, number>();
-    for (const i of face) {
-      const g = find(i);
-      centre.set(g, (centre.get(g) ?? new THREE.Vector3()).add(new THREE.Vector3(pos.getX(i), pos.getY(i), 0)));
-      count.set(g, (count.get(g) ?? 0) + 1);
-    }
-    for (const [g, c] of centre) c.divideScalar(count.get(g)!);
-
-    // The rim: every face vertex copied, grown a little (RIM_GROW) out from its feature's
-    // centre and set 2 mm behind the (lifted) feature, same bones and weights, so it moves with the head.
-    const extra = new Map<number, number>();
-    const attrs = Object.entries(geo.attributes) as [string, THREE.BufferAttribute][];
-    const grown = new Map<string, number[]>(attrs.map(([name, a]) => [name, Array.from(a.array as ArrayLike<number>)]));
-    for (const i of face) {
-      const n = pos.count + extra.size;
-      extra.set(i, n);
-      for (const [name, a] of attrs) {
-        const arr = grown.get(name)!;
-        for (let k = 0; k < a.itemSize; k++) arr.push(a.getComponent(i, k));
-        if (name === "position") {
-          const c = centre.get(find(i))!;
-          arr[n * 3] = c.x + (pos.getX(i) - c.x) * RIM_GROW;
-          arr[n * 3 + 1] = c.y + (pos.getY(i) - c.y) * RIM_GROW;
-          arr[n * 3 + 2] = pos.getZ(i) - 0.002;
-        } else if (name === "uv") {
-          arr[n * 2] = FACE_RIM_UV[0];
-          arr[n * 2 + 1] = FACE_RIM_UV[1];
-        }
-      }
-    }
-    for (const [name, a] of attrs) {
-      const Ctor = (a.array as Float32Array).constructor as new (xs: number[]) => THREE.TypedArray;
-      geo.setAttribute(name, new THREE.BufferAttribute(new Ctor(grown.get(name)!), a.itemSize, a.normalized));
-    }
-    const indices = Array.from(index.array as ArrayLike<number>);
-    for (const tri of tris) indices.push(...tri.map((i) => extra.get(i)!));
-    geo.setIndex(indices);
-    geo.computeBoundingBox();
-    geo.computeBoundingSphere();
   });
 }
 

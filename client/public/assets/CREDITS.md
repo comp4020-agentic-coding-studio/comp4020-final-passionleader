@@ -116,6 +116,8 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 | `bookcaseOpen.glb` | open shelves in the COMMON lounge |
 | `kitchenCoffeeMachine.glb` | coffee machine |
 | `toilet.glb` | the toilets in the Poop Room's stalls (brought over from crit 8) |
+| `laptop.glb`, `computerKeyboard.glb`, `computerMouse.glb`, `lampSquareTable.glb` | the staff's desks (Hub reception and back desk, library reception) |
+| `bookcaseClosedDoors.glb`, `cardboardBoxClosed.glb` | a cupboard and archive boxes behind them |
 
 ## Textures (`tex/ai/`, generated with Google Gemini)
 

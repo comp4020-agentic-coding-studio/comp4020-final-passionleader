@@ -21,8 +21,12 @@ export function mountMinimap(view: {
   /** Doors and places, labelled. */
   places: { x: number; z: number; name: string }[];
 }): { show(on: boolean): void; draw(x: number, z: number, heading: number): void } {
-  const W = 190;
-  const H = 168;
+  // As tall as fits; as wide as the campus is, so no empty strip at the side.
+  const { bounds: b } = view;
+  const pad = 8;
+  const H = 150;
+  const scale = (H - pad * 2) / (b.maxZ - b.minZ);
+  const W = Math.round((b.maxX - b.minX) * scale + pad * 2);
   const canvas = document.createElement("canvas");
   canvas.id = "minimap";
   canvas.width = W * 2;
@@ -35,9 +39,6 @@ export function mountMinimap(view: {
   const ctx = canvas.getContext("2d")!;
   // Wide and not a touch screen first (touch screens put controls in the corners).
   const desktop = window.matchMedia("(min-width: 701px) and (not (pointer: coarse))");
-  const { bounds: b } = view;
-  const pad = 8;
-  const scale = Math.min((W - pad * 2) / (b.maxX - b.minX), (H - pad * 2) / (b.maxZ - b.minZ));
   const px = (x: number): number => (pad + (x - b.minX) * scale) * 2;
   const pz = (z: number): number => (pad + (z - b.minZ) * scale) * 2;
   let on = false;

@@ -210,7 +210,7 @@ export function buildStreetscape(g: THREE.Group, colliders: Box[]): void {
   // so they're scenery), and planters either side of its door.
   // (The northern end, z -18..-13, is Lab Coffee: labcoffee.ts.)
   // On the colonnade's floor slab (0.42 m), not sunk into it.
-  for (const z of [-11, -6, 10, 14]) picnicTable(g, 7.2, z, 0.42);
+  for (const z of [-11, -6, 9.5, 12.4]) picnicTable(g, 7.2, z, 0.42); // the last clear of the slab's south edge (z 14)
   planter(g, colliders, 4.4, 0.2);
   planter(g, colliders, 4.4, 5.8);
 

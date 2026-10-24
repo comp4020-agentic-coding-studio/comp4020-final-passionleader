@@ -18,6 +18,8 @@ export interface Npc {
   z: number;
   /** Which way they face (radians about y; 0 faces +z). */
   rot: number;
+  /** How far in front of them you stand to talk (over a desk: further). Default 1.6 m. */
+  reach?: number;
   /** Their look: palette indexes, as for anyone (db.ts validLook). */
   look: { body: number; skin: number; hair: number; top: number; bottom: number; hat: number; hatColour: number };
   /** The pages they draw on (public, crawlable; see the plan's research). */
@@ -31,9 +33,11 @@ export const NPCS: Npc[] = [
     name: "Robin",
     role: "Library help desk",
     space: "library",
+    // Behind reception (the desk is z -8.6..-7.4), facing the room; you talk over it.
     x: -9,
-    z: -7.3,
+    z: -9.5,
     rot: 0,
+    reach: 3,
     look: { body: 1, skin: 2, hair: 3, top: 3, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "Chifley Library", url: "https://anulib.anu.edu.au/using-library/branches/chifley-library" },
@@ -83,9 +87,12 @@ export const NPCS: Npc[] = [
     name: "Priya",
     role: "Course adviser",
     space: "hub",
-    x: -13.4,
-    z: -5.3,
-    rot: 0,
+    // In the pocket behind reception's short east leg (x -8.9..-8), side by
+    // side, facing east over it, clear of the PCs on the bar.
+    x: -9.4,
+    z: -5.2,
+    rot: Math.PI / 2,
+    reach: 2.3,
     look: { body: 1, skin: 3, hair: 0, top: 5, bottom: 7, hat: 0, hatColour: 1 },
     links: [
       { label: "Program and course advice", url: "https://www.anu.edu.au/students/program-administration/program-management/program-and-course-advice" },
@@ -99,9 +106,10 @@ export const NPCS: Npc[] = [
     name: "Alex",
     role: "Careers adviser",
     space: "hub",
-    x: -11.2,
-    z: -5.3,
-    rot: 0,
+    x: -9.4,
+    z: -7.2,
+    rot: Math.PI / 2,
+    reach: 2.3,
     look: { body: 0, skin: 0, hair: 2, top: 1, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "Careers & Employability", url: "https://www.anu.edu.au/students/careers-opportunities/careers" },
