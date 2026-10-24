@@ -223,11 +223,13 @@ describe("study groups: resizing", () => {
 
 // The AI campus assistants: where they stand comes from the server, anyone
 // joined may ask (guests too), one question every few seconds, and the
-// answer comes with their pages. Not connected to a model yet.
+// answer comes with their pages.
 describe("campus assistants", () => {
   it("lists five, answers a guest with its pages, and slows down a rush", async () => {
-    const list = (await (await api("/api/npcs")).json()) as { id: string; space: string; links: unknown[] }[];
+    const list = (await (await api("/api/npcs")).json()) as { id: string; space: string; reach?: number; links: unknown[] }[];
     expect(list.map((n) => n.id).sort()).toEqual(["anusa", "careers", "course", "library", "sport"]);
+    // Those behind a desk say how far out you stand to talk, so their E spot isn't inside the desk.
+    expect(list.find((n) => n.id === "library")?.reach).toBeGreaterThan(2);
     const g = await guest();
     const res = await api("/api/npc/library/ask", "POST", { token: g.token, text: "When are you open?" });
     expect(res.status).toBe(200);

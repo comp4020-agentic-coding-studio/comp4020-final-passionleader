@@ -480,7 +480,7 @@ app.delete("/api/chats/:id", async (c) => {
 // Where they stand and what they cover (npcs.ts). Anyone joined may ask, guests
 // too, one question every three seconds, 500 characters; nothing is stored or
 // logged but that someone asked whom. Not connected to a model yet.
-app.get("/api/npcs", (c) => c.json(NPCS.map(({ id, name, role, space, x, z, rot, look, links, greeting }) => ({ id, name, role, space, x, z, rot, look, links, greeting }))));
+app.get("/api/npcs", (c) => c.json(NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting }))));
 
 const lastAsked = new Map<string, number>();
 const askedBy = new Map<string, { day: string; n: number }>();

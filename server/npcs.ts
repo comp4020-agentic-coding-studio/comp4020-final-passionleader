@@ -52,9 +52,11 @@ export const NPCS: Npc[] = [
     name: "Kai",
     role: "ANU Sport",
     space: "outdoor",
-    x: -24.8,
-    z: -30.4,
+    // Inside the tent at the table's east end, clear of the PC's E spot.
+    x: -24.3,
+    z: -31,
     rot: 0,
+    reach: 1.5,
     look: { body: 0, skin: 1, hair: 0, top: 0, bottom: 7, hat: 2, hatColour: 7 },
     links: [
       { label: "The gym", url: "https://anu-sport.com.au/gym" },
@@ -69,9 +71,11 @@ export const NPCS: Npc[] = [
     name: "Sam",
     role: "ANUSA",
     space: "anusa",
-    x: -4,
+    // Behind the counter's east end; you talk over it, clear of the PC's E spot.
+    x: -2.4,
     z: -6.2,
     rot: 0,
+    reach: 2.2,
     look: { body: 1, skin: 4, hair: 1, top: 3, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "What ANUSA is", url: "https://anusa.com.au/about/whatisanusa/" },
@@ -90,7 +94,7 @@ export const NPCS: Npc[] = [
     // In the pocket behind reception's short east leg (x -8.9..-8), side by
     // side, facing east over it, clear of the PCs on the bar.
     x: -9.4,
-    z: -5.2,
+    z: -5.9,
     rot: Math.PI / 2,
     reach: 2.3,
     look: { body: 1, skin: 3, hair: 0, top: 5, bottom: 7, hat: 0, hatColour: 1 },
@@ -107,7 +111,7 @@ export const NPCS: Npc[] = [
     role: "Careers adviser",
     space: "hub",
     x: -9.4,
-    z: -7.2,
+    z: -7.4,
     rot: Math.PI / 2,
     reach: 2.3,
     look: { body: 0, skin: 0, hair: 2, top: 1, bottom: 1, hat: 0, hatColour: 1 },
