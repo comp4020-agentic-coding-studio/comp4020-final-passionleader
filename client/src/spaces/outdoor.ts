@@ -94,7 +94,7 @@ export function buildOutdoor(): SpaceDef {
   // The noticeboard, where anyone posts events, clubs and the like (one tab,
   // unofficial): against the flower bed east of Broger's, facing the main
   // road, so you see it walking between the lawn and 154. Notes keep 2 m off it.
-  noticeboard(g, colliders, LAWN_BOARD, 0, ["Lawn noticeboard", "events · clubs · anything"]);
+  adBoard(g, colliders, LAWN_BOARD, 0);
   // Beside 155's door, facing the path: the study-group board.
   noticeboard(g, colliders, STUDY_BOARD, Math.PI / 2, ["Study groups", "start one · join one"]);
   // ANU Sport's blue tent at the north-west end, south of Symposium's bed.
@@ -180,7 +180,8 @@ export function buildOutdoor(): SpaceDef {
     apex: { color: 0xb07a48 },
     entrance: { side: "west", at: 6, color: 0xf4f3ef }, // z = 3, over the door
   });
-  sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 4.6, 3, -Math.PI / 2);
+  // Its name board between the Hub's door and the lounge's, up over the colonnade.
+  sign(g, ["154", "Di Riddell Student Centre", "Brian Kenyon Student Space"], 5.7, 5.4, -1, -Math.PI / 2);
   // Lab Coffee, along 154's north side and round its north-west corner.
   buildLabCoffee(g, colliders);
   doorway(g, 5.7, 3, -Math.PI / 2, "154 · Student Hub");
@@ -201,10 +202,9 @@ export function buildOutdoor(): SpaceDef {
   loungeCanopy.position.set(6 - 0.65, 3.3, -5);
   loungeCanopy.castShadow = true;
   g.add(loungeCanopy);
-  const loungeName = textPlane(["ANUSA Student Lounge"], 3.6, 0.45, { bg: "#1e6b52", fg: "#ffffff", font: 0.26 });
-  loungeName.position.set(6 - 1.31, 3.3, -5);
-  loungeName.rotation.y = -Math.PI / 2;
-  g.add(loungeName);
+  // Each door's name on its canopy's front edge, the edge's own size.
+  fascia(g, ["ANUSA Student Lounge"], 4, "#1e6b52", -5);
+  fascia(g, ["Student Hub"], 5, "#1f2d3d", 3);
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 24.85, Math.PI, "Chifley Library");
 
@@ -217,9 +217,9 @@ export function buildOutdoor(): SpaceDef {
       { x: -8.6, z: 7, label: "Enter 155 (pick a classroom)", to: "classroom", arrive: { x: 8.4, z: 6 } },
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
       // North of the Hub's door, on the ground floor: the ANUSA Student Lounge.
-      { x: 4.6, z: -5, label: "Enter the ANUSA Student Lounge", to: "anusa", arrive: { x: 8.4, z: 5 } },
+      { x: 4.6, z: -5, label: "Enter the ANUSA Student Lounge", to: "anusa", arrive: { x: -8.4, z: 5 } },
       // An easter egg: an unmarked staff door at the far end of Lab Coffee.
-      { x: 24.5, z: -21, label: "A door marked \"Staff only\"…", to: "poop", arrive: { x: 0, z: 1.6 } },
+      { x: 24.5, z: -21, label: "Staff only", to: "poop", arrive: { x: 0, z: 2.4 }, secret: true },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
@@ -235,7 +235,7 @@ export function buildOutdoor(): SpaceDef {
     tick: dog,
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
-      { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the lawn noticeboard" },
+      { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the advertising board" },
       { x: STUDY_BOARD.x + 0.9, z: STUDY_BOARD.z, id: "study-groups", label: "Open the study-group board" },
       { x: CAFE_MENU.x, z: CAFE_MENU.z + 0.9, id: "cafes", label: "Read Lab Coffee's board (cafés on campus)" },
     ],
@@ -255,6 +255,14 @@ export function buildOutdoor(): SpaceDef {
 }
 
 /** A building sign on a facade, facing the way `rotY` points. */
+/** A name along the front edge of one of 154's west canopies (1.3 m out, 0.25 m deep), `width` long, centred on z. */
+function fascia(g: THREE.Group, lines: string[], width: number, bg: string, z: number): void {
+  const plate = textPlane(lines, width, 0.25, { bg, fg: "#ffffff", font: 0.17 });
+  plate.position.set(6 - 1.3 - 0.01, 3.3, z);
+  plate.rotation.y = -Math.PI / 2;
+  g.add(plate);
+}
+
 function sign(g: THREE.Group, lines: string[], x: number, y: number, z: number, rotY: number): void {
   const plate = textPlane(lines, 6.5, lines.length * 0.75, { bg: "#1f2d3d", fg: "#ffffff", font: 0.42 });
   plate.position.set(x, y, z);
@@ -303,7 +311,7 @@ function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: num
   });
 }
 
-/** The lawn noticeboard, south of the flower bed east of Broger's (server/spaces.ts keeps notes off it too). */
+/** The advertising board, south of the flower bed east of Broger's (server/spaces.ts keeps notes off it too). */
 const LAWN_BOARD = { x: 1.75, z: -31.6 };
 
 /**
@@ -312,6 +320,82 @@ const LAWN_BOARD = { x: 1.75, z: -31.6 };
  * with. Notes keep 2 m off it too (server/spaces.ts).
  */
 const STUDY_BOARD = { x: -8.6, z: 2.3 };
+
+/**
+ * The advertising board: a steel-framed billboard on two posts, a green
+ * title strip over a face pasted with bright posters (drawn, made up: no
+ * real events or logos), its face toward `facing` like the noticeboards.
+ */
+function adBoard(g: THREE.Group, colliders: Box[], at: { x: number; z: number }, facing: number): void {
+  const board = new THREE.Group();
+  const steel = mat(0x4a5058);
+  for (const dx of [-1.55, 1.55]) {
+    const post = new THREE.Mesh(new THREE.BoxGeometry(0.12, 2.9, 0.12), steel);
+    post.position.set(dx, 1.45, -0.06);
+    board.add(post);
+  }
+  const frame = new THREE.Mesh(new THREE.BoxGeometry(3.3, 1.9, 0.1), steel);
+  frame.position.set(0, 1.85, -0.03);
+  const strip = textPlane(["Advertising board", "events · clubs · anything to promote"], 3.1, 0.42, { bg: "#1e6b52", fg: "#ffffff", font: 0.16 });
+  strip.position.set(0, 2.55, 0.03);
+  const face = new THREE.Mesh(new THREE.PlaneGeometry(3.1, 1.3), new THREE.MeshBasicMaterial({ map: postersTexture(), toneMapped: false }));
+  face.position.set(0, 1.65, 0.03);
+  // A little roof over it, against the rain.
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(3.5, 0.08, 0.45), steel);
+  roof.position.set(0, 2.84, 0.1);
+  board.add(frame, strip, face, roof);
+  board.position.set(at.x, 0, at.z);
+  board.rotation.y = facing;
+  g.add(board);
+  const across = Math.abs(Math.sin(facing)) > 0.5;
+  solid(colliders, across ? 0.3 : 3.4, across ? 3.4 : 0.3, at.x, at.z);
+}
+
+/** A wall of made-up posters: bright blocks, a few lines and a pin each, slightly askew. */
+function postersTexture(): THREE.CanvasTexture {
+  const canvas = document.createElement("canvas");
+  canvas.width = 620;
+  canvas.height = 260;
+  const ctx = canvas.getContext("2d")!;
+  ctx.fillStyle = "#e9e4d8";
+  ctx.fillRect(0, 0, canvas.width, canvas.height);
+  const posters: [number, number, number, number, string, string, string][] = [
+    [18, 18, 120, 160, "#e84a5f", "#fff", "GIG"],
+    [150, 30, 110, 140, "#ffb400", "#3b2a12", "FAIR"],
+    [272, 14, 130, 110, "#3d8bfd", "#fff", "CLUB"],
+    [282, 134, 120, 110, "#2fb380", "#fff", "SALE"],
+    [414, 22, 92, 150, "#a55eea", "#fff", "QUIZ"],
+    [516, 30, 88, 120, "#ff7f50", "#fff", "YOGA"],
+    [40, 190, 210, 56, "#fffaf0", "#3b2a12", "ROOM FOR RENT"],
+    [430, 184, 170, 64, "#1f2d3d", "#fff", "OPEN MIC"],
+  ];
+  for (const [x, y, w, h, bg, fg, word] of posters) {
+    ctx.save();
+    ctx.translate(x + w / 2, y + h / 2);
+    ctx.rotate((Math.random() - 0.5) * 0.08);
+    ctx.fillStyle = "rgba(0,0,0,0.18)";
+    ctx.fillRect(-w / 2 + 3, -h / 2 + 4, w, h);
+    ctx.fillStyle = bg;
+    ctx.fillRect(-w / 2, -h / 2, w, h);
+    ctx.fillStyle = fg;
+    ctx.textAlign = "center";
+    ctx.font = `800 ${Math.min(30, w / 4)}px system-ui, sans-serif`;
+    ctx.fillText(word, 0, h > 80 ? -h / 6 : 8);
+    if (h > 80) {
+      ctx.globalAlpha = 0.6;
+      for (let i = 0; i < 3; i++) ctx.fillRect(-w / 2 + 14, h / 8 + i * 13, w - 28 - i * 14, 5);
+      ctx.globalAlpha = 1;
+    }
+    ctx.fillStyle = "#c0392b";
+    ctx.beginPath();
+    ctx.arc(0, -h / 2 + 7, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.restore();
+  }
+  const tex = new THREE.CanvasTexture(canvas);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  return tex;
+}
 
 /** A chalkboard on two timber legs, its face toward `facing` (radians about y; 0 faces +z). */
 function noticeboard(g: THREE.Group, colliders: Box[], at: { x: number; z: number }, facing: number, lines: string[]): void {

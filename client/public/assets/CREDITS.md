@@ -115,6 +115,7 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 | `trashcan.glb`, `coatRackStanding.glb`, `plantSmall2.glb`, `plantSmall3.glb`, `books.glb`, `rugRectangle.glb` | small props (bins, coat stand, desk plants, books, doormat) |
 | `bookcaseOpen.glb` | open shelves in the COMMON lounge |
 | `kitchenCoffeeMachine.glb` | coffee machine |
+| `toilet.glb` | the toilets in the Poop Room's stalls (brought over from crit 8) |
 
 ## Textures (`tex/ai/`, generated with Google Gemini)
 
@@ -162,6 +163,17 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 their meeting rooms),
 `Sunlight_on_Glass.mp3` and `Where_The_Light_Settles.mp3` (Chifley Library
 and its team rooms) — Music generated with Google AI (Gemini) for this project.
+
+`Calm_Loop.mp3` (the Poop Room, as in crit 8):
+
+- Track: "Calm Loop" (file `Relaxing.mp3`, unmodified, renamed)
+- Author: wipics (https://opengameart.org/users/wipics)
+- Source: https://opengameart.org/content/calm-loop
+- Licence: Creative Commons Zero (CC0 1.0), https://creativecommons.org/publicdomain/zero/1.0/
+  (stated on the item page). Credit is not required but is given here anyway.
+
+The Poop Room's fart is synthesised in the browser with the Web Audio API
+(`client/src/sfx.ts`, crit 8's sound); no recorded asset is used.
 
 Everything else in the scene (room shells, characters, sticky notes, UI) is
 built from Three.js primitives and HTML/CSS in code.

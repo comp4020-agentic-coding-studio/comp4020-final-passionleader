@@ -41,10 +41,10 @@ export const SPACES: Record<string, Space> = {
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
-  anusa: { label: "ANUSA Student Lounge", halfX: 10, halfZ: 7, spawn: { x: 8.4, z: 3 } },
+  anusa: { label: "ANUSA Student Lounge", halfX: 10, halfZ: 7, spawn: { x: -8.4, z: 5 } },
   // An easter egg (plan 62): crit 8's Poop Room, behind a "Staff only" door
   // at the far end of Lab Coffee (client/src/spaces/poop.ts).
-  poop: { label: "a small room", halfX: 3, halfZ: 3, spawn: { x: 0, z: 1.8 } },
+  poop: { label: "a small room", halfX: 6, halfZ: 4.5, spawn: { x: 0, z: 2.4 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
@@ -92,10 +92,10 @@ const LIBRARY_TEAM_DOORS = [
   { x: 14.9, z: -1.5 },
   { x: 14.9, z: 2.5 },
 ];
-// The ANUSA Student Lounge's two meeting rooms, on its west wall (client/src/spaces/anusa.ts).
+// The ANUSA Student Lounge's two meeting rooms, on its east wall (client/src/spaces/anusa.ts).
 const ANUSA_TEAM_DOORS = [
-  { x: -8.9, z: -1.5 },
-  { x: -8.9, z: 3 },
+  { x: 8.9, z: -2.5 },
+  { x: 8.9, z: 5.2 },
 ];
 
 export interface Room {

@@ -9,7 +9,7 @@ import { roomShell } from "./room.ts";
 // counter with a PC to ANUSA's site (it may be framed), where one of the AI
 // campus assistants will stand; a sign pointing to the study-group board
 // (outside, beside 155's door); a lounge of sofa corners, armchairs and a coffee bar; a long work table; and
-// two meeting rooms off the west wall (meeting.ts: open, six people at most).
+// two meeting rooms off the east wall (meeting.ts: open, six people at most).
 // Not a copy of the real office, and not ANUSA's service.
 
 export const ANUSA = { halfX: 10, halfZ: 7 };
@@ -107,10 +107,10 @@ export function buildAnusa(): SpaceDef {
     solid(colliders, 0.7, 0.7, x, z);
   }
 
-  // The way out, on the east wall.
-  doorway(g, halfX - 0.05, 5, -Math.PI / 2, "Out to campus");
-  // The two meeting rooms, on the west wall.
-  ANUSA_TEAM_DOORS.forEach((d, i) => doorway(g, -halfX + 0.05, d.z, Math.PI / 2, `Meeting room ${i + 1}`));
+  // The way out, on the west wall: you came in heading east from campus.
+  doorway(g, -halfX + 0.05, 5, Math.PI / 2, "Out to campus");
+  // The two meeting rooms, on the east wall.
+  ANUSA_TEAM_DOORS.forEach((d, i) => doorway(g, halfX - 0.05, d.z, -Math.PI / 2, `Meeting room ${i + 1}`));
 
   // Sofas face each other over their tables; the armchairs face west.
   const seats = corners.flatMap(([x]) =>
@@ -128,7 +128,7 @@ export function buildAnusa(): SpaceDef {
     group: g,
     colliders,
     doors: [
-      { x: halfX - 1.1, z: 5, label: "Go out to campus", to: "outdoor", arrive: { x: 3.6, z: -5 } },
+      { x: -halfX + 1.1, z: 5, label: "Go out to campus", to: "outdoor", arrive: { x: 3.6, z: -5 } },
       ...roomDoors("team-anusa", ANUSA_TEAM_DOORS, (n) => `Enter meeting room ${n}`),
     ],
     halfX,

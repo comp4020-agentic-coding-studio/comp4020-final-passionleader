@@ -49,8 +49,8 @@ should feel at home in a virtual space shaped like the real campus they know.
    you and the staff see it. The ANUSA Student Lounge, next door in 154, is a
    place to rest and meet, with two meeting rooms. Beside 155's door, the
    study-group board: start a group, say how many people, and others join
-   until it's full. The lawn noticeboard stands by the north road; its posts
-   go after 30 days. All the boards say they're unofficial.
+   until it's full. The advertising board stands by the lawn on the north road; its
+   posts go after 30 days. All the boards say they're unofficial.
    Comments take hearts (the most-hearted first), and anything someone wrote
    can be reported. Type "/all" before a chat line to reach every space, or "/w name" to
    whisper to one signed-up person wherever they are (only the two of you
@@ -65,7 +65,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    ANU. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
    careers) stand in their places: **E** to ask one. They aren't connected to
    a model yet, so for now they say so and point to their pages.
-   Signed up, the 📮 button writes to someone by name and keeps your mail
+   Signed up, the ✉️ button writes to someone by name and keeps your mail
    for 30 days; it lights up when something arrives.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier

@@ -170,7 +170,7 @@ describe("where a note may go", () => {
     expect(noteSpotError("outdoor", -3, -14)).toBeNull();
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
     expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
-    expect(noteSpotError("outdoor", 1.75, -30.6)).not.toBeNull(); // at the lawn noticeboard, south of the bed east of Broger's
+    expect(noteSpotError("outdoor", 1.75, -30.6)).not.toBeNull(); // at the advertising board, south of the bed east of Broger's
     expect(noteSpotError("outdoor", -8.6, 3.2)).not.toBeNull(); // at the study-group board beside 155's door
     expect(noteSpotError("outdoor", -19.5, -21.6)).toBeNull(); // where it used to stand
     expect(noteSpotError("outdoor", 12, -22)).not.toBeNull(); // at Lab Coffee's menu board

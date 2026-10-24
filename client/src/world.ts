@@ -36,6 +36,8 @@ export interface Door {
   z: number;
   /** What the E hint says, e.g. "Enter the Student Hub". */
   label: string;
+  /** An easter egg's door: E works, but no badge or hint gives it away. */
+  secret?: boolean;
   /** The space it leads to, or "classroom" for 155's door, which asks which classroom. */
   to: SpaceId;
   /** Where you appear on the other side. */

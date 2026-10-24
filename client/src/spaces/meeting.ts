@@ -25,10 +25,10 @@ export const LIBRARY_TEAM_DOORS = [
   { x: 14.9, z: -1.5 },
   { x: 14.9, z: 2.5 },
 ];
-/** The ANUSA Student Lounge's two meeting rooms, on its west wall (same as server/spaces.ts). */
+/** The ANUSA Student Lounge's two meeting rooms, on its east wall (same as server/spaces.ts). */
 export const ANUSA_TEAM_DOORS = [
-  { x: -8.9, z: -1.5 },
-  { x: -8.9, z: 3 },
+  { x: 8.9, z: -2.5 },
+  { x: 8.9, z: 5.2 },
 ];
 /** Where the room's own door is along its side wall. */
 const INNER_DOOR_Z = -1.5;

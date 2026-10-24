@@ -72,11 +72,11 @@ const FIXED: Record<string, BoardDef> = {
     groups: true,
     space: "outdoor",
   },
-  // The noticeboard on the lawn: events, clubs, anything to promote. A
-  // poster is for now, so posts go after 30 days, the same as their files.
+  // The advertising board by the lawn: events, clubs, anything to promote.
+  // A poster is for now, so posts go after 30 days, the same as their files.
   outdoor: {
-    title: "Lawn noticeboard",
-    tabs: [{ id: "board", label: "Noticeboard" }],
+    title: "Advertising board",
+    tabs: [{ id: "board", label: "Ads" }],
     notice: `${UNOFFICIAL} Posts are removed after 30 days.`,
     layout: "grid",
     keepDays: 30,

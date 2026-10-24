@@ -82,19 +82,19 @@ Read before planning or building: `README.md` (what good means for this app),
   (https addresses), checked on the server.
 - The Student Hub's lab matching board (Labs looking for students,
   Students looking for labs), its "Ask the Hub" enquiry board, the
-  study-group board beside 155's door and the lawn noticeboard keep the same
+  study-group board beside 155's door and the advertising board keep the same
   post and comment rules; anyone posts in every tab until there's a staff
   role. A study group's writer sets how many people (2 to 20, them
   included); others join or leave with a button, never past that, checked on
   the server; the writer stays in until they remove the post. On "Ask the
   Hub" a writer may mark a question private: then only they and staff (for
   now the admin) see it, its comments and its files, checked on the server
-  for each; no other board takes private posts. Lawn posts go after 30 days
+  for each; no other board takes private posts. Ads go after 30 days
   (hidden at once, deleted by the hourly purge, files and all), and the
   board says so. Which boards exist, their tabs, which tabs are staff-only,
   and which allow private posts or expire live in `server/boards.ts` alone;
   the client draws what it's sent. All say they're unofficial and that
-  posters aren't verified. Notes keep 2 m off the lawn noticeboard (south of
+  posters aren't verified. Notes keep 2 m off the advertising board (south of
   the flower bed east of Broger's) and the study-group board (beside 155's
   door), which lists posts as thumbnails, two a row (a post's
   first picture, or its title).

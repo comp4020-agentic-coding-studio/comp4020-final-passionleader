@@ -32,7 +32,7 @@ describe("meeting rooms", () => {
     s.send({ t: "enter", space: room, x: 0, z: 0 });
     await expect(s.next(refused(room, "full"))).resolves.toBeTruthy();
     expect(await s.sees(opened(room), 400)).toBe(false);
-  });
+  }, 15_000); // seven people in a row, while the other spec files sign people up
 
   it("keeps a counselling room to the people invited in", async () => {
     const room = "counsel-6";

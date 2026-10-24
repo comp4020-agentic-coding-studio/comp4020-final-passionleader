@@ -199,7 +199,14 @@ function keepFaceDark(scene: THREE.Object3D): void {
       if (col === 1 && row >= 12 && row <= 14 && z >= 0.155 && z <= 0.165 && pos.getY(i) < 0.52) face.add(i);
     }
     if (face.size === 0) return;
-    for (const i of face) uv.setXY(i, ...FACE_DARK_UV);
+    // The eyes sat exactly on the skin's plane (z 0.160), and the rim 3 mm behind them,
+    // i.e. behind the skin: only its corners peeked out. Lift the features 4 mm and the
+    // rim 2 mm, both in front of the skin, so the rim shows all the way round.
+    for (const i of face) {
+      uv.setXY(i, ...FACE_DARK_UV);
+      pos.setZ(i, pos.getZ(i) + 0.004);
+    }
+    pos.needsUpdate = true;
     uv.needsUpdate = true;
 
     // Group the face triangles into features (two eyes, a mouth) by shared corners.
@@ -228,7 +235,7 @@ function keepFaceDark(scene: THREE.Object3D): void {
     for (const [g, c] of centre) c.divideScalar(count.get(g)!);
 
     // The rim: every face vertex copied, grown 35% out from its feature's
-    // centre and set 3 mm back, same bones and weights, so it moves with the head.
+    // centre and set 2 mm behind the (lifted) feature, same bones and weights, so it moves with the head.
     const extra = new Map<number, number>();
     const attrs = Object.entries(geo.attributes) as [string, THREE.BufferAttribute][];
     const grown = new Map<string, number[]>(attrs.map(([name, a]) => [name, Array.from(a.array as ArrayLike<number>)]));
@@ -242,7 +249,7 @@ function keepFaceDark(scene: THREE.Object3D): void {
           const c = centre.get(find(i))!;
           arr[n * 3] = c.x + (pos.getX(i) - c.x) * 1.35;
           arr[n * 3 + 1] = c.y + (pos.getY(i) - c.y) * 1.35;
-          arr[n * 3 + 2] = pos.getZ(i) - 0.003;
+          arr[n * 3 + 2] = pos.getZ(i) - 0.002;
         } else if (name === "uv") {
           arr[n * 2] = FACE_RIM_UV[0];
           arr[n * 2 + 1] = FACE_RIM_UV[1];

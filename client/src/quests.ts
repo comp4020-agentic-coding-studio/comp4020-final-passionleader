@@ -1,16 +1,18 @@
 import "./quests.css";
+import { fanfare, ding } from "./sfx.ts";
 
 // A short tutorial of small quests (plan 72): six things to try, ticked off
-// as you do them, skippable at any point. Kept in this browser only; once
+// as you do them (a ding and a puff of confetti; all six, a fanfare),
+// skippable at any point. Kept in this browser only; once
 // done or skipped it stays out of the way. main calls `done(id)` when one
 // happens.
 
-export type QuestId = "walk" | "wave" | "note" | "library" | "room" | "look";
+export type QuestId = "walk" | "wave" | "chat" | "library" | "room" | "look";
 
 const QUESTS: { id: QuestId; text: string }[] = [
   { id: "walk", text: "Walk around (WASD, or the pad)" },
   { id: "wave", text: "Wave to someone (hold Q, then Wave)" },
-  { id: "note", text: "Stick a sticky note (Q, then 1)" },
+  { id: "chat", text: "Say hello in the chat (Enter)" },
   { id: "library", text: "Go into Chifley Library" },
   { id: "room", text: "Step into a team room" },
   { id: "look", text: "Change your look (the hanger)" },
@@ -23,6 +25,25 @@ function load(): { done: QuestId[]; skipped: boolean } {
     return { done: Array.isArray(v.done) ? (v.done.filter((x) => typeof x === "string") as QuestId[]) : [], skipped: v.skipped === true };
   } catch {
     return { done: [], skipped: false };
+  }
+}
+
+const COLOURS = ["#e84a5f", "#ffb400", "#2fb380", "#3d8bfd", "#a55eea", "#ff7f50"];
+/** Bits of paper falling from `from`; gone by themselves (none if motion is reduced). */
+function confetti(from: DOMRect, count: number): void {
+  if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (let i = 0; i < count; i++) {
+    const bit = document.createElement("i");
+    bit.className = "confetti";
+    bit.style.left = `${from.left + Math.random() * from.width}px`;
+    bit.style.top = `${from.top + Math.random() * Math.min(from.height, 40)}px`;
+    bit.style.background = COLOURS[i % COLOURS.length]!;
+    bit.style.setProperty("--dx", `${(Math.random() - 0.5) * 220}px`);
+    bit.style.setProperty("--dy", `${120 + Math.random() * 260}px`);
+    bit.style.setProperty("--spin", `${(Math.random() - 0.5) * 1080}deg`);
+    bit.style.animationDuration = `${1.1 + Math.random() * 0.9}s`;
+    document.body.append(bit);
+    bit.addEventListener("animationend", () => bit.remove());
   }
 }
 
@@ -99,8 +120,22 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
       state.done.push(id);
       save();
       render();
-      // All done: a moment to see the last tick, then it goes.
-      if (finished()) window.setTimeout(render, 1500);
+      const li = list.children[QUESTS.findIndex((q) => q.id === id)] as HTMLElement | undefined;
+      li?.classList.add("just-done");
+      if (!finished()) {
+        ding();
+        if (li) confetti(li.getBoundingClientRect(), 18);
+        return;
+      }
+      // All six: a fanfare, confetti over the screen and a cheer; then it goes.
+      fanfare();
+      confetti(new DOMRect(0, 0, window.innerWidth, window.innerHeight * 0.3), 120);
+      const cheer = document.createElement("div");
+      cheer.className = "quests-cheer";
+      cheer.textContent = "🎉 All done! Welcome to ANU Crossing.";
+      document.body.append(cheer);
+      window.setTimeout(() => cheer.remove(), 3600);
+      window.setTimeout(render, 1500);
     },
   };
 }
