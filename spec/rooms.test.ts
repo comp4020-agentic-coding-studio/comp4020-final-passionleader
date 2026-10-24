@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { closeAll, connect, guest, visitor, type Msg, type Socket } from "./helpers.ts";
+import { api, closeAll, connect, guest, visitor, type Msg, type Socket } from "./helpers.ts";
 
 // The meeting rooms (plan 21, 6a, 26a, 30): six people at most, and the
 // counselling rooms let in only whoever someone inside has invited. The
@@ -12,13 +12,13 @@ const opened = (space: string) => (m: Msg) => m.t === "action" && m.kind === "ro
 const refused = (space: string, reason: string) => (m: Msg) =>
   m.t === "action" && m.kind === "room-refused" && m.space === space && m.reason === reason;
 
-async function inRoom(space: string, who: () => Promise<{ name: string; token: string }> = visitor): Promise<{ name: string; s: Socket }> {
+async function inRoom(space: string, who: () => Promise<{ name: string; token: string }> = visitor): Promise<{ name: string; token: string; s: Socket }> {
   const v = await who();
   const s = await connect(v.token);
   await s.next((m) => m.t === "welcome");
   s.send({ t: "enter", space, x: 0, z: 0 });
   await s.next(opened(space));
-  return { name: v.name, s };
+  return { name: v.name, token: v.token, s };
 }
 
 describe("meeting rooms", () => {
@@ -54,6 +54,30 @@ describe("meeting rooms", () => {
     // Being invited is per person: the third still can't come in.
     sc.send({ t: "enter", space: room, x: 0, z: 0 });
     await expect(sc.next(refused(room, "not invited"))).resolves.toBeTruthy();
+  });
+
+  it("saves a room's chat for the member who asks, tells the room, and shows it to nobody else", async () => {
+    const room = "team-library-2";
+    const a = await inRoom(room);
+    const b = await inRoom(room);
+    a.s.send({ t: "chat", text: "Shall we split the slides?" });
+    await b.s.next((m) => m.t === "chat" && m.text === "Shall we split the slides?");
+    b.s.send({ t: "save-chat" });
+    const saved = await b.s.next((m) => m.t === "action" && m.kind === "chat-saved");
+    expect(saved.ok).toBe(true);
+    // Everyone inside hears that it was saved.
+    await a.s.next((m) => m.t === "action" && m.kind === "room-line" && String((m.line as { text: string }).text).includes("saved this chat"));
+    const bList = (await (await api("/api/chats", "POST", { token: b.token })).json()) as { id: number; space: string }[];
+    expect(bList[0]).toMatchObject({ id: saved.id, space: room });
+    const one = (await (await api(`/api/chats/${saved.id}`, "POST", { token: b.token })).json()) as { lines: { text: string }[] };
+    expect(one.lines.map((l) => l.text)).toContain("Shall we split the slides?");
+    expect((await api(`/api/chats/${saved.id}`, "POST", { token: a.token })).status).toBe(404);
+    expect((await api(`/api/chats/${saved.id}`, "DELETE", { token: a.token })).status).toBe(404);
+    expect((await api(`/api/chats/${saved.id}`, "DELETE", { token: b.token })).status).toBe(200);
+    // A guest can't save one.
+    const g = await inRoom("team-library-1", guest);
+    g.s.send({ t: "save-chat" });
+    expect((await g.s.next((m) => m.t === "action" && m.kind === "chat-saved")).ok).toBe(false);
   });
 
   it("refuses an invite from outside a counselling room", async () => {

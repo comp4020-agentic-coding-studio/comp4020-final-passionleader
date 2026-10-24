@@ -78,6 +78,8 @@ export interface NetHandlers {
   roomLine(line: RoomLine): void;
   /** The server said no: the room is full, invite-only, or the invite failed. */
   roomRefused(space: SpaceId, reason: string): void;
+  /** Saving this meeting room's chat went (or didn't: a guest, or not in a room). */
+  chatSaved(ok: boolean): void;
   /** Someone's already on that seat. */
   seatRefused(): void;
   /** The admin stopped us doing `what` (chat, notes, posts, join) until `until`. */
@@ -97,6 +99,8 @@ export interface Net {
   emote(kind: Emote): void;
   /** Poops where we stand (the Poop Room only; the server checks). */
   poop(): void;
+  /** Keeps this meeting room's chat so far for us, 30 days (members only; the server checks). */
+  saveChat(): void;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): void;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -158,6 +162,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
           if (m.kind === "hearts") return on.hearts(m.noteId as number);
           if (m.kind === "mail") return on.mail(m.unread as number);
+          if (m.kind === "chat-saved") return on.chatSaved(m.ok === true);
           if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
@@ -208,6 +213,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     poop() {
       sendNow({ t: "poop" });
+    },
+    saveChat() {
+      sendNow({ t: "save-chat" });
     },
     invite(name) {
       sendNow({ t: "invite", name });

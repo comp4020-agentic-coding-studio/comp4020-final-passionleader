@@ -142,7 +142,11 @@ Read before planning or building: `README.md` (what good means for this app),
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
   chat, host, invites and files go, and the last one out is warned of
-  that before leaving (by the Leave button or the door). No notes in
+  that before leaving (by the Leave button or the door). One exception: a
+  member may save the chat so far (its lines, not the files) for themselves
+  only, kept 30 days in SQLite and then purged, at most 50 each; everyone
+  inside is told in the room that they saved it. Only its owner lists,
+  reads or deletes a saved chat, checked on the server. No notes in
   meeting rooms.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,

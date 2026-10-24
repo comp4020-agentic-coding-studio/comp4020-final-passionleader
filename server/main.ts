@@ -52,6 +52,10 @@ import {
   deleteMail,
   unreadCount,
   purgeOldMail,
+  purgeOldChats,
+  savedChatsOf,
+  savedChat,
+  deleteSavedChat,
   purgeIdleGuests,
   createGuest,
   createMember,
@@ -451,6 +455,25 @@ app.delete("/api/mail/:id", async (c) => {
   if (!m || m.reader.toLowerCase() !== v.name.toLowerCase()) return c.json({ error: "That message is gone." }, 404);
   deleteMail(m.id, v.name);
   return c.json({ unread: unreadCount(v.name) });
+});
+
+// --- saved meeting-room chats (plan 37) ---------------------------------------
+// Only their owner lists, reads or deletes them; kept 30 days (db.ts).
+app.post("/api/chats", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  return c.json(savedChatsOf(v.name));
+});
+app.post("/api/chats/:id", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const chat = savedChat(v.name, Number(c.req.param("id")));
+  return chat ? c.json(chat) : c.json({ error: "That chat is gone." }, 404);
+});
+app.delete("/api/chats/:id", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  return deleteSavedChat(v.name, Number(c.req.param("id"))) ? c.json({ ok: true }) : c.json({ error: "That chat is gone." }, 404);
 });
 
 // --- the AI campus assistants (plan 56) ---------------------------------------
@@ -1336,6 +1359,7 @@ const purge = (): void => {
   purgeOldAudit();
   purgeOldChat();
   purgeOldMail();
+  purgeOldChats();
   const guestsGone = purgeIdleGuests();
   if (guestsGone) log("guests-purged", null, { count: guestsGone });
   removeObjects(purgeFiles());

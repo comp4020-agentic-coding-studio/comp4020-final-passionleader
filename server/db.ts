@@ -516,6 +516,45 @@ export const markRead = (id: number): void => void db.prepare("UPDATE mail SET r
 /** The reader throws it away; the sender keeps their copy in Sent until the 30 days are up. */
 export const deleteMail = (id: number, reader: string): void => void db.prepare("UPDATE mail SET reader_deleted = 1 WHERE id = ? AND reader = ?").run(id, reader);
 export const unreadCount = (name: string): number => (db.prepare(`SELECT COUNT(*) AS n FROM mail WHERE reader = ? AND reader_deleted = 0 AND read_at IS NULL AND ${freshMail}`).get(name) as { n: number }).n;
+// --- saved meeting-room chats (plan 37) ---------------------------------------
+// A member in a meeting room can keep its chat so far (text lines and the
+// names of files shared, not the files), for themselves only, 30 days.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS saved_chats (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    owner    TEXT NOT NULL COLLATE NOCASE,
+    space    TEXT NOT NULL,
+    lines    TEXT NOT NULL,
+    saved_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS saved_chats_by_owner ON saved_chats (owner, saved_at);
+`);
+export interface SavedChat {
+  id: number;
+  space: string;
+  savedAt: string;
+  lines: { name: string; text: string; system?: boolean }[];
+}
+const freshChat = "saved_at > datetime('now', '-30 days')";
+/** Keeps a copy of a room's chat for `owner`; at most 50 kept each (the oldest goes). */
+export function saveChat(owner: string, space: string, lines: { name: string; text: string; system?: boolean }[]): number {
+  const { lastInsertRowid } = db.prepare("INSERT INTO saved_chats (owner, space, lines) VALUES (?, ?, ?)").run(owner, space, JSON.stringify(lines));
+  db.prepare("DELETE FROM saved_chats WHERE owner = ? AND id NOT IN (SELECT id FROM saved_chats WHERE owner = ? ORDER BY id DESC LIMIT 50)").run(owner, owner);
+  return Number(lastInsertRowid);
+}
+/** Someone's saved chats, newest first, without their lines. */
+export const savedChatsOf = (owner: string): Omit<SavedChat, "lines">[] =>
+  db.prepare(`SELECT id, space, saved_at AS savedAt FROM saved_chats WHERE owner = ? AND ${freshChat} ORDER BY id DESC`).all(owner) as unknown as Omit<SavedChat, "lines">[];
+/** One saved chat, only its owner's. */
+export function savedChat(owner: string, id: number): SavedChat | undefined {
+  const row = db.prepare(`SELECT id, space, saved_at AS savedAt, lines FROM saved_chats WHERE id = ? AND owner = ? AND ${freshChat}`).get(id, owner) as
+    | { id: number; space: string; savedAt: string; lines: string }
+    | undefined;
+  return row && { ...row, lines: JSON.parse(row.lines) as SavedChat["lines"] };
+}
+export const deleteSavedChat = (owner: string, id: number): boolean => db.prepare("DELETE FROM saved_chats WHERE id = ? AND owner = ?").run(id, owner).changes > 0;
+export const purgeOldChats = (): number => Number(db.prepare(`DELETE FROM saved_chats WHERE NOT (${freshChat})`).run().changes);
+
 export const purgeOldMail = (): number => Number(db.prepare(`DELETE FROM mail WHERE NOT (${freshMail})`).run().changes);
 
 export type JoinResult = { ok: true; joined: boolean; members: string[] } | { ok: false; why: "full" | "writer" };

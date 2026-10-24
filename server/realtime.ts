@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, restrictionOn, saveLastSpot, seen, type Look } from "./db.ts";
+import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -352,6 +352,20 @@ function onMessage(ws: WebSocket, raw: string): void {
     // about abuse can carry the last few minutes (db.ts, recentChat).
     if (rooms.has(player.space)) rooms.get(player.space)!.lines.push({ name: player.name, text });
     else keepChatLine(player.space, player.name, text);
+  } else if (msg.t === "save-chat") {
+    // Keep this room's chat so far, for this member, 30 days (db.ts saveChat);
+    // everyone inside is told, since it's their words too.
+    const state = rooms.get(player.space);
+    if (!state || !isMember(owners.get(ws) ?? { role: "guest" })) {
+      send(ws, { t: "action", kind: "chat-saved", ok: false, reason: state ? "guest" : "not in a room" });
+      return;
+    }
+    const lines = state.lines.map((l) => ({ name: l.name, text: l.text, ...(l.system ? { system: true } : {}) }));
+    const id = saveChat(player.name, player.space, lines);
+    log("chat-saved", owners.get(ws) ?? null, { space: player.space, lines: lines.length });
+    send(ws, { t: "action", kind: "chat-saved", ok: true, id });
+    roomSay(player.space, { name: player.name, text: `${player.name} saved this chat (kept 30 days, for them only)`, system: true });
+    roomChanged(player.space);
   } else if (msg.t === "invite" && typeof msg.name === "string") {
     // Anyone in a counselling room may invite someone in, by user name.
     const room = roomOf(player.space);

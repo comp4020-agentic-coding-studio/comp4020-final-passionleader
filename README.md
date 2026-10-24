@@ -145,7 +145,7 @@ writer and staff, mail only its reader, guests can't send it, and the
 assistants answer one question every three seconds (`board.test.ts`); only the admin reads the seven-day log and the bug
 reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
 meeting room holds six and a counselling room only
-the invited (`rooms.test.ts`); files are checked by type, size and who may
+the invited, and a saved chat is its saver's alone (`rooms.test.ts`); files are checked by type, size and who may
 attach or fetch them (`files.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
 Judged by people: whether it feels familiar and restful, and whether talking
 gets easier.
@@ -166,13 +166,15 @@ they are deleted (bug reports after 28, or when dealt with). Files are kept
 30 days at most, a meeting room's only until it empties, and go when their
 post is removed. Chat outside the meeting rooms is kept one day, read
 only if someone reports a person (then the last five minutes go to the
-admin with the report); meeting rooms' chat, moves and emotes are not kept.
+admin with the report); meeting rooms' chat, moves and emotes are not kept,
+unless someone inside saves the chat: then a copy is kept for them alone for
+30 days, and everyone in the room is told.
 
 ## What I chose not to build (yet)
 
-Voice in the meeting rooms, mail, one-to-one chat and
-voice chat. "Staff" is only
-the admin account for now: nothing yet tells a lecturer from a student. The buildings are
+Voice chat, and keeping a meeting room's files beyond the room (a saved chat
+keeps its lines only). Staff are whoever signs up with a staff @anu.edu.au
+address; nothing yet tells a lecturer from other staff. The buildings are
 simplified, not surveyed.
 
 ## What I read while deciding

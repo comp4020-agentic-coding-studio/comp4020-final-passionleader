@@ -43,6 +43,7 @@ export type Event =
   | "mail-sent"
   | "whisper"
   | "guests-purged"
+  | "chat-saved"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

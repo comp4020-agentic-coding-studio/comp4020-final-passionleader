@@ -2,7 +2,8 @@ import "./mailbox.css";
 import { canberraTime } from "./when.ts";
 
 // The mailbox (plan 16): messages to and from people signed up, by name,
-// read whenever you come in. Three views in one window: Inbox, Sent, Write.
+// read whenever you come in. Four views in one window: Inbox, Sent, Write,
+// and Saved chats (meeting-room chats you kept, plan 37: yours only, 30 days).
 // main does the requests; this only shows them. Guests see why they can't.
 
 export interface MailView {
@@ -22,7 +23,12 @@ export function mountMailbox(opts: {
   send(to: string, subject: string, text: string): Promise<string | null>;
   /** Signed up? Guests can't send or receive mail. */
   member(): boolean;
-}): { open(to?: string): void; isOpen(): boolean } {
+  /** Your saved meeting-room chats, newest first (an error message instead, if it failed). */
+  chats(): Promise<{ id: number; title: string; savedAt: string }[] | string>;
+  /** One saved chat's lines. */
+  chat(id: number): Promise<{ title: string; savedAt: string; lines: { name: string; text: string; system?: boolean }[] } | string>;
+  removeChat(id: number): Promise<string | null>;
+}): { open(to?: string, chats?: boolean): void; isOpen(): boolean } {
   const root = document.createElement("div");
   root.id = "mailbox";
   root.hidden = true;
@@ -56,6 +62,7 @@ export function mountMailbox(opts: {
   const inboxTab = tabBtn("Inbox");
   const sentTab = tabBtn("Sent");
   const writeTab = tabBtn("Write");
+  const chatsTab = tabBtn("Saved chats");
   const body = document.createElement("div");
   body.className = "mail-body";
   const status = document.createElement("p");
@@ -67,7 +74,7 @@ export function mountMailbox(opts: {
 
   let inbox: MailView[] = [];
   let sent: MailView[] = [];
-  let view: "inbox" | "sent" | "write" | "message" = "inbox";
+  let view: "inbox" | "sent" | "write" | "message" | "chats" = "inbox";
   let draftTo = "";
 
   function select(v: typeof view): void {
@@ -76,6 +83,7 @@ export function mountMailbox(opts: {
       [inboxTab, "inbox"],
       [sentTab, "sent"],
       [writeTab, "write"],
+      [chatsTab, "chats"],
     ] as const)
       b.setAttribute("aria-selected", String(view === which || (view === "message" && which === "inbox")));
   }
@@ -229,6 +237,86 @@ export function mountMailbox(opts: {
     list(show === "sent" ? sent : inbox, show === "sent");
   }
 
+  // Saved chats: a list, then one chat's lines, with Delete.
+  async function showChats(): Promise<void> {
+    select("chats");
+    status.textContent = "";
+    const items = await opts.chats();
+    if (typeof items === "string") return void (status.textContent = items);
+    if (!items.length) {
+      const p = document.createElement("p");
+      p.className = "mail-empty";
+      p.textContent = "No saved chats. In a meeting room, 💾 Save chat keeps it here for 30 days.";
+      body.replaceChildren(p);
+      return;
+    }
+    const ul = document.createElement("ul");
+    ul.className = "mail-list";
+    for (const c of items) {
+      const li = document.createElement("li");
+      const b = document.createElement("button");
+      b.type = "button";
+      b.className = "mail-row";
+      const what = document.createElement("span");
+      what.className = "mail-subject";
+      what.textContent = c.title;
+      const when = document.createElement("span");
+      when.className = "mail-when";
+      when.textContent = canberraTime(c.savedAt);
+      b.append(what, when);
+      b.addEventListener("click", () => void showChat(c.id));
+      li.append(b);
+      ul.append(li);
+    }
+    body.replaceChildren(ul);
+  }
+  async function showChat(id: number): Promise<void> {
+    const c = await opts.chat(id);
+    if (typeof c === "string") return void (status.textContent = c);
+    const wrap = document.createElement("div");
+    wrap.className = "mail-message";
+    const h = document.createElement("h3");
+    h.textContent = c.title;
+    const meta = document.createElement("p");
+    meta.className = "mail-meta";
+    meta.textContent = `Saved ${canberraTime(c.savedAt)} · only you see it · gone after 30 days`;
+    const lines = document.createElement("div");
+    lines.className = "mail-text saved-chat";
+    for (const l of c.lines) {
+      const p = document.createElement("p");
+      if (l.system) {
+        p.className = "saved-system";
+        p.textContent = l.text;
+      } else {
+        const who = document.createElement("strong");
+        who.textContent = `${l.name}: `;
+        p.append(who, document.createTextNode(l.text));
+      }
+      lines.append(p);
+    }
+    const row = document.createElement("div");
+    row.className = "settings-actions";
+    const back = document.createElement("button");
+    back.type = "button";
+    back.textContent = "← Back";
+    back.addEventListener("click", () => void showChats());
+    const del = document.createElement("button");
+    del.type = "button";
+    del.textContent = "Delete";
+    del.addEventListener("click", () => {
+      if (del.dataset.sure !== "1") {
+        del.dataset.sure = "1";
+        del.textContent = "Delete? Yes";
+        return;
+      }
+      void opts.removeChat(id).then((err) => (err ? (status.textContent = err) : void showChats()));
+    });
+    row.append(back, del);
+    wrap.append(h, meta, lines, row);
+    body.replaceChildren(wrap);
+  }
+
+  chatsTab.addEventListener("click", () => void showChats());
   inboxTab.addEventListener("click", () => list(inbox, false));
   sentTab.addEventListener("click", () => list(sent, true));
   writeTab.addEventListener("click", () => write());
@@ -245,10 +333,11 @@ export function mountMailbox(opts: {
   });
 
   return {
-    open(to) {
+    open(to, chats) {
       root.hidden = false;
       status.textContent = "";
-      if (to) {
+      if (chats && opts.member()) void showChats();
+      else if (to) {
         draftTo = to;
         write(to);
       } else if (!opts.member()) write();

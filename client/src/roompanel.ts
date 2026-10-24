@@ -46,6 +46,8 @@ export function mountRoomPanel(opts: {
   onOpenFile(id: string): Promise<string | null>;
   /** A link that shows a shared picture in place, or null. */
   onImageLink(id: string): Promise<string | null>;
+  /** Keeps the chat so far for this person (30 days; everyone inside is told). */
+  onSaveChat(): void;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -103,6 +105,7 @@ export function mountRoomPanel(opts: {
   }
 
   const chatBtn = addButton("", () => setChat(!chatOpen));
+  addButton("💾 Save chat", () => opts.onSaveChat()).title = "Keep this chat for 30 days (only you can read it; everyone here is told)";
   const chatLabel = document.createElement("span");
   chatLabel.textContent = "💬 Chat";
   const badge = document.createElement("span");

@@ -118,6 +118,11 @@ export interface NpcDef {
   links: { label: string; url: string }[];
   greeting: string;
 }
+/** Meeting-room chats you saved (plan 37): yours only, 30 days. */
+export const getSavedChats = (token: string): Promise<{ id: number; space: SpaceId; savedAt: string }[]> => request("/api/chats", "POST", { token });
+export const getSavedChat = (token: string, id: number): Promise<{ id: number; space: SpaceId; savedAt: string; lines: { name: string; text: string; system?: boolean }[] }> =>
+  request(`/api/chats/${id}`, "POST", { token });
+export const deleteSavedChat = (token: string, id: number): Promise<unknown> => request(`/api/chats/${id}`, "DELETE", { token });
 export const getNpcs = (): Promise<NpcDef[]> => request<NpcDef[]>("/api/npcs");
 export const askNpc = (token: string, id: string, text: string): Promise<{ reply: string }> => request(`/api/npc/${id}/ask`, "POST", { token, text });
 

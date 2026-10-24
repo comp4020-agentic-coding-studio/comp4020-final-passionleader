@@ -28,3 +28,8 @@
 .mail-form input, .mail-form textarea { min-height: 40px; padding: 6px 10px; border: 1px solid #8a6a50; border-radius: 8px; font: inherit; box-sizing: border-box; width: 100%; }
 .mail-send { min-height: 44px; background: var(--accent, #6b3f1d); color: #fff; border: 0; border-radius: 8px; font: inherit; cursor: pointer; }
 .mail-status { min-height: 1.3em; margin: 6px 0 0; font-size: 0.9rem; }
+
+/* A saved meeting-room chat: its lines, the room's own notices in italics. */
+.saved-chat { max-height: 50vh; overflow-y: auto; }
+.saved-chat p { margin: 0 0 6px; }
+.saved-chat .saved-system { font-style: italic; opacity: 0.7; }

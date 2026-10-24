@@ -31,6 +31,9 @@ import {
   type NpcDef,
   signupStart,
   signupCheck,
+  getSavedChats,
+  getSavedChat,
+  deleteSavedChat,
   signupFinish,
   resetStart,
   resetFinish,
@@ -205,6 +208,24 @@ function showUnread(n: number): void {
 }
 showUnread(0);
 const mailbox = mountMailbox({
+  async chats() {
+    if (!session) return "Join first.";
+    try {
+      return (await getSavedChats(session.token)).map((c) => ({ id: c.id, savedAt: c.savedAt, title: meetingRoom(c.space)?.title ?? "A meeting room" }));
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not load your saved chats.";
+    }
+  },
+  async chat(id) {
+    if (!session) return "Join first.";
+    try {
+      const c = await getSavedChat(session.token, id);
+      return { title: meetingRoom(c.space)?.title ?? "A meeting room", savedAt: c.savedAt, lines: c.lines };
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not open that chat.";
+    }
+  },
+  removeChat: async (id) => (session ? errorOf(deleteSavedChat(session.token, id)) : "Join first."),
   async load() {
     if (!session) return "Join first.";
     try {
@@ -717,6 +738,7 @@ const chat = mountChat({
 const roomPanel = mountRoomPanel({
   onSend: (text) => net?.chat(text),
   onInvite: (name) => net?.invite(name),
+  onSaveChat: () => (isMember(session) ? net?.saveChat() : signupPrompt.open("save a chat")),
   onLeave: () => {
     const out = space?.doors[0];
     if (out) setSpace(out.to, out.arrive, true);
@@ -1430,6 +1452,16 @@ function goOnline(token: string): void {
       // In a meeting room the map chat is hidden: show it in the room's window.
       if (roomPanel.isOpen()) roomPanel.add(line);
       else chat.add({ ...line, whisper: true });
+    },
+    chatSaved(ok) {
+      if (ok) {
+        sfx("note");
+        toast("Chat saved: ✉️ → Saved chats (30 days, only you).");
+      } else {
+        sfx("error");
+        if (!isMember(session)) signupPrompt.open("save a chat");
+        else toast("Only a meeting room's chat can be saved.");
+      }
     },
     whisperRefused(reason, name) {
       sfx("error");
