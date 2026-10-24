@@ -1,4 +1,5 @@
 import Anthropic from "@anthropic-ai/sdk";
+import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
 
 // The AI campus assistants (plan 56): five people standing about campus who
 // answer questions about one part of ANU each, from its public pages. Where
@@ -128,17 +129,22 @@ export const NPCS: Npc[] = [
 export const npcById = (id: unknown): Npc | undefined => NPCS.find((n) => n.id === id);
 
 // --- the model ----------------------------------------------------------------
-// Claude, by the API key in the Fly secret ANTHROPIC_API_KEY (never in the
-// repo). Haiku by default (NPC_MODEL to change it): short answers to short
-// questions, so cheap. To keep a bill from running away: 400 output tokens,
-// low effort, 30 questions a person a day and 1500 in all (main.ts checks the
-// per-person part, `budgetLeft` the total). Without a key, the honest
-// "not connected" answer stays. What's asked is sent to the API and nowhere
-// else: not stored, not logged (only that someone asked, and how long).
+// Either Amazon Bedrock, when the Fly secret NPC_MODEL names a Bedrock model or
+// inference profile (it then uses the same AWS keys and region as S3, so no new
+// key), or Claude by the API key in the Fly secret ANTHROPIC_API_KEY. Neither
+// key is ever in the repo. Short answers to short questions, so cheap. To keep
+// a bill from running away: 400 output tokens, 30 questions a person a day and
+// NPC_PER_DAY (150 by default) in all. main.ts checks the per-person part and
+// `budgetLeft` the total. With no model, the honest "not connected" answer
+// stays. What's asked goes to the model and nowhere else: not stored, not
+// logged (only that someone asked, and how long).
 
-const client = process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
 const MODEL = process.env.NPC_MODEL || "claude-haiku-5-5";
-const PER_DAY = 1500;
+/** Bedrock ids look like "anthropic.claude-…", "au.anthropic.…", "amazon.nova-micro-…". */
+const ON_BEDROCK = /^((au|apac|us|eu|global)\.)?(anthropic|amazon|meta|mistral)\./.test(MODEL);
+const bedrock = ON_BEDROCK && process.env.AWS_ACCESS_KEY_ID ? new BedrockRuntimeClient({ region: process.env.AWS_REGION }) : null;
+const client = !ON_BEDROCK && process.env.ANTHROPIC_API_KEY ? new Anthropic() : null;
+const PER_DAY = Number(process.env.NPC_PER_DAY) || 150;
 let today = "";
 let askedToday = 0;
 /** False once today's questions (all assistants, everyone) are used up. */
@@ -147,7 +153,7 @@ function budgetLeft(): boolean {
   if (day !== today) [today, askedToday] = [day, 0];
   return askedToday < PER_DAY;
 }
-export const modelReady = (): boolean => client !== null;
+export const modelReady = (): boolean => client !== null || bedrock !== null;
 
 const systemFor = (npc: Npc): string =>
   [
@@ -161,11 +167,12 @@ const systemFor = (npc: Npc): string =>
 /** What the assistant says back: the model's answer, or, without one, an honest note and its pages. */
 export async function answer(npc: Npc, question: string): Promise<string> {
   const offline = `I'm ${npc.name}, and I'm not connected to my AI brain right now, sorry! The pages below have what you need. (Nothing you type here is kept.)`;
-  if (!client) return offline;
+  if (!client && !bedrock) return offline;
   if (!budgetLeft()) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
   askedToday++;
+  if (bedrock) return askBedrock(bedrock, npc, question, offline);
   try {
-    const res = await client.messages.create(
+    const res = await client!.messages.create(
       {
         model: MODEL,
         max_tokens: 400,
@@ -184,10 +191,36 @@ export async function answer(npc: Npc, question: string): Promise<string> {
     // rule for outside AI services).
     if (err instanceof Anthropic.APIError && /credit|billing|spend limit/i.test(err.message)) {
       console.error(JSON.stringify({ at: new Date().toISOString(), event: "npc-error", npc: npc.id, code: "NPC-CREDIT" }));
-      return "My AI's credit has run out for now (error NPC-CREDIT), so I can't answer. Please let the app's author know at u8321477@anu.edu.au. The pages below still work.";
+      return CREDIT_OUT;
     }
     const code = err instanceof Anthropic.RateLimitError ? "NPC-BUSY" : err instanceof Anthropic.AuthenticationError ? "NPC-KEY" : err instanceof Anthropic.APIError ? `NPC-${err.status ?? "API"}` : "NPC-NET";
     console.error(JSON.stringify({ at: new Date().toISOString(), event: "npc-error", npc: npc.id, code }));
     return `I couldn't think just now (error ${code}). Try again in a moment, or use the pages below.`;
   }
 }
+
+const CREDIT_OUT = "My AI's credit has run out for now (error NPC-CREDIT), so I can't answer. Please let the app's author know at u8321477@anu.edu.au. The pages below still work.";
+
+/** The same question through Bedrock's Converse API. A refused call (the monthly budget's deny policy) reads as out of credit. */
+async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, offline: string): Promise<string> {
+  try {
+    const res = await br.send(
+      new ConverseCommand({
+        modelId: MODEL,
+        system: [{ text: systemFor(npc) }],
+        messages: [{ role: "user", content: [{ text: question }] }],
+        inferenceConfig: { maxTokens: 400 },
+      }),
+      { abortSignal: AbortSignal.timeout(20_000) },
+    );
+    const text = (res.output?.message?.content ?? []).flatMap((b) => (b.text ? [b.text] : [])).join("\n").trim();
+    return text || offline;
+  } catch (err) {
+    const name = (err as { name?: string }).name ?? "";
+    const code = name === "AccessDeniedException" ? "NPC-CREDIT" : name === "ThrottlingException" ? "NPC-BUSY" : name === "TimeoutError" || name === "AbortError" ? "NPC-NET" : `NPC-${name.replace(/Exception$/, "") || "API"}`;
+    console.error(JSON.stringify({ at: new Date().toISOString(), event: "npc-error", npc: npc.id, code }));
+    if (code === "NPC-CREDIT") return CREDIT_OUT;
+    return `I couldn't think just now (error ${code}). Try again in a moment, or use the pages below.`;
+  }
+}
+

@@ -120,14 +120,17 @@ Read before planning or building: `README.md` (what good means for this app),
   went and to whom, never what it said. Guests neither send nor receive it.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
   too, one question every three seconds and thirty a day each, 500
-  characters; 1500 a day in all. Claude answers (Haiku, by the Fly secret
-  `ANTHROPIC_API_KEY`, never in the repo), 400 tokens at most, told it's an
-  unofficial character, to say when it isn't sure and point to its pages.
-  What's asked goes to the API only: not stored, not logged (the log notes
-  who asked which assistant and how long it was). Without the key, or past
-  the day's limit, they say so and point to their pages; out of API
-  credit, they say that plainly with the author's email (NPC-CREDIT), so a
-  marker knows whom to tell.
+  characters; 150 a day in all (`NPC_PER_DAY`). A cheap model answers:
+  on Amazon Bedrock when the Fly secret `NPC_MODEL` names a Bedrock model
+  (the S3 keys, no new one), else Claude by the Fly secret
+  `ANTHROPIC_API_KEY`; no key is ever in the repo. 400 tokens at most,
+  told it's an unofficial character, to say when it isn't sure and point
+  to its pages. What's asked goes to the model only: not stored, not
+  logged (the log notes who asked which assistant and how long it was).
+  Without a model, or past the day's limit, they say so and point to
+  their pages; out of credit (or refused by the monthly budget's deny
+  policy), they say that plainly with the author's email (NPC-CREDIT), so
+  a marker knows whom to tell.
 - The Poop Room (an easter egg behind the "Staff only" door at the far end
   of Lab Coffee): in there the Q menu's first item poops instead of sticking
   a note. One poop per person, anyone joined (guests too), five seconds
