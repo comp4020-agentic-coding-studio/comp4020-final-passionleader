@@ -118,6 +118,10 @@ export function mountBoard(h: {
   heartComment(commentId: number): Promise<string | null>;
   /** Opens the report form about a person's post or comment. */
   report(about: ReportAbout): void;
+  /** False for a guest: Write a post then asks them to sign up instead (the server refuses them anyway). */
+  mayWrite(): boolean;
+  /** Tells a guest how to sign up. */
+  askSignup(what: string): void;
 }): {
   open(config: BoardConfig, canPostStaffOnly: boolean): void;
   /** A post or comment arrived or went, live: re-fetch whatever is on screen. */
@@ -829,6 +833,7 @@ export function mountBoard(h: {
   });
 
   writeBtn.addEventListener("click", () => {
+    if (!h.mayWrite()) return h.askSignup("write a post");
     showView("write");
     updateCounters();
     titleInput.focus();

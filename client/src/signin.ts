@@ -23,8 +23,7 @@ export function mountSignIn(opts: {
   resetStart(who: AnuWho): Promise<string | null>;
   resetFinish(who: AnuWho, code: string, password: string): Promise<Session | string>;
   entered(s: Session): void;
-  customise(): void;
-}): { show(message?: string): void; hide(): void; isOpen(): boolean } {
+}): { show(message?: string): void; showSignup(): void; hide(): void; isOpen(): boolean } {
   const root = document.getElementById("join");
   if (!root) throw new Error("#join is missing");
   root.replaceChildren();
@@ -114,14 +113,6 @@ export function mountSignIn(opts: {
     opts.entered(s);
   };
 
-  /** The customise button and the guest button share the sign-in view; this makes the former. */
-  function customiseButton(): HTMLButtonElement {
-    const b = el("button", "si-customise", "👕 Customise look");
-    b.type = "button";
-    b.addEventListener("click", () => opts.customise());
-    return b;
-  }
-
   // ---- View 1: sign in ----
   function buildSignIn(): { form: HTMLFormElement; focus: () => void; clear: (msg?: string) => void } {
     const form = el("form", "si-form");
@@ -131,16 +122,17 @@ export function mountSignIn(opts: {
     const error = el("p", "si-error");
     error.setAttribute("role", "alert");
     const submit = primary("Sign in");
-    const signup = link("Sign up with your ANU email");
+    const signup = primary("Sign up with your ANU email");
+    signup.type = "button";
+    signup.classList.add("si-signup");
+    const guest = link("Continue as a guest");
     const forgot = link("Forgot password?");
     const links = el("div", "si-links");
-    links.append(signup, forgot);
-    const rule = el("p", "si-or", "or");
-    const guest = secondary("Continue as a guest");
-    const guestHint = el("p", "si-hint", "Guests can walk, chat and stick notes. Posting and commenting need signing up.");
+    links.append(guest, forgot);
+    const guestHint = el("p", "si-hint", "Guests can walk, chat and look around; posting, notes and comments need signing up.");
     guestHint.id = nextId("hint");
     guest.setAttribute("aria-describedby", guestHint.id);
-    form.append(name.wrap, pw.wrap, error, submit, links, rule, guest, guestHint, customiseButton());
+    form.append(name.wrap, pw.wrap, error, submit, signup, links, guestHint);
 
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -291,11 +283,216 @@ export function mountSignIn(opts: {
     return { form, focus: () => student.input.focus(), clear: (msg) => (reset(), void (msg && (error1.textContent = msg))) };
   }
 
-  const built = { signin: buildSignIn(), signup: buildCodeFlow("signup"), reset: buildCodeFlow("reset") };
+  // ---- View 2: sign up, four steps (who, code, name, password), one field each ----
+  function buildSignupWizard(): { form: HTMLFormElement; focus: () => void; clear: (msg?: string) => void } {
+    const form = el("form", "si-form si-wizard");
+    form.noValidate = true;
+    const bar = el("div", "si-progress");
+    bar.setAttribute("role", "progressbar");
+    bar.setAttribute("aria-valuemin", "1");
+    bar.setAttribute("aria-valuemax", "4");
+    const segs = [0, 1, 2, 3].map(() => el("span", "si-seg"));
+    bar.append(...segs);
+    form.append(bar, el("h2", "si-h2", "Sign up with your ANU email"));
+
+    const mkStep = (hint: string): { step: HTMLDivElement; error: HTMLParagraphElement; actions: HTMLDivElement } => {
+      const step = el("div", "si-step");
+      step.append(el("p", "si-hint", hint));
+      const error = el("p", "si-error");
+      error.setAttribute("role", "alert");
+      const actions = el("div", "si-actions");
+      return { step, error, actions };
+    };
+    const backBtn = (): HTMLButtonElement => link("← Back");
+
+    // Step 1: who.
+    const s1 = mkStep("We email a 6-digit code to your ANU address to check it's you. Your email is never shown to anyone.");
+    const student = field("Student number", { autocomplete: "username", maxLength: 8, placeholder: "u1234567", inputMode: "text" });
+    const staffRow = el("label", "si-check");
+    const staffBox = el("input");
+    staffBox.type = "checkbox";
+    staffRow.append(staffBox, document.createTextNode(" I'm ANU staff"));
+    const staff = field("ANU staff email", { autocomplete: "email", type: "email", maxLength: 80, placeholder: "name@anu.edu.au", inputMode: "email" });
+    staff.wrap.hidden = true;
+    const send = primary("Send code");
+    const to1 = link("← Back to sign in");
+    s1.actions.append(send, to1);
+    s1.step.append(student.wrap, staffRow, staff.wrap, s1.error, s1.actions);
+
+    // Step 2: the code.
+    const s2 = mkStep("");
+    const sent = s2.step.firstElementChild as HTMLElement;
+    sent.className = "si-note";
+    sent.setAttribute("role", "status");
+    const code = field("6-digit code", { autocomplete: "one-time-code", maxLength: 6, placeholder: "123456", inputMode: "numeric" });
+    const next2 = primary("Continue");
+    const resend = link("Send a new code");
+    const back2 = backBtn();
+    s2.actions.append(next2, back2, resend);
+    s2.step.append(code.wrap, s2.error, s2.actions);
+
+    // Step 3: the name.
+    const s3 = mkStep("Shown above your head. 1–8 letters, digits or underscores.");
+    const name = field("Name", { autocomplete: "off", maxLength: 8, placeholder: "e.g. kim_22" });
+    const next3 = primary("Continue");
+    const back3 = backBtn();
+    s3.actions.append(next3, back3);
+    s3.step.append(name.wrap, s3.error, s3.actions);
+
+    // Step 4: the password, twice.
+    const s4 = mkStep(`${MIN_PASSWORD}+ characters. Not your ANU password.`);
+    const pw1 = field("Password", { autocomplete: "new-password", type: "password", maxLength: 100 });
+    const pw2 = field("Password again", { autocomplete: "new-password", type: "password", maxLength: 100 });
+    const finish = primary("Create account");
+    const back4 = backBtn();
+    s4.actions.append(finish, back4);
+    s4.step.append(pw1.wrap, pw2.wrap, s4.error, s4.actions);
+
+    const steps = [s1, s2, s3, s4];
+    const focusOf = [() => (staffBox.checked ? staff.input : student.input).focus(), () => code.input.focus(), () => name.input.focus(), () => pw1.input.focus()];
+    const stage = el("div", "si-stage");
+    stage.append(...steps.map((x) => x.step));
+    form.append(stage);
+
+    let at = 0;
+    const paint = (): void => {
+      segs.forEach((sg, i) => sg.classList.toggle("is-on", i <= at));
+      bar.setAttribute("aria-valuenow", String(at + 1));
+      bar.setAttribute("aria-label", `Step ${at + 1} of 4`);
+    };
+
+    /** Slides to step n: the old one out to the left (or right going back), the new one in from the other side. */
+    function goStep(n: number, focus = true): void {
+      if (n === at && !steps[n]!.step.hidden) return;
+      const from = steps[at]!.step;
+      const to = steps[n]!.step;
+      const dir = n > at ? 1 : -1;
+      at = n;
+      paint();
+      const still = matchMedia("(prefers-reduced-motion: reduce)").matches || typeof to.animate !== "function";
+      for (const [i, x] of steps.entries()) if (i !== n && x.step !== from) x.step.hidden = true;
+      to.hidden = false;
+      if (focus) focusOf[n]!();
+      if (still || from === to || from.hidden) {
+        from.hidden = from === to;
+        return;
+      }
+      const opts: KeyframeAnimationOptions = { duration: 250, easing: "ease", fill: "both" };
+      from.animate([{ transform: "translateX(0)", opacity: 1 }, { transform: `translateX(${-dir * 40}px)`, opacity: 0 }], opts);
+      window.setTimeout(() => {
+        if (steps[at]!.step !== from) from.hidden = true;
+      }, 260);
+      to.animate([{ transform: `translateX(${dir * 40}px)`, opacity: 0 }, { transform: "translateX(0)", opacity: 1 }], opts);
+    }
+
+    const who = (): AnuWho | string => {
+      if (staffBox.checked) {
+        const email = staff.input.value.trim().toLowerCase();
+        return STAFF_RE.test(email) ? { staff: true, email } : "Enter your @anu.edu.au email address.";
+      }
+      const studentNo = student.input.value.trim().toLowerCase();
+      return STUDENT_RE.test(studentNo) ? { studentNo } : "Enter your student number, like u1234567.";
+    };
+    staffBox.addEventListener("change", () => {
+      student.wrap.hidden = staffBox.checked;
+      staff.wrap.hidden = !staffBox.checked;
+      s1.error.textContent = "";
+      (staffBox.checked ? staff.input : student.input).focus();
+    });
+
+    const sendCode = (resending: boolean): void => {
+      const err = resending ? s2.error : s1.error;
+      const w = who();
+      if (typeof w === "string") return void (err.textContent = w);
+      void run(
+        form,
+        err,
+        async () => await opts.signupStart(w),
+        () => {
+          sent.textContent = resending
+            ? "A new code is on its way. Check your inbox (and junk) for a code from no-reply@passionleader.click."
+            : "Check your inbox (and junk) for a code from no-reply@passionleader.click.";
+          code.input.value = "";
+          if (!resending) goStep(1);
+          else code.input.focus();
+        },
+      );
+    };
+    const toName = (): void => {
+      if (!CODE_RE.test(code.input.value.trim())) return void (s2.error.textContent = "Enter the 6-digit code from the email.");
+      s2.error.textContent = "";
+      goStep(2);
+    };
+    const toPassword = (): void => {
+      const n = name.input.value.trim();
+      if (!NAME_RE.test(n)) return void (s3.error.textContent = "Name: 1–8 letters, digits or underscores.");
+      if (/^(qa_|guest)/i.test(n)) return void (s3.error.textContent = "That name is kept. Pick another.");
+      s3.error.textContent = "";
+      goStep(3);
+    };
+    const create = (): void => {
+      const w = who();
+      if (typeof w === "string") return void goStep(0), void (s1.error.textContent = w);
+      if (pw1.input.value.length < MIN_PASSWORD) return void (s4.error.textContent = `Password: at least ${MIN_PASSWORD} characters.`);
+      if (pw1.input.value !== pw2.input.value) return void (s4.error.textContent = "The two passwords don't match.");
+      void run(
+        form,
+        s4.error,
+        async () => {
+          const r = await opts.signupFinish(w, code.input.value.trim(), name.input.value.trim(), pw1.input.value);
+          // The server checks the code and the name only now: take the person to the step that needs fixing.
+          if (typeof r === "string") {
+            const low = r.toLowerCase();
+            if (/code/.test(low)) return void (s2.error.textContent = r), goStep(1), null;
+            if (/email|account already/.test(low)) return void (s1.error.textContent = r), goStep(0), null;
+            if (/name|taken/.test(low)) return void (s3.error.textContent = r), goStep(2), null;
+          }
+          return r;
+        },
+        (s) => s && enter(s),
+      );
+    };
+
+    send.addEventListener("click", () => sendCode(false));
+    resend.addEventListener("click", () => sendCode(true));
+    next2.addEventListener("click", toName);
+    next3.addEventListener("click", toPassword);
+    finish.addEventListener("click", create);
+    to1.addEventListener("click", () => go("signin"));
+    back2.addEventListener("click", () => goStep(0));
+    back3.addEventListener("click", () => goStep(1));
+    back4.addEventListener("click", () => goStep(2));
+    // Enter in a field presses its step's button. The buttons are all type=button: a submit
+    // button would make Enter click the first one in the form (step 1's), whatever step is up.
+    const press = (): void => [() => sendCode(false), toName, toPassword, create][at]!();
+    form.addEventListener("submit", (e) => e.preventDefault());
+    form.addEventListener("keydown", (e) => {
+      if (e.key !== "Enter" || !(e.target instanceof HTMLInputElement) || e.target.type === "checkbox") return;
+      e.preventDefault();
+      if (!form.hasAttribute("aria-busy")) press();
+    });
+    for (const b of [send, next2, next3, finish]) b.type = "button";
+
+    const reset = (): void => {
+      for (const i of [student.input, staff.input, code.input, name.input, pw1.input, pw2.input]) i.value = "";
+      staffBox.checked = false;
+      student.wrap.hidden = false;
+      staff.wrap.hidden = true;
+      for (const x of steps) x.error.textContent = "";
+      at = 0;
+      steps.forEach((x, i) => (x.step.hidden = i !== 0));
+      paint();
+    };
+    reset();
+    return { form, focus: () => focusOf[at]!(), clear: (msg) => (reset(), void (msg && (s1.error.textContent = msg))) };
+  }
+
+  const built = { signin: buildSignIn(), signup: buildSignupWizard(), reset: buildCodeFlow("reset") };
   let open = !root.hidden;
 
   function go(v: View, message?: string): void {
     for (const k of Object.keys(built) as View[]) built[k].form.hidden = k !== v;
+    card.classList.toggle("si-compact", v === "signup");
     built[v].clear(message);
     views.replaceChildren(built[v].form);
     built[v].focus();
@@ -308,6 +505,11 @@ export function mountSignIn(opts: {
       open = true;
       root.hidden = false;
       go("signin", message);
+    },
+    showSignup(): void {
+      open = true;
+      root.hidden = false;
+      go("signup");
     },
     hide(): void {
       open = false;

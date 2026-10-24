@@ -22,7 +22,7 @@ function read(): Quality {
 export const QUALITY: Quality = read();
 export const HIGH = QUALITY === "high";
 
-export function mountSettings(opts: { reportBug(): void; reportPerson(): void; mute(): void; signOut(): void }): void {
+export function mountSettings(opts: { reportBug(): void; reportPerson(): void; mute(): void; signOut(): void; isGuest(): boolean; signUp(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -125,9 +125,14 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
   const out = document.createElement("button");
   out.type = "button";
   out.className = "settings-bug";
-  out.textContent = "🚪 Sign out (or sign up)";
+  out.textContent = "🚪 Sign out";
+  // A guest's way to a real account (guests can't post, comment or stick notes).
+  const verify = document.createElement("button");
+  verify.type = "button";
+  verify.className = "settings-bug settings-verify";
+  verify.textContent = "✉️ Verify my ANU email (sign up)";
 
-  card.append(title, sound, fieldset, note, bug, person, mute, out, actions);
+  card.append(title, sound, fieldset, note, verify, bug, person, mute, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -136,6 +141,7 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
     button.focus();
   };
   button.addEventListener("click", () => {
+    verify.hidden = !opts.isGuest();
     dialog.hidden = false;
     (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
   });
@@ -155,6 +161,10 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
   out.addEventListener("click", () => {
     dialog.hidden = true;
     opts.signOut();
+  });
+  verify.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.signUp();
   });
   dialog.addEventListener("keydown", (e) => {
     e.stopPropagation();

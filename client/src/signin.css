@@ -99,6 +99,10 @@
   border-radius: 8px;
 }
 
+#join.si-root .si-signup {
+  margin-top: 10px;
+}
+
 #join.si-root .si-primary {
   border: 0;
   background: var(--accent);
@@ -175,4 +179,47 @@
   #join.si-root .si-card {
     padding: 18px;
   }
+}
+
+/* Sign-up wizard: a four-segment progress bar and one step at a time. */
+#join.si-root .si-compact .join-pitch,
+#join.si-root .si-compact .join-sub,
+#join.si-root .si-compact .si-flavour {
+  display: none;
+}
+
+#join.si-root .si-compact h1 {
+  margin-bottom: 4px;
+}
+
+#join.si-root .si-progress {
+  display: flex;
+  gap: 6px;
+  margin: 0 0 10px;
+}
+
+#join.si-root .si-seg {
+  flex: 1;
+  height: 4px;
+  border-radius: 2px;
+  background: rgba(107, 63, 29, 0.2);
+}
+
+#join.si-root .si-seg.is-on {
+  background: var(--accent);
+}
+
+#join.si-root .si-stage {
+  overflow-x: hidden;
+}
+
+#join.si-root .si-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0 12px;
+}
+
+#join.si-root .si-actions .si-primary {
+  flex: 1 1 100%;
 }

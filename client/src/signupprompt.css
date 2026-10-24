@@ -1,0 +1,11 @@
+/* The guest's "verify your ANU email" dialog, in the settings dialog's style. */
+
+#signup-prompt {
+  position: fixed; inset: 0; z-index: 40; display: grid; place-items: center;
+  padding: 16px; background: rgba(20, 20, 20, 0.45);
+}
+#signup-prompt[hidden] { display: none; }
+.signup-card { max-width: 380px; }
+.signup-ask { margin: 0 0 14px; line-height: 1.4; }
+.signup-card .settings-actions button { min-height: 44px; }
+.signup-card .signup-yes { background: var(--accent); color: #fff; }

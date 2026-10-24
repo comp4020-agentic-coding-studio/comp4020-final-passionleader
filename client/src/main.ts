@@ -10,7 +10,7 @@ import { say } from "./voice.ts";
 import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
-import { sfx, step, warmUp } from "./sfx.ts";
+import { fart, sfx, step, warmUp } from "./sfx.ts";
 import {
   ApiError,
   RESERVED_RE,
@@ -70,6 +70,7 @@ import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
+import { mountSignupPrompt } from "./signupprompt.ts";
 import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
 import { mountMailbox } from "./mailbox.ts";
@@ -145,14 +146,26 @@ mountSettings({
   reportBug: () => bugReport.open(),
   reportPerson: () => bugReport.open(true),
   mute: () => muteDialog.open(),
-  signOut() {
-    // This browser forgets who it was; the join screen offers signing up or in.
-    storage.set("campus.token", "");
-    storage.set("campus.role", "");
-    session = null;
-    showJoin();
-  },
+  signOut,
+  isGuest: () => !!session && !isMember(session),
+  signUp: () => signUpFromGuest(),
 });
+function signOut(): void {
+  // This browser forgets who it was; the join screen offers signing up or in.
+  storage.set("campus.token", "");
+  storage.set("campus.role", "");
+  session = null;
+  showJoin();
+}
+/** A guest goes for a real account: out of the campus, onto the sign-up form. */
+function signUpFromGuest(): void {
+  board.close();
+  signOut();
+  signIn.showSignup();
+}
+// A guest who tries something that needs signing up gets this, before the
+// action where we know (Write a post, a note) and on the server's refusal.
+const signupPrompt = mountSignupPrompt({ signUp: () => signUpFromGuest() });
 
 // Customise look has its own button, a coat hanger just left of the gear (it
 // used to be a row in the settings dialog). The join screen keeps its button.
@@ -176,7 +189,7 @@ mailBtn.id = "mail-btn";
 mailBtn.title = "Mail";
 mailBtn.setAttribute("aria-haspopup", "dialog");
 const mailIcon = document.createElement("span");
-mailIcon.textContent = "📮";
+mailIcon.textContent = "✉️";
 mailIcon.setAttribute("aria-hidden", "true");
 const mailBadge = document.createElement("span");
 mailBadge.className = "mail-badge";
@@ -682,7 +695,6 @@ const composer = mountNoteComposer(async (text) => {
     upsertNote(note);
     sfx("note");
     toast(replaced !== null ? "Note stuck. Your oldest note here was removed." : "Note stuck.");
-    quests.done("note");
   } catch (err) {
     throw asError(err);
   }
@@ -691,7 +703,13 @@ const composer = mountNoteComposer(async (text) => {
 // --- chat and the Q menu ---------------------------------------------------
 
 let net: Net | null = null;
-const chat = mountChat({ onSend: (text) => net?.chat(text), maxLength: 200 });
+const chat = mountChat({
+  onSend: (text) => {
+    net?.chat(text);
+    quests.done("chat");
+  },
+  maxLength: 200,
+});
 
 // In a meeting room, its group-chat window takes the place of the corner chat.
 const roomPanel = mountRoomPanel({
@@ -720,6 +738,7 @@ const radial = mountRadial(
   ],
   (id) => {
     if (id === "note" && space?.id === "poop") doPoop();
+    else if (id === "note" && !isMember(session)) signupPrompt.open("stick a note");
     else if (id === "note") void writeNote();
     else sendEmote(id as Emote);
     stage.focus();
@@ -889,6 +908,10 @@ const board = mountBoard({
     board.close();
     bugReport.open(true, about);
   },
+  mayWrite: () => isMember(session),
+  askSignup(what) {
+    signupPrompt.open(what);
+  },
   async joinGroup(postId) {
     if (!session) return "Join first.";
     try {
@@ -986,7 +1009,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 
 // --- the current space -----------------------------------------------------
@@ -1013,7 +1036,7 @@ function placeBadges(): void {
   }
   badges = [];
   if (!space) return;
-  const at = [...space.doors, ...(space.links ?? []), ...(space.spots ?? [])];
+  const at = [...space.doors.filter((d) => !d.secret), ...(space.links ?? []), ...(space.spots ?? [])];
   for (const { x, z } of at) {
     const el = document.createElement("div");
     el.className = "use-badge";
@@ -1107,7 +1130,7 @@ const minimap = mountMinimap({
     { x: -2, z: 22, name: "Library" },
     { x: 12, z: -21, name: "Lab Coffee" },
     { x: -26, z: -30, name: "ANU Sport" },
-    { x: 1.75, z: -31.6, name: "Noticeboard" },
+    { x: 1.75, z: -31.6, name: "Ad board" },
     { x: -8.6, z: 2.3, name: "Study groups" },
   ],
 });
@@ -1147,7 +1170,9 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   }
   scene.add(space.group);
   radial.relabel("note", id === "poop" ? "1 · 💩 Poop" : "1 · 📝 Sticky note");
-  if (id !== "poop") showPoops([]);
+  // Clear the last room's poops; in the Poop Room the server's list follows.
+  showPoops([]);
+  poopsShown = null;
   minimap.show(!!space.outdoor);
   if (id === "library") quests.done("library");
   if (meetingRoom(id)?.kind === "team") quests.done("room");
@@ -1209,10 +1234,20 @@ function doPoop(): void {
   lastPoop = now;
   net?.poop();
 }
+// Where each poop was in the last list; null until the first list after
+// coming in, which only sets it (those poops were there already).
+let poopsShown: Map<string, string> | null = null;
 function showPoops(list: { name: string; x: number; z: number }[]): void {
   removeTags(poopGroup);
   poopGroup.clear();
-  if (space?.id !== "poop") return;
+  if (space?.id !== "poop") {
+    poopsShown = null;
+    return;
+  }
+  // Someone's poop is new or moved since the last list: pbbt.
+  const now = new Map(list.map((p) => [p.name, `${p.x},${p.z}`]));
+  if (poopsShown && [...now].some(([name, at]) => poopsShown!.get(name) !== at)) fart();
+  poopsShown = now;
   for (const p of list) {
     const mesh = poopMesh();
     mesh.position.set(p.x, 0, p.z);
@@ -1280,7 +1315,6 @@ const signIn = mountSignIn({
   resetStart: (who) => errorOf(resetStart(who)),
   resetFinish: (who, code, password) => asSession(resetFinish(who, code, password)),
   entered: (s) => void enterAs(s),
-  customise: () => openLookPicker(),
 });
 
 /** In with a session: keep it in this browser, send up a look picked before, and open the world. */
@@ -1392,7 +1426,7 @@ function goOnline(token: string): void {
         guest: "Sign up to whisper to someone.",
         nobody: `Nobody signed up is called ${name}.`,
         self: "That's you.",
-        offline: `${name} isn't here right now. Try 📮 mail.`,
+        offline: `${name} isn't here right now. Try ✉️ mail.`,
       };
       toast(why[reason] ?? "That whisper didn't go.");
     },
@@ -1416,7 +1450,7 @@ function goOnline(token: string): void {
     mail(unread) {
       showUnread(unread);
       sfx("message");
-      toast(`📮 New mail (${unread} unread).`);
+      toast(`✉️ New mail (${unread} unread).`);
     },
     hearts(noteId) {
       if (panel.openNoteId() === noteId) void refreshComments(noteId);
@@ -1887,7 +1921,9 @@ function update(dt: number, now: number): void {
     if (mySeat) net?.sendMove({ x: mySeat.seat.x, y: 0, z: mySeat.seat.z, rot: mySeat.seat.rot });
     else net?.sendMove({ x: player.position.x, y: player.position.y, z: player.position.z, rot: player.rotation.y });
 
-    const target = busy() ? null : nearestTarget();
+    const found = busy() ? null : nearestTarget();
+    // A secret door works but says nothing (the Poop Room's).
+    const target = found?.kind === "door" && found.door.secret ? null : found;
     showBadges(target);
     hintEl.hidden = !target && !mySeat;
     if (mySeat && !target) hintEl.textContent = `${touchScreen.matches ? "Use" : "E"} · Stand up (or just walk)`;
@@ -1993,7 +2029,7 @@ void returnIfKnown();
 // A guest who tries something that needs signing up: say so, once, with a way to it.
 let signupPromptAt = 0;
 whenSignupNeeded(() => {
-  if (Date.now() - signupPromptAt < 4000) return;
+  if (Date.now() - signupPromptAt < 4000 || signupPrompt.isOpen()) return;
   signupPromptAt = Date.now();
-  toast("Sign up with your ANU email to post, comment or share files: ⚙️ → Sign out (or sign up).");
+  signupPrompt.open();
 });

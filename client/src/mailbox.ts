@@ -35,7 +35,7 @@ export function mountMailbox(opts: {
   head.className = "mail-head";
   const title = document.createElement("h2");
   title.id = "mail-title";
-  title.textContent = "📮 Mail";
+  title.textContent = "✉️ Mail";
   const close = document.createElement("button");
   close.type = "button";
   close.className = "mail-close";
@@ -168,7 +168,7 @@ export function mountMailbox(opts: {
     if (!opts.member()) {
       const p = document.createElement("p");
       p.className = "mail-empty";
-      p.textContent = "Mail is for people signed up with an ANU email. ⚙️ → Sign out (or sign up).";
+      p.textContent = "Mail is for people signed up with an ANU email: ⚙️ → Verify my ANU email.";
       body.replaceChildren(p);
       return;
     }
