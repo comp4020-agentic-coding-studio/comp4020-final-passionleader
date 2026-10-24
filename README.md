@@ -61,8 +61,8 @@ should feel at home in a virtual space shaped like the real campus they know.
    Lab Coffee wraps round 154's north-west corner, with a terrace; its menu
    board (**E**) lists the cafés on campus, where each is and roughly what
    it sells, gathered from public pages (not an official list).
-   The Student Hub's wall calendar shows this month and opens what's on at
-   ANU. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
+   The Student Hub's wall calendar shows this month and opens ANU's
+   university calendar for the year. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
    careers) stand in their places: **E** to ask one. Claude answers in
    their name, briefly, from what their pages cover; it can be wrong, so
    each points to its pages too. What you ask isn't kept.
