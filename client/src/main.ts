@@ -98,7 +98,7 @@ import { imageLink, openFile, upload } from "./uploads.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, pushOut, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { canberraTime } from "./when.ts";
 
 const SPEED = 4.2; // walking, world units per second
@@ -2049,6 +2049,7 @@ function update(dt: number, now: number): void {
   // its axis (once in about 20 minutes), so the sky wraps round seamlessly.
   // The light stays where it is, so shading doesn't move with it.
   if (highQuality) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
+  if (highQuality) wind.value += dt;
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);

@@ -520,6 +520,41 @@ export function tree(g: THREE.Group, colliders: Box[], x: number, z: number, s =
  */
 const loader = new GLTFLoader();
 const cache = new Map<string, Promise<THREE.Group | null>>();
+// Wind (plan 35, High only): leaves, grass and flowers sway a little, more
+// toward their tops, each plant out of step with the next (by where it
+// stands). One shared clock; main ticks it.
+export const wind = { value: 0 };
+const WINDY = /leaves|grass|flowers/i;
+const swayed = new WeakSet<THREE.Material>();
+function addWind(root: THREE.Object3D): void {
+  root.traverse((o) => {
+    const mesh = o as THREE.Mesh;
+    if (!mesh.isMesh) return;
+    for (const m of Array.isArray(mesh.material) ? mesh.material : [mesh.material]) {
+      if (!WINDY.test(m.name) || swayed.has(m)) continue;
+      swayed.add(m);
+      m.onBeforeCompile = (shader) => {
+        shader.uniforms.uWind = wind;
+        shader.vertexShader = shader.vertexShader
+          .replace("#include <common>", "#include <common>\nuniform float uWind;")
+          .replace(
+            "#include <begin_vertex>",
+            `#include <begin_vertex>
+            vec4 rootAt = modelMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+            #ifdef USE_INSTANCING
+              rootAt = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
+            #endif
+            float phase = rootAt.x * 0.37 + rootAt.z * 0.21;
+            float reach = max(position.y, 0.0) * 0.025;
+            transformed.x += sin(uWind * 1.3 + phase) * reach;
+            transformed.z += cos(uWind * 0.9 + phase * 1.7) * reach * 0.6;`,
+          );
+      };
+      m.needsUpdate = true;
+    }
+  });
+}
+
 export function loadModel(file: string, height: number): Promise<THREE.Group | null> {
   const key = `${file}@${height}`;
   let p = cache.get(key);
@@ -533,6 +568,7 @@ export function loadModel(file: string, height: number): Promise<THREE.Group | n
         box = new THREE.Box3().setFromObject(model);
         const c = box.getCenter(new THREE.Vector3());
         model.position.set(-c.x, -box.min.y, -c.z);
+        if (HIGH && file.startsWith("nature/")) addWind(model);
         const g = new THREE.Group();
         g.add(model);
         return g;
