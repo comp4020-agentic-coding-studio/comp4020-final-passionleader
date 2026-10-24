@@ -104,6 +104,23 @@ describe("real time", () => {
     expect((both.poops as { name: string }[]).filter((p) => p.name === a.name || p.name === b.name)).toHaveLength(2);
   });
 
+  it("whispers (/w name) reach only that member, in any space, and never from or to a guest", async () => {
+    const [a, b, c, g] = await Promise.all([visitor(), visitor(), visitor(), guest()]);
+    const [sa, sb, sc, sg] = await Promise.all([a, b, c, g].map((v) => connect(v.token)));
+    await Promise.all([sa, sb, sc, sg].map((s) => s.next((m) => m.t === "welcome")));
+    sb.send({ t: "enter", space: "library", x: 0, z: 0 });
+    await sb.next((m) => m.t === "players");
+    sa.send({ t: "chat", text: `/w ${b.name} meet at the lawn?` });
+    await expect(sb.next((m) => m.t === "whisper")).resolves.toMatchObject({ from: a.name, to: b.name, text: "meet at the lawn?" });
+    await expect(sa.next((m) => m.t === "whisper")).resolves.toMatchObject({ to: b.name });
+    expect(await sc.sees((m) => m.t === "whisper" || (m.t === "chat" && String(m.text).includes("lawn")), 400)).toBe(false);
+    sg.send({ t: "chat", text: `/w ${b.name} hi` });
+    await expect(sg.next((m) => m.t === "action" && m.kind === "whisper-refused")).resolves.toMatchObject({ reason: "guest" });
+    await new Promise((r) => setTimeout(r, 1100));
+    sa.send({ t: "chat", text: `/w ${g.name} hi` });
+    await expect(sa.next((m) => m.t === "action" && m.kind === "whisper-refused")).resolves.toMatchObject({ reason: "nobody" });
+  });
+
   it("shows an emote to the others in the space", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
     const sa = await connect(a.token);

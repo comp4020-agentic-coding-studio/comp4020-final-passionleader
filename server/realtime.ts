@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, findByName, findByToken, keepChatLine, lastSpot, lookOf, restrictionOn, saveLastSpot, type Look } from "./db.ts";
+import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, restrictionOn, saveLastSpot, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -39,6 +39,8 @@ const EMOTE_GAP_MS = 2000;
 // "/all message" reaches every space's chat log (not meeting rooms', which are
 // private): once every 30 seconds each, so it can't be used to flood the campus.
 const ALL_PREFIX = /^\/all\s+/i;
+// "/w name message": a whisper to one member, wherever they are (plan 17).
+const WHISPER = /^\/w\s+(\S+)\s+([\s\S]+)$/i;
 const ALL_GAP_MS = 30_000;
 
 const players = new Map<WebSocket, Player>();
@@ -304,6 +306,23 @@ function onMessage(ws: WebSocket, raw: string): void {
     if (stopped) {
       log("refused", owners.get(ws) ?? null, { action: "chat", space: player.space, reason: "restricted" });
       send(ws, { t: "action", kind: "restricted", what: "chat", until: stopped.until });
+      return;
+    }
+    const whisper = WHISPER.exec(raw);
+    if (whisper) {
+      // Members only, both ends; it goes to every tab the reader has open
+      // and back to the sender, and is never kept (not even for reports).
+      const to = findByName(whisper[1]);
+      const reason = !isMember(owners.get(ws) ?? { role: "guest" }) ? "guest" : !to || !isMember(to) ? "nobody" : to.name.toLowerCase() === player.name.toLowerCase() ? "self" : ![...players.values()].some((p) => p.name.toLowerCase() === to.name.toLowerCase()) ? "offline" : null;
+      if (reason || !to) {
+        send(ws, { t: "action", kind: "whisper-refused", reason, name: whisper[1].slice(0, 20) });
+        return;
+      }
+      const said = whisper[2].trim().slice(0, MAX_CHAT);
+      log("whisper", owners.get(ws) ?? null, { to: to.name, chars: said.length });
+      const line = { t: "whisper", from: player.name, to: to.name, text: said };
+      tellPerson(to.name, line);
+      tellPerson(player.name, line);
       return;
     }
     if (toAll) {

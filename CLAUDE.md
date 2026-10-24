@@ -102,7 +102,10 @@ Read before planning or building: `README.md` (what good means for this app),
   The one exception: "/all message" reaches the chat log in every space
   outside meeting rooms (its bubble only where the sender is), once every
   30 seconds per person, never from or into a meeting room; same chat
-  restriction. Mute hides someone's chat, bubbles, emotes and notes on your
+  restriction. And "/w name message" whispers to one member who is online,
+  wherever they are, members only both ends; the reader and the sender see
+  it, nobody else, and it's never kept (not in `chat_lines`, so not in a
+  report; the log notes who to and how long, never the text). Mute hides someone's chat, bubbles, emotes and notes on your
   own screen only (kept in your browser; the server never knows).
   Wave, yes, no and "mate" go once every two seconds at most (dance as
   often as you like), checked on the server.

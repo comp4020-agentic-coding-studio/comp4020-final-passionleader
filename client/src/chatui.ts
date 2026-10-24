@@ -19,7 +19,7 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
   openInput(): void;
   closeInput(): void;
   isTyping(): boolean;
-  add(msg: { name: string; text: string; self?: boolean }): void;
+  add(msg: { name: string; text: string; self?: boolean; whisper?: boolean }): void;
   system(text: string): void;
 } {
   const root = document.createElement("div");
@@ -43,11 +43,11 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
   const input = document.createElement("input");
   input.id = "chat-input";
   input.type = "text";
-  // Room for "/all " in front of a full-length line (the server counts the line itself).
-  input.maxLength = opts.maxLength + 5;
-  input.placeholder = "Say something · /all to every space";
+  // Room for "/all " or "/w name " in front of a full-length line (the server counts the line itself).
+  input.maxLength = opts.maxLength + 12;
+  input.placeholder = "Say something · /all everyone · /w name to one";
   input.autocomplete = "off";
-  input.setAttribute("aria-label", "Chat message. Start with /all to reach every space.");
+  input.setAttribute("aria-label", "Chat message. Start with /all to reach every space, or /w and a name to whisper to one person.");
   inputRow.append(input);
 
   root.append(log, controls, inputRow);
@@ -118,9 +118,9 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
     isTyping(): boolean {
       return typing;
     },
-    add(msg: { name: string; text: string; self?: boolean }): void {
+    add(msg: { name: string; text: string; self?: boolean; whisper?: boolean }): void {
       const el = document.createElement("div");
-      el.className = "chat-line" + (msg.self ? " self" : "");
+      el.className = "chat-line" + (msg.self ? " self" : "") + (msg.whisper ? " whisper" : "");
       const name = document.createElement("span");
       name.className = "chat-name";
       name.textContent = `${msg.name}: `;

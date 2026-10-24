@@ -52,7 +52,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    until it's full. The lawn noticeboard stands by the north road; its posts
    go after 30 days. All the boards say they're unofficial.
    Comments take hearts (the most-hearted first), and anything someone wrote
-   can be reported. Type "/all" before a chat line to reach every space.
+   can be reported. Type "/all" before a chat line to reach every space, or "/w name" to
+   whisper to one signed-up person wherever they are (only the two of you
+   see it, and it isn't kept).
    Under your name, how many people are on campus, in the Hub, the
    library, the classrooms and the meeting rooms (numbers only, never who),
    and the classroom picker shows how many are in each.
@@ -135,7 +137,8 @@ may not do, password resets (`campus.test.ts`); notes and comments
 persist, stay in their space, keep their limits, and only their author or an
 admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
 and new notes reach the same space within a second, and no other
-(`realtime.test.ts`, with the hidden room's one-poop-each rule); study
+(`realtime.test.ts`, with whispers reaching only their reader and the
+hidden room's one-poop-each rule); study
 groups never fill past their size, private questions reach only their
 writer and staff, mail only its reader, guests can't send it, and the
 assistants answer one question every three seconds (`board.test.ts`); only the admin reads the seven-day log and the bug

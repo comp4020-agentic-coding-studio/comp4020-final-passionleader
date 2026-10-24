@@ -41,6 +41,7 @@ export type Event =
   | "password-reset"
   | "npc-asked"
   | "mail-sent"
+  | "whisper"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

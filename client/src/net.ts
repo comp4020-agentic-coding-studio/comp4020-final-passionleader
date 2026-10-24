@@ -47,6 +47,10 @@ export interface NetHandlers {
   chat(id: string, name: string, text: string, all?: { space: SpaceId }): void;
   /** /all was refused: wait `seconds` (0: not from inside a meeting room). */
   allWait(seconds: number): void;
+  /** A whisper to or from us (/w name). */
+  whisper(from: string, to: string, text: string): void;
+  /** Our whisper didn't go: guest, nobody by that name, ourselves, or not online. */
+  whisperRefused(reason: string, name: string): void;
   emote(id: string, kind: Emote): void;
   note(note: Note): void;
   noteRemoved(id: number): void;
@@ -136,6 +140,8 @@ export function connect(token: string, on: NetHandlers): Net {
           return on.players(m.players as RemotePlayer[]);
         case "leave":
           return on.leave(m.id as string);
+        case "whisper":
+          return on.whisper(m.from as string, m.to as string, m.text as string);
         case "chat":
           return on.chat(m.id as string, m.name as string, m.text as string, m.all ? { space: m.space as SpaceId } : undefined);
         case "emote":
@@ -152,6 +158,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
           if (m.kind === "hearts") return on.hearts(m.noteId as number);
           if (m.kind === "mail") return on.mail(m.unread as number);
+          if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
             return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[]);

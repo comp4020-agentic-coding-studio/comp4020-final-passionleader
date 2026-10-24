@@ -1377,6 +1377,25 @@ function goOnline(token: string): void {
       const figure = figureOf(id);
       if (figure) speak(figure, text, 5000);
     },
+    whisper(from, to, text) {
+      const mineToo = !!session && from.toLowerCase() === session.name.toLowerCase();
+      if (!mineToo && muteDialog.isMuted(from)) return;
+      if (!mineToo) sfx("message");
+      const line = { name: mineToo ? `→ ${to}` : `${from} → you`, text, self: mineToo };
+      // In a meeting room the map chat is hidden: show it in the room's window.
+      if (roomPanel.isOpen()) roomPanel.add(line);
+      else chat.add({ ...line, whisper: true });
+    },
+    whisperRefused(reason, name) {
+      sfx("error");
+      const why: Record<string, string> = {
+        guest: "Sign up to whisper to someone.",
+        nobody: `Nobody signed up is called ${name}.`,
+        self: "That's you.",
+        offline: `${name} isn't here right now. Try 📮 mail.`,
+      };
+      toast(why[reason] ?? "That whisper didn't go.");
+    },
     allWait(seconds) {
       sfx("error");
       toast(seconds ? `/all again in ${seconds} s (once every 30 seconds).` : "/all doesn't leave a meeting room.");

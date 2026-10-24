@@ -53,6 +53,12 @@
   color: var(--paper, #f3e7a6);
 }
 
+/* A whisper (/w name): only the two of you see it. */
+.chat-line.whisper {
+  background: rgba(88, 52, 130, 0.85);
+  color: #f4ecff;
+}
+
 .chat-line.system {
   background: none;
   color: var(--ink, #3b2a12);
