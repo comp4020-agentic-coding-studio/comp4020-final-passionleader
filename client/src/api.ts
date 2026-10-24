@@ -96,6 +96,8 @@ export type AnuWho = { studentNo: string } | { staff: true; email: string };
 export const joinAsGuest = (token?: string): Promise<Session> => request<Session>("/api/guest", "POST", { token });
 /** Emails a six-digit sign-up code to the ANU address. */
 export const signupStart = (who: AnuWho): Promise<{ sent: boolean; to: string }> => request("/api/signup/start", "POST", who);
+/** Checks the emailed code before the name and password steps (a try, but the code stays). */
+export const signupCheck = (who: AnuWho, code: string): Promise<{ ok: true }> => request("/api/signup/check", "POST", { ...who, code });
 export const signupFinish = (who: AnuWho, code: string, name: string, password: string): Promise<Session> =>
   request<Session>("/api/signup/finish", "POST", { ...who, code, name, password });
 /** Emails a code to reset a forgotten password (the same answer whether or not there's an account). */
@@ -110,6 +112,8 @@ export interface NpcDef {
   x: number;
   z: number;
   rot: number;
+  /** How far in front of them you stand to talk (default 1.6 m; further over a desk). */
+  reach?: number;
   look: Look;
   links: { label: string; url: string }[];
   greeting: string;

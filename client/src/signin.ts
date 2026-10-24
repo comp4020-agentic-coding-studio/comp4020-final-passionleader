@@ -19,6 +19,8 @@ export function mountSignIn(opts: {
   signIn(name: string, password: string): Promise<Session | string>;
   guest(): Promise<Session | string>;
   signupStart(who: AnuWho): Promise<string | null>;
+  /** Checks the code before the next steps; an error message, or null. */
+  signupCheck(who: AnuWho, code: string): Promise<string | null>;
   signupFinish(who: AnuWho, code: string, name: string, password: string): Promise<Session | string>;
   resetStart(who: AnuWho): Promise<string | null>;
   resetFinish(who: AnuWho, code: string, password: string): Promise<Session | string>;
@@ -117,7 +119,7 @@ export function mountSignIn(opts: {
   function buildSignIn(): { form: HTMLFormElement; focus: () => void; clear: (msg?: string) => void } {
     const form = el("form", "si-form");
     form.noValidate = true;
-    const name = field("Name", { autocomplete: "username", maxLength: 12, required: true, placeholder: "u1234567 or your name" });
+    const name = field("Name or student number", { autocomplete: "username", maxLength: 80, required: true, placeholder: "u1234567, your name, or staff email" });
     const pw = field("Password", { autocomplete: "current-password", type: "password" });
     const error = el("p", "si-error");
     error.setAttribute("role", "alert");
@@ -137,7 +139,7 @@ export function mountSignIn(opts: {
     form.addEventListener("submit", (e) => {
       e.preventDefault();
       const n = name.input.value.trim();
-      if (!n) return void (error.textContent = "Enter your name.");
+      if (!n) return void (error.textContent = "Enter your name or student number.");
       if (!pw.input.value) return void (error.textContent = "Enter your password, or continue as a guest.");
       void run(form, error, () => opts.signIn(n, pw.input.value), (s) => s && enter(s));
     });
@@ -409,9 +411,8 @@ export function mountSignIn(opts: {
         err,
         async () => await opts.signupStart(w),
         () => {
-          sent.textContent = resending
-            ? "A new code is on its way. Check your inbox (and junk) for a code from no-reply@passionleader.click."
-            : "Check your inbox (and junk) for a code from no-reply@passionleader.click.";
+          const to = "email" in w ? w.email : `${w.studentNo}@anu.edu.au`;
+          sent.textContent = `${resending ? "A new code went" : "We sent a code"} to ${to}. Check your inbox (and junk) for an email from no-reply@passionleader.click. Not your address? Go back.`;
           code.input.value = "";
           if (!resending) goStep(1);
           else code.input.focus();
@@ -419,9 +420,20 @@ export function mountSignIn(opts: {
       );
     };
     const toName = (): void => {
-      if (!CODE_RE.test(code.input.value.trim())) return void (s2.error.textContent = "Enter the 6-digit code from the email.");
-      s2.error.textContent = "";
-      goStep(2);
+      const c = code.input.value.trim();
+      if (!CODE_RE.test(c)) return void (s2.error.textContent = "Enter the 6-digit code from the email.");
+      const w = who();
+      if (typeof w === "string") return void goStep(0), void (s1.error.textContent = w);
+      // The server checks it now, so a wrong code stops here, not after the password.
+      void run(
+        form,
+        s2.error,
+        async () => await opts.signupCheck(w, c),
+        () => {
+          s2.error.textContent = "";
+          goStep(2);
+        },
+      );
     };
     const toPassword = (): void => {
       const n = name.input.value.trim();

@@ -30,6 +30,7 @@ import {
   askNpc,
   type NpcDef,
   signupStart,
+  signupCheck,
   signupFinish,
   resetStart,
   resetFinish,
@@ -1070,6 +1071,9 @@ function showBadges(target: Target | null): void {
 // figures with a name tag, an E spot in front of each ("Talk to …").
 let npcList: NpcDef[] = [];
 const npcFigures: Avatar[] = [];
+/** Each assistant's name tag, shown only within NPC_TAG_RANGE (from across a space they cluttered the view). */
+const npcTags: { obj: CSS2DObject; at: THREE.Object3D }[] = [];
+const NPC_TAG_RANGE = 5.5;
 const npcChat = mountNpcChat({
   async ask(id, text) {
     if (!session) return "Join first.";
@@ -1101,11 +1105,12 @@ function placeNpcs(s: SpaceDef): void {
     a.group.position.set(n.x, 0, n.z);
     a.group.rotation.y = n.rot;
     // Just the name over them (side by side, a role made the tags overlap); the E hint says the role.
-    tag(a.group, n.name, 2.2, "player-label npc-label");
+    npcTags.push({ obj: tag(a.group, n.name, 2.2, "player-label npc-label"), at: a.group });
     s.group.add(a.group);
     npcFigures.push(a);
     // You talk to them from in front (they face +z by default: so from +z).
-    s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * 1.6, z: n.z + Math.cos(n.rot) * 1.6, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
+    const reach = n.reach ?? 1.6;
+    s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * reach, z: n.z + Math.cos(n.rot) * reach, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
   }
   if (s === space) placeBadges();
 }
@@ -1312,6 +1317,7 @@ const signIn = mountSignIn({
   signIn: (name, password) => asSession(join(name.normalize("NFKC").trim(), undefined, password.trim())),
   guest: () => asSession(joinAsGuest(storage.get("campus.role") === "guest" ? storage.get("campus.token") || undefined : undefined)),
   signupStart: (who) => errorOf(signupStart(who)),
+  signupCheck: (who, code) => errorOf(signupCheck(who, code)),
   signupFinish: (who, code, name, password) => asSession(signupFinish(who, code, name.normalize("NFKC").trim(), password)),
   resetStart: (who) => errorOf(resetStart(who)),
   resetFinish: (who, code, password) => asSession(resetFinish(who, code, password)),
@@ -1946,6 +1952,10 @@ function update(dt: number, now: number): void {
   const ease = 1 - Math.exp(-12 * dt);
   me.update(dt);
   for (const a of npcFigures) a.update(dt);
+  for (const t of npcTags) {
+    const near = t.at.position.distanceTo(player.position) < NPC_TAG_RANGE;
+    if (t.obj.visible !== near) t.obj.visible = near;
+  }
   minimap.draw(player.position.x, player.position.z, player.rotation.y);
   for (const view of others.values()) {
     const before = view.group.position.clone();

@@ -45,6 +45,22 @@ describe("guests and signing up", () => {
     expect((await api("/api/signup/finish", "POST", { studentNo, code, name: freshName(), password: "long enough" })).status).toBe(201);
   });
 
+  it("signs in by student number as well as by name, and checks the code before the last step", async () => {
+    const v = await visitor();
+    const byNo = await api("/api/join", "POST", { name: v.studentNo, password: "correct horse 1" });
+    expect(byNo.status).toBe(200);
+    expect(((await byNo.json()) as { name: string }).name).toBe(v.name);
+    expect((await api("/api/join", "POST", { name: v.studentNo.toUpperCase(), password: "wrong one!" })).status).toBe(401);
+    // The code check between steps: a wrong code stops there, the right one keeps for finish.
+    const studentNo = `u${Math.floor(1_000_000 + Math.random() * 8_999_999)}`;
+    await api("/api/signup/start", "POST", { studentNo });
+    const mail = (await (await api(`/api/test/mail?to=${studentNo}@anu.edu.au`)).json()) as { text: string };
+    const code = /\b(\d{6})\b/.exec(mail.text)![1]!;
+    expect((await api("/api/signup/check", "POST", { studentNo, code: code === "000000" ? "111111" : "000000" })).status).toBe(401);
+    expect((await api("/api/signup/check", "POST", { studentNo, code })).status).toBe(200);
+    expect((await api("/api/signup/finish", "POST", { studentNo, code, name: freshName(), password: "long enough" })).status).toBe(201);
+  });
+
   it("resets a forgotten password by an emailed code, and the old browsers sign in again", async () => {
     const v = await visitor();
     // A tab already open on the old token is put out at once.

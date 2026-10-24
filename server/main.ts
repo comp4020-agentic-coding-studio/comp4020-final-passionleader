@@ -176,6 +176,21 @@ app.post("/api/join", async (c) => {
   // Phone keyboards add spaces and lookalike characters (a full-width "＿").
   const name = b.name.normalize("NFKC").trim();
 
+  // A student number or an ANU address signs in to the account signed up
+  // with it, whatever its name (and wins over an old retired name like it).
+  const byEmail = /^u\d{7}$/i.test(name) ? findByEmail(`${name.toLowerCase()}@anu.edu.au`) : /@anu\.edu\.au$/i.test(name) ? findByEmail(name.toLowerCase()) : undefined;
+  if (!byEmail && /@/.test(name)) return c.json({ error: "No account with that email. Sign up with it first." }, 404);
+  if (byEmail?.passwordHash && typeof password === "string" && password.trim()) {
+    if (!checkPassword(password.trim(), byEmail.passwordHash)) {
+      log("join-refused", { name: byEmail.name }, { reason: "wrong password" }, { ip: ipOf(c) });
+      return c.json({ error: "Wrong password." }, 401);
+    }
+    const barred = stopped(c, byEmail, "join", { action: "join" });
+    if (barred) return barred;
+    log("join", byEmail, { how: "password, by email" }, { ip: ipOf(c) });
+    return c.json({ name: byEmail.name, token: byEmail.token, role: byEmail.role, spawn: lastSpot(byEmail.name), look: lookOf(byEmail.name) });
+  }
+
   // Test and admin accounts sign in with a password, from any browser.
   if (RESERVED.test(name)) {
     const account = RESERVED_RULE.test(name) ? findByName(name) : undefined;
@@ -198,7 +213,8 @@ app.post("/api/join", async (c) => {
   const existing = findByName(name);
   // Since sign-up, a name without a password is a guest's: guests come in
   // with { guest: true } (below), members with their name and password.
-  if (existing?.role === "retired") return c.json({ error: `"${name}" belonged to someone from before sign-up. Pick another name.` }, 409);
+  if (existing?.role === "retired")
+    return c.json({ error: /^u\d{7}$/i.test(name) ? "No account signed up with that student number yet. Sign up with your ANU email." : `"${name}" belonged to someone from before sign-up; it can't be signed into.` }, 409);
   // A name with a password behind it signs in with that password from any device.
   if (existing?.passwordHash && typeof password === "string" && password.trim()) {
     if (!checkPassword(password.trim(), existing.passwordHash)) {
@@ -318,6 +334,21 @@ app.post("/api/signup/start", async (c) => {
   if ("error" in who2) return c.json({ error: who2.error }, 400);
   if (findByEmail(who2.email)) return c.json({ error: "That email has an account already. Sign in, or reset its password." }, 409);
   return sendCode(c, who2.email, "signup");
+});
+
+// The code alone, between the steps, so a wrong one is caught before the
+// name and password: it counts as one of the five tries and the code stays
+// for finish (which checks it again).
+app.post("/api/signup/check", async (c) => {
+  const b = await body(c);
+  const who2 = anuEmail(b);
+  if ("error" in who2) return c.json({ error: who2.error }, 400);
+  const stored = takeCode(who2.email, "signup");
+  if (!stored || typeof b.code !== "string" || stored !== hashCode(who2.email, b.code.trim())) {
+    log("join-refused", null, { reason: "wrong sign-up code" }, { ip: ipOf(c) });
+    return c.json({ error: stored ? "That code is wrong. Check the email and try again." : "That code is too old or tried too often. Ask for a new one." }, 401);
+  }
+  return c.json({ ok: true });
 });
 
 app.post("/api/signup/finish", async (c) => {
