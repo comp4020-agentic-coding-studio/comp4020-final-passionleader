@@ -144,7 +144,7 @@ export function buildLibrary(): SpaceDef {
 
 // --- books on the shelves ---------------------------------------------------------
 
-const BOOKCASE_H = 1.9;
+export const BOOKCASE_H = 1.9;
 // The bookcase model's shelves, as fractions of its height, its inside width
 // and depth (Kenney's bookcaseClosedWide: 0.79 tall, 0.8 wide, 0.25 deep).
 const SHELVES = [0.07, 0.31, 0.55].map((y) => (y / 0.79) * BOOKCASE_H);
@@ -158,7 +158,7 @@ const SPINES = [0x7a2e2a, 0x2f4a6b, 0x355e3b, 0x8a6a2c, 0x5a3b5e, 0x9b4a24, 0x3b
  * widths and colours, with the odd gap and the odd one leaning. One instanced
  * mesh for all of them: a few hundred books in a single draw call.
  */
-function fillShelves(g: THREE.Group, cases: [number, number][]): void {
+export function fillShelves(g: THREE.Group, cases: [number, number][]): void {
   // The same "random" every visit, so the shelves don't reshuffle.
   let seed = 7;
   const rand = (): number => ((seed = (seed * 16807) % 2147483647) - 1) / 2147483646;

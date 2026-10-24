@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { block, doorway, floor, lightPool, mat, paperPile, place, poster, SHARED_BGM, SOFA_TOP, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
+import { BOOKCASE_H, fillShelves } from "./library.ts";
 import { COUNSEL_DOORS, roomDoors } from "./meeting.ts";
 import { roomShell } from "./room.ts";
 
@@ -112,19 +113,19 @@ export function buildHub(): SpaceDef {
     }
     solid(colliders, 4.6, 2.3, cx, -7.55);
   }
-  // The bookcases, west of the calendar (the coffee bar, arcades and these
-  // all moved west so it hangs at eye level instead of up through the ceiling).
-  for (const x of [8.75, 11.25]) {
-    place(g, "bookcaseClosedWide.glb", 1.9, x, -HALF.halfZ + 0.4);
-    solid(colliders, 2, 0.7, x, -HALF.halfZ + 0.4);
-  }
+  // East of the sign, west to east: the calendar, the coffee bar, the
+  // arcades, then two bookcases full of books in the corner.
+  const shelves: [number, number][] = [15.45, 17.4].map((x) => [x, -HALF.halfZ + 0.4]);
+  for (const [x, z] of shelves) place(g, "bookcaseClosedWide.glb", BOOKCASE_H, x, z);
+  fillShelves(g, shelves);
+  solid(colliders, 4, 0.7, 16.4, -HALF.halfZ + 0.4);
   // A big wall calendar (plan 66): this month, and E opens ANU's university
   // calendar for this year (it won't be framed: a new tab).
   wallCalendar(g, CALENDAR.x, -HALF.halfZ + 0.02);
-  // A coffee bar on the back wall under the sign (the north-west corner is the admin's now).
-  for (const x of [-2, -1]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
-  place(g, "kitchenCoffeeMachine.glb", 0.4, -2, -HALF.halfZ + 0.5, 0, true, 0.95);
-  solid(colliders, 2.2, 0.8, -1.5, -HALF.halfZ + 0.5);
+  // A coffee bar on the back wall, east of the calendar (the north-west corner is the admin's).
+  for (const x of [8.5, 9.5]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
+  place(g, "kitchenCoffeeMachine.glb", 0.4, 8.5, -HALF.halfZ + 0.5, 0, true, 0.95);
+  solid(colliders, 2.2, 0.8, 9, -HALF.halfZ + 0.5);
 
   // The lounge half, at the front: three corners of two sofas facing each
   // other across a glass coffee table, on a rug, with a floor lamp.
@@ -237,7 +238,7 @@ export function buildHub(): SpaceDef {
 }
 
 /** The wall calendar on the north wall; E from in front. */
-const CALENDAR = { x: 15.5 };
+const CALENDAR = { x: 5.6 };
 
 /** This month as a wall calendar: a header and a grid of days, today ringed (drawn once, on a canvas). */
 function wallCalendar(g: THREE.Group, x: number, z: number): void {
@@ -293,9 +294,9 @@ function wallCalendar(g: THREE.Group, x: number, z: number): void {
 // games on GitHub Pages: Two-Tone (riff 5, made with my pod) and Retro Run &
 // Gun (my crit 5). Both let themselves be shown inside another page.
 const GAMES = [
-  { x: 1.5, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone"], marquee: 0x40c0ff },
-  { x: 4, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess"], marquee: 0xff5fa2 },
-  { x: 6.5, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun"], marquee: 0xffb030 },
+  { x: 11, title: "Two-Tone", url: "https://passionleader.github.io/anu-agentic-coding-studio/riff5-passionleader/modified/", screen: ["Two-Tone"], marquee: 0x40c0ff },
+  { x: 12.4, title: "Sketch & Guess", url: "/minigame/sketch/", screen: ["Sketch", "& Guess"], marquee: 0xff5fa2 },
+  { x: 13.8, title: "Retro Run & Gun", url: "https://passionleader.github.io/anu-agentic-coding-studio/crit5-passionleader/", screen: ["Retro", "Run & Gun"], marquee: 0xffb030 },
 ];
 
 /**
