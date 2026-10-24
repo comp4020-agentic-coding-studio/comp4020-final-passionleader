@@ -64,6 +64,9 @@ body.in-room #hud-help { display: none; }
   padding: 16px; background: rgba(60, 45, 10, 0.55); z-index: 10;
 }
 #join[hidden] { display: none; }
+/* On a phone the card can fill the height; keep it below the round
+   look and settings buttons at the top right. */
+@media (max-width: 700px) { #join { padding-top: 64px; } }
 #join-form {
   width: min(380px, 100%); padding: 24px; border-radius: 16px;
   background: var(--paper); box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
