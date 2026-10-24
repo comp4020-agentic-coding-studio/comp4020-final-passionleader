@@ -53,7 +53,7 @@ export const NPCS: Npc[] = [
     role: "ANU Sport",
     space: "outdoor",
     // Inside the tent at the table's east end, clear of the PC's E spot.
-    x: -24.3,
+    x: -43.8, // SPORT_PC.x + 1.7 (client/src/spaces/sportstent.ts)
     z: -31,
     rot: 0,
     reach: 1.5,

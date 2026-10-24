@@ -20,20 +20,18 @@ const AVE = { z: -31, w: 18 };
 const EAST_TOP = CREEK.x + CREEK.bankTop; // -57.6
 const WEST_TOP = CREEK.x - CREEK.bankTop; // -75.2
 
-/** Where walking stops in the west: in line with Symposium's west end (the user's call). The creek, its bridge and boardwalks are scenery past it. */
-export const LAWN_WEST_X = -40;
-/** Picnic tables in the grove north of Badger & Co; you sit on their benches (outdoor.ts seats). */
+/** Where walking stops in the west: the white building's west end, north of the avenue (the user's call). The white path, boardwalk and creek past it are scenery. */
+export const LAWN_WEST_X = -51;
+/** Picnic tables in a row on the grass north of Badger & Co; you sit on their benches (outdoor.ts seats). */
 export const PICNIC: [number, number][] = [
-  [-35, -7.5],
-  [-33.5, -14],
-  [-29.5, -16.5],
+  [-47, -12],
+  [-43, -12],
+  [-39, -12],
 ];
 
-/** The boardwalks: from the avenue south past Badger & Co, and north past the white buildings, each between the building and the creek's fence. */
-const BOARDWALKS = [
-  { minX: -57.4, maxX: -54.2, minZ: -22, maxZ: 22 },
-  { minX: -57.4, maxX: -54.2, minZ: -90, maxZ: -40 },
-];
+/** The strip along the east bank, behind the creek's fence: timber boardwalk north of the bridge (up to its end pillar), warm paving south of the avenue past Badger & Co (the user's call). */
+const BOARDWALK = { minX: -57.4, maxX: -54.2, minZ: -90, maxZ: -34.4 };
+const SOUTH_WALK = { minX: -57.4, maxX: -54.2, minZ: -22, maxZ: 22 };
 
 /**
  * Badger & Co, at the north-east corner of the Health and Well-Being Centre:
@@ -119,18 +117,19 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     for (let x = x0 + 0.8; x < x1; x += 2.4) shrubs.push({ x, z, rotY: x * 2.3 });
   }
   scatter(g, "nature/Bush_Hedge.glb", 0.9, shrubs, false);
-  lamp(g, colliders, -45.5, AVE.z - 7.5);
   lamp(g, colliders, -82, AVE.z + 7.5);
 
   // ---- The bridge: the avenue's paving over the creek, dark rails, white end pillars ----
+  // Narrower than the avenue: its north 6.4 m (two boardwalks' width) cut off (the user's call).
+  const BRIDGE = { z: AVE.z + 3.2, w: AVE.w - 6.4 };
   const bx0 = WEST_TOP - 1.4;
   const bx1 = EAST_TOP + 1.4;
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0, 0.5, AVE.w), texMat("ai/paving.jpg", (bx1 - bx0) / 2, AVE.w / 2));
-  deck.position.set((bx0 + bx1) / 2, -0.25 + 0.01, AVE.z);
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0, 0.5, BRIDGE.w), texMat("ai/paving.jpg", (bx1 - bx0) / 2, BRIDGE.w / 2));
+  deck.position.set((bx0 + bx1) / 2, -0.25 + 0.01, BRIDGE.z);
   g.add(deck);
   const steel = mat(RAIL);
   for (const side of [-1, 1]) {
-    const z = AVE.z + side * (AVE.w / 2 - 0.1);
+    const z = BRIDGE.z + side * (BRIDGE.w / 2 - 0.1);
     for (const y of [1.0, 0.55]) {
       const r = new THREE.Mesh(new THREE.BoxGeometry(bx1 - bx0 - 1.6, 0.06, 0.06), steel);
       r.position.set((bx0 + bx1) / 2, y, z);
@@ -140,7 +139,7 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     for (let x = bx0 + 1; x <= bx1 - 0.9; x += 0.6) posts.push({ x, y: 0.5, z, sx: 1, sy: 1, sz: 1, rot: 0 });
     instanced(g, new THREE.BoxGeometry(0.04, 1, 0.04), steel, posts);
     for (const x of [bx0 + 0.7, bx1 - 0.7]) {
-      const pz = AVE.z + side * (AVE.w / 2 + 0.1);
+      const pz = BRIDGE.z + side * (BRIDGE.w / 2 + 0.1);
       const pillar = new THREE.Mesh(new THREE.BoxGeometry(1.4, 1.5, 1.4), mat(CONCRETE));
       pillar.position.set(x, 0.75, pz);
       g.add(pillar);
@@ -156,9 +155,8 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   // ---- Trees ----
   // Big ones on the lawn's extension (the models the lawn's edge uses).
   const big: [string, number, Spot[]][] = [
-    ["CommonTree_3.glb", 8, [{ x: -36, z: -27, rotY: 0.4, scale: 1.1 }, { x: -52, z: -17, rotY: 2, scale: 1.0 }]],
-    ["CommonTree_5.glb", 8.5, [{ x: -42, z: -23.5, rotY: 1, scale: 1.1 }, { x: -53, z: -8, rotY: 3, scale: 1.0 }, { x: -31, z: -14, rotY: 5, scale: 0.9 }]],
-    ["CommonTree_4.glb", 7.5, [{ x: -38, z: -16, rotY: 4, scale: 1.0 }]],
+    ["CommonTree_3.glb", 5.5, [{ x: -52.5, z: -17, rotY: 2, scale: 1.0 }]],
+    ["CommonTree_5.glb", 8.5, [{ x: -52.5, z: -7, rotY: 3, scale: 1.0 }]],
   ];
   for (const [file, h, spots] of big) {
     scatter(g, `nature/${file}`, h, spots);
@@ -187,24 +185,28 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   for (const [i, p] of poplars.entries()) tree(g, "CommonTree_5.glb", p, 9, 0.45, 1.35, 0x5f8a3c, i * 1.3);
   for (const p of [...willows, ...poplars]) if (p.x > EAST_TOP - 1) solid(colliders, 0.8, 0.8, p.x, p.z);
 
-  // North of Badger & Co: a grove of the lawn's trees with picnic tables
-  // between them, and white paving filling the lane down to 155.
+  // North of Badger & Co, on the grass only (no trees on paving): a row of
+  // picnic tables with a row of lower trees behind them (the user's call).
+  // South of the grass (z -6), the campus's warm paving runs from the
+  // boardwalk to 155, and Badger & Co stands on it.
   const grove: Spot[] = [
-    { x: -48, z: -9, rotY: 0.6, scale: 1 },
-    { x: -44, z: -5, rotY: 2.1, scale: 1.1 },
-    { x: -38.5, z: -11.5, rotY: 4, scale: 0.95 },
-    { x: -31, z: -11, rotY: 1.3, scale: 1.05 },
-    { x: -38.5, z: -4, rotY: 5.2, scale: 0.9 },
-    { x: -29.5, z: -4.5, rotY: 3.3, scale: 1 },
+    ...[-49, -45, -41, -37].map((x, i) => ({ x, z: -17, rotY: i * 1.7, scale: 1 + (i % 2) * 0.08 })),
   ];
-  scatter(g, "nature/CommonTree_3.glb", 7.5, grove.filter((_, i) => i % 2 === 0));
-  scatter(g, "nature/CommonTree_5.glb", 8, grove.filter((_, i) => i % 2 === 1));
+  scatter(g, "nature/CommonTree_3.glb", 5.5, grove.filter((_, i) => i % 2 === 0));
+  scatter(g, "nature/CommonTree_5.glb", 5.8, grove.filter((_, i) => i % 2 === 1));
   for (const s of grove) solid(colliders, 0.9, 0.9, s.x, s.z);
   for (const [x, z] of PICNIC) picnicTable(g, colliders, x, z);
-  const lane = { minX: BADGER.maxX, maxX: -28, minZ: -2, maxZ: 16 };
-  floor(g, lane.maxX - lane.minX, lane.maxZ - lane.minZ, (lane.minX + lane.maxX) / 2, (lane.minZ + lane.maxZ) / 2, texMat("ai/paving.jpg", 5, 9), 0.011);
+  // The same tint as outdoor.ts's paving, which covers from x -35 east.
+  const lane = { minX: SOUTH_WALK.maxX, maxX: -34.9, minZ: -6, maxZ: 17 };
+  floor(g, lane.maxX - lane.minX, lane.maxZ - lane.minZ, (lane.minX + lane.maxX) / 2, (lane.minZ + lane.maxZ) / 2, texMat("ai/paving.jpg", (lane.maxX - lane.minX) / 2, (lane.maxZ - lane.minZ) / 2, 0xd6d2ca), 0.011);
 
-  for (const b of BOARDWALKS) boardwalk(g, colliders, b);
+  // Between the white building's west end and the boardwalk north of the avenue: a white path as wide as the deck.
+  const path = { minX: -54.2, maxX: -51, minZ: -90, maxZ: -40 };
+  floor(g, path.maxX - path.minX, path.maxZ - path.minZ, (path.minX + path.maxX) / 2, (path.minZ + path.maxZ) / 2, texMat("ai/paving.jpg", 1.6, 25), 0.012);
+  boardwalk(g, colliders, BOARDWALK);
+  const sw = SOUTH_WALK;
+  floor(g, sw.maxX - sw.minX, sw.maxZ - sw.minZ, (sw.minX + sw.maxX) / 2, (sw.minZ + sw.maxZ) / 2, texMat("ai/paving.jpg", (sw.maxX - sw.minX) / 2, (sw.maxZ - sw.minZ) / 2, 0xd6d2ca), 0.011);
+  fence(g, colliders, sw, 0);
 
   buildBadger(g, colliders);
 }
@@ -224,16 +226,21 @@ function boardwalk(g: THREE.Group, colliders: Box[], { minX, maxX, minZ, maxZ }:
   const joints: Inst[] = [];
   for (let z = minZ + 1.2; z < maxZ; z += 1.2) joints.push({ x: (minX + maxX) / 2, y: 0.125, z, sx: 1, sy: 1, sz: 1, rot: 0 });
   instanced(g, new THREE.BoxGeometry(w, 0.01, 0.04), mat(0x6b4a2e), joints);
-  // The fence on the creek side.
+  fence(g, colliders, { minX, maxX, minZ, maxZ }, 0.12);
+}
+
+/** The steel fence on the creek side (west edge) of a strip, standing on a floor `y` high. */
+function fence(g: THREE.Group, colliders: Box[], { minX, minZ, maxZ }: Box, y0: number): void {
+  const len = maxZ - minZ;
   const fx = minX + 0.1;
   const steel = mat(RAIL);
   for (const y of [1.0, 0.55]) {
     const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, len), steel);
-    r.position.set(fx, y, (minZ + maxZ) / 2);
+    r.position.set(fx, y0 + y, (minZ + maxZ) / 2);
     g.add(r);
   }
   const posts: Inst[] = [];
-  for (let z = minZ + 0.3; z <= maxZ; z += 2) posts.push({ x: fx, y: 0.55, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  for (let z = minZ + 0.3; z <= maxZ; z += 2) posts.push({ x: fx, y: y0 + 0.55, z, sx: 1, sy: 1, sz: 1, rot: 0 });
   instanced(g, new THREE.BoxGeometry(0.08, 1.1, 0.08), steel, posts);
   colliders.push({ minX: fx - 0.1, maxX: fx + 0.1, minZ, maxZ });
 }

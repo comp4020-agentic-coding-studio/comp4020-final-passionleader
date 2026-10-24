@@ -29,16 +29,16 @@ export interface Space {
 
 // Outside: the lawn and the road north of it, the road in front of the
 // O'Donoghue centre, and the path south between 155 and 154, over the bridge
-// to the library's door. Nothing west of Symposium's west end (x -40): the
+// to the library's door. Nothing west of the white building's west end (x -51): the
 // creek, its bridge and boardwalks are scenery. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts (creek.ts).
 const OUTDOOR_AREAS: Area[] = [
-  { minX: -40, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to Symposium's west end (the creek is scenery past it)
+  { minX: -51, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the white building's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
 ];
 
 export const SPACES: Record<string, Space> = {
-  outdoor: { label: "ANU campus", halfX: 89, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
+  outdoor: { label: "ANU campus", halfX: 89, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: 5, z: -28 } }, // first visit: the north road, by the advertising board
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
@@ -173,7 +173,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
   { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
-  { x: -26, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)
+  { x: -45.5, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)
   { x: -24.8, z: -28.8 }, // in front of ANU Sport's assistant (server/npcs.ts)
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [

@@ -1144,9 +1144,9 @@ function placeNpcs(s: SpaceDef): void {
 // The campus minimap (plan 53): the walkable ground and buildings outside,
 // and the places you can go in. Same bounds as spaces/outdoor.ts.
 const minimap = mountMinimap({
-  bounds: { minX: -52, maxX: 27, minZ: -41, maxZ: 25 },
+  bounds: { minX: -55, maxX: 27, minZ: -41, maxZ: 25 },
   areas: [
-    { minX: -40, maxX: 5, minZ: -39.4, maxZ: -2 },
+    { minX: -51, maxX: 5, minZ: -39.4, maxZ: -2 },
     { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
     { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
   ],
@@ -1162,7 +1162,7 @@ const minimap = mountMinimap({
     { x: 5.7, z: -5, name: "ANUSA" },
     { x: -2, z: 22, name: "Library" },
     { x: 12, z: -21, name: "Lab Coffee" },
-    { x: -26, z: -30, name: "ANU Sport" },
+    { x: -45.5, z: -30, name: "ANU Sport" },
     { x: 1.75, z: -31.6, name: "Ad board" },
     { x: -8.6, z: 2.3, name: "Study groups" },
   ],
@@ -2077,7 +2077,7 @@ renderer.setAnimationLoop(() => {
 });
 
 // Show the campus behind the join form.
-setSpace("outdoor", { x: -6, z: 10 }, false);
+setSpace("outdoor", { x: 5, z: -28 }, false);
 showJoin();
 void returnIfKnown();
 // A guest who tries something that needs signing up: say so, once, with a way to it.

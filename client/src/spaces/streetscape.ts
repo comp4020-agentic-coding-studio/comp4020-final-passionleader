@@ -102,6 +102,8 @@ const BED_Z = [-36.4, -32.8] as const;
  */
 function flowerBeds(g: THREE.Group, colliders: Box[]): void {
   const runs: [number, number][] = [
+    [-49.5, -42],
+    [-39.5, -32],
     [-29.5, -22.5],
     [-20, -13],
     [-10.5, -3.5],
@@ -221,6 +223,6 @@ export function buildStreetscape(g: THREE.Group, colliders: Box[]): void {
   // North: the flower beds, and on the path in front of the white buildings
   // (west of the passage), cafe tables with benches against the wall.
   flowerBeds(g, colliders);
-  for (const x of [-25, -16.5, -8, 0]) cafeTable(g, colliders, x, -37.6);
-  for (const x of [-21, -12.5, -4]) plainBench(g, colliders, x, PATH_Z[0] + 0.35);
+  for (const x of [-33.5, -25, -16.5, -8, 0]) cafeTable(g, colliders, x, -37.6);
+  for (const x of [-45.5, -38, -21, -12.5, -4]) plainBench(g, colliders, x, PATH_Z[0] + 0.35);
 }

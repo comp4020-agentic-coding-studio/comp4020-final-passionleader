@@ -9,7 +9,7 @@ import { block, mat, place, solid, textPlane, type Box } from "../world.ts";
 // logo. One of the AI campus assistants will stand beside it.
 
 /** The PC on the tent's table; E from the south of it. */
-export const SPORT_PC = { x: -26, z: -30.2 };
+export const SPORT_PC = { x: -45.5, z: -30.2 };
 
 const BLUE = 0x1f5fae;
 const BANNER_BLUE = 0x1a73e8;

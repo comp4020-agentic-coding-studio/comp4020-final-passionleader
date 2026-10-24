@@ -7,7 +7,7 @@ import { SPORT_PC, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { SEAT_WALL_SEATS, buildStreetscape } from "./streetscape.ts";
-import { LAWN_WEST_X, PICNIC_SEATS, buildCreek } from "./creek.ts";
+import { BADGER, LAWN_WEST_X, PICNIC_SEATS, buildCreek } from "./creek.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
 // view (used only as a reference, never shipped): the lawn to the north-west,
@@ -20,10 +20,10 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 
 // Where you can walk: the lawn and the road north of it, the road in front of
 // the O'Donoghue centre, and the path south between 155 and 154, over the
-// bridge to the library's door; nothing west of Symposium's west end (the
+// bridge to the library's door; nothing west of the white building's west end (the
 // creek in creek.ts is scenery). Same as OUTDOOR_AREAS in server/spaces.ts.
 const OUTDOOR_AREAS: Box[] = [
-  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to Symposium's west end (the creek is scenery past it)
+  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the white building's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
 ];
@@ -55,36 +55,10 @@ export function buildOutdoor(): SpaceDef {
   floor(g, 14, pathTo - pathFrom, -2, (pathFrom + pathTo) / 2, texMat("ai/paving.jpg", 7, (pathTo - pathFrom) / 3.2), 0.01);
   floor(g, 20, 16, -19, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
   buildBackdrop(g, colliders);
-  // Trees, bushes and flowers (Quaternius, CC0), laid out evenly: trees in
-  // a row down the map's west edge,
-  // flowers in a grid on the lawn, and bushes round each building's foot,
-  // stopping short of the doors.
-  const trees = ["CommonTree_3.glb", "CommonTree_4.glb", "CommonTree_5.glb"];
-  const edge: Spot[][] = [[], [], []];
-  const ex = OUTDOOR.halfX + 0.6;
-  const ez = OUTDOOR.halfZ + 0.6;
-  let n = 0;
-  const addTree = (x: number, z: number): void => {
-    edge[n % 3]!.push({ x, z, rotY: (n * 1.7) % (Math.PI * 2), scale: 0.9 + ((n * 7) % 4) * 0.07 });
-    n++;
-  };
-  // Only down the west side, north of Badger & Co's corner: south of it is the
-  // white paving between Badger & Co and 155 (creek.ts plants the trees that
-  // stood there north of Badger & Co instead).
-  for (let z = -ez + (ez * 2) / 8; z < -8; z += (ez * 2) / 8) addTree(-ex, z);
-  edge.forEach((spots, i) => scatter(g, `nature/${trees[i]}`, 7.5, spots));
-  // The far belt is scenery: no shadows, and only on High.
-  if (HIGH) {
-    const belt: Spot[] = [];
-    for (let i = 0; i < 16; i++) {
-      const a = (i / 16) * Math.PI * 2;
-      const z = Math.sin(a) * 33;
-      // North of the lawn the backdrop buildings stand where these would.
-      if (z < -20 || z > 14 || Math.cos(a) * 42 > 25) continue;
-      belt.push({ x: Math.cos(a) * 42, z, rotY: i, scale: 1 + (i % 3) * 0.12 });
-    }
-    scatter(g, `nature/${trees[1]}`, 8, belt, false);
-  }
+  // Bushes and flowers (Quaternius, CC0), laid out evenly: flowers in a grid
+  // on the lawn, and bushes round each building's foot, stopping short of the
+  // doors. No trees on the paving (the user's call): creek.ts plants them on
+  // the grass west of it.
 
   // The lawn (x -29..-9, z -22..-6, stopping where the path's paving
   // starts): flowering bushes on a grid, flower clumps between them on High.
@@ -110,9 +84,9 @@ export function buildOutdoor(): SpaceDef {
   // Bushes every 3 m round each building, a metre out from the wall, with
   // gaps at the doors (and their canopies).
   const hedge: Spot[] = [];
-  const ring = (minX: number, maxX: number, minZ: number, maxZ: number, gap: (x: number, z: number) => boolean): void => {
+  const ring = (minX: number, maxX: number, minZ: number, maxZ: number, gap: (x: number, z: number) => boolean, halfX = OUTDOOR.halfX): void => {
     const add = (x: number, z: number): void => {
-      if (!gap(x, z) && Math.abs(x) < OUTDOOR.halfX && Math.abs(z) < OUTDOOR.halfZ) hedge.push({ x, z, rotY: x * 3 + z });
+      if (!gap(x, z) && Math.abs(x) < halfX && Math.abs(z) < OUTDOOR.halfZ) hedge.push({ x, z, rotY: x * 3 + z });
     };
     for (let x = minX + 1; x <= maxX - 1; x += 3) {
       add(x, minZ - 1);
@@ -125,6 +99,8 @@ export function buildOutdoor(): SpaceDef {
   };
   ring(-28, -10, -2, 16, (x, z) => (x > -11 && Math.abs(z - 7) < 3.6) || z > 16); // 155: door east, none at the sunken edge
   ring(6, 26, -20, 14, (x, z) => x < 7 && (Math.abs(z - 3) < 3.6 || Math.abs(z + 5) < 3)); // 154: the Hub's door and the lounge's, both west
+  // Badger & Co (creek.ts) has no door you use; like 155, none at the sunken edge.
+  ring(BADGER.minX, BADGER.maxX, BADGER.minZ, BADGER.maxZ, (_x, z) => z > 16, 52);
   scatter(g, "nature/Bush_Hedge.glb", 0.9, hedge);
 
   // Benches on the lawn's south side; its east side gets a seat wall.

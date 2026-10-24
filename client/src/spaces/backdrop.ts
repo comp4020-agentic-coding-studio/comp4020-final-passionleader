@@ -163,13 +163,16 @@ function block(
  * glass at z: each shop four tall panes in a dark frame, a coloured awning,
  * and a plain painted name board. Names only, in plain type: no brand logos.
  */
-function shopfronts(g: THREE.Group, x0: number, x1: number, z: number): void {
-  // Left to right as on the real street: a bar, Subway, a burger place.
-  const shops = [
-    { name: "Symposium", w: 13, board: "#2b2b30", fg: "#e8c872", awning: 0x2b2b30 },
-    { name: "Subway", w: 13, board: "#00843d", fg: "#ffcc00", awning: 0x00843d },
-    { name: "Broger", w: 13, board: "#c8331e", fg: "#ffffff", awning: 0xc8331e },
-  ];
+// Left to right as on the real street: a bar, Subway, a burger place.
+const SHOPS = [
+  { name: "Symposium", w: 13, board: "#2b2b30", fg: "#e8c872", awning: 0x2b2b30 },
+  { name: "Subway", w: 13, board: "#00843d", fg: "#ffcc00", awning: 0x00843d },
+  { name: "Broger", w: 13, board: "#c8331e", fg: "#ffffff", awning: 0xc8331e },
+];
+/** West of Symposium: an unlet unit or a nameless office, glass front and a plain grey awning, no name. */
+const UNLET = [{ name: "", w: 9, board: "", fg: "", awning: 0x8a8d90 }];
+
+function shopfronts(g: THREE.Group, x0: number, x1: number, z: number, shops = SHOPS): void {
   const h = FLOOR_H;
   const wall = mat(0xd9c8a9);
   const frame = mat(0x2a2a2a);
@@ -195,9 +198,11 @@ function shopfronts(g: THREE.Group, x0: number, x1: number, z: number): void {
     awning.position.set(cx, 2.72, z + 0.6);
     awning.rotation.x = 0.18;
     g.add(awning);
-    const sign = textPlane([s.name], Math.min(s.w - 1, 7), 0.6, { bg: s.board, fg: s.fg, font: 0.4 });
-    sign.position.set(cx, 3.05, z + 0.03);
-    g.add(sign);
+    if (s.name) {
+      const sign = textPlane([s.name], Math.min(s.w - 1, 7), 0.6, { bg: s.board, fg: s.fg, font: 0.4 });
+      sign.position.set(cx, 3.05, z + 0.03);
+      g.add(sign);
+    }
     x += s.w + 0.5;
   }
 }
@@ -226,9 +231,11 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // Its ground floor along the road is shops and cafes, not windows.
   block(backdrop, beige, -18, -47, 44, 14, 6, 1);
   shopfronts(backdrop, -40, 4, -40);
-  // The row carries on west to the creek's boardwalk (the gap looked empty):
-  // the same block, windows on the ground floor too.
-  block(backdrop, beige, -48.4, -47, 16.8, 14, 7);
+  // The row carries on west to x -51, leaving a white path and the creek's
+  // boardwalk (each 3.2 m) before the creek: the same block over a glass
+  // ground floor, an unlet unit or nameless office.
+  block(backdrop, beige, -45.5, -47, 11, 14, 6, 1);
+  shopfronts(backdrop, -51, -40, -40, UNLET);
   block(backdrop, beige, 7, -47, 6, 14, 5, 2);
   road(6, 22, 7, -51);
   block(backdrop, beige, 7, -68, 18, 12, 5); // seen through the passage
