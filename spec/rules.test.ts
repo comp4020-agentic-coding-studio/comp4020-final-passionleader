@@ -169,6 +169,8 @@ describe("where a note may go", () => {
     const { noteSpotError } = await import("../server/spaces.ts");
     expect(noteSpotError("outdoor", -3, -14)).toBeNull();
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
+    expect(noteSpotError("outdoor", -40, -13)).not.toBeNull(); // inside Badger & Co, by the creek
+    expect(noteSpotError("outdoor", -45, -30)).toBeNull(); // the lawn carried west to the creek
     expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
     expect(noteSpotError("outdoor", 1.75, -30.6)).not.toBeNull(); // at the advertising board, south of the bed east of Broger's
     expect(noteSpotError("outdoor", -8.6, 3.2)).not.toBeNull(); // at the study-group board beside 155's door

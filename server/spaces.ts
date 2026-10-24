@@ -29,15 +29,18 @@ export interface Space {
 
 // Outside: the lawn and the road north of it, the road in front of the
 // O'Donoghue centre, and the path south between 155 and 154, over the bridge
-// to the library's door. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts.
+// to the library's door, and west along University Avenue over the creek's
+// bridge. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts (creek.ts).
 const OUTDOOR_AREAS: Area[] = [
-  { minX: -29.5, maxX: 5, minZ: -39.4, maxZ: -2 },
+  { minX: -51.8, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
+  { minX: -61.4, maxX: -50.8, minZ: -36.8, maxZ: -32.2 }, // the footbridge's deck
+  { minX: -73, maxX: -60.4, minZ: -38, maxZ: -31 }, // the far bank's path
 ];
 
 export const SPACES: Record<string, Space> = {
-  outdoor: { label: "ANU campus", halfX: 30, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
+  outdoor: { label: "ANU campus", halfX: 73, halfZ: 40, areas: OUTDOOR_AREAS, spawn: { x: -6, z: 10 } },
   hub: { label: "Student Hub", halfX: 20, halfZ: 13, spawn: { x: 0, z: 9 } },
   library: { label: "Chifley Library", halfX: 16, halfZ: 11, spawn: { x: 0, z: -8.5 } },
   // On 154's ground floor, north of the Hub's door (client/src/spaces/anusa.ts).
@@ -160,6 +163,7 @@ export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa", "po
 const BUILDINGS: Area[] = [
   { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
   { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
+  { minX: -47, maxX: -33, minZ: -20, maxZ: -6 }, // Badger & Co (client/src/spaces/creek.ts)
 ];
 const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 7 }, // 155's door

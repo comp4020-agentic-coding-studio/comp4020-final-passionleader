@@ -24,7 +24,7 @@ export function mountMinimap(view: {
   // As tall as fits; as wide as the campus is, so no empty strip at the side.
   const { bounds: b } = view;
   const pad = 8;
-  const H = 150;
+  const H = 130;
   const scale = (H - pad * 2) / (b.maxZ - b.minZ);
   const W = Math.round((b.maxX - b.minX) * scale + pad * 2);
   const canvas = document.createElement("canvas");

@@ -7,6 +7,7 @@ import { SPORT_PC, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { buildStreetscape } from "./streetscape.ts";
+import { CREEK_AREAS, LAWN_WEST_X, buildCreek } from "./creek.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
 // view (used only as a reference, never shipped): the lawn to the north-west,
@@ -19,11 +20,13 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 
 // Where you can walk: the lawn and the road north of it, the road in front of
 // the O'Donoghue centre, and the path south between 155 and 154, over the
-// bridge to the library's door. Same as OUTDOOR_AREAS in server/spaces.ts.
+// bridge to the library's door, and west along University Avenue over the
+// creek's bridge (creek.ts). Same as OUTDOOR_AREAS in server/spaces.ts.
 const OUTDOOR_AREAS: Box[] = [
-  { minX: -29.5, maxX: 5, minZ: -39.4, maxZ: -2 },
+  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
+  ...CREEK_AREAS, // the footbridge's deck and the far bank's path
 ];
 
 export function buildOutdoor(): SpaceDef {
@@ -37,7 +40,11 @@ export function buildOutdoor(): SpaceDef {
   const grass = (w: number, d: number, x: number, z: number): void => {
     floor(g, w, d, x, z, texMat("ai/grass.jpg", w / 3.9, d / 3.9, 0xb4c49c), -0.02);
   };
-  grass(700, 367, 0, -166.5);
+  // The creek's channel (x -60.4..-51.6, z -40..14, creek.ts) is left open: its water lies below the grass.
+  grass(289.6, 367, -205.2, -166.5); // x -350..-60.4
+  grass(401.6, 367, 149.2, -166.5); // x -51.6..350
+  grass(8.8, 310, -56, -195); // between them, north of the channel (z -350..-40)
+  grass(8.8, 2.5, -56, 15.25); // and the sliver south of it (z 14..16.5)
   grass(700, 327, 0, 186.5);
   grass(315, 6, -192.5, 20);
   grass(315, 6, 192.5, 20);
@@ -125,6 +132,7 @@ export function buildOutdoor(): SpaceDef {
   bench(g, colliders, -23, -5.2, 0);
   bench(g, colliders, -16, -5.2, 0);
   buildStreetscape(g, colliders);
+  buildCreek(g, colliders);
   const dog = addDog(g, colliders);
 
   // Building 155: Marie Reay Teaching Centre. Six storeys of glass with the
@@ -223,13 +231,14 @@ export function buildOutdoor(): SpaceDef {
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
-    halfX: 30,
+    halfX: 73,
     halfZ: 40,
     areas: OUTDOOR_AREAS,
-    // Same as server/spaces.ts: no notes in 155 or 154's footprint, or on the dog.
+    // Same as server/spaces.ts: no notes in 155, 154 or Badger & Co's footprint, or on the dog.
     noteBuildings: [
       { minX: -28, maxX: -10, minZ: -2, maxZ: 16 },
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
+      { minX: -47, maxX: -33, minZ: -20, maxZ: -6 },
     ],
     noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, STUDY_BOARD],
     tick: dog,
