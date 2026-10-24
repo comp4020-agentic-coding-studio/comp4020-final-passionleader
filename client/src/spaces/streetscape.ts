@@ -85,8 +85,12 @@ function seatWall(g: THREE.Group, colliders: Box[], x: number, z0: number, z1: n
     slat.position.set(x - 0.2 + i * 0.13, 0.45, (z0 + z1) / 2);
     g.add(slat);
   }
-  solid(colliders, 0.55, len, x, (z0 + z1) / 2);
+  // Low: you can jump onto it and over it, and sit on it (SEAT_WALL_SEATS).
+  colliders.push({ minX: x - 0.275, maxX: x + 0.275, minZ: z0, maxZ: z1, top: 0.47, standOn: true });
 }
+
+/** The lawn's east seat wall (x -9.3, z -21.5..-7): a seat every 2.4 m, facing east over the path. */
+export const SEAT_WALL_SEATS = Array.from({ length: 6 }, (_, i) => ({ x: -9.3, z: -20.3 + i * 2.4, rot: Math.PI / 2, y: 0.46 }));
 
 /** The north road's three strips (z): buildings' path, beds, main road; 1:1:3. */
 const PATH_Z = [-40, -36.4] as const;
