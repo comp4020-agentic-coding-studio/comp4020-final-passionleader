@@ -29,16 +29,12 @@ export interface Space {
 
 // Outside: the lawn and the road north of it, the road in front of the
 // O'Donoghue centre, and the path south between 155 and 154, over the bridge
-// to the library's door, and west along University Avenue over the creek's
-// bridge. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts (creek.ts).
+// to the library's door. Nothing west of Symposium's west end (x -40): the
+// creek, its bridge and boardwalks are scenery. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts (creek.ts).
 const OUTDOOR_AREAS: Area[] = [
-  { minX: -57.8, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
+  { minX: -40, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to Symposium's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
-  { minX: -76.2, maxX: -56.8, minZ: -39.3, maxZ: -22.7 }, // the bridge's deck, as wide as the road
-  { minX: -88, maxX: -75.2, minZ: -39.4, maxZ: -22.6 }, // the road on the far bank
-  { minX: -57.2, maxX: -50.2, minZ: -22.8, maxZ: 22 }, // the boardwalk past Badger & Co, and the strip beside it
-  { minX: -57.2, maxX: -54.4, minZ: -90, maxZ: -39.2 }, // the boardwalk north past the white buildings
 ];
 
 export const SPACES: Record<string, Space> = {

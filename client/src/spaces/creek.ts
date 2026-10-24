@@ -20,22 +20,15 @@ const AVE = { z: -31, w: 18 };
 const EAST_TOP = CREEK.x + CREEK.bankTop; // -57.6
 const WEST_TOP = CREEK.x - CREEK.bankTop; // -75.2
 
-/**
- * What can be walked on out here, besides the lawn's extension (which outdoor.ts
- * and server/spaces.ts widen to x -51.8, 0.2 m short of the east bank's top
- * edge): the bridge's deck (between the rails), the road on the far bank, and
- * the timber boardwalk south along the east bank, between Badger & Co and the
- * creek's fence.
- * Same numbers as the end of OUTDOOR_AREAS in server/spaces.ts.
- */
-export const CREEK_AREAS: Box[] = [
-  { minX: -76.2, maxX: -56.8, minZ: -39.3, maxZ: -22.7 },
-  { minX: -88, maxX: -75.2, minZ: -39.4, maxZ: -22.6 },
-  { minX: -57.2, maxX: -50.2, minZ: -22.8, maxZ: 22 },
-  { minX: -57.2, maxX: -54.4, minZ: -90, maxZ: -39.2 },
+/** Where walking stops in the west: in line with Symposium's west end (the user's call). The creek, its bridge and boardwalks are scenery past it. */
+export const LAWN_WEST_X = -40;
+/** Picnic tables in the grove north of Badger & Co; you sit on their benches (outdoor.ts seats). */
+export const PICNIC: [number, number][] = [
+  [-35, -7.5],
+  [-33.5, -14],
+  [-29.5, -16.5],
 ];
-/** The lawn's new west limit. */
-export const LAWN_WEST_X = -57.8;
+
 /** The boardwalks: from the avenue south past Badger & Co, and north past the white buildings, each between the building and the creek's fence. */
 const BOARDWALKS = [
   { minX: -57.4, maxX: -54.2, minZ: -22, maxZ: 22 },
@@ -194,6 +187,23 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   for (const [i, p] of poplars.entries()) tree(g, "CommonTree_5.glb", p, 9, 0.45, 1.35, 0x5f8a3c, i * 1.3);
   for (const p of [...willows, ...poplars]) if (p.x > EAST_TOP - 1) solid(colliders, 0.8, 0.8, p.x, p.z);
 
+  // North of Badger & Co: a grove of the lawn's trees with picnic tables
+  // between them, and white paving filling the lane down to 155.
+  const grove: Spot[] = [
+    { x: -48, z: -9, rotY: 0.6, scale: 1 },
+    { x: -44, z: -5, rotY: 2.1, scale: 1.1 },
+    { x: -38.5, z: -11.5, rotY: 4, scale: 0.95 },
+    { x: -31, z: -11, rotY: 1.3, scale: 1.05 },
+    { x: -38.5, z: -4, rotY: 5.2, scale: 0.9 },
+    { x: -29.5, z: -4.5, rotY: 3.3, scale: 1 },
+  ];
+  scatter(g, "nature/CommonTree_3.glb", 7.5, grove.filter((_, i) => i % 2 === 0));
+  scatter(g, "nature/CommonTree_5.glb", 8, grove.filter((_, i) => i % 2 === 1));
+  for (const s of grove) solid(colliders, 0.9, 0.9, s.x, s.z);
+  for (const [x, z] of PICNIC) picnicTable(g, colliders, x, z);
+  const lane = { minX: BADGER.maxX, maxX: -28, minZ: -2, maxZ: 16 };
+  floor(g, lane.maxX - lane.minX, lane.maxZ - lane.minZ, (lane.minX + lane.maxX) / 2, (lane.minZ + lane.maxZ) / 2, texMat("ai/paving.jpg", 5, 9), 0.011);
+
   for (const b of BOARDWALKS) boardwalk(g, colliders, b);
 
   buildBadger(g, colliders);
@@ -337,3 +347,32 @@ function panel(length: number): THREE.MeshStandardMaterial {
   m.userData.unique = true;
   return m;
 }
+
+/** A timber picnic table with a bench either side, long side along z (as under 154's colonnade). */
+function picnicTable(g: THREE.Group, colliders: Box[], x: number, z: number): void {
+  const wood = mat(0xd9a066);
+  const t = new THREE.Group();
+  const top = new THREE.Mesh(new THREE.BoxGeometry(0.8, 0.06, 1.8), wood);
+  top.position.y = 0.74;
+  t.add(top);
+  for (const side of [-1, 1]) {
+    const seat = new THREE.Mesh(new THREE.BoxGeometry(0.28, 0.05, 1.8), wood);
+    seat.position.set(side * 0.62, 0.45, 0);
+    t.add(seat);
+    for (const end of [-0.7, 0.7]) {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.78, 0.08), wood);
+      leg.position.set(side * 0.32, 0.37, end);
+      leg.rotation.z = side * 0.45;
+      t.add(leg);
+    }
+  }
+  t.position.set(x, 0, z);
+  enableShadows(t);
+  g.add(t);
+  solid(colliders, 0.8, 1.8, x, z);
+}
+
+/** Two seats on each bench of each picnic table, facing the table. */
+export const PICNIC_SEATS = PICNIC.flatMap(([x, z]) =>
+  [-1, 1].flatMap((side) => [-0.45, 0.45].map((dz) => ({ x: x + side * 0.62, z: z + dz, rot: side < 0 ? Math.PI / 2 : -Math.PI / 2, y: 0.46 }))),
+);

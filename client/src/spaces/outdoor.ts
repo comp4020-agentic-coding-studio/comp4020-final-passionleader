@@ -7,7 +7,7 @@ import { SPORT_PC, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { SEAT_WALL_SEATS, buildStreetscape } from "./streetscape.ts";
-import { CREEK_AREAS, LAWN_WEST_X, buildCreek } from "./creek.ts";
+import { LAWN_WEST_X, PICNIC_SEATS, buildCreek } from "./creek.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
 // view (used only as a reference, never shipped): the lawn to the north-west,
@@ -20,13 +20,12 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 
 // Where you can walk: the lawn and the road north of it, the road in front of
 // the O'Donoghue centre, and the path south between 155 and 154, over the
-// bridge to the library's door, and west along University Avenue over the
-// creek's bridge (creek.ts). Same as OUTDOOR_AREAS in server/spaces.ts.
+// bridge to the library's door; nothing west of Symposium's west end (the
+// creek in creek.ts is scenery). Same as OUTDOOR_AREAS in server/spaces.ts.
 const OUTDOOR_AREAS: Box[] = [
-  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, carried west to Sullivans Creek's bank
+  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to Symposium's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
-  ...CREEK_AREAS, // the footbridge's deck and the far bank's path
 ];
 
 export function buildOutdoor(): SpaceDef {
@@ -69,9 +68,10 @@ export function buildOutdoor(): SpaceDef {
     edge[n % 3]!.push({ x, z, rotY: (n * 1.7) % (Math.PI * 2), scale: 0.9 + ((n * 7) % 4) * 0.07 });
     n++;
   };
-  // Only down the west side now: roads run along the north and east, and
-  // the sunken level and the library close the south.
-  for (let z = -ez + (ez * 2) / 8; z < 16; z += (ez * 2) / 8) addTree(-ex, z);
+  // Only down the west side, north of Badger & Co's corner: south of it is the
+  // white paving between Badger & Co and 155 (creek.ts plants the trees that
+  // stood there north of Badger & Co instead).
+  for (let z = -ez + (ez * 2) / 8; z < -8; z += (ez * 2) / 8) addTree(-ex, z);
   edge.forEach((spots, i) => scatter(g, `nature/${trees[i]}`, 7.5, spots));
   // The far belt is scenery: no shadows, and only on High.
   if (HIGH) {
@@ -258,7 +258,7 @@ export function buildOutdoor(): SpaceDef {
     bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3"],
     outdoor: true,
     // The two lawn benches, two people each.
-    seats: [...[-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))), ...SEAT_WALL_SEATS],
+    seats: [...[-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))), ...SEAT_WALL_SEATS, ...PICNIC_SEATS],
   };
 }
 

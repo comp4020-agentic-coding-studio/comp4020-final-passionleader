@@ -213,7 +213,7 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // beds are in streetscape.ts). Its east end stops at the asphalt road that
   // runs north past 154's east side, between the O'Donoghue centre and the
   // red-brick buildings, with a pale footpath along its west edge.
-  road(68.5, 18, -5.75, -31); // x -40..28.5
+  road(84.6, 18, -13.8, -31); // x -56.1..28.5 (on west of x -40 it meets creek.ts's avenue paving)
   road(3, 91, 30, -29.5); // footpath x 28.5..31.5, z -75..16
   floor(backdrop, 9, 142, 36, -55, asphaltMat(9, 142), 0.008); // x 31.5..40.5, z -126..16
   // The road's pale paving carries on east across the asphalt, as on campus:
@@ -226,6 +226,9 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // Its ground floor along the road is shops and cafes, not windows.
   block(backdrop, beige, -18, -47, 44, 14, 6, 1);
   shopfronts(backdrop, -40, 4, -40);
+  // The row carries on west to the creek's boardwalk (the gap looked empty):
+  // the same block, windows on the ground floor too.
+  block(backdrop, beige, -48.4, -47, 16.8, 14, 7);
   block(backdrop, beige, 7, -47, 6, 14, 5, 2);
   road(6, 22, 7, -51);
   block(backdrop, beige, 7, -68, 18, 12, 5); // seen through the passage
