@@ -221,7 +221,7 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // red-brick buildings, with a pale footpath along its west edge.
   road(84.6, 18, -13.8, -31); // x -56.1..28.5 (on west of x -40 it meets creek.ts's avenue paving)
   road(3, 91, 30, -29.5); // footpath x 28.5..31.5, z -75..16
-  floor(backdrop, 9, 142, 36, -55, asphaltMat(9, 142), 0.008); // x 31.5..40.5, z -126..16
+  floor(backdrop, 9, 130, 36, -61, asphaltMat(9, 130), 0.008); // x 31.5..40.5, z -126..4, then down the ramp (buildSouth)
   // The road's pale paving carries on east across the asphalt, as on campus:
   // the asphalt cuts across it (drawn on top), rather than the road ending in grass.
   road(60, 18, 70.5, -31); // x 40.5..100.5
@@ -288,18 +288,12 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   const name = textPlane(["Lowitja O'Donoghue", "Cultural Centre"], 11, 2.3, { bg: "#2a3743", fg: "#ffffff", font: 0.8 });
   name.position.set(px + 1.5, ph * 0.75, pz + pd / 2 + 0.1);
   pavilion.add(name);
-  // The Career Hub on its lit ground floor (plan 111): its name on the front,
-  // and its door on the west side, in the passage under the white row (the
-  // user's call, 10/30), with an arrow at the road pointing in.
-  const careers = textPlane(["← Career Hub", "door in the passage to the left"], 4.6, 1.1, { bg: "#23404f", fg: "#ffffff", font: 0.36 });
-  careers.position.set(px, 2.6, pz + pd / 2 + 0.1);
+  // The Career Hub on its lit ground floor (plan 111): its name over a door in
+  // the front, on the north road (the user's call, 10/30).
+  const careers = textPlane(["Career Hub", "internships · jobs"], 4, 1.1, { bg: "#23404f", fg: "#ffffff", font: 0.42 });
+  careers.position.set(px, 3, pz + pd / 2 + 0.1);
   pavilion.add(careers);
-  const sideX = px - pw / 2 - 0.02;
-  doorway(pavilion, sideX + 0.06, -43.5, -Math.PI / 2, "");
-  const over = textPlane(["Career Hub"], 2.2, 0.55, { bg: "#23404f", fg: "#ffffff", font: 0.32 });
-  over.position.set(sideX, 3, -43.5);
-  over.rotation.y = -Math.PI / 2;
-  pavilion.add(over);
+  doorway(pavilion, px, pz + pd / 2 + 0.06, 0, "");
 
   markOccluderGroup(g, pavilion, new THREE.Box3(new THREE.Vector3(px - pw / 2 - 2, 0, pz - pd / 2 - 1.5), new THREE.Vector3(px + pw / 2 + 2, ph + 0.7, pz + pd / 2 + 3)));
 
@@ -320,9 +314,14 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
 
 /** The south: a sunken outdoor level, the path's bridge over it, Chifley Library. */
 function buildSouth(g: THREE.Group, colliders: Box[]): void {
+  // A sunken one-lane road crosses under the bridge (the user's call, 10/30):
+  // the asphalt road east of 154 ramps down into a cutting along the
+  // library's front, runs west under the bridge (open beneath, like the
+  // creek's), and at the library's west end turns south along its side.
+  // All scenery: nobody walks down there.
   const DEPTH = 2.6;
   const z0 = 17;
-  const z1 = 23;
+  const z1 = 26; // a wider cutting than before; the library moved 3 m south for it
   const wallMat = mat(0xbdb8ae);
   const steel = mat(0x1d1f22);
   const rail = (x0: number, x1: number, za: number, zb: number): void => {
@@ -342,31 +341,85 @@ function buildSouth(g: THREE.Group, colliders: Box[]): void {
     along.rotation.y = -Math.atan2(zb - za, x1 - x0);
     g.add(along);
   };
-  // Two pits, either side of the bridge (the path runs x -9..5).
-  for (const [x0, x1] of [
-    [-35, -9],
-    [5, 35],
-  ] as const) {
-    const w = x1 - x0;
-    const cx = (x0 + x1) / 2;
-    floor(g, w, z1 - z0, cx, (z0 + z1) / 2, texMat("ai/paving.jpg", w / 2, 3, 0x9a968e), -DEPTH);
-    for (const z of [z0, z1]) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(w, DEPTH, 0.3), wallMat);
-      wall.position.set(cx, -DEPTH / 2, z + (z === z0 ? 0.15 : -0.15));
-      g.add(wall);
-      rail(x0, x1, z, z);
-    }
-    for (const x of [x0, x1]) {
-      const wall = new THREE.Mesh(new THREE.BoxGeometry(0.3, DEPTH, z1 - z0), wallMat);
-      wall.position.set(x + (x === x0 ? 0.15 : -0.15), -DEPTH / 2, (z0 + z1) / 2);
-      g.add(wall);
-    }
-    solid(colliders, w, z1 - z0, cx, (z0 + z1) / 2);
+  const X_WEST = -38; // the cutting turns south here, just past the library's west end (x -30)
+  const X_EAST = 40.5; // the east road's far edge
+  // The cutting: pale paving on its floor, the one-lane road down its middle,
+  // retaining walls along both sides with railings on top.
+  const w = X_EAST - X_WEST;
+  const cx = (X_WEST + X_EAST) / 2;
+  floor(g, w, z1 - z0, cx, (z0 + z1) / 2, texMat("ai/paving.jpg", w / 2, 4, 0x9a968e), -DEPTH);
+  const LANE = 4.4;
+  const laneZ = (z0 + z1) / 2;
+  floor(g, w - 4, LANE, cx + 2, laneZ, asphaltMat(w - 4, LANE), -DEPTH + 0.01);
+  for (const z of [z0, z1]) {
+    // The north wall stops where the ramp comes down at the east end.
+    const x1 = z === z0 ? 31.5 : X_EAST;
+    const wl = x1 - X_WEST;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(wl, DEPTH, 0.3), wallMat);
+    wall.position.set((X_WEST + x1) / 2, -DEPTH / 2, z + (z === z0 ? 0.15 : -0.15));
+    g.add(wall);
+    // Railings along the top, but not across the bridge (it has its own).
+    for (const [ra, rb] of [
+      [X_WEST, -9],
+      [5, x1],
+    ] as const)
+      rail(ra, rb, z, z);
   }
-  // The bridge: a deck with railings either side.
-  const deck = new THREE.Mesh(new THREE.BoxGeometry(14, 0.6, z1 - z0), wallMat);
+  const eastWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, DEPTH, z1 - z0), wallMat);
+  eastWall.position.set(X_EAST - 0.15, -DEPTH / 2, (z0 + z1) / 2);
+  g.add(eastWall);
+  solid(colliders, w, z1 - z0, cx, (z0 + z1) / 2);
+  // The bend south: the cutting runs on down the library's west side.
+  const SOUTH_TO = 60;
+  const sw = 7;
+  const sx = X_WEST + sw / 2;
+  floor(g, sw, SOUTH_TO - z1, sx, (z1 + SOUTH_TO) / 2, texMat("ai/paving.jpg", 3, (SOUTH_TO - z1) / 2, 0x9a968e), -DEPTH);
+  floor(g, LANE, SOUTH_TO - z0 - 2, sx, (z0 + 2 + SOUTH_TO) / 2, asphaltMat(LANE, SOUTH_TO - z0), -DEPTH + 0.012);
+  for (const x of [X_WEST, X_WEST + sw]) {
+    const za = x === X_WEST ? z0 : z1;
+    const wall = new THREE.Mesh(new THREE.BoxGeometry(0.3, DEPTH, SOUTH_TO - za), wallMat);
+    wall.position.set(x + (x === X_WEST ? 0.15 : -0.15), -DEPTH / 2, (za + SOUTH_TO) / 2);
+    g.add(wall);
+    rail(x, x, za, SOUTH_TO);
+  }
+  const westEnd = new THREE.Mesh(new THREE.BoxGeometry(0.3, DEPTH, z1 - z0), wallMat);
+  westEnd.position.set(X_WEST + 0.15, -DEPTH / 2, (z0 + z1) / 2);
+  g.add(westEnd);
+  solid(colliders, sw, SOUTH_TO - z1, sx, (z1 + SOUTH_TO) / 2);
+  // The ramp: the east road (x 31.5..40.5) slopes from street level at z 4
+  // down to the cutting's floor at its north wall, then turns west into it.
+  const RAMP_FROM = 4;
+  const rampLen = z0 + 4.5 - RAMP_FROM;
+  const slope = Math.atan2(DEPTH, rampLen);
+  const ramp = new THREE.Mesh(new THREE.PlaneGeometry(9, Math.hypot(rampLen, DEPTH)), asphaltMat(9, rampLen));
+  ramp.rotation.x = -Math.PI / 2 + slope;
+  ramp.position.set(36, -DEPTH / 2 + 0.01, RAMP_FROM + rampLen / 2);
+  g.add(ramp);
+  // Its side walls, rising from nothing to the cutting's depth.
+  for (const x of [31.5, 40.5]) {
+    const side = new THREE.Shape();
+    side.moveTo(0, 0);
+    side.lineTo(rampLen, -DEPTH);
+    side.lineTo(rampLen, 0);
+    side.closePath();
+    const wallSide = new THREE.Mesh(new THREE.ShapeGeometry(side), new THREE.MeshStandardMaterial({ color: 0xbdb8ae, side: THREE.DoubleSide }));
+    wallSide.rotation.y = -Math.PI / 2;
+    wallSide.position.set(x, 0, RAMP_FROM);
+    g.add(wallSide);
+    rail(x, x, RAMP_FROM + 2, z0);
+  }
+  solid(colliders, 9, rampLen, 36, RAMP_FROM + rampLen / 2);
+
+  // The bridge: a deck over the cutting with railings either side, open
+  // beneath (the road runs under it), on a pier at each bank.
+  const deck = new THREE.Mesh(new THREE.BoxGeometry(14.8, 0.6, z1 - z0), wallMat);
   deck.position.set(-2, -0.3, (z0 + z1) / 2);
   g.add(deck);
+  for (const x of [-9.2, 5.2]) {
+    const beam = new THREE.Mesh(new THREE.BoxGeometry(0.4, 0.5, z1 - z0), mat(0x8f8a80));
+    beam.position.set(x, -0.85, (z0 + z1) / 2);
+    g.add(beam);
+  }
   rail(-9, -9, z0, z1);
   rail(5, 5, z0, z1);
 
@@ -383,18 +436,18 @@ function buildSouth(g: THREE.Group, colliders: Box[]): void {
     chifleyMat(66),
     chifleyMat(66),
   ]);
-  lib.position.set(3, 2 * FLOOR_H, 32);
+  lib.position.set(3, 2 * FLOOR_H, 35);
   library.add(lib);
   // A deep cornice along the top.
   const cornice = new THREE.Mesh(new THREE.BoxGeometry(67, 0.5, 1.2), mat(0xcfc3ae));
-  cornice.position.set(3, 4 * FLOOR_H + 0.1, 25.2);
+  cornice.position.set(3, 4 * FLOOR_H + 0.1, 28.2);
   library.add(cornice);
   const door = new THREE.Mesh(new THREE.BoxGeometry(6, 3.2, 0.2), mat(0x1c2328));
-  door.position.set(-2, 1.6, 24.95);
+  door.position.set(-2, 1.6, 27.95);
   library.add(door);
   g.add(library);
   // Its ground is a beige forecourt, not the campus grass: the building fades
   // when the camera comes close, and grass then showed where the library stands.
-  floor(g, 70, 16.3, 3, 31.35, texMat("ai/paving.jpg", 35, 8, 0xe2d6bc), 0.01);
-  solid(colliders, 66, 14, 3, 32);
+  floor(g, 68.5, 16.3, 3.75, 34.35, texMat("ai/paving.jpg", 34, 8, 0xe2d6bc), 0.01); // x -30.5..38
+  solid(colliders, 66, 14, 3, 35);
 }

@@ -34,8 +34,7 @@ export interface Space {
 const OUTDOOR_AREAS: Area[] = [
   { minX: -51, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the white building's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
-  { minX: 4.6, maxX: 9.4, minZ: -46, maxZ: -39.4 }, // into the passage, to the Career Hub's door on the O'Donoghue centre's west side
-  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
+  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 25 },
 ];
 
 export const SPACES: Record<string, Space> = {
@@ -182,8 +181,8 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -8.6, z: 2.3 }, // the study-group board beside 155's door (client/src/spaces/outdoor.ts STUDY_BOARD)
   { x: 24.5, z: -21 }, // a "Staff only" door at Lab Coffee's far end (the easter egg)
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
-  { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
-  { x: 9.1, z: -43.5 }, // the Career Hub's door, on the O'Donoghue centre's west side in the passage (client/src/spaces/outdoor.ts)
+  { x: -2, z: 24.6 }, // Chifley Library's front door (E at the end of the bridge)
+  { x: 18, z: -39 }, // the Career Hub's door, in the O'Donoghue centre's front (client/src/spaces/outdoor.ts)
   { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
   { x: -45.5, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)

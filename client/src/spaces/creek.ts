@@ -17,6 +17,50 @@ const CREEK = { x: -66.4, bankTop: 8.8, water: 8, depth: 2.2 };
 export const CREEK_Z = { from: -160, to: 60 };
 /** The avenue and its bridge: centre z, and the width of the paving (the north road's, backdrop.ts). */
 const AVE = { z: -31, w: 18 };
+/**
+ * South of the avenue's bridge the creek bends gently west (the user's call,
+ * 10/30): walking south toward Badger & Co it draws slowly away from the
+ * lawn. North of the bridge it runs straight. Everything along it (water,
+ * banks, fences, the paths and the far road) follows the same curve.
+ */
+const BEND_FROM = -22;
+export const bend = (z: number): number => (z <= BEND_FROM ? 0 : -0.0022 * (z - BEND_FROM) ** 2);
+
+/**
+ * A long strip along z from z0 to z1, its cross-section from (xa, ya) to
+ * (xb, yb), shifted west by the creek's bend as it goes: water, a bank's
+ * slope, a path. Short steps where it bends, one where it's straight.
+ */
+function ribbon(g: THREE.Group, xa: number, xb: number, ya: number, yb: number, z0: number, z1: number, material: THREE.Material, texLen = 0, bendB = true): THREE.Mesh {
+  const zs: number[] = [z0];
+  if (z0 < BEND_FROM && z1 > BEND_FROM) zs.push(BEND_FROM);
+  for (let z = Math.max(z0, BEND_FROM) + 2; z < z1; z += 2) zs.push(z);
+  zs.push(z1);
+  const pos: number[] = [];
+  const uv: number[] = [];
+  const idx: number[] = [];
+  const across = Math.hypot(xb - xa, yb - ya);
+  zs.forEach((z, i) => {
+    const b = bend(z);
+    pos.push(xa + b, ya, z, xb + (bendB ? b : 0), yb, z);
+    const v = texLen ? (z - z0) / texLen : i;
+    uv.push(0, v, texLen ? across / Math.max(texLen, 0.001) : 1, v);
+    if (i) {
+      const a = (i - 1) * 2;
+      idx.push(a, a + 2, a + 1, a + 1, a + 2, a + 3);
+    }
+  });
+  const geo = new THREE.BufferGeometry();
+  geo.setAttribute("position", new THREE.Float32BufferAttribute(pos, 3));
+  geo.setAttribute("uv", new THREE.Float32BufferAttribute(uv, 2));
+  geo.setIndex(idx);
+  geo.computeVertexNormals();
+  const m = new THREE.Mesh(geo, material);
+  m.receiveShadow = HIGH;
+  g.add(m);
+  return m;
+}
+
 /** The top edges of the banks: nobody walks past them (areas stop short of them). */
 const EAST_TOP = CREEK.x + CREEK.bankTop; // -57.6
 const WEST_TOP = CREEK.x - CREEK.bankTop; // -75.2
@@ -80,20 +124,14 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   const mz = (CREEK_Z.from + CREEK_Z.to) / 2;
 
   // ---- The channel: dull green-brown water, and a sloping grassy bank each side ----
-  const w = new THREE.Mesh(new THREE.PlaneGeometry(water, len), new THREE.MeshStandardMaterial({ color: WATER, roughness: 0.3, metalness: 0.1 }));
-  w.rotation.x = -Math.PI / 2;
-  w.position.set(cx, -depth, mz);
-  g.add(w);
-  const run = bankTop - water / 2;
-  const slopeLen = Math.hypot(run, depth);
-  for (const side of [-1, 1]) {
-    const geo = new THREE.PlaneGeometry(slopeLen, len);
-    geo.rotateX(-Math.PI / 2); // lie flat: width along x, length along z
-    const slope = new THREE.Mesh(geo, texMat("ai/grass.jpg", 1, len / 3.9, 0x9fb08a));
-    slope.position.set(cx + side * (water / 2 + run / 2), -depth / 2, mz);
-    slope.rotation.z = side * Math.atan2(depth, run); // rises away from the water
-    g.add(slope);
-  }
+  const waterMat = new THREE.MeshStandardMaterial({ color: WATER, roughness: 0.3, metalness: 0.1, side: THREE.DoubleSide });
+  ribbon(g, cx - water / 2, cx + water / 2, -depth, -depth, CREEK_Z.from, CREEK_Z.to, waterMat);
+  const grass = texMat("ai/grass.jpg", 1, 1, 0x9fb08a);
+  grass.side = THREE.DoubleSide;
+  ribbon(g, cx - bankTop, cx - water / 2, 0, -depth, CREEK_Z.from, CREEK_Z.to, grass, 3.9);
+  ribbon(g, cx + water / 2, cx + bankTop, -depth, 0, CREEK_Z.from, CREEK_Z.to, grass, 3.9);
+  void len;
+  void mz;
   // Where the channel meets the building at its north end: a concrete wall with a dark culvert mouth.
   const wall = new THREE.Mesh(new THREE.PlaneGeometry(bankTop * 2, depth + 0.05), mat(0x5a5e62));
   wall.position.set(cx, -depth / 2, CREEK_Z.from + 0.02);
@@ -106,15 +144,11 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     floor(g, x1 - x0, AVE.w, (x0 + x1) / 2, AVE.z, texMat("ai/paving.jpg", (x1 - x0) / 2, AVE.w / 2), 0.012);
   };
   paving(EAST_TOP + 1.4, -40); // from the bridge's east end to the north road at -40
-  paving(WEST_TOP - 3.4, WEST_TOP - 1.4); // the far bank's footpath (the road is below)
-  paving(-110, WEST_TOP - 11.2); // and on past the road
+  // On the far bank the avenue stops at the footpath: no white paving across the road (the user's call, 10/30).
   // A planter row along the road's south edge, where it meets the grass.
   const shrubs: Spot[] = [];
   const z = AVE.z + AVE.w / 2 + 0.35;
-  for (const [x0, x1] of [
-    [-54.5, -42],
-    [-107, -94],
-  ] as const) {
+  for (const [x0, x1] of [[-54.5, -42]] as const) {
     block(g, null, [x1 - x0, 0.4, 0.5], [(x0 + x1) / 2, z], CONCRETE);
     for (let x = x0 + 0.8; x < x1; x += 2.4) shrubs.push({ x, z, rotY: x * 2.3 });
   }
@@ -153,32 +187,22 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   // poured concrete in slabs with a kerb, and beyond it a two-lane asphalt
   // road with a dashed centre line, both running north-south as far as the
   // creek does; the avenue meets the road at a crossing. Scenery only. ----
-  const zLen = CREEK_Z.to - CREEK_Z.from;
-  const zMid = (CREEK_Z.from + CREEK_Z.to) / 2;
   const walk = { x0: WEST_TOP - 3.4, x1: WEST_TOP - 0.2 };
-  floor(g, walk.x1 - walk.x0, zLen, (walk.x0 + walk.x1) / 2, zMid, mat(0xcfccc5), 0.02);
+  ribbon(g, walk.x0, walk.x1, 0.02, 0.02, CREEK_Z.from, CREEK_Z.to, mat(0xcfccc5));
   // The slabs' joints every 1.5 m, and the kerb on the road side.
   const joints: Inst[] = [];
-  for (let z = CREEK_Z.from; z < CREEK_Z.to; z += 1.5) if (z < AVE.z - AVE.w / 2 || z > AVE.z + AVE.w / 2) joints.push({ x: (walk.x0 + walk.x1) / 2, y: 0.026, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  for (let z = CREEK_Z.from; z < CREEK_Z.to; z += 1.5) joints.push({ x: (walk.x0 + walk.x1) / 2 + bend(z), y: 0.026, z, sx: 1, sy: 1, sz: 1, rot: Math.atan(bend(z + 0.5) - bend(z - 0.5)) });
   instanced(g, new THREE.BoxGeometry(walk.x1 - walk.x0, 0.004, 0.04), mat(0xa9a6a0), joints);
-  const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, zLen), mat(0xbdbab3));
-  kerb.position.set(walk.x0 - 0.12, 0.075, zMid);
-  g.add(kerb);
+  ribbon(g, walk.x0 - 0.25, walk.x0, 0.15, 0.15, CREEK_Z.from, CREEK_Z.to, mat(0xbdbab3));
   const road = { x0: walk.x0 - 7.25, x1: walk.x0 - 0.25 };
-  floor(g, road.x1 - road.x0, zLen, (road.x0 + road.x1) / 2, zMid, asphaltMat(road.x1 - road.x0, zLen), 0.01);
-  // Two lanes: a dashed white centre line, solid edge lines (not across the avenue's crossing).
+  const tar = asphaltMat(road.x1 - road.x0, 8);
+  ribbon(g, road.x0, road.x1, 0.01, 0.01, CREEK_Z.from, CREEK_Z.to, tar, 8);
+  // Two lanes: a dashed white centre line and solid edge lines.
   const dashes: Inst[] = [];
-  for (let z = CREEK_Z.from; z < CREEK_Z.to; z += 6) if (z < AVE.z - AVE.w / 2 - 1 || z > AVE.z + AVE.w / 2 + 1) dashes.push({ x: (road.x0 + road.x1) / 2, y: 0.016, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  for (let z = CREEK_Z.from; z < CREEK_Z.to; z += 6) dashes.push({ x: (road.x0 + road.x1) / 2 + bend(z), y: 0.016, z, sx: 1, sy: 1, sz: 1, rot: Math.atan(bend(z + 0.5) - bend(z - 0.5)) });
   instanced(g, new THREE.BoxGeometry(0.15, 0.004, 3), new THREE.MeshBasicMaterial({ color: 0xf2f2f2 }), dashes);
-  for (const x of [road.x0 + 0.3, road.x1 - 0.3]) {
-    const line = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.004, zLen), new THREE.MeshBasicMaterial({ color: 0xe8e8e8 }));
-    line.position.set(x, 0.015, zMid);
-    g.add(line);
-  }
-  // A zebra crossing where the avenue meets the road.
-  const stripes: Inst[] = [];
-  for (let z = AVE.z - 4; z <= AVE.z + 4; z += 1) stripes.push({ x: (road.x0 + road.x1) / 2, y: 0.017, z, sx: 1, sy: 1, sz: 1, rot: 0 });
-  instanced(g, new THREE.BoxGeometry(road.x1 - road.x0 - 1.2, 0.004, 0.5), new THREE.MeshBasicMaterial({ color: 0xf4f4f4 }), stripes);
+  const white = new THREE.MeshBasicMaterial({ color: 0xe8e8e8 });
+  for (const x of [road.x0 + 0.3, road.x1 - 0.3]) ribbon(g, x - 0.06, x + 0.06, 0.015, 0.015, CREEK_Z.from, CREEK_Z.to, white);
 
   // ---- Trees ----
   // Big ones on the lawn's extension (the models the lawn's edge uses).
@@ -209,8 +233,10 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   // The lawn's own tree models, so they sit with the rest: willows a wide
   // CommonTree_4 with golden leaves, poplars a CommonTree_5 squeezed narrow
   // and stretched tall.
-  for (const [i, p] of willows.entries()) tree(g, "CommonTree_4.glb", p, 7, 1.5, 1, 0xc8b04a, i * 1.9);
-  for (const [i, p] of poplars.entries()) tree(g, "CommonTree_5.glb", p, 9, 0.45, 1.35, 0x5f8a3c, i * 1.3);
+  // Those on the creek's banks follow its bend.
+  const onBank = (p: { x: number; z: number }) => (p.x < -51.5 ? { x: p.x + bend(p.z), z: p.z } : p);
+  for (const [i, p] of willows.entries()) tree(g, "CommonTree_4.glb", onBank(p), 7, 1.5, 1, 0xc8b04a, i * 1.9);
+  for (const [i, p] of poplars.entries()) tree(g, "CommonTree_5.glb", onBank(p), 9, 0.45, 1.35, 0x5f8a3c, i * 1.3);
   for (const p of [...willows, ...poplars]) if (p.x > EAST_TOP - 1) solid(colliders, 0.8, 0.8, p.x, p.z);
 
   // North of Badger & Co, on the grass only (no trees on paving): a row of
@@ -224,17 +250,23 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   scatter(g, "nature/CommonTree_5.glb", 5.8, grove.filter((_, i) => i % 2 === 1));
   for (const s of grove) solid(colliders, 0.9, 0.9, s.x, s.z);
   for (const [x, z] of PICNIC) picnicTable(g, colliders, x, z);
-  // The same tint as outdoor.ts's paving, which covers from x -35 east.
-  const lane = { minX: SOUTH_WALK.maxX, maxX: -34.9, minZ: -6, maxZ: 17 };
-  floor(g, lane.maxX - lane.minX, lane.maxZ - lane.minZ, (lane.minX + lane.maxX) / 2, (lane.minZ + lane.maxZ) / 2, texMat("ai/paving.jpg", (lane.maxX - lane.minX) / 2, (lane.maxZ - lane.minZ) / 2, 0xd6d2ca), 0.011);
+  // The same tint as outdoor.ts's paving, which covers from x -35 east; its
+  // creek edge follows the bend, so it widens to the south (the user's call).
+  const warm = texMat("ai/paving.jpg", 1, 1, 0xd6d2ca);
+  warm.side = THREE.DoubleSide;
+  ribbon(g, SOUTH_WALK.maxX, -34.9, 0.011, 0.011, -6, 17, warm, 2, false);
+  // Grass between the bending walk and the straight lawn edge, north of the paving.
+  const lawnGrass = texMat("ai/grass.jpg", 1, 1);
+  lawnGrass.side = THREE.DoubleSide;
+  ribbon(g, SOUTH_WALK.maxX, -51, 0.006, 0.006, BEND_FROM, -6, lawnGrass, 3, false);
 
   // Between the white building's west end and the boardwalk north of the avenue: a white path as wide as the deck.
   const path = { minX: -54.2, maxX: -51, minZ: -90, maxZ: -40 };
   floor(g, path.maxX - path.minX, path.maxZ - path.minZ, (path.minX + path.maxX) / 2, (path.minZ + path.maxZ) / 2, texMat("ai/paving.jpg", 1.6, 25), 0.012);
   boardwalk(g, colliders, BOARDWALK);
   const sw = SOUTH_WALK;
-  floor(g, sw.maxX - sw.minX, sw.maxZ - sw.minZ, (sw.minX + sw.maxX) / 2, (sw.minZ + sw.maxZ) / 2, texMat("ai/paving.jpg", (sw.maxX - sw.minX) / 2, (sw.maxZ - sw.minZ) / 2, 0xd6d2ca), 0.011);
-  fence(g, colliders, sw, 0);
+  ribbon(g, sw.minX, sw.maxX, 0.011, 0.011, sw.minZ, sw.maxZ, warm, 2);
+  bentFence(g, sw.minX + 0.1, sw.minZ, sw.maxZ);
 
   buildBadger(g, colliders);
 }
@@ -271,6 +303,27 @@ function fence(g: THREE.Group, colliders: Box[], { minX, minZ, maxZ }: Box, y0: 
   for (let z = minZ + 0.3; z <= maxZ; z += 2) posts.push({ x: fx, y: y0 + 0.55, z, sx: 1, sy: 1, sz: 1, rot: 0 });
   instanced(g, new THREE.BoxGeometry(0.08, 1.1, 0.08), steel, posts);
   colliders.push({ minX: fx - 0.1, maxX: fx + 0.1, minZ, maxZ });
+}
+
+/** The same steel fence along the creek's bend (south of the bridge): rails as short straight runs, posts every 2 m. Scenery: the walk limit (x -51) keeps people off it. */
+function bentFence(g: THREE.Group, x: number, z0: number, z1: number): void {
+  const steel = mat(RAIL);
+  const posts: Inst[] = [];
+  for (let z = z0; z < z1; z += 2) {
+    const za = z;
+    const zb = Math.min(z + 2, z1);
+    const xa = x + bend(za);
+    const xb = x + bend(zb);
+    const len = Math.hypot(xb - xa, zb - za);
+    for (const y of [1.0, 0.55]) {
+      const r = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.06, len), steel);
+      r.position.set((xa + xb) / 2, y, (za + zb) / 2);
+      r.rotation.y = Math.atan2(xb - xa, zb - za);
+      g.add(r);
+    }
+    posts.push({ x: xa, y: 0.55, z: za, sx: 1, sy: 1, sz: 1, rot: 0 });
+  }
+  instanced(g, new THREE.BoxGeometry(0.08, 1.1, 0.08), steel, posts);
 }
 
 /** A tall black lamp post, like the campus's (streetscape.ts), arm over the avenue. */
