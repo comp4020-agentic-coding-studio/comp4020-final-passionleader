@@ -1,0 +1,24 @@
+/* "Who's here": under the HUD's online line, top left. */
+#hud-online.who-trigger { pointer-events: auto; cursor: pointer; }
+#hud-online.who-trigger:hover { background: rgba(255, 251, 224, 0.95); }
+#who-here {
+  position: fixed; top: 64px; left: 16px; z-index: 30;
+  width: min(280px, calc(100vw - 32px)); max-height: 60vh; overflow-y: auto;
+  background: #fffbe0; color: #3b2a12; border: 2px solid #6b3f1d; border-radius: 12px;
+  padding: 8px 10px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); font: 14px/1.4 system-ui, sans-serif;
+}
+#who-here[hidden] { display: none; }
+#who-here .who-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+#who-here .who-head button { border: 0; background: none; font-size: 1rem; cursor: pointer; min-width: 32px; min-height: 32px; }
+#who-here ul { list-style: none; margin: 0; padding: 0; }
+#who-here li { margin: 2px 0; }
+#who-here li button {
+  width: 100%; text-align: left; min-height: 32px; padding: 2px 8px; border-radius: 8px;
+  border: 1px solid #e2d4b4; background: #fff; color: inherit; font: inherit; cursor: pointer;
+}
+#who-here li button:hover:not(:disabled) { background: #f3e7a6; }
+#who-here li button:disabled { cursor: default; opacity: 0.75; }
+#who-here .who-me { padding: 2px 8px; font-weight: 700; }
+#who-here .who-empty, #who-here .who-hint, #who-here .who-elsewhere { color: #7a6a52; font-size: 0.8rem; margin: 4px 0 0; }
+#who-here .who-staff { padding: 0 6px; border-radius: 6px; background: #23404f; color: #fff; font-size: 0.72rem; }
+@media (max-width: 700px) { #who-here { top: 84px; } }

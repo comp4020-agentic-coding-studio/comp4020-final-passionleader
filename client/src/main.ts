@@ -68,6 +68,7 @@ import {
   type Session,
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
+import { mountWhoHere } from "./whohere.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
 import { mountNoteComposer } from "./notecompose.ts";
@@ -530,6 +531,7 @@ interface OtherView {
   lookKey: string;
   /** The seat they're on, if any. */
   seat?: Seat;
+  staff: boolean;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
@@ -546,7 +548,7 @@ function upsertOther(p: RemotePlayer): void {
     tag(group, p.staff ? `${p.name} · staff` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look) };
+    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff };
     others.set(p.id, view);
   }
   // A new look (they changed it while here): recolour in place.
@@ -945,6 +947,26 @@ function showOnline(): void {
   hudOnline.textContent = short ? `👥 ${total} online` : `Online: ${parts.join(" · ")}`;
   hudOnline.hidden = false;
 }
+// Press the online line: who's in this space by name, elsewhere as counts (whohere.ts).
+mountWhoHere(hudOnline, {
+  here: () => [...others.values()].map((o) => ({ name: o.name, staff: o.staff })),
+  counts: () => {
+    const n = (id: string): number => onlineCounts[id] ?? 0;
+    return [
+      ["Campus", n("outdoor")],
+      ["Hub", n("hub")],
+      ["Library", n("library")],
+      ["ANUSA", n("anusa")],
+      ["Career Hub", n("careers")],
+      ["Classrooms", classroomList.reduce((sum, c) => sum + n(c.space), 0)],
+      ["Rooms", n("rooms")],
+    ];
+  },
+  me: () => session?.name ?? "",
+  mayWhisper: () => isMember(session),
+  whisper: (name) => chat.prefill(`/w ${name} `),
+});
+
 async function loadClassrooms(): Promise<void> {
   try {
     useClassrooms(await getClassrooms());

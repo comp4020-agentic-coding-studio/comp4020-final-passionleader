@@ -17,6 +17,8 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
   show(): void;
   hide(): void;
   openInput(): void;
+  /** Opens the input with this text in it (a whisper's "/w name "), the cursor at the end. */
+  prefill(text: string): void;
   closeInput(): void;
   isTyping(): boolean;
   add(msg: { name: string; text: string; self?: boolean; whisper?: boolean }): void;
@@ -114,6 +116,11 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
       root.hidden = true;
     },
     openInput,
+    prefill(text: string): void {
+      openInput();
+      input.value = text;
+      input.setSelectionRange(text.length, text.length);
+    },
     closeInput,
     isTyping(): boolean {
       return typing;
