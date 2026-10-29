@@ -70,6 +70,7 @@ import {
 import { mountChat } from "./chatui.ts";
 import { mountWhoHere } from "./whohere.ts";
 import { canberraHour, daylightAt } from "./daylight.ts";
+import { mountStatus, statusText } from "./status.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
 import { mountNoteComposer } from "./notecompose.ts";
@@ -554,6 +555,9 @@ interface OtherView {
   /** The seat they're on, if any. */
   seat?: Seat;
   staff: boolean;
+  /** Their name tag's element, to show their status beside the name. */
+  label: HTMLElement;
+  status?: string;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
@@ -567,10 +571,10 @@ function upsertOther(p: RemotePlayer): void {
     const variant = variantOf(look);
     const avatar = new Avatar(look);
     const group = avatar.group;
-    tag(group, p.staff ? `${p.name} · staff` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label");
+    const label = tag(group, p.staff ? `${p.name} · staff` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label").element;
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff };
+    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff, label };
     others.set(p.id, view);
   }
   // A new look (they changed it while here): recolour in place.
@@ -580,6 +584,13 @@ function upsertOther(p: RemotePlayer): void {
     view.lookKey = key;
     view.variant = variantOf(look);
     view.avatar.setLook(look);
+  }
+  // Their status beside the name ("👋 open to chat"), when it changes.
+  if ((p.status ?? "") !== (view.status ?? "")) {
+    view.status = p.status;
+    const base = p.staff ? `${p.name} · staff` : p.name;
+    view.label.textContent = p.status ? `${statusText(p.status).icon} ${base}` : base;
+    view.label.title = p.status ? statusText(p.status).label : "";
   }
   // Sitting: on the seat, facing its way, whatever their last step said.
   view.seat = p.seat ? seatAt(p.seat) : undefined;
@@ -969,9 +980,12 @@ function showOnline(): void {
   hudOnline.textContent = short ? `👥 ${total} online` : `Online: ${parts.join(" · ")}`;
   hudOnline.hidden = false;
 }
+// Your status, beside your name at the top left (status.ts); kept in this browser and sent on each connect.
+const statusPicker = mountStatus(hudName, (s) => net?.status(s));
+
 // Press the online line: who's in this space by name, elsewhere as counts (whohere.ts).
 mountWhoHere(hudOnline, {
-  here: () => [...others.values()].map((o) => ({ name: o.name, staff: o.staff })),
+  here: () => [...others.values()].map((o) => ({ name: o.status ? `${statusText(o.status).icon} ${o.name}` : o.name, staff: o.staff })),
   counts: () => {
     const n = (id: string): number => onlineCounts[id] ?? 0;
     return [
@@ -1610,6 +1624,8 @@ function goOnline(token: string): void {
   net = connect(token, {
     welcome(id, _space, players) {
       selfId = id;
+      // The status picked last time goes up again (the server forgets it with the socket).
+      window.setTimeout(() => statusPicker.resend(), 300);
       // The server may have us elsewhere after a reconnect: tell it where we are.
       if (space) net?.enter(space.id, player.position.x, player.position.z);
       players.forEach(upsertOther);

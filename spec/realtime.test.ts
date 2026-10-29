@@ -80,6 +80,26 @@ describe("real time", () => {
     await expect(sb.next((m) => m.t === "emote" && m.kind === "dance")).resolves.toBeTruthy();
   });
 
+  it("shows a status (one of three, never free text) beside a name to the space, at most once every two seconds", async () => {
+    const [a, b] = await Promise.all([visitor(), visitor()]);
+    const sa = await connect(a.token);
+    const sb = await connect(b.token);
+    await Promise.all([sa.next((m) => m.t === "welcome"), sb.next((m) => m.t === "welcome")]);
+    const status = (s: string | undefined) => (m: { t: string; players?: unknown }) =>
+      m.t === "players" && (m.players as (P & { status?: string })[]).some((p) => p.name === a.name && p.status === s);
+    sa.send({ t: "status", status: "chat" });
+    await expect(sb.next(status("chat"))).resolves.toBeTruthy();
+    // Too soon, and free text: neither changes it.
+    sa.send({ t: "status", status: "study" });
+    sa.send({ t: "status", status: "come find me lol" });
+    expect(await sb.seesNew(status("study"), 700)).toBe(false);
+    await new Promise((r) => setTimeout(r, 2100));
+    sa.send({ t: "status", status: "come find me lol" });
+    expect(await sb.seesNew(status("come find me lol"), 600)).toBe(false);
+    sa.send({ t: "status", status: null });
+    await expect(sb.next(status(undefined))).resolves.toBeTruthy();
+  });
+
   it("keeps one poop per person in the Poop Room, five seconds apart, and nowhere else", async () => {
     const [a, b] = await Promise.all([visitor(), guest()]);
     const sa = await connect(a.token);

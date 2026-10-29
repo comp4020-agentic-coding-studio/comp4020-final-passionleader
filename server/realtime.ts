@@ -16,7 +16,12 @@ import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 // the spaces and what people do in them can keep changing.
 
 /** `seat` is the seat they're sitting on ("<space>:<n>"), if any; `look` how their figure looks. */
-export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true };
+export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true; status?: Status };
+/** How open someone is to a chat (RICE v2 #3): one of three, never free text, shown beside their name to their space. */
+export type Status = "chat" | "study" | "away";
+const STATUSES: ReadonlySet<string> = new Set(["chat", "study", "away"]);
+const STATUS_GAP_MS = 2000;
+const lastStatus = new WeakMap<WebSocket, number>();
 /** Who's behind a socket, for the activity log only: never sent to anyone. */
 const owners = new WeakMap<WebSocket, { name: string; token: string; role: string }>();
 
@@ -434,6 +439,14 @@ function onMessage(ws: WebSocket, raw: string): void {
     lastPoop.set(key, now);
     putPoop(player.name, player.x, player.z);
     broadcastSpace("poop", { t: "action", kind: "poops", poops: poopList() });
+  } else if (msg.t === "status" && (msg.status === null || (typeof msg.status === "string" && STATUSES.has(msg.status)))) {
+    // Three fixed values (or none), at most one change every two seconds; it goes with them through doors, not to the database.
+    const now = Date.now();
+    if (now - (lastStatus.get(ws) ?? 0) < STATUS_GAP_MS) return;
+    lastStatus.set(ws, now);
+    if (msg.status === null) delete player.status;
+    else player.status = msg.status as Status;
+    dirty.add(player.space);
   } else if (msg.t === "emote" && typeof msg.kind === "string" && EMOTES.has(msg.kind)) {
     if (msg.kind !== "dance") {
       const now = Date.now();

@@ -1,0 +1,22 @@
+/* The status button sits after your name at the top left. */
+#status-btn {
+  pointer-events: auto; margin-left: 6px; vertical-align: top;
+  padding: 3px 8px; min-height: 28px; border-radius: 8px; border: 1px solid #c9b88e;
+  background: rgba(255, 251, 224, 0.88); color: #3b2a12; font: 600 0.8rem system-ui, sans-serif; cursor: pointer;
+}
+#status-btn:hover { background: #fffbe0; }
+#status-menu {
+  position: fixed; top: 46px; left: 16px; z-index: 31; display: flex; flex-direction: column; gap: 2px;
+  background: #fffbe0; border: 2px solid #6b3f1d; border-radius: 10px; padding: 6px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18);
+}
+#status-menu[hidden] { display: none; }
+#status-menu button {
+  text-align: left; min-height: 34px; padding: 2px 10px; border: 0; border-radius: 6px; background: none;
+  color: #3b2a12; font: 14px system-ui, sans-serif; cursor: pointer;
+}
+#status-menu button:hover { background: #f3e7a6; }
+body.in-room #status-btn { display: none; }
+@media (max-width: 700px) {
+  #status-btn { font-size: 0.72rem; padding: 2px 6px; min-height: 26px; }
+  #status-menu { top: 44px; }
+}

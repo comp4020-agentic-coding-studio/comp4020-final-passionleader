@@ -21,7 +21,10 @@ export interface RemotePlayer {
   look?: Look | null;
   /** ANU staff (or the admin): a mark on their name tag. */
   staff?: boolean;
+  /** How open they are to a chat, if they've said (RICE v2 #3). */
+  status?: PlayerStatus;
 }
+export type PlayerStatus = "chat" | "study" | "away";
 
 export type Emote = "wave" | "yes" | "no" | "mate" | "dance";
 
@@ -105,6 +108,8 @@ export interface Net {
   enter(space: SpaceId, x: number, z: number): void;
   chat(text: string): void;
   emote(kind: Emote): void;
+  /** Says how open we are to a chat (or clears it); shown beside our name to our space. */
+  status(s: PlayerStatus | null): void;
   /** Poops where we stand (the Poop Room only; the server checks). */
   poop(): void;
   /** Keeps this meeting room's chat so far for us, 30 days (members only; the server checks). */
@@ -226,6 +231,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     emote(kind) {
       sendNow({ t: "emote", kind });
+    },
+    status(s) {
+      sendNow({ t: "status", status: s });
     },
     poop() {
       sendNow({ t: "poop" });
