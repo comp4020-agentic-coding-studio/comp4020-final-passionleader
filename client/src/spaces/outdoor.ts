@@ -67,7 +67,35 @@ export function buildOutdoor(): SpaceDef {
   const pathFrom = -OUTDOOR.halfZ - 3;
   const pathTo = 26.2;
   floor(g, 14, pathTo - pathFrom, -2, (pathFrom + pathTo) / 2, texMat("ai/paving.jpg", 7, (pathTo - pathFrom) / 3.2), 0.01);
-  floor(g, 20, 16, -19, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
+  // The lawn, the same deeper green as the grass by Badger & Co (the user's call, 10/30: one lawn, one colour).
+  floor(g, 20, 16, -19, -14, texMat("ai/grass.jpg", 8, 6.4, 0xb4c49c), 0.02);
+  // The path between Badger & Co's picnic lawn and the lawn (x -35..-29) curves
+  // toward Badger & Co going south, joining its old line at the road (the user's
+  // call, 10/30): paving over the picnic lawn's corner, grass over the path's old west side.
+  const curveX = (x0: number, z: number): number => x0 - 5 * ((z + 22) / 16) ** 2;
+  const wedge = (x0: number, y: number, material: THREE.Material, outward: number): void => {
+    const shape = new THREE.Shape();
+    shape.moveTo(x0, 22);
+    for (let z = -22; z <= -6.001; z += 1) shape.lineTo(curveX(x0, z), -z);
+    shape.lineTo(curveX(x0, -6), 6);
+    shape.lineTo(x0 + outward, 6);
+    shape.lineTo(x0 + outward, 22);
+    shape.closePath();
+    const geo = new THREE.ShapeGeometry(shape);
+    geo.rotateX(-Math.PI / 2); // shape's y becomes -z
+    const uv = geo.attributes.position!;
+    const uvs: number[] = [];
+    for (let i = 0; i < uv.count; i++) uvs.push(uv.getX(i) / 2.5, uv.getZ(i) / 2.5);
+    geo.setAttribute("uv", new THREE.Float32BufferAttribute(uvs, 2));
+    const m = new THREE.Mesh(geo, material);
+    m.position.y = y;
+    m.receiveShadow = true;
+    g.add(m);
+  };
+  const lawnTex = texMat("ai/grass.jpg", 1, 1, 0xb4c49c);
+  const paveTex = texMat("ai/paving.jpg", 1, 1, 0xd6d2ca);
+  wedge(-35, 0.006, paveTex, 0); // the picnic lawn gives up the curve's west side to paving
+  wedge(-29, 0.021, lawnTex, 0); // the lawn grows into the path's old east side
   buildBackdrop(g, colliders);
   // Bushes and flowers (Quaternius, CC0), laid out evenly: flowers in a grid
   // on the lawn, and bushes round each building's foot, stopping short of the
