@@ -175,8 +175,9 @@ export const SUN_DIR = new THREE.Vector3(0.55, 0.75, 0.35).normalize();
  * box that follows the player (the caller moves it), so the shadow map stays
  * sharp without covering the whole campus.
  */
-export function addLights(scene: THREE.Scene, shadows: boolean): THREE.DirectionalLight {
-  scene.add(new THREE.HemisphereLight(0xdfefff, 0x8a7a62, 0.9));
+export function addLights(scene: THREE.Scene, shadows: boolean): THREE.DirectionalLight & { hemi: THREE.HemisphereLight } {
+  const hemi = new THREE.HemisphereLight(0xdfefff, 0x8a7a62, 0.9);
+  scene.add(hemi);
   const sun = new THREE.DirectionalLight(0xfff3e0, 2.6);
   sun.castShadow = shadows;
   sun.shadow.mapSize.set(2048, 2048);
@@ -188,7 +189,7 @@ export function addLights(scene: THREE.Scene, shadows: boolean): THREE.Direction
   sun.shadow.bias = -0.0004;
   sun.shadow.normalBias = 0.03;
   scene.add(sun, sun.target);
-  return sun;
+  return Object.assign(sun, { hemi });
 }
 
 /** Turns on shadows for everything in a group: floors only receive them. */

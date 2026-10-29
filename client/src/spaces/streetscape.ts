@@ -26,6 +26,7 @@ function lamp(g: THREE.Group, colliders: Box[], x: number, z: number, face: numb
     new THREE.MeshStandardMaterial({ color: 0xfff1cf, emissive: 0xffd88a, emissiveIntensity: 0.8 }),
   );
   bulb.position.set(0.55, 5.12, 0);
+  bulb.userData.lamp = true; // glows at night (daylight.ts)
   l.add(pole, arm, head, bulb);
   l.position.set(x, 0, z);
   l.rotation.y = face;

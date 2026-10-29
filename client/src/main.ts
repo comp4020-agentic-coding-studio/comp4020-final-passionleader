@@ -69,6 +69,7 @@ import {
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
 import { mountWhoHere } from "./whohere.ts";
+import { canberraHour, daylightAt } from "./daylight.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
 import { mountNoteComposer } from "./notecompose.ts";
@@ -348,6 +349,27 @@ new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/sky/campus_sky
   domeReady = true;
   if (space?.outdoor) applySky();
 });
+// Canberra's time of day, outside (daylight.ts): checked on going out and once a minute.
+function applyDaylight(): void {
+  if (!space?.outdoor) return;
+  const { hour, month } = canberraHour();
+  const d = daylightAt(hour, month);
+  skyDome.material.color.copy(d.sky);
+  sun.color.copy(d.sunColour);
+  sun.intensity = d.sunIntensity;
+  sun.hemi.intensity = d.hemiIntensity;
+  if (scene.fog) (scene.fog as THREE.Fog).color.copy(d.fog);
+  renderer.toneMappingExposure = d.exposure;
+  // The sky's reflected light dims with it; at night a cool, faint fill.
+  scene.environmentIntensity = 0.12 + 0.88 * (1 - d.lamps);
+  space.group.traverse((o) => {
+    if (!o.userData.lamp) return;
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
+    m.emissiveIntensity = 0.8 + d.lamps * 3.2;
+  });
+}
+window.setInterval(applyDaylight, 60_000);
+
 function applySky(): void {
   scene.background = null;
   if (domeReady) {
@@ -1384,6 +1406,11 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   // pale walls and floors glared, so rooms get a softer sun and fill.
   sun.intensity = space.outdoor ? 2.6 : 1.3 * (space.light ?? 1);
   scene.environmentIntensity = space.outdoor ? 1 : 0.55 * (space.light ?? 1);
+  // Indoors, daylight as it always was; outside, Canberra's hour.
+  sun.color.setHex(0xfff3e0);
+  sun.hemi.intensity = 0.9;
+  renderer.toneMappingExposure = 0.85;
+  applyDaylight();
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(cameraOffset(space, at.z));
