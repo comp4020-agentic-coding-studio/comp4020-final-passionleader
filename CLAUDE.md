@@ -61,7 +61,7 @@ Read before planning or building: `README.md` (what good means for this app),
   30 seconds, five per person per space (a sixth replaces their oldest, after a
   warning). They disappear a month after they're stuck (the note says when);
   until then only the author or an admin removes one. Never in the Student
-  Hub or the ANUSA Student Lounge, never inside a building's footprint outside, never
+  Hub (but by staff) or the ANUSA Student Lounge, never inside a building's footprint outside, never
   within 2 m of a door or anything else you press E at; the server checks it.
   Comments: same text limits, one every 10 seconds, same removal rule.
   Deleting a note or a comment asks first.
@@ -154,6 +154,13 @@ Read before planning or building: `README.md` (what good means for this app),
   until when, and logs every change. "Coming in" puts them out at once (back
   to the join screen, told until when). The admin can also kick someone
   once, with nothing stored, so they may come straight back; logged too.
+- Roles: only the top admin (`qa_master`), on the admin PC's Roles tab,
+  makes a signed-up member staff or a student again, and gives or takes the
+  admin PC (the log, reports, restrictions, kicks); never their own role,
+  never a guest's, every change logged, checked on the server. Someone
+  given the admin PC can't restrict or kick the top admin or another holder.
+  Staff and the admin may also stick notes in the Student Hub (clear of its
+  doors and PCs).
 - Meeting rooms (counselling rooms off the Hub, team rooms off classrooms
   and the library) hold six people at most. Team rooms are open; a
   counselling room lets in only those someone inside has invited. Both are
@@ -203,8 +210,10 @@ Read before planning or building: `README.md` (what good means for this app),
 - This is not an official ANU service: no ANU logos or official styling, and
   any board that looks like an ANU channel says it's unofficial and that
   posters' identities aren't verified.
-- Test and admin accounts: `qa_master` is the only admin (e.g. creates
-  classrooms); `qa_bot01`–`qa_bot10` are ordinary users for testing. Their
+- Test and admin accounts: `qa_master` is the top admin (e.g. creates
+  classrooms, and alone changes roles); `qa_bot01`–`04` are staff, `05`–`08`
+  students and `09`–`10` guests, all signing in by password, for testing each
+  role. Their
   tokens never go in the repo. Live-site testing uses them only.
 
 ## Stack

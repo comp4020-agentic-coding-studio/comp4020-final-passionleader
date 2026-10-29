@@ -212,7 +212,7 @@ export function buildHub(): SpaceDef {
     camera: new THREE.Vector3(0, 6.5, 7.5),
     bgm: SHARED_BGM,
     floor: "wood",
-    // A place to sit together; notes go up outside and in classrooms.
+    // A place to sit together; notes go up outside and in classrooms (and here, by staff only: main.ts, server/spaces.ts).
     noNotes: true,
     seats: [-11, -2, 7].flatMap((x) =>
       [-0.5, 0.5].flatMap((dx) => [

@@ -7,9 +7,11 @@
 <style>
   /* The admin's page: the last seven days of what people wrote, removed and
      were refused, the bug reports and reports about people, and who is
-     stopped from doing what. Opened from the Student Hub's admin PC (in the
+     stopped from doing what, and (the top admin only) who is staff and who
+     may use this page. Opened from the Student Hub's admin PC (in the
      in-app window) or in its own tab. Every request is
-     checked on the server: only the admin gets anything back. */
+     checked on the server: only the admin, and those they let in, get
+     anything back. */
   :root { --ink: #3b2a12; --paper: #f5edd8; --card: #fffaf0; --accent: #6b3f1d; --line: #e2d4b4; --muted: #7a6a52; }
   * { box-sizing: border-box; }
   body { margin: 0; background: var(--paper); color: var(--ink); font: 14px/1.45 system-ui, sans-serif; }
@@ -80,6 +82,7 @@
       <button type="button" role="tab" id="tab-log" aria-selected="true">Log</button>
       <button type="button" role="tab" id="tab-bugs" aria-selected="false">Reports (<span id="bug-count">0</span>)</button>
       <button type="button" role="tab" id="tab-limits" aria-selected="false">Restrictions (<span id="limit-count">0</span>)</button>
+      <button type="button" role="tab" id="tab-roles" aria-selected="false">Roles</button>
       <button type="button" id="refresh">Refresh</button>
       <label class="check"><input type="checkbox" id="auto" checked> Auto-refresh every 5 s</label>
       <span class="me" id="me"></span>
@@ -140,6 +143,19 @@
         <tbody id="limits"></tbody>
       </table>
     </section>
+    <section id="roles-view" hidden>
+      <p class="hint">The top admin only. Make a signed-up member staff (Notices, opening classrooms, private enquiries, Hub notes) or a student again, and let someone use this admin PC (the log, reports, restrictions) or stop them. Guests need to sign up first. The top admin's own role never changes. Every change goes in the log.</p>
+      <form class="bar" id="roles-form">
+        <input id="r-q" placeholder="name or email" aria-label="Find a person by name or email" size="18" autocomplete="off">
+        <button type="submit" class="primary">Find</button>
+        <button type="button" id="r-all">Staff and admins</button>
+      </form>
+      <p class="error" id="roles-error" role="alert"></p>
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Admin PC</th><th></th></tr></thead>
+        <tbody id="roles"></tbody>
+      </table>
+    </section>
   </main>
 </div>
 
@@ -179,7 +195,7 @@
       const data = await res.json().catch(() => ({}));
       $("si-pass").value = "";
       if (!res.ok) return showSignin(data.error || "Could not sign in.");
-      if (data.role !== "admin") return showSignin("This page is for the admin.");
+      // The server says who may use this page (the admin, and those given the admin PC).
       token = data.token;
       try { sessionStorage.setItem("admin.token", token); } catch {}
       start(data.name);
@@ -198,7 +214,7 @@
     if (event === "refused" || event === "join-refused" || event === "person-report") return "refused";
     if (event.endsWith("-removed") || event === "note-replaced" || event === "note-expired") return "removed";
     if (["join", "connect", "disconnect"].includes(event)) return "signin";
-    if (event.startsWith("classroom") || event.startsWith("restrict") || event === "room-invite") return "admin";
+    if (event.startsWith("classroom") || event.startsWith("restrict") || event === "room-invite" || event === "role-changed" || event === "kicked") return "admin";
     return "content";
   }
   function summary(e) {
@@ -207,7 +223,7 @@
     if (d.action) parts.push(`tried to ${d.action}`);
     if (d.reason) parts.push(`reason: ${d.reason}`);
     if (d.owner) parts.push(`owner: ${d.owner}`);
-    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online", "name", "what", "until", "about", "chatLines"]) {
+    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online", "name", "what", "until", "about", "chatLines", "role", "adminPc"]) {
       if (d[k] !== undefined && d[k] !== null) parts.push(`${k}: ${d[k]}`);
     }
     return parts.join(" · ");
@@ -400,18 +416,68 @@
     } catch (err) { $("limit-error").textContent = err.message; }
   });
 
+  // --- roles (the top admin only) ---
+  async function loadRoles(q = "") {
+    $("roles-error").textContent = "";
+    try {
+      const { people } = await api("/api/admin/roles", "POST", { q });
+      const rows = $("roles");
+      rows.replaceChildren();
+      if (!people.length) {
+        const tr = el("tr");
+        const td = el("td", "hint", q ? "Nobody matches." : "No staff yet.");
+        td.colSpan = 5;
+        tr.append(td);
+        rows.append(tr);
+      }
+      for (const p of people) {
+        const tr = el("tr");
+        const acts = el("td");
+        const fixed = p.role === "admin" || p.role === "guest";
+        if (!fixed) {
+          const staff = el("button", "", p.role === "staff" ? "Make student" : "Make staff");
+          staff.type = "button";
+          staff.addEventListener("click", () => change(p.name, { role: p.role === "staff" ? "student" : "staff" }));
+          const pc = el("button", "", p.adminPc ? "Take admin PC" : "Give admin PC");
+          pc.type = "button";
+          pc.addEventListener("click", () => {
+            if (!p.adminPc && !confirm(`Let ${p.name} read the log and reports, and restrict people?`)) return;
+            change(p.name, { adminPc: !p.adminPc });
+          });
+          acts.append(staff, " ", pc);
+        } else acts.append(el("span", "details", p.role === "admin" ? "top admin" : "guest: sign up first"));
+        tr.append(el("td", "", p.name), el("td", "mono", p.email || "–"), el("td", "", p.role), el("td", "", p.role === "admin" || p.adminPc ? "yes" : "–"), acts);
+        rows.append(tr);
+      }
+    } catch (err) {
+      if (err.status === 401) return showSignin(err.message);
+      $("roles-error").textContent = err.message;
+    }
+  }
+  async function change(name, what) {
+    $("roles-error").textContent = "";
+    try {
+      await api("/api/admin/roles", "PUT", { name, ...what });
+      loadRoles($("r-q").value.trim());
+    } catch (err) { $("roles-error").textContent = err.message; }
+  }
+  $("roles-form").addEventListener("submit", (e) => { e.preventDefault(); loadRoles($("r-q").value.trim()); });
+  $("r-all").addEventListener("click", () => { $("r-q").value = ""; loadRoles(); });
+
   // --- tabs, refresh ---
   let tab = "log";
-  const TITLES = { log: "Activity log (last 7 days)", bugs: "Reports", limits: "Restrictions" };
-  const LOADERS = { log: () => loadLog(), bugs: () => loadBugs(), limits: () => loadLimits() };
+  const TITLES = { log: "Activity log (last 7 days)", bugs: "Reports", limits: "Restrictions", roles: "Roles" };
+  const LOADERS = { log: () => loadLog(), bugs: () => loadBugs(), limits: () => loadLimits(), roles: () => loadRoles($("r-q").value.trim()) };
   function show(which) {
     tab = which;
     $("tab-log").setAttribute("aria-selected", String(which === "log"));
     $("tab-bugs").setAttribute("aria-selected", String(which === "bugs"));
     $("tab-limits").setAttribute("aria-selected", String(which === "limits"));
+    $("tab-roles").setAttribute("aria-selected", String(which === "roles"));
     $("log-view").hidden = which !== "log";
     $("bug-view").hidden = which !== "bugs";
     $("limit-view").hidden = which !== "limits";
+    $("roles-view").hidden = which !== "roles";
     $("filters").hidden = which !== "log";
     $("title").textContent = TITLES[which];
     LOADERS[which]();
@@ -419,6 +485,7 @@
   $("tab-log").addEventListener("click", () => show("log"));
   $("tab-bugs").addEventListener("click", () => show("bugs"));
   $("tab-limits").addEventListener("click", () => show("limits"));
+  $("tab-roles").addEventListener("click", () => show("roles"));
   $("refresh").addEventListener("click", () => LOADERS[tab]());
   $("older").addEventListener("click", () => loadLog(true));
   $("filters").addEventListener("submit", (e) => { e.preventDefault(); loadLog(); });

@@ -1,5 +1,5 @@
-// Creates or updates the password accounts: qa_master (admin) and
-// qa_bot01–qa_bot10 (ordinary users). It takes only scrypt hashes, never
+// Creates or updates the password accounts: qa_master (the top admin) and
+// qa_bot01–qa_bot10 (01–04 staff, 05–08 students, 09–10 guests). It takes only scrypt hashes, never
 // passwords, as one base64 JSON argument, so it can run on the live machine:
 //
 //   flyctl ssh console -a comp4020-final-passionleader -C "node /app/scripts/seed-accounts.ts <base64>"
@@ -17,6 +17,6 @@ if (!arg) {
   console.error("usage: node scripts/seed-accounts.ts <base64 JSON of [{name, role, hash}]>");
   process.exit(1);
 }
-const accounts = JSON.parse(Buffer.from(arg, "base64").toString("utf8")) as { name: string; role: "user" | "admin"; hash: string }[];
+const accounts = JSON.parse(Buffer.from(arg, "base64").toString("utf8")) as { name: string; role: "admin" | "staff" | "student" | "guest" | "user"; hash: string }[];
 for (const a of accounts) upsertAccount(a.name, randomUUID(), a.role, a.hash);
 console.log(`${process.env.DATABASE_PATH}: ${accounts.length} account(s) ready: ${accounts.map((a) => a.name).join(", ")}`);

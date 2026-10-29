@@ -65,6 +65,11 @@ import {
   forgetCode,
   isMember,
   isStaff,
+  mayUseAdminPc,
+  findPeople,
+  staffAndAdmins,
+  setRole,
+  setAdminPc,
   resetPassword,
   storeCode,
   takeCode,
@@ -543,7 +548,7 @@ app.post("/api/notes", async (c) => {
     return c.json({ error: bad }, 400);
   }
   const { x, z } = clampTo(b.space, b.x, b.z);
-  const where = noteSpotError(b.space, x, z);
+  const where = noteSpotError(b.space, x, z, isStaff(v));
   if (where) {
     log("refused", v, { action: "note", space: b.space, x: Math.round(x * 10) / 10, z: Math.round(z * 10) / 10, reason: where }, { ip: ipOf(c), content: (b.text as string).trim() });
     return c.json({ error: where }, 400);
@@ -1033,7 +1038,7 @@ app.delete("/api/board-comments/:id", async (c) => {
 // every request; anyone joined may send a bug report.
 
 const AUDIT_GROUPS: Record<string, string[]> = {
-  admin: ["restricted", "restriction-lifted", "kicked", "classroom-created", "classroom-removed", "classroom-link"],
+  admin: ["restricted", "restriction-lifted", "kicked", "role-changed", "classroom-created", "classroom-removed", "classroom-link"],
   content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "person-report", "file"],
   signin: ["join", "join-refused", "connect", "disconnect"],
   refused: ["refused", "join-refused"],
@@ -1043,12 +1048,56 @@ async function asAdmin(c: Context): Promise<{ v: Visitor; b: Body } | Response> 
   const b = await body(c);
   const v = who(b);
   if (!v) return c.json({ error: "Join first." }, 401);
-  if (v.role !== "admin") {
+  if (!mayUseAdminPc(v)) {
     log("refused", v, { action: "read admin log", reason: "not admin" }, { ip: ipOf(c) });
     return c.json({ error: "This is for the admin." }, 403);
   }
   return { v, b };
 }
+
+/** Whether `v` (on the admin PC) may restrict or kick `target`: never the top admin, and another admin-PC holder only by the top admin. */
+const mayAct = (v: Visitor, target: Visitor): boolean => target.role !== "admin" && (v.role === "admin" || !mayUseAdminPc(target));
+
+// --- roles (plan 101): the top admin only ---------------------------------------
+// Who is staff (Notices, classrooms, private enquiries, Hub notes) and who
+// may use the admin PC. Only the top admin changes either, never their own,
+// never a guest's; every change is logged.
+async function asTopAdmin(c: Context): Promise<{ v: Visitor; b: Body } | Response> {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  if (r.v.role !== "admin") {
+    log("refused", r.v, { action: "roles", reason: "not the top admin" }, { ip: ipOf(c) });
+    return c.json({ error: "Only the top admin changes roles." }, 403);
+  }
+  return r;
+}
+app.post("/api/admin/roles", async (c) => {
+  const r = await asTopAdmin(c);
+  if (r instanceof Response) return r;
+  const q = typeof r.b.q === "string" ? r.b.q.trim().slice(0, 60) : "";
+  return c.json({ people: q ? findPeople(q) : staffAndAdmins() });
+});
+app.put("/api/admin/roles", async (c) => {
+  const r = await asTopAdmin(c);
+  if (r instanceof Response) return r;
+  const { v, b } = r;
+  const target = typeof b.name === "string" ? findByName(b.name.trim()) : undefined;
+  if (!target) return c.json({ error: "No one by that name." }, 404);
+  if (target.role === "admin") return c.json({ error: "The top admin's role doesn't change." }, 400);
+  if (target.role === "guest" || target.role === "retired") return c.json({ error: "Guests (and retired names) can't be given a role. They need to sign up first." }, 400);
+  const changes: Record<string, unknown> = {};
+  if (b.role === "staff" || b.role === "student") {
+    if (!setRole(target.name, b.role)) return c.json({ error: "That role can't be set on them." }, 400);
+    changes.role = b.role;
+  }
+  if (typeof b.adminPc === "boolean") {
+    setAdminPc(target.name, b.adminPc);
+    changes.adminPc = b.adminPc;
+  }
+  if (!Object.keys(changes).length) return c.json({ error: "Change what?" }, 400);
+  log("role-changed", v, { name: target.name, ...changes }, { ip: ipOf(c) });
+  return c.json({ ok: true, person: findPeople(target.name).find((p) => p.name === target.name) });
+});
 
 app.post("/api/admin/log", async (c) => {
   const r = await asAdmin(c);
@@ -1093,7 +1142,7 @@ app.put("/api/admin/restrictions", async (c) => {
   const { v, b } = r;
   const target = typeof b.name === "string" ? findByName(b.name.trim()) : undefined;
   if (!target) return c.json({ error: "No one by that name." }, 404);
-  if (target.role === "admin") return c.json({ error: "The admin can't be restricted." }, 400);
+  if (!mayAct(v, target)) return c.json({ error: "The admin can't be restricted." }, 400);
   const what = RESTRICTABLE.find((k) => k === b.what);
   if (!what) return c.json({ error: "Restrict what?" }, 400);
   const hours = typeof b.hours === "number" && Number.isFinite(b.hours) ? Math.max(1, Math.min(24 * 365, Math.round(b.hours))) : 0;
@@ -1114,7 +1163,7 @@ app.post("/api/admin/kick", async (c) => {
   const { v, b } = r;
   const target = typeof b.name === "string" ? findByName(b.name.trim()) : undefined;
   if (!target) return c.json({ error: "No one by that name." }, 404);
-  if (target.role === "admin") return c.json({ error: "The admin can't be kicked." }, 400);
+  if (!mayAct(v, target)) return c.json({ error: "The admin can't be kicked." }, 400);
   const tabs = kick(target.name);
   if (!tabs) return c.json({ error: `${target.name} isn't on the campus right now.` }, 404);
   log("kicked", v, { name: target.name, tabs }, { ip: ipOf(c) });
@@ -1270,7 +1319,7 @@ app.post("/api/files/:id/link", async (c) => {
   if (!f || !f.ready) return c.json({ error: "That file is gone." }, 404);
   const allowed =
     (f.kind === "board" && maySeePost(v, findPost(f.postId!) ?? { author: "", private: true })) ||
-    (f.kind === "bug" && v.role === "admin") ||
+    (f.kind === "bug" && mayUseAdminPc(v)) ||
     (f.kind === "room" && (() => {
       const at = livePlayer(v.name)?.space;
       return !!at && roomSessionOf(v.name, at) === f.room;

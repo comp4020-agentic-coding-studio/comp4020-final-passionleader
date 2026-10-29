@@ -165,7 +165,7 @@ describe("notes last a month", () => {
 });
 
 describe("where a note may go", () => {
-  it("anywhere outside but buildings and doors, in classrooms, never in the Hub", async () => {
+  it("anywhere outside but buildings and doors, in classrooms, in the Hub only by staff", async () => {
     const { noteSpotError } = await import("../server/spaces.ts");
     expect(noteSpotError("outdoor", -3, -14)).toBeNull();
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
@@ -178,6 +178,11 @@ describe("where a note may go", () => {
     expect(noteSpotError("outdoor", 12, -22)).not.toBeNull(); // at Lab Coffee's menu board
     expect(noteSpotError("comp8020", 0, 2)).toBeNull();
     expect(noteSpotError("hub", 0, 0)).not.toBeNull();
+    // Staff and the admin may (plan 99), clear of the Hub's doors and PCs.
+    expect(noteSpotError("hub", 0, 0, true)).toBeNull();
+    expect(noteSpotError("hub", 18.9, 2, true)).not.toBeNull(); // a counselling door
+    expect(noteSpotError("hub", -17, -2.7, true)).not.toBeNull(); // the matching board's PC
+    expect(noteSpotError("anusa", 0, 0, true)).not.toBeNull(); // still never in the ANUSA lounge
   });
 });
 
@@ -239,5 +244,29 @@ describe("kept chat and restrictions", () => {
     expect(db.restrictionOn("spammer", "notes")).toBeUndefined();
     expect(db.lift("SPAMMER", "chat")).toBe(true);
     expect(db.restrictionOn("spammer", "chat")).toBeUndefined();
+  });
+});
+
+describe("roles (the top admin's Roles tab)", () => {
+  it("makes a member staff and back, gives the admin PC, and never changes a guest or the top admin", () => {
+    db.createMember("rolly", "t-rolly", "student", "u1111111@anu.edu.au", "x");
+    expect(db.mayUseAdminPc(db.findByName("rolly"))).toBe(false);
+    expect(db.setRole("rolly", "staff")).toBe(true);
+    expect(db.isStaff(db.findByName("rolly"))).toBe(true);
+    expect(db.setAdminPc("rolly", true)).toBe(true);
+    expect(db.mayUseAdminPc(db.findByName("rolly"))).toBe(true);
+    expect(db.setRole("rolly", "student")).toBe(true);
+    expect(db.setAdminPc("rolly", false)).toBe(true);
+    expect(db.mayUseAdminPc(db.findByName("rolly"))).toBe(false);
+    // A guest can't be given either; the top admin can't be changed.
+    const g = db.createGuest("t-guest-roles");
+    expect(g && db.setRole(g, "staff")).toBe(false);
+    expect(g && db.setAdminPc(g, true)).toBe(false);
+    db.upsertAccount("qa_master", "t-top", "admin", "x");
+    expect(db.setRole("qa_master", "student")).toBe(false);
+    expect(db.setAdminPc("qa_master", false)).toBe(false);
+    expect(db.mayUseAdminPc(db.findByName("qa_master"))).toBe(true);
+    // The test accounts cover every role.
+    expect(["qa_bot01", "qa_bot05", "qa_bot09", "qa_master"].map(db.qaRole)).toEqual(["staff", "student", "guest", "admin"]);
   });
 });

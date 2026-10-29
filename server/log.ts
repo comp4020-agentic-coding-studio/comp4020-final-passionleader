@@ -44,6 +44,7 @@ export type Event =
   | "whisper"
   | "guests-purged"
   | "chat-saved"
+  | "role-changed"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"

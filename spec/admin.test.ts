@@ -32,6 +32,13 @@ describe("the admin's log and bug reports", () => {
     expect((await api("/api/admin/restrictions", "DELETE", { token: v.token, name: v.name, what: "chat" })).status).toBe(403);
   });
 
+  it("refuses the Roles tab to anyone but the top admin", async () => {
+    const v = await visitor();
+    expect((await api("/api/admin/roles", "POST", { token: v.token })).status).toBe(403);
+    expect((await api("/api/admin/roles", "PUT", { token: v.token, name: v.name, role: "staff" })).status).toBe(403);
+    expect((await api("/api/admin/roles", "PUT", { token: v.token, name: v.name, adminPc: true })).status).toBe(403);
+  });
+
   it("takes a report about someone; the visitor can't supply the chat it carries", async () => {
     const v = await visitor();
     const rude = await visitor();

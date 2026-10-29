@@ -28,6 +28,8 @@ export interface Visitor {
   token: string;
   role: Role;
   passwordHash: string | null;
+  /** 1 if the top admin gave them the admin PC (plan 101). */
+  adminPc?: number;
 }
 export interface Note {
   id: number;
@@ -126,6 +128,8 @@ const wanted: Record<string, string> = {
   look: "TEXT",
   email: "TEXT",
   last_seen: "TEXT",
+  // Use of the admin PC (log, reports, restrictions), given and taken by the top admin (plan 101).
+  admin_pc: "INTEGER NOT NULL DEFAULT 0",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
@@ -298,7 +302,7 @@ db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?)").run("COMP8020")
 
 // --- visitors --------------------------------------------------------------
 
-const visitorCols = "name, token, role, password_hash AS passwordHash";
+const visitorCols = "name, token, role, password_hash AS passwordHash, admin_pc AS adminPc";
 
 export function findByName(name: string): Visitor | undefined {
   return db.prepare(`SELECT ${visitorCols} FROM visitors WHERE name = ?`).get(name) as Visitor | undefined;
@@ -324,7 +328,64 @@ export function findByEmail(email: string): Visitor | undefined {
  * the few notes from before guests were refused them go too.
  */
 export const purgeIdleGuests = (): number =>
-  Number(db.prepare("DELETE FROM visitors WHERE role = 'guest' AND coalesce(last_seen, created_at) < datetime('now', '-30 days')").run().changes);
+  Number(
+    db.prepare("DELETE FROM visitors WHERE role = 'guest' AND name NOT LIKE 'qa\\_%' ESCAPE '\\' AND coalesce(last_seen, created_at) < datetime('now', '-30 days')").run().changes,
+  );
+
+// The test accounts cover each role (plan 93): qa_bot01–04 staff, 05–08
+// students, 09–10 guests (still signing in by password); qa_master the top
+// admin. Set once from the old all-"user" accounts; changed by hand after
+// that (the Roles tab), it stays as changed.
+export const qaRole = (name: string): "admin" | "staff" | "student" | "guest" | null => {
+  if (name === "qa_master") return "admin";
+  const n = Number(/^qa_bot(\d\d)$/.exec(name)?.[1]);
+  return !n ? null : n <= 4 ? "staff" : n <= 8 ? "student" : n <= 10 ? "guest" : null;
+};
+for (const { name } of db.prepare("SELECT name FROM visitors WHERE role = 'user' AND name LIKE 'qa\\_bot%' ESCAPE '\\'").all() as { name: string }[]) {
+  const role = qaRole(name);
+  if (role) db.prepare("UPDATE visitors SET role = ? WHERE name = ?").run(role, name);
+}
+
+// --- roles (plan 101) ---------------------------------------------------------
+// The top admin (role "admin", qa_master) is the only one who changes roles:
+// a member becomes staff or back to a student, and anyone signed up can be
+// given (or lose) the admin PC. Guests and retired accounts don't change, and
+// nobody changes the top admin.
+
+/** True for the top admin and for anyone they gave the admin PC. */
+export const mayUseAdminPc = (v: { role: string; adminPc?: number } | null | undefined): boolean => !!v && (v.role === "admin" || v.adminPc === 1);
+
+export interface RoleRow {
+  name: string;
+  role: string;
+  adminPc: boolean;
+  email: string | null;
+}
+/** Members whose name or email contains `q` (at most 30), for the Roles tab. */
+export function findPeople(q: string): RoleRow[] {
+  const like = `%${q.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+  return (
+    db
+      .prepare(
+        "SELECT name, role, admin_pc AS adminPc, email FROM visitors WHERE role NOT IN ('retired') AND (name LIKE ? ESCAPE '\\' OR email LIKE ? ESCAPE '\\') ORDER BY role = 'guest', name LIMIT 30",
+      )
+      .all(like, like) as { name: string; role: string; adminPc: number; email: string | null }[]
+  ).map((r) => ({ ...r, adminPc: r.adminPc === 1 }));
+}
+/** Everyone with more than a student's powers, for the Roles tab's first view. */
+export const staffAndAdmins = (): RoleRow[] =>
+  (
+    db.prepare("SELECT name, role, admin_pc AS adminPc, email FROM visitors WHERE role IN ('staff', 'admin') OR admin_pc = 1 ORDER BY role = 'admin' DESC, name").all() as {
+      name: string;
+      role: string;
+      adminPc: number;
+      email: string | null;
+    }[]
+  ).map((r) => ({ ...r, adminPc: r.adminPc === 1 }));
+export const setRole = (name: string, role: "student" | "staff"): boolean =>
+  db.prepare("UPDATE visitors SET role = ? WHERE name = ? AND role IN ('student', 'staff', 'user')").run(role, name).changes > 0;
+export const setAdminPc = (name: string, on: boolean): boolean =>
+  db.prepare("UPDATE visitors SET admin_pc = ? WHERE name = ? AND role NOT IN ('guest', 'retired', 'admin')").run(on ? 1 : 0, name).changes > 0;
 /** Marks someone as seen now (when their socket connects). */
 export const seen = (name: string): void => void db.prepare("UPDATE visitors SET last_seen = datetime('now') WHERE name = ?").run(name);
 
@@ -537,26 +598,30 @@ db.exec(`
   );
   CREATE INDEX IF NOT EXISTS saved_chats_by_owner ON saved_chats (owner, saved_at);
 `);
+// A room's shared notes can be saved on their own too (plan 83): kind "notes", one line.
+if (!(db.prepare("PRAGMA table_info(saved_chats)").all() as { name: string }[]).some((c) => c.name === "kind"))
+  db.exec("ALTER TABLE saved_chats ADD COLUMN kind TEXT NOT NULL DEFAULT 'chat'");
 export interface SavedChat {
   id: number;
   space: string;
+  kind: "chat" | "notes";
   savedAt: string;
   lines: { name: string; text: string; system?: boolean }[];
 }
 const freshChat = "saved_at > datetime('now', '-30 days')";
 /** Keeps a copy of a room's chat for `owner`; at most 50 kept each (the oldest goes). */
-export function saveChat(owner: string, space: string, lines: { name: string; text: string; system?: boolean }[]): number {
-  const { lastInsertRowid } = db.prepare("INSERT INTO saved_chats (owner, space, lines) VALUES (?, ?, ?)").run(owner, space, JSON.stringify(lines));
+export function saveChat(owner: string, space: string, lines: { name: string; text: string; system?: boolean }[], kind: "chat" | "notes" = "chat"): number {
+  const { lastInsertRowid } = db.prepare("INSERT INTO saved_chats (owner, space, lines, kind) VALUES (?, ?, ?, ?)").run(owner, space, JSON.stringify(lines), kind);
   db.prepare("DELETE FROM saved_chats WHERE owner = ? AND id NOT IN (SELECT id FROM saved_chats WHERE owner = ? ORDER BY id DESC LIMIT 50)").run(owner, owner);
   return Number(lastInsertRowid);
 }
 /** Someone's saved chats, newest first, without their lines. */
 export const savedChatsOf = (owner: string): Omit<SavedChat, "lines">[] =>
-  db.prepare(`SELECT id, space, saved_at AS savedAt FROM saved_chats WHERE owner = ? AND ${freshChat} ORDER BY id DESC`).all(owner) as unknown as Omit<SavedChat, "lines">[];
+  db.prepare(`SELECT id, space, kind, saved_at AS savedAt FROM saved_chats WHERE owner = ? AND ${freshChat} ORDER BY id DESC`).all(owner) as unknown as Omit<SavedChat, "lines">[];
 /** One saved chat, only its owner's. */
 export function savedChat(owner: string, id: number): SavedChat | undefined {
-  const row = db.prepare(`SELECT id, space, saved_at AS savedAt, lines FROM saved_chats WHERE id = ? AND owner = ? AND ${freshChat}`).get(id, owner) as
-    | { id: number; space: string; savedAt: string; lines: string }
+  const row = db.prepare(`SELECT id, space, kind, saved_at AS savedAt, lines FROM saved_chats WHERE id = ? AND owner = ? AND ${freshChat}`).get(id, owner) as
+    | { id: number; space: string; kind: SavedChat["kind"]; savedAt: string; lines: string }
     | undefined;
   return row && { ...row, lines: JSON.parse(row.lines) as SavedChat["lines"] };
 }

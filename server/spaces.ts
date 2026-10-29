@@ -150,7 +150,8 @@ export function clampToAreas(areas: Area[], x: number, z: number): { x: number; 
 }
 
 // --- where a sticky note may go --------------------------------------------
-// Anywhere but the Student Hub, which is for sitting together, not papering.
+// Anywhere but the Student Hub, which is for sitting together, not papering
+// (except by staff and the admin, for notices, plan 99).
 // Outside, never inside a building's footprint; everywhere, never within 2 m
 // of something you press E at (a door, the whiteboard, the dog), so a note
 // can't hide it or fight it for the E key. The client checks the same spots
@@ -186,6 +187,16 @@ const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -9, z: -5.7 }, // in front of the library's assistant (server/npcs.ts)
   ...LIBRARY_TEAM_DOORS,
 ];
+// The Student Hub (staff only): its way out, the counselling doors, reception's
+// PCs (used from z -2.7), the admin PC, the arcade and the calendar on the
+// north wall (client/src/spaces/hub.ts).
+const HUB_KEEP_CLEAR: { x: number; z: number }[] = [
+  { x: -18.9, z: 6 },
+  ...COUNSEL_DOORS,
+  ...[-17, -14.75, -12.5, -10.1].map((x) => ({ x, z: -2.7 })),
+  { x: -18.4, z: -10.4 },
+  ...[11, 12.4, 13.8, 5.6].map((x) => ({ x, z: -11.1 })),
+];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out
   { x: 0, z: -6.7 }, // the whiteboard
@@ -194,9 +205,13 @@ const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   ...CLASSROOM_TEAM_DOORS,
 ];
 
-/** Why a note can't go here, or null if it can. */
-export function noteSpotError(space: SpaceId, x: number, z: number): string | null {
-  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : space === "poop" ? "Not in here." : "No sticky notes in the Student Hub.";
+/** Why a note can't go here, or null if it can. `staff`: staff and the admin, who may stick notes in the Hub. */
+export function noteSpotError(space: SpaceId, x: number, z: number, staff = false): string | null {
+  if (space === "hub" && staff) {
+    if (HUB_KEEP_CLEAR.some((p) => Math.hypot(p.x - x, p.z - z) < NOTE_CLEARANCE)) return "Too close to a door or something you can use. Step away a little.";
+    return null;
+  }
+  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : space === "poop" ? "Not in here." : "Only staff stick notes in the Student Hub.";
   if (roomOf(space)) return "No sticky notes in meeting rooms.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
