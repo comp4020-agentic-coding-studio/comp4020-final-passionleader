@@ -337,7 +337,7 @@ const systemFor = (npc: Npc, pieces: Piece[], lang: string): string =>
  * slip into these even when told not to.
  */
 export function tidy(text: string): string {
-  return text
+  return onceEach(text
     .replace(/\[(\[[^\]]+\]\(https?:\/\/[^)\s]+\))\]/g, "$1")
     .replace(/\[\[(?:source\s*)?\d+\]\]\((https?:\/\/[^)\s]+)\)/gi, "[source]($1)")
     .replace(/\s?\[(?:source\s*)?\d+(?:\s*,\s*\d+)*\](?!\()/gi, "")
@@ -348,7 +348,22 @@ export function tidy(text: string): string {
     .replace(/(\[[^\]]+\]\([^)\s]+\))(?:,?\s*\1)+/g, "$1")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/,([.;:])/g, "$1")
-    .trim();
+    .trim());
+}
+
+/** A link already given earlier in the answer becomes its plain text the second time (the model cites the same page after every sentence). */
+function onceEach(text: string): string {
+  const seen = new Set<string>();
+  return text.replace(/(\s?)\[([^\]]+)\]\((https?:\/\/[^)\s]+)\)(?=([.,;:)]|\s|$))/g, (m, space: string, label: string, url: string, _next: string, at: number, all: string) => {
+    if (!seen.has(url)) {
+      seen.add(url);
+      return m;
+    }
+    // A citation tacked on after a sentence ("… on Fridays [Hours](…).") goes; one inside a sentence keeps its words.
+    const tacked = /^[.,;:!?]/.test(all.slice(at + m.length)) || /^\s*$/.test(all.slice(at + m.length));
+    if (tacked || /^(source|link|here|\d+)$/i.test(label.trim()) || label === url) return "";
+    return `${space}${label}`;
+  }).replace(/\s+([,.;:])/g, "$1").replace(/ {2,}/g, " ");
 }
 
 

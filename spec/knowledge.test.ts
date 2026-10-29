@@ -104,6 +104,8 @@ describe("tidy answers", () => {
   it("drops numbered references and links bare addresses", async () => {
     const { tidy } = await import("../server/npcs.ts");
     expect(tidy("Five items【Pantry](https://a.anu/p), [Pantry](https://a.anu/p)].")).toBe("Five items[Pantry](https://a.anu/p).");
+    // The same page cited after every sentence: linked once, then gone (or plain words inside a sentence).
+    expect(tidy("Open 24h [Hours](https://a.anu/h). Desk shut [Hours](https://a.anu/h). See the [Hours](https://a.anu/h) page.")).toBe("Open 24h [Hours](https://a.anu/h). Desk shut. See the Hours page.");
     expect(tidy("Open 24 hours [1]. See [[2]](https://a.b/c) and <https://x.y/h> [source 3].")).toBe(
       "Open 24 hours. See [source](https://a.b/c) and [https://x.y/h](https://x.y/h).",
     );
