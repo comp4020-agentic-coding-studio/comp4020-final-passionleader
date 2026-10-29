@@ -98,7 +98,8 @@ export function westWindows(g: THREE.Group, wall: number, zs: number[], size = {
     beam.renderOrder = 2;
     const spot = new THREE.Mesh(new THREE.PlaneGeometry(drop * 0.9, w * 1.4), patch);
     spot.rotation.x = -Math.PI / 2;
-    spot.position.set(x + drop * 0.75 + 0.6, 0.015, z + lean * 0.75);
+    // Above the rugs (0.015), so the two don't flicker where they overlap.
+    spot.position.set(x + drop * 0.75 + 0.6, 0.03, z + lean * 0.75);
     spot.userData.noShadow = true;
     spot.renderOrder = 1;
     g.add(beam, spot);

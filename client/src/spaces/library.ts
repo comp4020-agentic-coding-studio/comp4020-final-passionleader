@@ -122,7 +122,7 @@ export function buildLibrary(): SpaceDef {
     group: g,
     colliders,
     doors: [
-      { ...DOOR, label: "Go outside", to: "outdoor", arrive: { x: -2, z: 23.4 } },
+      { ...DOOR, label: "Go outside", to: "outdoor", arrive: { x: -2, z: 25 } },
       ...roomDoors("team-library", LIBRARY_TEAM_DOORS, (n) => `Enter team room ${n}`),
     ],
     ...HALF,

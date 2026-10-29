@@ -295,7 +295,9 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   pavilion.add(careers);
   doorway(pavilion, px, pz + pd / 2 + 0.06, 0, "");
 
-  markOccluderGroup(g, pavilion, new THREE.Box3(new THREE.Vector3(px - pw / 2 - 2, 0, pz - pd / 2 - 1.5), new THREE.Vector3(px + pw / 2 + 2, ph + 0.7, pz + pd / 2 + 3)));
+  // Only the walls' box, not the roof's overhang over the pavement: standing at its door, the camera's
+  // ray from the south met the overhang first and the whole building faded (the user, 10/30).
+  markOccluderGroup(g, pavilion, new THREE.Box3(new THREE.Vector3(px - pw / 2, 0, pz - pd / 2), new THREE.Vector3(px + pw / 2, ph + 0.7, pz + pd / 2 - 0.3)));
 
   // Low red-brick buildings beyond the east road.
   const red = facadeTexture("#9b5a44", "#8a4d39", "#2f3a42", "#d8cfc2");
@@ -368,7 +370,9 @@ function buildSouth(g: THREE.Group, colliders: Box[]): void {
   const eastWall = new THREE.Mesh(new THREE.BoxGeometry(0.3, DEPTH, z1 - z0), wallMat);
   eastWall.position.set(X_EAST - 0.15, -DEPTH / 2, (z0 + z1) / 2);
   g.add(eastWall);
-  solid(colliders, w, z1 - z0, cx, (z0 + z1) / 2);
+  // Solid either side of the bridge (x -9..5), never across it: the bridge is the way to the library.
+  solid(colliders, -9 - X_WEST, z1 - z0, (X_WEST - 9) / 2, (z0 + z1) / 2);
+  solid(colliders, X_EAST - 5, z1 - z0, (5 + X_EAST) / 2, (z0 + z1) / 2);
   // The bend south: the cutting runs on down the library's west side.
   const SOUTH_TO = 60;
   const sw = 7;

@@ -1230,7 +1230,7 @@ const minimap = mountMinimap({
   areas: [
     { minX: -51, maxX: 5, minZ: -39.4, maxZ: -2 },
     { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
-    { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 25 },
+    { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 26.6 },
   ],
   buildings: [
     { name: "Badger", minX: -50, maxX: -38, minZ: -2, maxZ: 16 },
@@ -2083,9 +2083,9 @@ const questArrow = new THREE.Group();
 function questTarget(): { x: number; z: number; y: number } | null {
   if (!space || !playing) return null;
   const q = quests.current();
-  if (q === "library" && space.id === "outdoor") return { x: -2, z: 24.6, y: 3.2 };
+  if (q === "library" && space.id === "outdoor") return { x: -2, z: 26.4, y: 3.2 };
   if (q === "room" && space.id === "library") return { x: -14.9, z: -1.5, y: 3.2 };
-  if (q === "room" && space.id === "outdoor") return { x: -2, z: 24.6, y: 3.2 }; // team rooms are in the library
+  if (q === "room" && space.id === "outdoor") return { x: -2, z: 26.4, y: 3.2 }; // team rooms are in the library
   if (q === "npc") {
     const here = npcList.filter((n) => n.space === space?.id && !n.model3d);
     let best: (typeof here)[number] | undefined;

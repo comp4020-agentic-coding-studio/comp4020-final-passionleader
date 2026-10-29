@@ -25,7 +25,7 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 const OUTDOOR_AREAS: Box[] = [
   { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the white building's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
-  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 25 },
+  { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 26.6 },
 ];
 
 export function buildOutdoor(): SpaceDef {
@@ -35,23 +35,34 @@ export function buildOutdoor(): SpaceDef {
   // Grass out to the horizon (the fog hides where it ends), the paved campus
   // on top of it, a lighter path between the buildings, and the lawn.
   // One paving tile is about 2 m (40 x 20 cm pavers); one grass tile 2.5-4 m.
-  // Both stop short of the sunken level at z 17..23 (see backdrop.ts).
+  // Both stop short of the sunken level at z 17..26 (see backdrop.ts).
   const grass = (w: number, d: number, x: number, z: number): void => {
     floor(g, w, d, x, z, texMat("ai/grass.jpg", w / 3.9, d / 3.9, 0xb4c49c), -0.02);
   };
   // The creek's channel (x -75.2..-57.6, z -160..60, creek.ts) is left open: its water lies below the grass.
   grass(274.8, 367, -212.6, -166.5); // x -350..-75.2
-  grass(407.6, 367, 146.2, -166.5); // x -57.6..350
+  grass(407.6, 354, 146.2, -173); // x -57.6..350, z -350..4
+  // z 4..17, leaving the ramp down to the sunken road open (x 31.5..40.5, backdrop.ts).
+  grass(89.1, 13, -13.05, 10.5); // x -57.6..31.5
+  grass(309.5, 13, 195.25, 10.5); // x 40.5..350
   grass(17.6, 190, -66.4, -255); // between them, north of the channel (z -350..-160)
-  grass(700, 327, 0, 186.5);
-  grass(315, 6, -192.5, 20);
-  grass(315, 6, 192.5, 20);
-  floor(g, OUTDOOR.halfX * 2 + 6, 44, 0, -5, texMat("ai/paving.jpg", 35, 22, 0xd6d2ca));
-  floor(g, OUTDOOR.halfX * 2 + 6, 4, 0, 25, texMat("ai/paving.jpg", 35, 2, 0xd6d2ca));
+  // Around the sunken road (backdrop.ts buildSouth): its cutting runs x -38..40.5
+  // at z 17..26 and turns south at x -38..-31 down to z 60. No grass over it.
+  grass(312, 9, -194, 21.5); // west of the cutting, z 17..26 (x -350..-38)
+  grass(309.5, 9, 195.25, 21.5); // east of it (x 40.5..350)
+  grass(312, 324, -194, 188); // south, west of the turn (x -350..-38)
+  grass(381, 324, 159.5, 188); // south, east of the turn (x -31..350)
+  grass(7, 290, -34.5, 205); // south of where the turn ends (z 60..350)
+  // The campus paving (x -92..92, z -27..17), open over the ramp down to the sunken road (x 31.5..40.5, z 4..17).
+  floor(g, OUTDOOR.halfX * 2 + 6, 31, 0, -11.5, texMat("ai/paving.jpg", 35, 15.5, 0xd6d2ca)); // z -27..4
+  floor(g, 123.5, 13, -30.25, 10.5, texMat("ai/paving.jpg", 23.5, 6.5, 0xd6d2ca)); // z 4..17, x -92..31.5
+  floor(g, 51.5, 13, 66.25, 10.5, texMat("ai/paving.jpg", 10, 6.5, 0xd6d2ca)); // x 40.5..92
+  // A paved strip south of the cutting (backdrop.ts, z 17..26), in front of the library (moved 3 m south, 10/30).
+  floor(g, OUTDOOR.halfX * 2 + 6, 2, 0, 27, texMat("ai/paving.jpg", 35, 1, 0xd6d2ca));
   // The path runs from the north edge to the library's forecourt (backdrop.ts,
-  // from z 23.2), and stops there so the two don't overlap and flicker.
+  // from z 26.2), and stops there so the two don't overlap and flicker.
   const pathFrom = -OUTDOOR.halfZ - 3;
-  const pathTo = 23.2;
+  const pathTo = 26.2;
   floor(g, 14, pathTo - pathFrom, -2, (pathFrom + pathTo) / 2, texMat("ai/paving.jpg", 7, (pathTo - pathFrom) / 3.2), 0.01);
   floor(g, 20, 16, -19, -14, texMat("ai/grass.jpg", 8, 6.4), 0.02);
   buildBackdrop(g, colliders);
@@ -208,7 +219,7 @@ export function buildOutdoor(): SpaceDef {
       // An easter egg: an unmarked staff door at the far end of Lab Coffee.
       { x: 24.5, z: -21, label: "Staff only", to: "poop", arrive: { x: 6, z: -4.5 }, secret: true },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
-      { x: -2, z: 24.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
+      { x: -2, z: 26.4, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
     halfX: 89,
     halfZ: 40,
@@ -234,7 +245,7 @@ export function buildOutdoor(): SpaceDef {
     camera: new THREE.Vector3(0, 5.5, 10.5),
     // Chifley Library closes the south: walking up the bridge to its door,
     // the camera climbs over your head instead of going into the building.
-    southWall: { from: 15, z: 25 },
+    southWall: { from: 16.6, z: 26.6 },
     bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3", "Along_the_Griffin_Lake.mp3"],
     outdoor: true,
     // The two lawn benches, two people each.
