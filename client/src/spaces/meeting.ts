@@ -74,6 +74,9 @@ export function roomRef(id: SpaceId, classroomCode: (space: SpaceId) => string |
   return door && code ? { kind: "team", title: `${code} · Team room ${n}`, parent, door } : undefined;
 }
 
+/** Where you appear inside a meeting room, coming in by its door (or by accepting an invitation). */
+export const roomArrival = (ref: RoomRef): { x: number; z: number } => ({ x: innerSide(ref.door) * (HALF.halfX - 2.9), z: INNER_DOOR_Z });
+
 /** The doors into a space's rooms, for that space's `doors`. */
 export function roomDoors(prefix: string, doors: { x: number; z: number }[], label: (n: number) => string): Door[] {
   return doors.map((d, i) => ({

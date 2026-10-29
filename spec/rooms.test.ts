@@ -49,6 +49,23 @@ describe("meeting rooms", () => {
     expect(uc).not.toBe(ua);
   });
 
+  it("asks an invitee who's online, and an invitation is good for one visit", async () => {
+    const host = await inRoom("career-5");
+    const b = await visitor();
+    const sb = await connect(b.token);
+    await sb.next((m) => m.t === "welcome");
+    host.s.send({ t: "invite", name: b.name });
+    await expect(sb.next((m) => m.t === "action" && m.kind === "room-invited" && m.space === "career-5" && m.from === host.name)).resolves.toBeTruthy();
+    // Accepting from anywhere takes them straight in.
+    sb.send({ t: "enter", space: "career-5", x: 0, z: 0 });
+    await expect(sb.next(opened("career-5"))).resolves.toBeTruthy();
+    // Out again, the invitation is used up.
+    sb.send({ t: "enter", space: "careers", x: 0, z: 5 });
+    await sb.next((m) => m.t === "players");
+    sb.send({ t: "enter", space: "career-5", x: 0, z: 0 });
+    await expect(sb.next(refused("career-5", "not invited"))).resolves.toBeTruthy();
+  });
+
   it("keeps the Career Hub's interview rooms to the invited, like counselling rooms", async () => {
     const host = await inRoom("career-2");
     const b = await visitor();

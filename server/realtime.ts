@@ -200,6 +200,8 @@ function roomLeft(space: SpaceId, name: string, who: { name: string; token: stri
   // The host walking out hands the room to someone still inside.
   const state = rooms.get(space)!;
   if (state.host === name) state.host = inSpace(space)[0]!.name;
+  // An invitation is good for one visit (the user's call, 10/30): out again, it takes a new one.
+  if (roomOf(space)?.kind === "counselling") state.invited.delete(name.toLowerCase());
   roomSay(space, { name, text: `${name} left`, system: true });
   roomChanged(space);
 }
@@ -410,6 +412,8 @@ function onMessage(ws: WebSocket, raw: string): void {
     log("room-invite", owners.get(ws) ?? null, { space: player.space, invited: invitee.name });
     roomSay(player.space, { name: player.name, text: `${player.name} invited ${invitee.name}`, system: true });
     roomChanged(player.space);
+    // If they're on campus, they're asked at once: accept to be taken straight in.
+    tellPerson(invitee.name, { t: "action", kind: "room-invited", space: player.space, from: player.name });
   } else if (msg.t === "poop" && player.space === "poop") {
     const key = player.name.toLowerCase();
     const now = Date.now();

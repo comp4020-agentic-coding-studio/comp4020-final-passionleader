@@ -84,6 +84,8 @@ export interface NetHandlers {
   roomRefused(space: SpaceId, reason: string): void;
   /** Saving this meeting room's chat went (or didn't: a guest, or not in a room). */
   chatSaved(ok: boolean, what: "chat" | "notes", reason?: string): void;
+  /** Someone in a counselling room invited you: accept to be taken in. */
+  invited(space: SpaceId, from: string): void;
   /** The room's whiteboard link, asked for by whiteboard(). */
   whiteboard(url: string): void;
   /** Someone's already on that seat. */
@@ -179,6 +181,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-open")
             return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null });
           if (m.kind === "pad") return on.pad(m.text as string, m.by as string);
+          if (m.kind === "room-invited" && typeof m.space === "string" && typeof m.from === "string") return on.invited(m.space, m.from);
           if (m.kind === "whiteboard" && typeof m.url === "string") return on.whiteboard(m.url);
           if (m.kind === "room") return on.room(m.room as RoomState);
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
