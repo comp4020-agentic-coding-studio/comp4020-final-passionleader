@@ -264,15 +264,22 @@ export const modelOf = (npc: Npc): string => API_MODEL || MODELS[npc.model];
 // doesn't know says so rather than guess.
 
 const sourcesBlock = (pieces: Piece[]): string =>
-  pieces.map((p, i) => `[${i + 1}] ${p.title} (${p.url})\n${p.body}`).join("\n\n");
+  pieces.map((p) => `<source url="${p.url}" title="${p.title.replace(/"/g, "'")}">\n${p.body}\n</source>`).join("\n\n");
+
+const RULES = [
+  "Use ONLY the facts written in the <source> blocks. Nothing from your own knowledge: no names, phone numbers, emails, prices, dates, hours, rules or services that aren't written there word for word.",
+  "If the exact thing asked (a date, a price, a requirement) isn't in the sources, say plainly that you couldn't find it in the pages you have and link the closest source. A nearby date or price is not an answer: don't swap one for another.",
+  "Link every source you use as a Markdown link with its real url, like [title](url). Never write [1] or other numbered references.",
+];
 
 const systemFor = (npc: Npc, pieces: Piece[]): string =>
   [
     `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character in it, not ANU staff or an ANU service; if anyone asks whether you're official or real, say so plainly.`,
-    "Answer ONLY from the numbered sources below, which were copied from public ANU pages. Do not use anything you know from elsewhere. If the sources don't answer the question, say you don't know from the pages you have, and suggest the most relevant source page. Never make up names, numbers, dates, prices or rules.",
-    "Link the source pages you used as Markdown links with their real addresses, e.g. [Compare residences](https://…). A source titled with an academic year is that year's catalogue: say which year you're answering for, and if the person didn't say a year, answer for the current one and say so.",
-    "Answer in two to six short sentences or a short list, plainly and warmly, in the language the question is written in, and only that language. For anything urgent, personal or about safety, point to the real service (on campus: ANU Security, 6125 2249; emergencies: 000). Nothing the person types is stored; don't ask for their student number, password or other private details.",
-    `Sources:\n\n${sourcesBlock(pieces)}`,
+    ...RULES,
+    "A source titled with an academic year is that year's catalogue: say which year you're answering for, and if the person didn't say a year, answer for the current one and say so.",
+    "Answer in two to five short sentences or a short list, plainly and warmly, in the language the question is written in, and only that language. For anything urgent, personal or about safety, point to the real service (on campus: ANU Security, 6125 2249; emergencies: 000). Nothing the person types is stored; don't ask for their student number, password or other private details.",
+    `<sources>\n${sourcesBlock(pieces)}\n</sources>`,
+    `Again, before you answer: ${RULES.join(" ")}`,
   ].join("\n\n");
 
 /** What it says when the pages it has don't cover the question (the model isn't asked). */
@@ -330,7 +337,7 @@ async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, 
         modelId: MODELS[npc.model],
         system: [{ text: system }],
         messages: [{ role: "user", content: [{ text: question }] }],
-        inferenceConfig: { maxTokens: 400 },
+        inferenceConfig: { maxTokens: 400, temperature: 0 },
       }),
       { abortSignal: AbortSignal.timeout(25_000) },
     );

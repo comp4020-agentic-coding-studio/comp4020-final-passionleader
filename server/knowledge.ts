@@ -115,7 +115,9 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
   const asked = question.match(YEAR)?.[1];
   const year = asked ? Number(asked) : new Date().getFullYear();
   const codes = words.filter((w) => /^[a-z]{4}\d{4}$/.test(w));
-  const match = words.map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
+  // Pages say "Second Semester" where people ask "semester 2" (and the other way): search both.
+  const extra = [/\b(semester|sem|s)\s*1\b|\b1st\b/i.test(question) ? "first" : "", /\b(semester|sem|s)\s*2\b|\b2nd\b/i.test(question) ? "second" : ""].filter(Boolean);
+  const match = [...words, ...extra].map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
   const rows = db
     .prepare(
       `SELECT title, body, url, source, year, bm25(pieces, 2.0, 1.0) AS score FROM pieces
@@ -137,7 +139,7 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
     const text = `${r.title} ${r.body}`.toLowerCase();
     if (codes.length && !codes.some((c) => text.includes(c))) continue;
     // Whole words, give or take an ending ("residence" counts for "residences", "won" not for "wonderful").
-    const hits = words.filter((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,3}($|[^\\p{L}\\p{N}])`, "u").test(text)).length;
+    const hits = [...words, ...extra].filter((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,3}($|[^\\p{L}\\p{N}])`, "u").test(text)).length;
     if (hits < need) continue;
     // At most two pieces of one page, so a long page doesn't crowd the rest out.
     const n = perUrl.get(r.url) ?? 0;

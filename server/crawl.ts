@@ -104,8 +104,16 @@ const decode = (t: string): string =>
 export function pageText(html: string): { title: string; text: string } {
   const clean = (t: string | undefined): string => decode((t ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
   // The page's heading, or its <title> without the site's name when the heading is empty.
-  const title = clean(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]) || clean(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]).replace(/\s*[|–-]\s*[^|–-]*$/, "");
-  let body = html.match(/<main[\s>][\s\S]*?<\/main>/i)?.[0] ?? html.match(/<body[\s>][\s\S]*<\/body>/i)?.[0] ?? html;
+  // The catalogue's first h1 is its banner ("Programs and Courses"); its own title is in intro__degree-title.
+  const title =
+    clean(html.match(/class="intro__degree-title"[^>]*>([\s\S]*?)<\/h1>/i)?.[1]) ||
+    clean([...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)].map((m) => m[1]).find((h) => clean(h) && clean(h) !== "Programs and Courses")) ||
+    clean(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]).replace(/\s*[|–-]\s*[^|–-]*$/, "");
+  // The main content: <main>, or the catalogue's from its intro on (its banner and year menu are noise), or the body.
+  const intro = html.indexOf('class="intro__inner"');
+  let body = html.match(/<main[\s>][\s\S]*?<\/main>/i)?.[0] ?? (intro > 0 ? html.slice(html.lastIndexOf("<", intro)) : undefined) ?? html.match(/<body[\s>][\s\S]*<\/body>/i)?.[0] ?? html;
+  // The catalogue's list of academic years to switch between.
+  body = body.replace(/<select[\s\S]*?<\/select>/gi, " ").replace(/<ul[^>]*academic-year[\s\S]*?<\/ul>/gi, " ");
   body = body
     .replace(/<(script|style|nav|header|footer|svg|noscript|form|button|iframe|template)\b[\s\S]*?<\/\1>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
@@ -120,6 +128,8 @@ export function pageText(html: string): { title: string; text: string } {
     .filter((l) => l && l !== "-" && l !== "|")
     // Site furniture that isn't content: page owners, feedback, sign-up buttons, share and cookie lines.
     .filter((l) => !/^(page owner:?|university feedback|send email|join now|sign up online|share this|back to top|skip to (main )?content|accept( all)? cookies?|location)$/i.test(l.replace(/^- /, "")))
+    // A run of bare years is the catalogue's year switcher, not content.
+    .filter((l, i, all) => !/^20\d\d$/.test(l) || !(/^20\d\d$/.test(all[i + 1] ?? "") || /^20\d\d$/.test(all[i - 1] ?? "")))
     // A heading with nothing under it (galleries, menus) is just noise.
     .filter((l, i, all) => !l.startsWith("## ") || !(all[i + 1] ?? "## ").startsWith("## "))
     .join("\n")
@@ -297,8 +307,10 @@ export async function crawl(opts: { only?: string[]; log?: (line: string) => voi
       continue;
     }
     const year = t.year ? ` (${t.year} academic year)` : "";
+    // A catalogue page's code leads its title ("COMP2300 Computer Architecture"), so a code in a question finds it.
+    const code = t.source === "catalogue" ? `${decodeURIComponent(t.url.split("/").pop() ?? "").toUpperCase()} ` : "";
     try {
-      savePage({ url: t.url, source: t.source, year: t.year, title: `${title}${year}`, pieces: pieces(text) });
+      savePage({ url: t.url, source: t.source, year: t.year, title: `${code}${title}${year}`, pieces: pieces(text) });
       saved++;
     } catch {
       failed++;
