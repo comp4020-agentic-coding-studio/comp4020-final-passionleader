@@ -1,76 +1,61 @@
-/* A room's dock and chat: the dock (room name, head count, Chat, Leave) sits
-   top right below the music box and the gear, and the chat panel opens under
-   it. On phones the column spans the width under the HUD. The column takes no
-   clicks itself, so with the chat closed the game and the D-pad stay free. */
+/* A small room's window (plan 83): the room menu, or one of its views (chat,
+   shared notes), on the right on a computer and the whole screen on a phone.
+   Closed, only a small "Room" button stays, top left. While it's open the
+   rest of the screen's buttons step aside (body.room-open, style.css). Its
+   height follows the visible screen (--vvh, main.ts), so a phone's keyboard
+   never covers the box you type in. */
 
 #room-ui {
   position: fixed;
-  top: 70px; /* below the music box and the gear */
+  top: 12px;
   right: 12px;
   bottom: 12px;
   z-index: 17;
   box-sizing: border-box;
-  width: 340px;
+  width: 380px;
   max-width: calc(100vw - 24px);
   display: flex;
   flex-direction: column;
-  gap: 8px;
-  pointer-events: none;
+  border-radius: 14px;
+  background: var(--paper, #f3e7a6);
+  color: var(--ink, #3b2a12);
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
   font-family: system-ui, sans-serif;
+  overflow: hidden;
 }
 
 #room-ui[hidden],
 #room-ui [hidden],
+#room-reopen[hidden],
 .room-modal[hidden] {
   display: none !important;
 }
 
-#room-ui > * {
-  pointer-events: auto;
-}
-
-.room-dock {
-  flex: none;
-  box-sizing: border-box;
-  padding: 8px 10px;
-  border-radius: 14px;
-  background: var(--paper, #f3e7a6);
-  color: var(--ink, #3b2a12);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
-}
-
-.room-dock-top {
-  display: flex;
-  align-items: baseline;
-  gap: 8px;
-  padding: 0 4px 6px;
-}
-
-.room-dock-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-#room-panel {
+.room-menu,
+.room-view {
   flex: 1;
   min-height: 0;
-  box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  overflow: hidden;
-  padding-top: 8px;
-  border-radius: 14px;
-  background: var(--paper, #f3e7a6);
-  color: var(--ink, #3b2a12);
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
+  overflow-y: auto;
 }
 
-#room-panel[hidden] {
-  display: none !important;
+.room-head {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 8px 6px 14px;
+}
+
+.room-head h3 {
+  flex: 1;
+  margin: 0;
+  font-size: 1.05rem;
 }
 
 #room-ui button,
+#room-reopen,
 .room-modal button {
   font: inherit;
   cursor: pointer;
@@ -78,24 +63,20 @@
 
 #room-ui button:focus-visible,
 #room-ui input:focus-visible,
+#room-ui textarea:focus-visible,
+#room-reopen:focus-visible,
 .room-modal button:focus-visible {
   outline: 3px solid var(--accent, #6b3f1d);
   outline-offset: 2px;
 }
 
-/* Up to two lines, so "COMP8020 · Team room 2" isn't cut off beside the
-   Leave button. */
 .room-title {
+  flex: 1;
   margin: 0;
   min-width: 0;
-  overflow: hidden;
-  font-size: 1.05rem;
+  font-size: 1.1rem;
   font-weight: 700;
   line-height: 1.2;
-  display: -webkit-box;
-  -webkit-box-orient: vertical;
-  -webkit-line-clamp: 2;
-  line-clamp: 2;
   overflow-wrap: anywhere;
 }
 
@@ -108,12 +89,75 @@
   font-weight: 700;
 }
 
-.room-leave,
-.room-dock-btn {
+.room-x {
+  flex: none;
+  min-width: 44px;
+  min-height: 44px;
+  border: 0;
+  border-radius: 8px;
+  background: none;
+  color: inherit;
+  font-size: 1.1rem;
+}
+
+.room-x:hover {
+  background: rgba(107, 63, 29, 0.12);
+}
+
+.room-items {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px 14px 8px;
+}
+
+.room-item {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-height: 56px;
+  padding: 8px 12px;
+  border: 0;
+  border-radius: 10px;
+  background: #fffbe0;
+  color: var(--ink, #3b2a12);
+  text-align: left;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.room-item:hover {
+  background: #fff6c8;
+}
+
+.room-item-icon {
+  font-size: 1.4rem;
+}
+
+.room-item-label {
+  display: flex;
+  flex-direction: column;
+  font-weight: 700;
+}
+
+.room-item-label small {
+  font-weight: 400;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.room-item .room-badge {
+  margin-left: auto;
+}
+
+.room-leave-hint {
+  padding: 0 14px 12px;
+}
+
+.room-secondary {
   flex: none;
   min-height: 44px;
   padding: 6px 12px;
-  font-size: 0.9rem;
   border: 0;
   border-radius: 8px;
   background: #e6dcc0;
@@ -121,15 +165,23 @@
   font-weight: 700;
 }
 
-.room-dock-btn {
+/* Closed: a small button to open the menu again, top left where the name was (the HUD steps aside in a room). */
+#room-reopen {
+  position: fixed;
+  top: 12px;
+  left: 16px;
+  z-index: 17;
   display: inline-flex;
   align-items: center;
   gap: 6px;
-}
-
-.room-dock-btn[aria-pressed="true"] {
+  min-height: 44px;
+  padding: 6px 14px;
+  border: 0;
+  border-radius: 22px;
   background: var(--accent, #6b3f1d);
   color: #fff;
+  font-weight: 700;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
 }
 
 .room-badge {
@@ -195,6 +247,7 @@
   background: #fffbe0;
   color: var(--ink, #3b2a12);
   font: inherit;
+  font-size: 16px; /* under 16 px an iPhone zooms the page in on focus */
 }
 
 .room-primary {
@@ -326,49 +379,21 @@
 }
 
 @media (max-width: 600px), (pointer: coarse) {
+  /* A phone: the window is the whole visible screen. */
   #room-ui {
-    right: 12px;
-    left: 12px;
+    top: var(--vvtop, 0);
+    left: 0;
+    right: 0;
     bottom: auto;
     width: auto;
     max-width: none;
-    top: 64px; /* the help line is hidden in rooms (style.css), so it can sit higher */
-  }
-
-  /* Open, the chat takes the whole screen under the dock (half a screen was
-     too cramped to read and type in); close it to walk. */
-  #room-ui {
-    bottom: 12px;
-  }
-
-  #room-panel {
-    flex: 1 1 auto;
-  }
-
-  .room-members {
-    padding-bottom: 4px;
-  }
-
-  .room-invite {
-    padding-bottom: 4px;
-  }
-
-  .room-error {
-    min-height: 0;
-    margin-top: 2px;
-  }
-
-  .room-note {
-    margin-top: 2px;
+    height: var(--vvh, 100dvh);
+    border-radius: 0;
+    padding-top: env(safe-area-inset-top);
   }
 
   .room-log {
-    min-height: 90px;
-  }
-
-  .room-send-row {
-    padding-top: 6px;
-    padding-bottom: 8px;
+    min-height: 60px;
   }
 }
 

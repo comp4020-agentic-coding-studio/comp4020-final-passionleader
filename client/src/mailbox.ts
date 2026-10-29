@@ -3,7 +3,7 @@ import { canberraTime } from "./when.ts";
 
 // The mailbox (plan 16): messages to and from people signed up, by name,
 // read whenever you come in. Four views in one window: Inbox, Sent, Write,
-// and Saved chats (meeting-room chats you kept, plan 37: yours only, 30 days).
+// and Saved (meeting-room chats and shared notes you kept, plan 37 and 83: yours only, 30 days).
 // main does the requests; this only shows them. Guests see why they can't.
 
 export interface MailView {
@@ -62,7 +62,7 @@ export function mountMailbox(opts: {
   const inboxTab = tabBtn("Inbox");
   const sentTab = tabBtn("Sent");
   const writeTab = tabBtn("Write");
-  const chatsTab = tabBtn("Saved chats");
+  const chatsTab = tabBtn("Saved");
   const body = document.createElement("div");
   body.className = "mail-body";
   const status = document.createElement("p");
@@ -246,7 +246,7 @@ export function mountMailbox(opts: {
     if (!items.length) {
       const p = document.createElement("p");
       p.className = "mail-empty";
-      p.textContent = "No saved chats. In a meeting room, 💾 Save chat keeps it here for 30 days.";
+      p.textContent = "Nothing saved. In a meeting room, the room menu's Save chat and Save notes keep a copy here for 30 days.";
       body.replaceChildren(p);
       return;
     }

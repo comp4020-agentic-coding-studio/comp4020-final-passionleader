@@ -74,6 +74,7 @@ export function mountLookPicker(opts: {
   root.id = "look-picker";
   root.hidden = true;
   root.setAttribute("role", "dialog");
+  root.dataset.keep = "";
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-labelledby", "look-picker-title");
 

@@ -1,14 +1,18 @@
-// The group-chat window for a small room (a counselling room or a team room).
-// While you're inside, a small dock (room name, head count, buttons) sits at
-// the top right, and its Chat button opens and closes the chat under it: who
-// is here, the messages, a box to type in. Later buttons go in the dock too. Nothing is stored: the server keeps the chat
-// only while someone is in the room, so the panel just shows what it is told.
-// A counselling room is invite-only, so anyone inside can invite a user by
-// name; a team room is open to all and has no invite row. The server decides
-// who may be invited or enter; this only collects the name and tidies it.
-// The 📎 button shares a file (200 MB at most) with the people inside; it is
-// gone, like the chat, once the room empties. The last one out is warned in a
-// popup of its own, so it works with the chat closed.
+// A small room's window (a counselling room or a team room, plan 83).
+// Coming in opens the room menu: the room's name and who is here, an invite
+// box in a counselling room, and what you can do: Chat, Shared notes, Save
+// chat, Save notes. Chat and Shared notes each fill the window; × (or Esc)
+// goes back to the menu, and closing the menu leaves only the 3D room and a
+// small "Room" button to open it again. Going between them never clears
+// anything: the chat, the notes and anything half typed stay until you leave
+// by the door. While the window is open, the rest of the screen's buttons
+// (HUD, mail, look, settings, and on a phone the pad) step aside
+// (body.room-open, style.css).
+// Nothing is stored: the server keeps the chat only while someone is in the
+// room. The server decides who may be invited or enter; this only collects
+// the name and tidies it. The 📎 button shares a file (200 MB at most) with
+// the people inside; it goes, like the chat, once the room empties. The last
+// one out is warned in a popup of its own (askLeave, from the door).
 
 import "./roompanel.css";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
@@ -32,6 +36,9 @@ export interface RoomLine {
   file?: { id: string; name: string; size: number };
 }
 
+/** What the room window shows: the menu, one of its views, or nothing (just the "Room" button). */
+type View = "menu" | "chat" | "notes" | "closed";
+
 // The same rule as everywhere else for a user name.
 const NAME_RULE = /^[A-Za-z0-9_]{1,8}$/;
 const MAX_LINES = 200;
@@ -46,10 +53,16 @@ export function mountRoomPanel(opts: {
   onOpenFile(id: string): Promise<string | null>;
   /** A link that shows a shared picture in place, or null. */
   onImageLink(id: string): Promise<string | null>;
-  /** Keeps the chat so far for this person (30 days; everyone inside is told). */
-  onSaveChat(): void;
-  /** Opens or closes the room's shared notes. */
-  onNotes(): void;
+  /** Keeps the chat so far (or only the shared notes) for this person, 30 days; everyone inside is told. */
+  onSave(what: "chat" | "notes"): void;
+  /** The shared notes' own element (roompad.ts), shown as the Notes view. */
+  notes: HTMLElement;
+  /** Called when the window opens or closes, so the rest of the screen can make way. */
+  onShown(open: boolean): void;
+  /** Opens the Campus Guide at the rooms (plan 112). */
+  onHelp(): void;
+  /** Opens the room's shared whiteboard (plan 85). */
+  onWhiteboard(): void;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -57,95 +70,43 @@ export function mountRoomPanel(opts: {
   add(line: RoomLine): void;
   close(): void;
   isOpen(): boolean;
+  /** True while the window covers the room (menu or a view), so the game's keys stay out. */
+  isShowing(): boolean;
   isTyping(): boolean;
   focusInput(): void;
+  /** Shows a view (the menu, chat, notes) or hides the window. */
+  show(view: View): void;
   /**
    * Leaving: straight out if anyone else is inside; if you're the last, a
    * warning first that the room's chat and files go when it empties.
    */
   askLeave(): void;
 } {
-  // One fixed column at the top right: the dock, then the chat panel under it.
-  // The column itself takes no clicks, so a closed chat leaves the game free.
   const ui = document.createElement("div");
   ui.id = "room-ui";
   ui.hidden = true;
+  ui.setAttribute("role", "region");
+  ui.setAttribute("aria-labelledby", "room-title");
+  // Closing it loses nothing (the chat and notes stay), so Esc never asks (dialogkeys.ts).
+  ui.dataset.keep = "";
 
-  const root = document.createElement("div");
-  root.id = "room-panel";
-  root.setAttribute("role", "region");
-  root.setAttribute("aria-labelledby", "room-title");
-
-  const dock = document.createElement("div");
-  dock.className = "room-dock";
-  const dockTop = document.createElement("div");
-  dockTop.className = "room-dock-top";
+  // --- the menu --------------------------------------------------------------
+  const menu = document.createElement("div");
+  menu.className = "room-menu";
+  const menuHead = document.createElement("div");
+  menuHead.className = "room-head";
   const title = document.createElement("h2");
   title.id = "room-title";
   title.className = "room-title";
   const count = document.createElement("span");
   count.className = "room-count";
-  dockTop.append(title, count);
-  const actions = document.createElement("div");
-  actions.className = "room-dock-actions";
-  const leave = document.createElement("button");
-  leave.type = "button";
-  leave.className = "room-leave";
-  leave.textContent = "Leave room";
-  actions.append(leave);
-  dock.append(dockTop, actions);
-
-  /** Adds a button to the dock, before "Leave room" (which stays last). Later buttons go through here. */
-  function addButton(label: string, onClick: () => void): HTMLButtonElement {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "room-dock-btn";
-    b.textContent = label;
-    b.addEventListener("click", onClick);
-    actions.insertBefore(b, leave);
-    return b;
-  }
-
-  const chatBtn = addButton("", () => setChat(!chatOpen));
-  addButton("📝 Notes", () => opts.onNotes()).title = "Shared notes for everyone in the room (Markdown)";
-  addButton("💾 Save chat", () => opts.onSaveChat()).title = "Keep this chat for 30 days (only you can read it; everyone here is told)";
-  const chatLabel = document.createElement("span");
-  chatLabel.textContent = "💬 Chat";
-  const badge = document.createElement("span");
-  badge.className = "room-badge";
-  badge.hidden = true;
-  chatBtn.append(chatLabel, badge);
-  chatBtn.setAttribute("aria-controls", "room-panel");
-
-  // Shown when the last person in the room goes to leave: a popup of its own.
-  const lastOut = document.createElement("div");
-  lastOut.className = "room-modal";
-  lastOut.hidden = true;
-  const lastOutCard = document.createElement("div");
-  lastOutCard.className = "room-modal-card";
-  lastOutCard.setAttribute("role", "alertdialog");
-  lastOutCard.setAttribute("aria-modal", "true");
-  lastOutCard.setAttribute("aria-labelledby", "room-last-out-title");
-  lastOutCard.setAttribute("aria-describedby", "room-last-out-text");
-  const lastOutTitle = document.createElement("h2");
-  lastOutTitle.id = "room-last-out-title";
-  lastOutTitle.textContent = "Leave the room?";
-  const lastOutText = document.createElement("p");
-  lastOutText.id = "room-last-out-text";
-  lastOutText.textContent = "You're the last one here. When you leave, this room's chat and shared files are cleared for good.";
-  const lastOutRow = document.createElement("div");
-  lastOutRow.className = "room-last-out-row";
-  const leaveYes = document.createElement("button");
-  leaveYes.type = "button";
-  leaveYes.className = "room-primary";
-  leaveYes.textContent = "Leave and clear";
-  const leaveNo = document.createElement("button");
-  leaveNo.type = "button";
-  leaveNo.className = "room-leave";
-  leaveNo.textContent = "Stay";
-  lastOutRow.append(leaveYes, leaveNo);
-  lastOutCard.append(lastOutTitle, lastOutText, lastOutRow);
-  lastOut.append(lastOutCard);
+  const hideBtn = document.createElement("button");
+  hideBtn.type = "button";
+  hideBtn.className = "room-x";
+  hideBtn.textContent = "✕";
+  hideBtn.title = "Close (Esc): see the room; walk to the door to leave";
+  hideBtn.setAttribute("aria-label", "Close the room menu");
+  menuHead.append(title, count, hideBtn);
 
   const members = document.createElement("ul");
   members.className = "room-members";
@@ -176,12 +137,70 @@ export function mountRoomPanel(opts: {
   inviteError.setAttribute("role", "alert");
   invite.append(inviteRow, invitedNote, inviteError);
 
+  const items = document.createElement("div");
+  items.className = "room-items";
+  /** A big button on the menu. Later items (whiteboard, voice, help) come through here. */
+  function addItem(
+    icon: string,
+    label: string,
+    hint: string,
+    onClick: () => void,
+  ): HTMLButtonElement {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "room-item";
+    const i = document.createElement("span");
+    i.className = "room-item-icon";
+    i.textContent = icon;
+    i.setAttribute("aria-hidden", "true");
+    const l = document.createElement("span");
+    l.className = "room-item-label";
+    l.textContent = label;
+    const h = document.createElement("small");
+    h.textContent = hint;
+    l.append(h);
+    b.append(i, l);
+    b.addEventListener("click", onClick);
+    items.append(b);
+    return b;
+  }
+  const chatItem = addItem(
+    "💬",
+    "Chat",
+    "Talk with everyone here; share files",
+    () => show("chat"),
+  );
+  const badge = document.createElement("span");
+  badge.className = "room-badge";
+  badge.hidden = true;
+  chatItem.append(badge);
+  addItem("📝", "Shared notes", "One Markdown page for the room", () =>
+    show("notes"),
+  );
+  addItem(
+    "💾",
+    "Save chat",
+    "Keep this chat 30 days (only you; the room is told)",
+    () => opts.onSave("chat"),
+  );
+  addItem("🗒️", "Save notes", "Keep the shared notes 30 days (only you)", () =>
+    opts.onSave("notes"),
+  );
+  const leaveHint = document.createElement("p");
+  leaveHint.className = "room-note room-leave-hint";
+  leaveHint.textContent = "To leave, close this and walk out by the door.";
+  menu.append(menuHead, members, invite, items, leaveHint);
+
+  // --- the chat view ------------------------------------------------------------
+  const chatView = document.createElement("div");
+  chatView.className = "room-view room-chat";
+  chatView.setAttribute("aria-label", "Room chat");
+  const chatHead = viewHead("💬 Chat");
   const log = document.createElement("div");
   log.className = "room-log";
   log.setAttribute("role", "log");
   log.setAttribute("aria-live", "polite");
   log.setAttribute("aria-label", "Room chat");
-
   const sendRow = document.createElement("div");
   sendRow.className = "room-send-row";
   const input = document.createElement("input");
@@ -209,43 +228,135 @@ export function mountRoomPanel(opts: {
   fileStatus.setAttribute("role", "status");
   fileStatus.hidden = true;
   sendRow.append(attach, picker, input, sendBtn);
+  chatView.append(chatHead, log, fileStatus, sendRow);
 
-  root.append(members, invite, log, fileStatus, sendRow);
-  ui.append(dock, root);
-  document.body.append(ui, lastOut);
+  // --- the notes view (roompad.ts draws inside) ----------------------------------
+  const notesView = document.createElement("div");
+  notesView.className = "room-view room-notes";
+  notesView.append(viewHead("📝 Shared notes"), opts.notes);
 
-  let isOpen = false;
-  // The chat panel is open or closed from the dock; it starts closed on entering
-  // a room, so the room is seen first. A line from someone else while it is
-  // closed counts as unread.
-  let chatOpen = false;
-  let unread = 0;
-
-  function syncChatButton(): void {
-    chatBtn.setAttribute("aria-pressed", String(chatOpen));
-    chatBtn.setAttribute("aria-expanded", String(chatOpen));
-    badge.hidden = unread === 0;
-    badge.textContent = unread === 0 ? "" : unread > 99 ? "99+" : String(unread);
-    chatBtn.setAttribute("aria-label", unread ? `Chat, ${unread} unread` : "Chat");
+  function viewHead(text: string): HTMLDivElement {
+    const head = document.createElement("div");
+    head.className = "room-head";
+    const h = document.createElement("h3");
+    h.textContent = text;
+    const back = document.createElement("button");
+    back.type = "button";
+    back.className = "room-x";
+    back.textContent = "✕";
+    back.title = "Back to the room menu (Esc)";
+    back.setAttribute("aria-label", "Back to the room menu");
+    back.addEventListener("click", () => show("menu"));
+    head.append(h, back);
+    return head;
   }
 
-  function setChat(on: boolean): void {
-    chatOpen = on;
-    root.hidden = !on;
-    if (on) {
+  // The small button left when the window is closed, to open the menu again.
+  const reopen = document.createElement("button");
+  reopen.type = "button";
+  reopen.id = "room-reopen";
+  reopen.hidden = true;
+  const reopenLabel = document.createElement("span");
+  reopenLabel.textContent = "🚪 Room";
+  const reopenBadge = document.createElement("span");
+  reopenBadge.className = "room-badge";
+  reopenBadge.hidden = true;
+  reopen.append(reopenLabel, reopenBadge);
+  reopen.addEventListener("click", () => show("menu"));
+
+  // Shown when the last person in the room goes to leave: a popup of its own.
+  const lastOut = document.createElement("div");
+  lastOut.className = "room-modal";
+  lastOut.hidden = true;
+  const lastOutCard = document.createElement("div");
+  lastOutCard.className = "room-modal-card";
+  lastOutCard.setAttribute("role", "alertdialog");
+  lastOutCard.setAttribute("aria-modal", "true");
+  lastOutCard.setAttribute("aria-labelledby", "room-last-out-title");
+  lastOutCard.setAttribute("aria-describedby", "room-last-out-text");
+  const lastOutTitle = document.createElement("h2");
+  lastOutTitle.id = "room-last-out-title";
+  lastOutTitle.textContent = "Leave the room?";
+  const lastOutText = document.createElement("p");
+  lastOutText.id = "room-last-out-text";
+  lastOutText.textContent =
+    "You're the last one here. When you leave, this room's chat, shared notes and files are cleared for good (unless you saved them).";
+  const lastOutRow = document.createElement("div");
+  lastOutRow.className = "room-last-out-row";
+  const leaveYes = document.createElement("button");
+  leaveYes.type = "button";
+  leaveYes.className = "room-primary";
+  leaveYes.textContent = "Leave and clear";
+  const leaveNo = document.createElement("button");
+  leaveNo.type = "button";
+  leaveNo.className = "room-secondary";
+  leaveNo.textContent = "Stay";
+  lastOutRow.append(leaveYes, leaveNo);
+  lastOutCard.append(lastOutTitle, lastOutText, lastOutRow);
+  lastOut.append(lastOutCard);
+
+  ui.append(menu, chatView, notesView);
+  document.body.append(ui, reopen, lastOut);
+
+  let isOpen = false;
+  let view: View = "closed";
+  let unread = 0;
+  let memberCount = 0;
+
+  function syncBadges(): void {
+    for (const b of [badge, reopenBadge]) {
+      b.hidden = unread === 0;
+      b.textContent = unread === 0 ? "" : unread > 99 ? "99+" : String(unread);
+    }
+    chatItem.setAttribute(
+      "aria-label",
+      unread ? `Chat, ${unread} unread` : "Chat",
+    );
+    reopen.setAttribute(
+      "aria-label",
+      unread ? `Open the room menu, ${unread} unread` : "Open the room menu",
+    );
+  }
+
+  function show(next: View): void {
+    if (!isOpen) return;
+    const wasShowing = view !== "closed";
+    view = next;
+    ui.hidden = next === "closed";
+    reopen.hidden = next !== "closed";
+    menu.hidden = next !== "menu";
+    chatView.hidden = next !== "chat";
+    notesView.hidden = next !== "notes";
+    if (next === "chat") {
       unread = 0;
       log.scrollTop = log.scrollHeight;
-    } else if (root.contains(document.activeElement)) (document.activeElement as HTMLElement).blur();
-    syncChatButton();
+      syncBadges();
+    }
+    // Focus follows the view (not on a phone's first open, where the keyboard would cover the menu).
+    if (next === "closed") {
+      if (ui.contains(document.activeElement))
+        (document.activeElement as HTMLElement).blur();
+    } else if (next === "menu")
+      (menu.querySelector(".room-item") as HTMLElement | null)?.focus({
+        preventScroll: true,
+      });
+    else if (next === "notes")
+      (opts.notes.querySelector("textarea") as HTMLElement | null)?.focus({
+        preventScroll: true,
+      });
+    if (wasShowing !== (next !== "closed")) opts.onShown(next !== "closed");
   }
 
   function renderInfo(info: RoomInfo): void {
     title.textContent = info.title;
     memberCount = info.members.length;
     // Someone came in while we were asking: no need to warn any more.
-    if (memberCount > 1) closeLastOut(false);
+    if (memberCount > 1) closeLastOut();
     count.textContent = `${info.members.length}/${info.cap}`;
-    count.setAttribute("aria-label", `${info.members.length} of ${info.cap} people`);
+    count.setAttribute(
+      "aria-label",
+      `${info.members.length} of ${info.cap} people`,
+    );
     members.replaceChildren(
       ...info.members.map((name) => {
         const li = document.createElement("li");
@@ -263,15 +374,19 @@ export function mountRoomPanel(opts: {
     invite.hidden = !counselling;
     const waiting = counselling ? (info.invited ?? []) : [];
     invitedNote.hidden = waiting.length === 0;
-    invitedNote.textContent = waiting.length ? `Invited: ${waiting.join(", ")}` : "";
+    invitedNote.textContent = waiting.length
+      ? `Invited: ${waiting.join(", ")}`
+      : "";
   }
 
   /** True when the log is at (or within a few pixels of) the bottom, so a new line should keep it there. */
-  const atBottom = (): boolean => log.scrollHeight - log.scrollTop - log.clientHeight < 24;
+  const atBottom = (): boolean =>
+    log.scrollHeight - log.scrollTop - log.clientHeight < 24;
 
   function append(line: RoomLine): void {
     const el = document.createElement("div");
-    el.className = "room-line" + (line.system ? " system" : line.self ? " self" : "");
+    el.className =
+      "room-line" + (line.system ? " system" : line.self ? " self" : "");
     if (line.system) {
       el.textContent = line.text;
     } else {
@@ -293,9 +408,16 @@ export function mountRoomPanel(opts: {
         a.append(img);
         el.append(a);
         void opts.onImageLink(f.id).then((url) => {
-          if (!url) return a.replaceWith(document.createTextNode(`🖼 ${f.name} (couldn't load)`));
+          if (!url)
+            return a.replaceWith(
+              document.createTextNode(`🖼 ${f.name} (couldn't load)`),
+            );
           const stick = atBottom();
-          img.addEventListener("load", () => stick && (log.scrollTop = log.scrollHeight), { once: true });
+          img.addEventListener(
+            "load",
+            () => stick && (log.scrollTop = log.scrollHeight),
+            { once: true },
+          );
           img.src = url;
           a.href = url;
         });
@@ -305,7 +427,10 @@ export function mountRoomPanel(opts: {
         b.type = "button";
         b.className = "room-file";
         b.textContent = `📎 ${f.name} · ${sizeLabel(f.size)}`;
-        b.addEventListener("click", () => void opts.onOpenFile(f.id).then((msg) => say(msg)));
+        b.addEventListener(
+          "click",
+          () => void opts.onOpenFile(f.id).then((msg) => say(msg)),
+        );
         el.append(b);
       } else el.append(document.createTextNode(line.text));
     }
@@ -327,7 +452,9 @@ export function mountRoomPanel(opts: {
     if (file.size > MAX_FILE_BYTES) return say("Files can be up to 200 MB.");
     attach.disabled = true;
     say(`Uploading ${file.name}…`);
-    const error = await opts.onShare(file, (done) => say(`Uploading ${file.name}… ${Math.round(done * 100)}%`));
+    const error = await opts.onShare(file, (done) =>
+      say(`Uploading ${file.name}… ${Math.round(done * 100)}%`),
+    );
     attach.disabled = false;
     say(error);
   });
@@ -343,7 +470,8 @@ export function mountRoomPanel(opts: {
   function sendInvite(): void {
     const name = inviteInput.value.trim();
     if (!NAME_RULE.test(name)) {
-      inviteError.textContent = "A user name is 1–8 letters, digits or underscores.";
+      inviteError.textContent =
+        "A user name is 1–8 letters, digits or underscores.";
       return;
     }
     inviteError.textContent = "";
@@ -354,14 +482,14 @@ export function mountRoomPanel(opts: {
 
   inviteBtn.addEventListener("click", sendInvite);
   sendBtn.addEventListener("click", sendMessage);
-  leave.addEventListener("click", askLeave);
+  hideBtn.addEventListener("click", () => show("closed"));
   leaveYes.addEventListener("click", () => {
-    closeLastOut(false);
+    closeLastOut();
     opts.onLeave();
   });
-  leaveNo.addEventListener("click", () => closeLastOut(true));
+  leaveNo.addEventListener("click", () => closeLastOut());
   lastOut.addEventListener("click", (e) => {
-    if (e.target === lastOut) closeLastOut(true);
+    if (e.target === lastOut) closeLastOut();
   });
   inviteInput.addEventListener("input", () => {
     inviteError.textContent = "";
@@ -373,36 +501,33 @@ export function mountRoomPanel(opts: {
     e.stopPropagation();
     if (e.key === "Escape") {
       e.preventDefault();
-      closeLastOut(true);
+      closeLastOut();
     } else if (e.key === "Tab") {
       e.preventDefault();
       (document.activeElement === leaveNo ? leaveYes : leaveNo).focus();
     }
   });
 
-  // The game listens on window for WASD, E, Q and Enter, so keys typed in the
-  // panel must not reach it (the same as the chat box in chatui.ts). Enter
-  // sends or invites; Escape only lets go of the box, it does not close the room.
+  // While the window is open no key reaches the game (it listens on window
+  // for WASD, E, Q and Enter). Enter sends or invites. Esc steps back: out of
+  // a view to the menu, out of the menu to the room. Nothing typed is lost.
   ui.addEventListener("keydown", (e) => {
-    const target = e.target as HTMLElement;
-    if (target !== input && target !== inviteInput) return;
     e.stopPropagation();
-    if (e.key === "Enter") {
+    const target = e.target as HTMLElement;
+    if (e.key === "Enter" && (target === input || target === inviteInput)) {
       e.preventDefault();
       if (target === input) sendMessage();
       else sendInvite();
     } else if (e.key === "Escape") {
       e.preventDefault();
-      target.blur();
+      show(view === "menu" ? "closed" : "menu");
     }
   });
 
-  let memberCount = 0;
-  /** Closes the last-out popup; `back` puts focus back on the Leave button. */
-  function closeLastOut(back: boolean): void {
+  /** Closes the last-out popup. */
+  function closeLastOut(): void {
     if (lastOut.hidden) return;
     lastOut.hidden = true;
-    if (back) leave.focus();
   }
 
   function askLeave(): void {
@@ -412,9 +537,12 @@ export function mountRoomPanel(opts: {
   }
 
   function hide(): void {
+    const wasShowing = view !== "closed";
     isOpen = false;
+    view = "closed";
     lastOut.hidden = true;
     ui.hidden = true;
+    reopen.hidden = true;
     log.replaceChildren();
     members.replaceChildren();
     input.value = "";
@@ -422,11 +550,10 @@ export function mountRoomPanel(opts: {
     inviteError.textContent = "";
     invitedNote.textContent = "";
     say(null);
-    chatOpen = true;
-    root.hidden = false;
     unread = 0;
-    syncChatButton();
+    syncBadges();
     (document.activeElement as HTMLElement | null)?.blur();
+    if (wasShowing) opts.onShown(false);
   }
 
   return {
@@ -437,9 +564,12 @@ export function mountRoomPanel(opts: {
       input.value = "";
       inviteInput.value = "";
       inviteError.textContent = "";
+      unread = 0;
+      syncBadges();
       isOpen = true;
-      ui.hidden = false;
-      setChat(false);
+      view = "closed";
+      // Coming in opens the menu.
+      show("menu");
     },
     update(info) {
       // Only the header, the member chips and the invited line change, so
@@ -451,20 +581,22 @@ export function mountRoomPanel(opts: {
       const stick = atBottom() || !!line.self;
       append(line);
       if (stick) log.scrollTop = log.scrollHeight;
-      // Someone else's line while the chat is closed: count it on the button.
-      if (!chatOpen && !line.self && !line.system) {
+      // Someone else's line while the chat isn't on screen: count it.
+      if (view !== "chat" && !line.self && !line.system) {
         unread++;
-        syncChatButton();
+        syncBadges();
       }
     },
     close: hide,
     isOpen: () => isOpen,
+    isShowing: () => isOpen && view !== "closed",
     // Also true while the last-out popup is up, so the game doesn't walk behind it.
-    isTyping: () => isOpen && (!lastOut.hidden || document.activeElement === input || document.activeElement === inviteInput),
+    isTyping: () => isOpen && (view !== "closed" || !lastOut.hidden),
     askLeave,
+    show,
     focusInput() {
       if (!isOpen) return;
-      setChat(true);
+      show("chat");
       input.focus();
     },
   };

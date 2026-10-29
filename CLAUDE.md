@@ -146,8 +146,9 @@ Read before planning or building: `README.md` (what good means for this app),
 - The Poop Room (an easter egg behind the "Staff only" door at the far end
   of Lab Coffee): in there the Q menu's first item poops instead of sticking
   a note. One poop per person, anyone joined (guests too), five seconds
-  apart, a new one replacing their last; server memory only, sent only to
-  whoever is in the room. No notes in it. Its door is never signposted.
+  apart, a new one replacing their last; kept in SQLite 30 days (so a
+  deploy doesn't sweep them away), sent only to whoever is in the room. No
+  notes in it. Its door is never signposted.
 - The admin can stop one person (never the admin) from sticky notes and
   their comments, board posts and their comments, chat, or coming in at
   all, for 1 hour to a year; the server checks before each, tells them
@@ -161,20 +162,27 @@ Read before planning or building: `README.md` (what good means for this app),
   given the admin PC can't restrict or kick the top admin or another holder.
   Staff and the admin may also stick notes in the Student Hub (clear of its
   doors and PCs).
-- Meeting rooms (counselling rooms off the Hub, team rooms off classrooms
-  and the library) hold six people at most. Team rooms are open; a
-  counselling room lets in only those someone inside has invited. Both are
+- Meeting rooms (counselling rooms off the Hub, interview rooms off the
+  Career Hub, team rooms off classrooms, the library and the ANUSA lounge)
+  hold six people at most. Team rooms are open; a counselling or interview
+  room lets in only those someone inside has invited. Both are
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
   chat, host, invites and files go, and the last one out is warned of
-  that before leaving (by the Leave button or the door). One exception: a
-  member may save the chat so far (its lines, not the files) for themselves
-  only, kept 30 days in SQLite and then purged, at most 50 each; everyone
-  inside is told in the room that they saved it. Only its owner lists,
+  that before leaving by the door (there is no Leave button: the room's
+  window opens on coming in, closes to a small "Room" button, and you walk
+  out). One exception: a member may save the chat so far (its lines, not
+  the files), or the shared notes alone, for themselves only, kept 30 days
+  in SQLite and then purged, at most 50 each; everyone inside is told in the
+  room that they saved it. Only its owner lists,
   reads or deletes a saved chat, checked on the server. No notes in
   meeting rooms. A room also has one shared Markdown note (5000
   characters, last write wins, in server memory with the room's chat, gone
-  when it empties; a saved chat takes a copy).
+  when it empties; a saved chat takes a copy; a picture dropped in it is
+  shared like any room file and goes with them), and one whiteboard: an
+  Excalidraw collaboration link the server makes at random for that room
+  when first asked, given only to people inside, forgotten when it empties
+  (the drawing goes through Excalidraw's own encrypted relay, never ours).
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

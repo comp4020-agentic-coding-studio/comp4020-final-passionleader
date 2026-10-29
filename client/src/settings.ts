@@ -22,7 +22,7 @@ function read(): Quality {
 export const QUALITY: Quality = read();
 export const HIGH = QUALITY === "high";
 
-export function mountSettings(opts: { reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
+export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -133,7 +133,45 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
   out.className = "settings-bug";
   out.textContent = "🚪 Sign out";
 
-  card.append(title, sound, fieldset, note, verify, bug, person, mute, out, actions);
+  // Full screen (plan 88), on touch screens only: a button where the browser
+  // allows it (Android, iPad); an iPhone's Safari doesn't, so it says how to
+  // add the campus to the home screen, which opens without the browser's bars.
+  const screen = document.createElement("fieldset");
+  const screenLegend = document.createElement("legend");
+  screenLegend.textContent = "Screen";
+  const fsBtn = document.createElement("button");
+  fsBtn.type = "button";
+  fsBtn.className = "settings-bug";
+  const fsNote = document.createElement("p");
+  fsNote.className = "settings-note";
+  screen.append(screenLegend, fsBtn, fsNote);
+  const canFull = (): boolean => typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
+  const standalone = (): boolean => window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
+  const syncScreen = (): void => {
+    screen.hidden = !window.matchMedia("(pointer: coarse)").matches || standalone();
+    fsBtn.hidden = !canFull();
+    fsBtn.textContent = document.fullscreenElement ? "↙ Leave full screen" : "⛶ Full screen";
+    fsNote.hidden = canFull();
+    fsNote.textContent = "For full screen on an iPhone: Share (□↑) → Add to Home Screen, then open ANU Crossing from its icon.";
+  };
+  fsBtn.addEventListener("click", () => {
+    if (document.fullscreenElement) void document.exitFullscreen();
+    else void document.documentElement.requestFullscreen({ navigationUI: "hide" }).catch(() => {});
+    dialog.hidden = true;
+  });
+  document.addEventListener("fullscreenchange", syncScreen);
+
+  // Where everything not made here comes from, and its licence (13).
+  const credits = document.createElement("button");
+  credits.type = "button";
+  credits.className = "settings-bug";
+  credits.textContent = "📜 Credits and licences";
+  credits.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.credits();
+  });
+
+  card.append(title, sound, fieldset, note, screen, verify, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -142,6 +180,7 @@ export function mountSettings(opts: { reportBug(): void; reportPerson(): void; m
     button.focus();
   };
   button.addEventListener("click", () => {
+    syncScreen();
     verify.hidden = !opts.isGuest();
     out.hidden = opts.isGuest();
     dialog.hidden = false;

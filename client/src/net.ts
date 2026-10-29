@@ -19,6 +19,8 @@ export interface RemotePlayer {
   seat?: string;
   /** How they look, once they've picked (else a default from their name). */
   look?: Look | null;
+  /** ANU staff (or the admin): a mark on their name tag. */
+  staff?: boolean;
 }
 
 export type Emote = "wave" | "yes" | "no" | "mate" | "dance";
@@ -81,7 +83,9 @@ export interface NetHandlers {
   /** The server said no: the room is full, invite-only, or the invite failed. */
   roomRefused(space: SpaceId, reason: string): void;
   /** Saving this meeting room's chat went (or didn't: a guest, or not in a room). */
-  chatSaved(ok: boolean): void;
+  chatSaved(ok: boolean, what: "chat" | "notes", reason?: string): void;
+  /** The room's whiteboard link, asked for by whiteboard(). */
+  whiteboard(url: string): void;
   /** Someone's already on that seat. */
   seatRefused(): void;
   /** The admin stopped us doing `what` (chat, notes, posts, join) until `until`. */
@@ -102,7 +106,10 @@ export interface Net {
   /** Poops where we stand (the Poop Room only; the server checks). */
   poop(): void;
   /** Keeps this meeting room's chat so far for us, 30 days (members only; the server checks). */
-  saveChat(): void;
+  /** Asks for the room's shared whiteboard (plan 85). */
+  whiteboard(): void;
+  /** Keeps the room's chat (or only its shared notes) for me, 30 days. */
+  saveChat(what?: "chat" | "notes"): void;
   /** The room's shared notes, as we now have them. */
   pad(text: string): void;
   /** Invites someone into the counselling room we're in. */
@@ -166,12 +173,13 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
           if (m.kind === "hearts") return on.hearts(m.noteId as number);
           if (m.kind === "mail") return on.mail(m.unread as number);
-          if (m.kind === "chat-saved") return on.chatSaved(m.ok === true);
+          if (m.kind === "chat-saved") return on.chatSaved(m.ok === true, m.what === "notes" ? "notes" : "chat", typeof m.reason === "string" ? m.reason : undefined);
           if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
             return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null });
           if (m.kind === "pad") return on.pad(m.text as string, m.by as string);
+          if (m.kind === "whiteboard" && typeof m.url === "string") return on.whiteboard(m.url);
           if (m.kind === "room") return on.room(m.room as RoomState);
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
@@ -219,8 +227,11 @@ export function connect(token: string, on: NetHandlers): Net {
     poop() {
       sendNow({ t: "poop" });
     },
-    saveChat() {
-      sendNow({ t: "save-chat" });
+    whiteboard() {
+      sendNow({ t: "whiteboard" });
+    },
+    saveChat(what = "chat") {
+      sendNow({ t: "save-chat", what });
     },
     pad(text) {
       sendNow({ t: "pad", text });

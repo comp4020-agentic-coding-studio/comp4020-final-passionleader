@@ -1,24 +1,19 @@
-/* The meeting room's shared notes: a panel on the left, the chat's on the right. */
+/* The meeting room's shared notes, inside the room window's Notes view (roompanel.css). */
 #room-pad {
-  position: fixed; left: 16px; top: 64px; bottom: 120px; z-index: 12; width: min(380px, calc(100vw - 32px));
-  display: flex; flex-direction: column; gap: 6px;
-  padding: 10px 12px; border-radius: 12px; background: var(--paper, #f3e7a6);
-  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3); color: var(--ink, #3b2a12);
+  flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 6px; padding: 0 12px 12px;
 }
-#room-pad[hidden] { display: none; }
-#room-pad .pad-head { display: flex; align-items: center; gap: 6px; }
-#room-pad h2 { flex: 1; margin: 0; font-size: 1rem; }
-#room-pad button { min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #6b3f1d; background: #fffaf0; color: inherit; cursor: pointer; }
+#room-pad .pad-head { display: flex; justify-content: flex-end; gap: 6px; }
+#room-pad button { min-height: 36px; padding: 0 10px; border-radius: 8px; border: 1px solid #6b3f1d; background: #fffaf0; color: inherit; cursor: pointer; font: inherit; }
 #room-pad textarea, #room-pad .pad-preview {
-  flex: 1; min-height: 0; width: 100%; box-sizing: border-box; padding: 8px; border-radius: 8px;
-  border: 1px solid #6b3f1d; background: #fffdf5; font: 0.9rem/1.4 ui-monospace, monospace; resize: none; overflow-y: auto;
+  flex: 1; min-height: 120px; width: 100%; box-sizing: border-box; padding: 8px; border-radius: 8px;
+  border: 1px solid #6b3f1d; background: #fffdf5; color: inherit; font: 16px/1.4 ui-monospace, monospace; resize: none; overflow-y: auto;
 }
-#room-pad .pad-preview { font-family: system-ui, sans-serif; }
+#room-pad .pad-preview { font-family: system-ui, sans-serif; font-size: 0.95rem; }
 #room-pad .pad-foot { margin: 0; font-size: 0.8rem; opacity: 0.75; min-height: 1em; }
-/* Phones: under the room's dock (roompanel.css, about 190 px tall with its buttons) so its heading isn't hidden, above the D-pad. */
-@media (max-width: 600px), (pointer: coarse) { #room-pad { top: 200px; bottom: 200px; left: 12px; width: calc(100vw - 24px); } }
 /* The note's Markdown headings (# ## ###, drawn as h4..h6): from large down to body size, never smaller than the text. */
 #room-pad .pad-preview h4 { font-size: 1.4rem; margin: 14px 0 6px; }
 #room-pad .pad-preview h5 { font-size: 1.2rem; margin: 12px 0 6px; }
 #room-pad .pad-preview h6 { font-size: 1.05rem; margin: 10px 0 4px; }
 #room-pad .pad-preview > :first-child { margin-top: 0; }
+#room-pad .pad-picture { display: block; max-width: 100%; max-height: 50vh; margin: 6px 0; border-radius: 8px; }
+#room-pad .pad-head input[type="file"] { display: none; }

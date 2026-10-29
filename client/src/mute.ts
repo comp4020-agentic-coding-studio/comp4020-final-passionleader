@@ -33,6 +33,7 @@ export function mountMute(opts: {
   root.id = "mute-dialog";
   root.hidden = true;
   root.setAttribute("role", "dialog");
+  root.dataset.keep = "";
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-labelledby", "mute-title");
   const card = document.createElement("form");

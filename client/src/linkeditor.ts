@@ -24,6 +24,7 @@ export function mountLinkEditor(opts: {
   root.id = "link-editor";
   root.hidden = true;
   root.setAttribute("role", "dialog");
+  root.dataset.keep = "";
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-labelledby", "link-editor-title");
 

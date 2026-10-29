@@ -1,20 +1,23 @@
 import "./quests.css";
 import { fanfare, ding } from "./sfx.ts";
 
-// A short tutorial of small quests (plan 72): six things to try, ticked off
+// A short tutorial of small quests (plan 72): seven things to try, ticked off
 // as you do them (a ding and a puff of confetti; all six, a fanfare),
 // skippable at any point. Kept in this browser only; once
 // done or skipped it stays out of the way. main calls `done(id)` when one
-// happens.
+// happens. On a phone (plan 87) it's one line: the next thing to try and
+// Skip, top centre, clear of the pad and the buttons. A quest done while the
+// list isn't on screen is ticked quietly (no ding for something unseen).
 
-export type QuestId = "walk" | "wave" | "chat" | "library" | "room" | "look";
+export type QuestId = "walk" | "wave" | "chat" | "npc" | "library" | "room" | "look";
 
 const QUESTS: { id: QuestId; text: string }[] = [
   { id: "walk", text: "Walk around (WASD, or the pad)" },
   { id: "wave", text: "Wave to someone (hold Q, then Wave)" },
   { id: "chat", text: "Say hello in the chat (Enter)" },
-  { id: "library", text: "Go into Chifley Library" },
-  { id: "room", text: "Step into a team room" },
+  { id: "npc", text: "Ask an AI assistant something (follow the arrow)" },
+  { id: "library", text: "Go into Chifley Library (follow the arrow)" },
+  { id: "room", text: "Step into a team room (follow the arrow)" },
   { id: "look", text: "Change your look (the hanger)" },
 ];
 const KEY = "campus.quests";
@@ -47,7 +50,7 @@ function confetti(from: DOMRect, count: number): void {
   }
 }
 
-export function mountQuests(): { show(on: boolean): void; done(id: QuestId): void } {
+export function mountQuests(): { show(on: boolean): void; done(id: QuestId): void; current(): QuestId | null } {
   let state = load();
   const root = document.createElement("section");
   root.id = "quests";
@@ -67,7 +70,10 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
   head.append(title, skip);
   const list = document.createElement("ul");
   list.className = "quests-list";
-  root.append(head, list);
+  // The phone's one line: the next quest.
+  const next = document.createElement("p");
+  next.className = "quests-next";
+  root.append(head, next, list);
   document.body.append(root);
 
   let wanted = false;
@@ -95,8 +101,12 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
         return li;
       }),
     );
+    const todo = QUESTS.find((q) => !state.done.includes(q.id));
+    next.textContent = todo ? `Try: ${todo.text} (${n + 1}/${QUESTS.length})` : "";
     root.hidden = !wanted || finished();
   }
+  /** True if the list can be seen right now (not hidden by a phone's width, a room's window or a closed list). */
+  const onScreen = (): boolean => !root.hidden && root.offsetParent !== null;
 
   title.addEventListener("click", () => {
     open = !open;
@@ -110,6 +120,8 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
 
   render();
   return {
+    /** The next quest not yet done, while the list is up (for main's arrow); null when finished, skipped or hidden. */
+    current: () => (!wanted || finished() ? null : (QUESTS.find((q) => !state.done.includes(q.id))?.id ?? null)),
     show(on) {
       wanted = on;
       state = load();
@@ -117,9 +129,11 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
     },
     done(id) {
       if (state.done.includes(id) || state.skipped) return;
+      const seen = onScreen();
       state.done.push(id);
       save();
       render();
+      if (!seen) return;
       const li = list.children[QUESTS.findIndex((q) => q.id === id)] as HTMLElement | undefined;
       li?.classList.add("just-done");
       if (!finished()) {

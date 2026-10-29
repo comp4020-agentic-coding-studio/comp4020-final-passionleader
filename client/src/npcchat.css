@@ -22,3 +22,19 @@
 .npc-form { display: flex; gap: 8px; }
 .npc-form input { flex: 1; min-width: 0; min-height: 44px; padding: 0 10px; border: 1px solid #8a6a50; border-radius: 8px; font: inherit; }
 .npc-form button { min-height: 44px; min-width: 64px; }
+/* Phones (81a): the window fits above the keyboard (--vvh, main.ts), the
+   conversation gets the room, and the page links shrink to one scrolling row. */
+@media (max-width: 700px), (pointer: coarse) {
+  #npc-chat { padding: 0; place-items: start stretch; top: var(--vvtop, 0); bottom: auto; height: var(--vvh, 100dvh); }
+  .npc-card { width: 100%; height: 100%; max-height: none; border-radius: 0; padding: 10px 12px; }
+  .npc-head h2 { font-size: 1rem; }
+  .npc-log { max-height: none; min-height: 60px; }
+  .npc-links { flex-wrap: nowrap; overflow-x: auto; margin: 6px 0; padding-bottom: 2px; }
+  .npc-link { flex: none; min-height: 30px; padding: 2px 8px; font-size: 0.75rem; white-space: nowrap; }
+  .npc-form input { font-size: 16px; } /* under 16 px an iPhone zooms in on focus */
+}
+.npc-ai { flex: none; padding: 1px 7px; border-radius: 6px; background: #1e6b52; color: #fff; font: 700 0.72rem system-ui, sans-serif; letter-spacing: 0.04em; }
+.npc-head h2 { flex: 1; }
+.npc-notice { width: min(420px, 100%); }
+.npc-notice ul { margin: 0 0 14px; padding-left: 20px; line-height: 1.45; }
+.npc-notice li + li { margin-top: 4px; }

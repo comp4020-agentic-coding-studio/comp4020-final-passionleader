@@ -24,7 +24,7 @@ export function sizeLabel(bytes: number): string {
  * Uploads one file to `target`. Resolves to an error message, or null once
  * the server has it. `progress` gets 0..1 as it goes.
  */
-export async function upload(token: string, target: FileTarget, file: File, progress?: (done: number) => void): Promise<string | null> {
+export async function upload(token: string, target: FileTarget, file: File, progress?: (done: number) => void, onId?: (id: string) => void): Promise<string | null> {
   if (file.size > MAX_FILE_BYTES) return "Files can be up to 200 MB.";
   if (file.size === 0) return "That file is empty.";
   let ticket: { id: string; url: string; type: string };
@@ -51,6 +51,7 @@ export async function upload(token: string, target: FileTarget, file: File, prog
   if (status < 200 || status >= 300) return `Uploads aren't available right now. Please tell the admin. Error code: S3-${status}`;
   try {
     await uploadDone(token, ticket.id);
+    onId?.(ticket.id);
     return null;
   } catch (err) {
     return err instanceof ApiError ? err.message : "Could not finish the upload.";

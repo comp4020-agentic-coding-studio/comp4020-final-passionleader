@@ -79,6 +79,7 @@ import { mountSignupPrompt } from "./signupprompt.ts";
 import { mountRoomPad } from "./roompad.ts";
 import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
+import { installDialogKeys } from "./dialogkeys.ts";
 import { mountMailbox } from "./mailbox.ts";
 import { mountMinimap } from "./minimap.ts";
 import { mountQuests } from "./quests.ts";
@@ -90,6 +91,8 @@ import { poopMesh } from "./spaces/poop.ts";
 import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
+import { mountCalendar } from "./calendar.ts";
+import { mountGuide } from "./guide.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
@@ -98,7 +101,7 @@ import { imageLink, openFile, upload } from "./uploads.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { canberraTime } from "./when.ts";
 
 const SPEED = 4.2; // walking, world units per second
@@ -149,6 +152,7 @@ const highQuality = HIGH;
 // Mute (plan 33): someone's chat, bubbles and notes vanish from this screen only.
 const muteDialog = mountMute({ changed: () => syncMutedNotes() });
 mountSettings({
+  credits: () => webview.open({ label: "Credits and licences", url: "/credits/", embeddable: true }),
   reportBug: () => bugReport.open(),
   reportPerson: () => bugReport.open(true),
   mute: () => muteDialog.open(),
@@ -192,6 +196,18 @@ hangerBtn.setAttribute("aria-haspopup", "dialog");
 hangerBtn.addEventListener("click", () => openLookPicker());
 document.body.append(hangerBtn);
 
+// The Campus Guide (plan 112): a 📖 button left of the mail; the first visit opens its short tour, then the quests.
+const guideBtn = document.createElement("button");
+guideBtn.type = "button";
+guideBtn.id = "guide-btn";
+guideBtn.textContent = "📖";
+guideBtn.title = "Campus Guide";
+guideBtn.setAttribute("aria-label", "Campus Guide");
+guideBtn.setAttribute("aria-haspopup", "dialog");
+document.body.append(guideBtn);
+const guide = mountGuide({ onTourDone: () => quests.show(playing) });
+guideBtn.addEventListener("click", () => guide.open());
+
 // The mailbox (plan 16): left of the hanger, with a count of unread mail.
 const mailBtn = document.createElement("button");
 mailBtn.type = "button";
@@ -216,7 +232,7 @@ const mailbox = mountMailbox({
   async chats() {
     if (!session) return "Join first.";
     try {
-      return (await getSavedChats(session.token)).map((c) => ({ id: c.id, savedAt: c.savedAt, title: meetingRoom(c.space)?.title ?? "A meeting room" }));
+      return (await getSavedChats(session.token)).map((c) => ({ id: c.id, savedAt: c.savedAt, title: `${c.kind === "notes" ? "📝 Notes" : "💬 Chat"} · ${meetingRoom(c.space)?.title ?? "A meeting room"}` }));
     } catch (err) {
       return err instanceof ApiError ? err.message : "Could not load your saved chats.";
     }
@@ -225,7 +241,7 @@ const mailbox = mountMailbox({
     if (!session) return "Join first.";
     try {
       const c = await getSavedChat(session.token, id);
-      return { title: meetingRoom(c.space)?.title ?? "A meeting room", savedAt: c.savedAt, lines: c.lines };
+      return { title: `${c.kind === "notes" ? "📝 Notes" : "💬 Chat"} · ${meetingRoom(c.space)?.title ?? "A meeting room"}`, savedAt: c.savedAt, lines: c.lines };
     } catch (err) {
       return err instanceof ApiError ? err.message : "Could not open that chat.";
     }
@@ -522,7 +538,7 @@ function upsertOther(p: RemotePlayer): void {
     const variant = variantOf(look);
     const avatar = new Avatar(look);
     const group = avatar.group;
-    tag(group, p.name, 2.2, "player-label");
+    tag(group, p.staff ? `${p.name} · staff` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label");
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
     view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look) };
@@ -741,12 +757,28 @@ const chat = mountChat({
 
 // In a meeting room, its group-chat window takes the place of the corner chat.
 // The room's shared notes (plan 39): sent as you type, the others' edits arrive by net.
-const roomPad = mountRoomPad({ onChange: (text) => net?.pad(text) });
+const roomPad = mountRoomPad({
+  onChange: (text) => net?.pad(text),
+  // A picture in the notes is shared with the room like 📎 (plan 37), so it goes when the room empties.
+  onImage: async (file) => {
+    if (!session) return "Join first.";
+    let id = "";
+    const err = await upload(session.token, { kind: "room" }, file, undefined, (got) => (id = got));
+    return err ?? (id ? { id } : "Could not share that picture.");
+  },
+  imageLink: async (id) => (session ? imageLink(session.token, id) : null),
+});
 const roomPanel = mountRoomPanel({
   onSend: (text) => net?.chat(text),
   onInvite: (name) => net?.invite(name),
-  onSaveChat: () => (isMember(session) ? net?.saveChat() : signupPrompt.open("save a chat")),
-  onNotes: () => roomPad.toggle(),
+  onSave: (what) => (isMember(session) ? net?.saveChat(what) : signupPrompt.open(what === "notes" ? "save the notes" : "save a chat")),
+  notes: roomPad.el,
+  onShown: (open) => {
+    document.body.classList.toggle("room-open", open);
+    if (open) stopMoving();
+  },
+  onHelp: () => guide.open("rooms"),
+  onWhiteboard: () => net?.whiteboard(),
   onLeave: () => {
     const out = space?.doors[0];
     if (out) setSpace(out.to, out.arrive, true);
@@ -883,10 +915,14 @@ function showOnline(): void {
     `Hub ${n("hub")}`,
     `${short ? "Lib" : "Library"} ${n("library")}`,
     `ANUSA ${n("anusa")}`,
+    `${short ? "Career" : "Career Hub"} ${n("careers")}`,
     `${short ? "Class" : "Classrooms"} ${inClassrooms}`,
     `Rooms ${n("rooms")}`,
   ];
-  hudOnline.textContent = `${short ? "" : "Online: "}${parts.join(" · ")}`;
+  // A phone has room for the total only beside its four round buttons; the whole line is its title (and a computer's text).
+  const total = Object.values(onlineCounts).reduce((a, b) => a + b, 0);
+  hudOnline.title = `Online: ${parts.join(" · ")}`;
+  hudOnline.textContent = short ? `👥 ${total} online` : `Online: ${parts.join(" · ")}`;
   hudOnline.hidden = false;
 }
 async function loadClassrooms(): Promise<void> {
@@ -911,6 +947,7 @@ const dogPrompt = mountDogPrompt({
 });
 // Lab Coffee's menu board, north of 154: the cafés on campus.
 const cafeGuide = mountCafeGuide();
+const calendar = mountCalendar();
 
 // Boards in classrooms (Q&A, Notices, Board), the Student Hub and on the
 // lawn. The server decides who may post in a staff-only tab; the dialog only
@@ -1035,14 +1072,15 @@ async function openBoard(id: SpaceId, key: string = id): Promise<void> {
 }
 
 // When a dialog closes, hand focus back to the game view.
-for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "board"]) {
+for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-calendar", "npc-chat", "board"]) {
   const el = document.getElementById(id);
   if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || roomPad.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
+installDialogKeys();
 
 // --- the current space -----------------------------------------------------
 
@@ -1101,6 +1139,10 @@ function showBadges(target: Target | null): void {
 // figures with a name tag, an E spot in front of each ("Talk to …").
 let npcList: NpcDef[] = [];
 const npcFigures: Avatar[] = [];
+const npcById = new Map<string, Avatar>();
+/** NPCs with a model of their own (Seongsu's ghost): they float a little. */
+const ghosts: THREE.Group[] = [];
+let nextNpcWave = 0;
 /** Each assistant's name tag, shown only within NPC_TAG_RANGE (from across a space they cluttered the view). */
 const npcTags: { obj: CSS2DObject; at: THREE.Object3D }[] = [];
 const NPC_TAG_RANGE = 5.5;
@@ -1108,7 +1150,9 @@ const npcChat = mountNpcChat({
   async ask(id, text) {
     if (!session) return "Join first.";
     try {
-      return await askNpc(session.token, id, text);
+      const r = await askNpc(session.token, id, text);
+      quests.done("npc");
+      return r;
     } catch (err) {
       return err instanceof ApiError ? err.message : "Something went wrong.";
     }
@@ -1131,13 +1175,38 @@ function placeNpcs(s: SpaceDef): void {
   if (!here.length) return;
   s.group.userData.npcsPlaced = true;
   for (const n of here) {
+    // Seongsu, the author, is a little ghost in sneakers on a picnic bench (plan 94); the rest are people.
+    if (n.model3d) {
+      const ghost = new THREE.Group();
+      ghost.position.set(n.x, n.seated ? 0.46 : 0, n.z);
+      ghost.rotation.y = n.rot;
+      const body = new THREE.Group();
+      ghost.add(body);
+      s.group.add(ghost);
+      ghosts.push(body);
+      void loadModel(`npc/${n.model3d}.glb`, 1.15).then((m) => {
+        if (!m) return;
+        const model = m.clone(true);
+        // The file brings its own backdrop (a big plane) and its turntable: not wanted here.
+        model.traverse((o) => {
+          if (/^(Plane|Circle)/.test(o.name)) o.visible = false;
+        });
+        body.add(model);
+      });
+      npcTags.push({ obj: tag(ghost, `${n.name} · AI`, 1.6, "player-label npc-label"), at: ghost });
+      const reach = n.reach ?? 1.6;
+      s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * reach, z: n.z + Math.cos(n.rot) * reach, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
+      continue;
+    }
     const a = new Avatar(n.look);
     a.group.position.set(n.x, 0, n.z);
     a.group.rotation.y = n.rot;
     // Just the name over them (side by side, a role made the tags overlap); the E hint says the role.
-    npcTags.push({ obj: tag(a.group, n.name, 2.2, "player-label npc-label"), at: a.group });
+    npcTags.push({ obj: tag(a.group, `${n.name} · AI`, 2.2, "player-label npc-label"), at: a.group });
     s.group.add(a.group);
     npcFigures.push(a);
+    npcById.set(n.id, a);
+    a.group.userData.seated = n.seated === true;
     // You talk to them from in front (they face +z by default: so from +z).
     const reach = n.reach ?? 1.6;
     s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * reach, z: n.z + Math.cos(n.rot) * reach, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
@@ -1167,6 +1236,8 @@ const minimap = mountMinimap({
     { x: -2, z: 22, name: "Library" },
     { x: 12, z: -21, name: "Lab Coffee" },
     { x: -45.5, z: -30, name: "ANU Sport" },
+    { x: -39.3, z: -30, name: "Housing" },
+    { x: 18, z: -39, name: "Career Hub" },
     { x: 1.75, z: -31.6, name: "Ad board" },
     { x: -8.6, z: 2.3, name: "Study groups" },
   ],
@@ -1212,6 +1283,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   showPoops([]);
   poopsShown = null;
   minimap.show(!!space.outdoor);
+  turnBtn.hidden = !space.outdoor;
   if (id === "library") quests.done("library");
   if (meetingRoom(id)?.kind === "team") quests.done("room");
   placeNpcs(space);
@@ -1232,7 +1304,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(cameraOffset(space, at.z));
-  if (session) hudName.textContent = `You are ${session.name} · ${space.title}`;
+  if (session) hudName.textContent = session.name;
   // Sound only after joining: the Enter click is the gesture browsers require.
   if (playing) playTrack(space.bgm);
   if (tell) net?.enter(id, at.x, at.z);
@@ -1254,7 +1326,8 @@ async function openNote(id: number): Promise<void> {
 /** Why a note can't go where the player stands, or null (server/spaces.ts noteSpotError). */
 function noteSpotError(): string | null {
   if (space && meetingRoom(space.id)) return "No sticky notes in meeting rooms.";
-  if (!space || space.noNotes) return "No sticky notes in the Student Hub.";
+  // Staff and the admin may stick notes in the Hub (plan 99); everyone else not.
+  if (!space || (space.noNotes && !(space.id === "hub" && isStaff(session)))) return space?.id === "hub" ? "Only staff stick notes in the Student Hub." : "No sticky notes here.";
   const { x, z } = player.position;
   if ((space.noteBuildings ?? []).some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";
   const spots = [...(space.noteKeepClear ?? []), ...space.doors, ...(space.links ?? []), ...(space.spots ?? [])];
@@ -1394,6 +1467,7 @@ function showJoin(message = ""): void {
   for (const id of [...others.keys()]) removeOther(id);
   signIn.show(message);
   minimap.show(false);
+  turnBtn.hidden = true;
   quests.show(false);
   hud.hidden = true;
   touch.hidden = true;
@@ -1409,7 +1483,9 @@ function enterWorld(): void {
   touch.hidden = false;
   playing = true;
   keyGuide.show();
-  quests.show(true);
+  // The welcome tour first, the quests after it (never both at once).
+  quests.show(false);
+  guide.tourIfNew();
   chat.show();
   const spawn = session.spawn;
   setSpace(isSpaceId(spawn.space) ? spawn.space : "outdoor", spawn, false);
@@ -1459,13 +1535,20 @@ function goOnline(token: string): void {
       if (roomPanel.isOpen()) roomPanel.add(line);
       else chat.add({ ...line, whisper: true });
     },
-    chatSaved(ok) {
+    whiteboard(url) {
+      // In the in-app window over the room; a phone may prefer its own tab, which the window offers.
+      webview.open({ label: "Room whiteboard (Excalidraw)", url, embeddable: true });
+    },
+    chatSaved(ok, what, reason) {
+      const thing = what === "notes" ? "Notes" : "Chat";
       if (ok) {
         sfx("note");
-        toast("Chat saved: ✉️ → Saved chats (30 days, only you).");
+        toast(`${thing} saved: ✉️ → Saved (30 days, only you).`);
+        roomPanel.add({ name: "", text: `${thing} saved for you: find it under ✉️ → Saved (30 days).`, system: true });
       } else {
         sfx("error");
-        if (!isMember(session)) signupPrompt.open("save a chat");
+        if (!isMember(session)) signupPrompt.open(what === "notes" ? "save the notes" : "save a chat");
+        else if (reason === "empty") roomPanel.add({ name: "", text: "The shared notes are empty: nothing to save yet.", system: true });
         else toast("Only a meeting room's chat can be saved.");
       }
     },
@@ -1585,7 +1668,7 @@ function goOnline(token: string): void {
     },
     status(online) {
       if (session && space) {
-        hudName.textContent = `You are ${session.name} · ${space.title}${online ? "" : " · reconnecting…"}`;
+        hudName.textContent = `${session.name}${online ? "" : " · reconnecting…"}`;
       }
     },
   });
@@ -1677,7 +1760,30 @@ for (const btn of touch.querySelectorAll<HTMLButtonElement>("[data-dir]")) {
 // iPhones ignore the viewport's user-scalable=no, so pinching, or tapping
 // twice fast (two fingers on the pad and Jump), zooms the page. Over the game
 // and its buttons, both are stopped here; windows scroll and zoom as normal.
-const overGame = (t: EventTarget | null): boolean => t instanceof Element && !!t.closest("#stage, #touch");
+const overGame = (t: EventTarget | null): boolean =>
+  t instanceof Element && !!t.closest("#stage, #touch, #mail-btn, #look-btn, #settings-btn, #room-reopen, #chat-open, #hud");
+// Holding a finger on the game or its buttons would open the phone's own menu
+// (copy, look up, "Search with…"): not here (81d). Text boxes keep theirs.
+document.addEventListener("contextmenu", (e) => {
+  if (overGame(e.target)) e.preventDefault();
+});
+document.addEventListener("selectstart", (e) => {
+  if (overGame(e.target)) e.preventDefault();
+});
+// The height a phone shows above its keyboard, for windows that must keep
+// their text box in sight while typing (the room window, the assistants').
+const vv = window.visualViewport;
+const fitViewport = (): void => {
+  const h = vv ? vv.height : window.innerHeight;
+  document.documentElement.style.setProperty("--vvh", `${Math.round(h)}px`);
+  document.documentElement.style.setProperty("--vvtop", `${Math.round(vv ? vv.offsetTop : 0)}px`);
+  // iOS scrolls the whole page up to show a focused box; the layout is fixed, so put it back.
+  if (vv && window.scrollY) window.scrollTo(0, 0);
+};
+fitViewport();
+vv?.addEventListener("resize", fitViewport);
+vv?.addEventListener("scroll", fitViewport);
+window.addEventListener("resize", fitViewport);
 for (const type of ["gesturestart", "gesturechange"]) {
   document.addEventListener(type, (e) => {
     if (overGame(e.target)) e.preventDefault();
@@ -1888,12 +1994,18 @@ function interact(): void {
       dogPrompt.open();
     }
     else if (target.id === "cafes") cafeGuide.open();
+    else if (target.id === "calendar") calendar.open();
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "enquiries" && space) void openBoard(space.id, "hub-desk");
     else if (target.id === "study-groups" && space) void openBoard(space.id, "study-groups");
     else if (target.id.startsWith("npc:")) {
       const npc = npcList.find((n) => `npc:${n.id}` === target.id);
-      if (npc) npcChat.open(npc);
+      if (npc) {
+        npcChat.open(npc);
+        // A spoken hello in their voice (plan 79), at the effects volume.
+        say("Hi, how can I help you?", 0, npc.voice ?? "female");
+        npcById.get(npc.id)?.perform("wave");
+      }
     }
     else if (target.id === "projects") void openProjects();
     else if (target.id === "board-link") openStaffLink("board");
@@ -1916,6 +2028,8 @@ function interact(): void {
 const camOffset = new THREE.Vector3();
 function cameraOffset(s: SpaceDef, z: number): THREE.Vector3 {
   camOffset.copy(s.camera);
+  // Outside, the view can be turned a quarter at a time (plan 34): the offset turns round the player.
+  if (s.outdoor && camYaw) return camOffset.applyAxisAngle(Y_AXIS, camYaw);
   if (!s.southWall) return camOffset;
   const { from, z: wall } = s.southWall;
   const t = THREE.MathUtils.smoothstep(z, from, wall);
@@ -1923,6 +2037,63 @@ function cameraOffset(s: SpaceDef, z: number): THREE.Vector3 {
   camOffset.set(s.camera.x, THREE.MathUtils.lerp(s.camera.y, 12, t), THREE.MathUtils.lerp(s.camera.z, 1.2, t));
   return camOffset;
 }
+
+// --- the quest arrow (plan 112) ---------------------------------------------
+// For a quest that means going somewhere, a big arrow bobs over where to go
+// in the space you're in, until it's done or the quests are skipped: the
+// library's door outside; a team room's door in the library; the nearest AI
+// assistant for "ask one something".
+const questArrow = new THREE.Group();
+{
+  const orange = new THREE.MeshBasicMaterial({ color: 0xff7a1a, depthTest: false, transparent: true, opacity: 0.95 });
+  const head = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.8, 4), orange);
+  head.rotation.x = Math.PI; // pointing down
+  head.position.y = 0.4;
+  const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), orange);
+  shaft.position.y = 1.15;
+  questArrow.add(head, shaft);
+  questArrow.renderOrder = 10;
+  questArrow.traverse((o) => (o.renderOrder = 10));
+  questArrow.visible = false;
+  scene.add(questArrow);
+}
+function questTarget(): { x: number; z: number; y: number } | null {
+  if (!space || !playing) return null;
+  const q = quests.current();
+  if (q === "library" && space.id === "outdoor") return { x: -2, z: 21.6, y: 3.2 };
+  if (q === "room" && space.id === "library") return { x: -14.9, z: -1.5, y: 3.2 };
+  if (q === "room" && space.id === "outdoor") return { x: -2, z: 21.6, y: 3.2 }; // team rooms are in the library
+  if (q === "npc") {
+    const here = npcList.filter((n) => n.space === space?.id && !n.model3d);
+    let best: (typeof here)[number] | undefined;
+    for (const n of here) if (!best || Math.hypot(n.x - player.position.x, n.z - player.position.z) < Math.hypot(best.x - player.position.x, best.z - player.position.z)) best = n;
+    return best ? { x: best.x, z: best.z, y: 3 } : null;
+  }
+  return null;
+}
+
+// --- turning the view (plan 34) ---------------------------------------------
+// Outside only, one button (and the R key) turns the camera a quarter round
+// the player each press; indoors the rooms are built to be seen from the
+// south, so it goes back to that on going in (and is kept for coming out).
+const Y_AXIS = new THREE.Vector3(0, 1, 0);
+let camYaw = 0;
+const turnBtn = document.createElement("button");
+turnBtn.type = "button";
+turnBtn.id = "turn-btn";
+turnBtn.textContent = "⟳";
+turnBtn.title = "Turn the view (R)";
+turnBtn.setAttribute("aria-label", "Turn the view a quarter (R)");
+turnBtn.hidden = true;
+document.body.append(turnBtn);
+function turnView(): void {
+  if (!space?.outdoor) return;
+  camYaw = (camYaw + Math.PI / 2) % (Math.PI * 2);
+}
+turnBtn.addEventListener("click", turnView);
+window.addEventListener("keydown", (e) => {
+  if (e.code === "KeyR" && !e.repeat && playing && !busy() && !e.ctrlKey && !e.metaKey) turnView();
+});
 
 // --- game loop -------------------------------------------------------------
 
@@ -1939,6 +2110,8 @@ function update(dt: number, now: number): void {
     let moving = false;
     if (!busy()) {
       move.set(Number(dirs.right) - Number(dirs.left), 0, Number(dirs.down) - Number(dirs.up));
+      // Turned outside (plan 34), up stays "away from the camera".
+      if (camYaw) move.applyAxisAngle(Y_AXIS, camYaw);
       // Walking gets you up.
       if (mySeat && move.lengthSq() > 0) standUp();
       if (move.lengthSq() > 0) {
@@ -1998,6 +2171,22 @@ function update(dt: number, now: number): void {
   const ease = 1 - Math.exp(-12 * dt);
   me.update(dt);
   for (const a of npcFigures) a.update(dt);
+  const qt = questTarget();
+  questArrow.visible = !!qt;
+  if (qt) {
+    questArrow.position.set(qt.x, qt.y + Math.sin(now / 250) * 0.25, qt.z);
+    questArrow.rotation.y += dt * 2;
+  }
+  for (const body of ghosts) {
+    body.userData.bob = (body.userData.bob ?? Math.random() * 6) + dt;
+    body.position.y = 0.06 + Math.sin(body.userData.bob * 1.6) * 0.05;
+  }
+  // Now and then an assistant waves (plan 106), so they read as someone to talk to.
+  if (performance.now() > nextNpcWave) {
+    nextNpcWave = performance.now() + 6000 + Math.random() * 14000;
+    const standing = npcFigures.filter((a) => !a.group.userData.seated && a.group.parent === space?.group);
+    standing[Math.floor(Math.random() * standing.length)]?.perform("wave");
+  }
   for (const t of npcTags) {
     const near = t.at.position.distanceTo(player.position) < NPC_TAG_RANGE;
     if (t.obj.visible !== near) t.obj.visible = near;
@@ -2024,7 +2213,7 @@ function update(dt: number, now: number): void {
   // In a meeting room the dock and chat take the right-hand column, and the
   // exit door's label sat half under it ("Leave the roo"): nudge any label
   // that would run under it back to the left.
-  const columnLeft = roomPanel.isOpen() ? (document.getElementById("room-ui")?.getBoundingClientRect().left ?? Infinity) : Infinity;
+  const columnLeft = roomPanel.isShowing() ? (document.getElementById("room-ui")?.getBoundingClientRect().left ?? Infinity) : Infinity;
   for (const label of doorLabels) {
     label.getWorldPosition(labelAt);
     const d = Math.hypot(labelAt.x - player.position.x, labelAt.z - player.position.z);

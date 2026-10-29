@@ -58,7 +58,7 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
 
   const main = document.createElement("div");
   main.className = "keyguide-main";
-  main.append(group("Move", wasd), group("Interact", e), group("Menu", q), group("Chat", enter));
+  main.append(group("Move", wasd), group("Interact", e), group("Emotes", q), group("Chat", enter));
 
   const space = key("space", "SPACE");
   space.classList.add("keyguide-space");

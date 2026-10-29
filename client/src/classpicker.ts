@@ -29,6 +29,7 @@ export function mountClassPicker(h: {
   root.id = "class-picker";
   root.hidden = true;
   root.setAttribute("role", "dialog");
+  root.dataset.keep = "";
   root.setAttribute("aria-modal", "true");
   root.setAttribute("aria-labelledby", "class-picker-title");
 

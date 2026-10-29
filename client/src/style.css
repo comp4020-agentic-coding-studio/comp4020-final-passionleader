@@ -26,6 +26,13 @@ input, textarea, [role="dialog"], [role="region"], [role="alertdialog"] {
   user-select: text;
   -webkit-user-select: text;
 }
+/* Buttons never start a text selection or the iPhone's loupe and "Search / Find in Page" bar when tapped fast or held (81d). */
+button, [role="button"], .use-badge, .player-label, .door-label, canvas {
+  user-select: none;
+  -webkit-user-select: none;
+  -webkit-touch-callout: none;
+  -webkit-tap-highlight-color: transparent;
+}
 #stage { position: fixed; inset: 0; outline: none; }
 #stage canvas { display: block; }
 /* A moment of black between spaces, so a room's furniture loading in isn't seen popping up. */
@@ -46,16 +53,19 @@ input, textarea, [role="dialog"], [role="region"], [role="alertdialog"] {
   background: rgba(255, 251, 224, 0.7); font-size: 0.8rem;
 }
 #hud-online[hidden] { display: none; }
-#hud-help { font-size: 0.85rem; opacity: 0.8; }
-/* Phones: keep the HUD's lines clear of the hanger and gear at the top right (2 x 44 px + gaps). */
+/* Phones: keep the HUD's lines clear of the guide, mail, hanger and gear at the top right (4 x 44 px + gaps). */
 @media (max-width: 700px) {
-  #hud p { max-width: calc(100vw - 200px); }
+  #hud p { max-width: calc(100vw - 252px); }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
 }
-/* In a meeting room on a phone, its window sits where the help line would be. */
-body.in-room #hud-help { display: none; }
+/* A room's window open (plan 83): everything else steps aside, so the window
+   has the screen (on a phone, the pad and buttons too). Closed, the HUD's
+   place top left holds the small "Room" button. */
+body.room-open #hud, body.room-open #mail-btn, body.room-open #look-btn, body.room-open #settings-btn,
+body.room-open #bgm-player, body.room-open #touch, body.room-open #hint, body.room-open #quests,
+body.room-open #keyguide, body.in-room #hud-name, body.in-room #hud-online { display: none !important; }
 #toast { min-height: 1.2em; font-size: 0.9rem; font-weight: 600; }
 #toast:not(:empty) { display: inline-block; padding: 2px 10px; border-radius: 8px; background: rgba(255, 251, 224, 0.88); }
 
@@ -103,6 +113,7 @@ body.in-room #hud-help { display: none; }
 #touch button {
   pointer-events: auto; border: 0; color: #fff; background: rgba(107, 63, 29, 0.85);
   font-weight: 700; user-select: none; -webkit-user-select: none; touch-action: none;
+  -webkit-touch-callout: none; -webkit-tap-highlight-color: transparent;
 }
 #dpad {
   display: grid; gap: 6px; grid-template-columns: repeat(3, 56px); grid-template-rows: repeat(2, 56px);
@@ -115,12 +126,8 @@ body.in-room #hud-help { display: none; }
 #actions { display: flex; gap: 10px; align-items: flex-end; }
 #use-btn { width: 84px; height: 84px; border-radius: 50%; font-size: 1.05rem; }
 #jump-btn, #menu-btn { width: 64px; height: 64px; border-radius: 50%; font-size: 0.95rem; }
+#menu-btn { font-size: 0.8rem; letter-spacing: -0.01em; }
 
-/* On desktop the key guide (keyguide.ts) shows the controls; phones get a line of text. */
-.touch-help { display: none; }
-@media (pointer: coarse), (max-width: 700px) {
-  .touch-help { display: block; }
-}
 
 /* Other players' names float over their heads, always visible. */
 .player-label {
@@ -178,6 +185,7 @@ body.in-room #hud-help { display: none; }
   #actions { gap: 6px; }
   #use-btn { width: 68px; height: 68px; }
   #jump-btn, #menu-btn { width: 52px; height: 52px; font-size: 0.85rem; }
+  #menu-btn { font-size: 0.68rem; }
 }
 
 /* Settings: a gear at the top right (volumes live in its dialog), and a small dialog. */
@@ -253,8 +261,35 @@ body.in-room #hud-help { display: none; }
   background: var(--accent); color: #fff; font-weight: 700;
 }
 .chooser-preview { font-size: 0.85rem; opacity: 0.8; overflow-wrap: anywhere; }
+/* Staff's name tags (1c): the same pill in ANU-ish navy with a gold edge. */
+.staff-label { background: rgba(31, 61, 107, 0.92); box-shadow: inset 0 0 0 1.5px #d6b45a; }
 /* An AI campus assistant's name tag: the same pill as a person's, a little greener. */
 .npc-label { background: rgba(30, 107, 82, 0.9); color: #fff; }
 /* The campus minimap, under the HUD (desktop, outdoors). */
 #minimap { position: fixed; top: 76px; left: 16px; z-index: 4; border-radius: 10px; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2); pointer-events: none; }
 #minimap[hidden] { display: none; }
+
+/* Opened from a phone's home screen the page runs under the notch and the
+   home bar (viewport-fit=cover): keep the controls clear of both. */
+@supports (top: env(safe-area-inset-top)) {
+  #hud { top: calc(12px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); }
+  #settings-btn, #look-btn, #mail-btn { top: calc(10px + env(safe-area-inset-top)); }
+  #settings-btn { right: calc(12px + env(safe-area-inset-right)); }
+  #look-btn { right: calc(64px + env(safe-area-inset-right)); }
+  #mail-btn { right: calc(116px + env(safe-area-inset-right)); }
+  #touch:not([hidden]) {
+    padding-bottom: calc(16px + env(safe-area-inset-bottom));
+    padding-left: calc(16px + env(safe-area-inset-left));
+    padding-right: calc(16px + env(safe-area-inset-right));
+  }
+  #room-reopen { top: calc(12px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); }
+}
+/* Turning the view outside (plan 34): one round button, bottom centre on a computer, above the pad's row on a phone. */
+#turn-btn {
+  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 6;
+  width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(255, 255, 255, 0.9); color: var(--ink); font-size: 1.5rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+}
+#turn-btn:focus-visible { outline: 3px solid #6b3f1d; outline-offset: 2px; }
+@media (pointer: coarse), (max-width: 700px) { #turn-btn { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); left: auto; right: 16px; transform: none; } }
+body.room-open #turn-btn { display: none !important; }

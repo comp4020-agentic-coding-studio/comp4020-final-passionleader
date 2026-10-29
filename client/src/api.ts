@@ -119,10 +119,16 @@ export interface NpcDef {
   look: Look;
   links: { label: string; url: string }[];
   greeting: string;
+  /** Whose voice says hello (plan 79). */
+  voice?: "male" | "female";
+  /** Sits rather than stands (and doesn't wave). */
+  seated?: boolean;
+  /** A model of its own instead of a person (assets/npc/<model3d>.glb). */
+  model3d?: string;
 }
 /** Meeting-room chats you saved (plan 37): yours only, 30 days. */
-export const getSavedChats = (token: string): Promise<{ id: number; space: SpaceId; savedAt: string }[]> => request("/api/chats", "POST", { token });
-export const getSavedChat = (token: string, id: number): Promise<{ id: number; space: SpaceId; savedAt: string; lines: { name: string; text: string; system?: boolean }[] }> =>
+export const getSavedChats = (token: string): Promise<{ id: number; space: SpaceId; kind?: "chat" | "notes"; savedAt: string }[]> => request("/api/chats", "POST", { token });
+export const getSavedChat = (token: string, id: number): Promise<{ id: number; space: SpaceId; kind?: "chat" | "notes"; savedAt: string; lines: { name: string; text: string; system?: boolean }[] }> =>
   request(`/api/chats/${id}`, "POST", { token });
 export const deleteSavedChat = (token: string, id: number): Promise<unknown> => request(`/api/chats/${id}`, "DELETE", { token });
 export const getNpcs = (): Promise<NpcDef[]> => request<NpcDef[]>("/api/npcs");

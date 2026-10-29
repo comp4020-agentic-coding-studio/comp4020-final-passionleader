@@ -43,5 +43,15 @@
   .quests-list li.just-done, .quests-cheer { animation-duration: 0.01s; }
   .quests-cheer { animation: none; opacity: 1; }
 }
-/* Phones: the touch controls own the bottom corners. */
-@media (max-width: 700px) { #quests { display: none; } }
+.quests-next { display: none; }
+/* Phones (plan 87): one line at the top, under the HUD, the next quest and Skip; the touch controls own the bottom. */
+@media (max-width: 700px), (pointer: coarse) {
+  #quests {
+    left: 50%; right: auto; bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
+    width: min(440px, calc(100vw - 32px)); padding: 2px 4px 2px 12px; display: flex; align-items: center; gap: 6px;
+  }
+  #quests[hidden] { display: none; }
+  #quests .quests-title, #quests .quests-list { display: none; }
+  #quests .quests-head { order: 2; }
+  #quests .quests-next { display: block; flex: 1; margin: 0; font-size: 0.82rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+}
