@@ -116,31 +116,50 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
   const year = asked ? Number(asked) : new Date().getFullYear();
   const codes = words.filter((w) => /^[a-z]{4}\d{4}$/.test(w));
   // Pages say "Second Semester" where people ask "semester 2" (and the other way): search both.
-  const extra = [/\b(semester|sem|s)\s*1\b|\b1st\b/i.test(question) ? "first" : "", /\b(semester|sem|s)\s*2\b|\b2nd\b/i.test(question) ? "second" : ""].filter(Boolean);
+  // And "when is it open" is answered by an hours table.
+  const extra = [
+    /\b(semester|sem|s)\s*1\b|\b1st\b/i.test(question) ? "first" : "",
+    /\b(semester|sem|s)\s*2\b|\b2nd\b/i.test(question) ? "second" : "",
+    /\b(open|opens|opening|close|closes|closing|hours)\b/i.test(question) && !words.includes("hours") ? "hours" : "",
+  ].filter(Boolean);
   const match = [...words, ...extra].map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
-  const rows = db
-    .prepare(
-      `SELECT title, body, url, source, year, bm25(pieces, 2.0, 1.0) AS score FROM pieces
-       WHERE pieces MATCH ? AND source IN (${sources.map(() => "?").join(",")})
-       ORDER BY (year IS NOT NULL AND year != ?) , score LIMIT 60`,
-    )
-    .all(match, ...sources, year) as unknown as (Piece & { score: number })[];
+  // Each source drawn from on its own (up to 120 pieces each), so the
+  // catalogue's thousands of course pages, which all say "semester" and
+  // "census date", can't crowd a student page's answer out of the pool.
+  const query = db.prepare(
+    `SELECT title, body, url, source, year, bm25(pieces, 2.0, 1.0) AS score FROM pieces
+     WHERE pieces MATCH ? AND source = ?
+     ORDER BY (year IS NOT NULL AND year != ?) , score LIMIT 120`,
+  );
+  const rows = sources
+    .flatMap((src) => query.all(match, src, year) as unknown as (Piece & { score: number })[])
+    .sort((a, b) => a.score - b.score);
   const need = codes.length ? 1 : words.length <= 2 ? 1 : Math.max(2, Math.floor(words.length / 2));
-  // Asked about money: pieces with prices in them come first (the price table, not the overview).
-  if (/\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|how much|\$)/i.test(question)) {
-    // The more prices a piece lists, the earlier (a price table beats a page that mentions one).
-    const prices = (r: { body: string }): number => Math.min(6, (r.body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length);
-    rows.sort((a, b) => prices(b) - prices(a));
-  }
+  // Each candidate scored: how many of the question's words it holds, twice over in its title (whole
+  // words, give or take an ending: "residence" counts for "residences",
+  // "open" for "opening", "won" not for "wonderful"), then, asked about money,
+  // how many prices it lists (a price table beats a page that mentions one),
+  // then SQLite's own rank.
+  const money = /\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|how much|\$)/i.test(question);
+  const terms = [...words, ...extra].map((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,4}($|[^\\p{L}\\p{N}])`, "u"));
+  // Numbers ("2", "2026") are in half the catalogue's titles: only words weigh in a title.
+  const wordTerms = terms.filter((_, i) => !/^\d+$/.test([...words, ...extra][i]!));
+  const scored = rows
+    .filter((r) => !(asked && r.year !== null && r.year !== year))
+    .map((r, i) => {
+      const text = `${r.title} ${r.body}`.toLowerCase();
+      const hits = terms.filter((t) => t.test(text)).length;
+      // A word in the title counts twice: the page is about it, not just mentioning it.
+      const title = r.title.toLowerCase();
+      const weight = hits + wordTerms.filter((t) => t.test(title)).length;
+      const prices = money ? Math.min(6, (r.body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length) : 0;
+      return { r, text, hits, weight, prices, i };
+    })
+    .filter((x) => x.hits >= need && (!codes.length || codes.some((c) => x.text.includes(c))))
+    .sort((a, b) => b.weight - a.weight || b.prices - a.prices || a.i - b.i);
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
-  for (const r of rows) {
-    if (asked && r.year !== null && r.year !== year) continue;
-    const text = `${r.title} ${r.body}`.toLowerCase();
-    if (codes.length && !codes.some((c) => text.includes(c))) continue;
-    // Whole words, give or take an ending ("residence" counts for "residences", "won" not for "wonderful").
-    const hits = [...words, ...extra].filter((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,3}($|[^\\p{L}\\p{N}])`, "u").test(text)).length;
-    if (hits < need) continue;
+  for (const { r } of scored) {
     // At most two pieces of one page, so a long page doesn't crowd the rest out.
     const n = perUrl.get(r.url) ?? 0;
     if (n >= 2) continue;

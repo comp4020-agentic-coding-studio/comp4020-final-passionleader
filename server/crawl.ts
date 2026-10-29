@@ -312,7 +312,9 @@ export async function crawl(opts: { only?: string[]; log?: (line: string) => voi
     try {
       // An hours page lists weeks far ahead; the first few (this week and the next) are the ones worth asking about.
       const all = pieces(text);
-      const kept = /libcal\.com\/hours/.test(t.url) ? all.slice(0, 3) : all;
+      // A table the page fills in with JavaScript arrives as rows of dashes ("Chifley | – | – |…"): not an answer, and misleading.
+      const real = all.filter((p) => (p.match(/\|\s*[–-]\s*(?=\|)/g) ?? []).length < 6);
+      const kept = /libcal\.com\/hours/.test(t.url) ? real.slice(0, 3) : real;
       savePage({ url: t.url, source: t.source, year: t.year, title: `${code}${title}${year}`, pieces: kept });
       saved++;
     } catch {
