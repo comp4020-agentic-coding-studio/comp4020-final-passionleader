@@ -228,9 +228,11 @@ describe("study groups: resizing", () => {
 // joined may ask (guests too), one question every few seconds, and the
 // answer comes with their pages.
 describe("campus assistants", () => {
-  it("lists five, answers a guest with its pages, and slows down a rush", async () => {
+  it("lists them all, answers a guest with its pages, and slows down a rush", async () => {
     const list = (await (await api("/api/npcs")).json()) as { id: string; space: string; reach?: number; links: unknown[] }[];
-    expect(list.map((n) => n.id).sort()).toEqual(["anusa", "careers", "course", "library", "sport"]);
+    expect(list.map((n) => n.id).sort()).toEqual(["anusa", "careers", "course", "housing", "intl", "library", "seongsu", "sport"]);
+    // The careers adviser works in the Career Hub now (plan 111).
+    expect(list.find((n) => n.id === "careers")?.space).toBe("careers");
     // Those behind a desk say how far out you stand to talk, so their E spot isn't inside the desk.
     expect(list.find((n) => n.id === "library")?.reach).toBeGreaterThan(2);
     const g = await guest();

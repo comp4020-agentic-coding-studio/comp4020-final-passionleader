@@ -379,7 +379,7 @@ function picnicTable(g: THREE.Group, colliders: Box[], x: number, z: number): vo
   solid(colliders, 0.8, 1.8, x, z);
 }
 
-/** Two seats on each bench of each picnic table, facing the table. */
+/** Two seats on each bench of each picnic table, facing the table; but the one Seongsu, the author's ghost, sits on (server/npcs.ts). */
 export const PICNIC_SEATS = PICNIC.flatMap(([x, z]) =>
   [-1, 1].flatMap((side) => [-0.45, 0.45].map((dz) => ({ x: x + side * 0.62, z: z + dz, rot: side < 0 ? Math.PI / 2 : -Math.PI / 2, y: 0.46 }))),
-);
+).filter((s) => !(Math.abs(s.x - -38.38) < 0.01 && Math.abs(s.z - -11.55) < 0.01));

@@ -1,0 +1,489 @@
+{
+ "source": [
+  "https://www.anu.edu.au/directories/university-calendar?year=2026",
+  "https://www.anu.edu.au/directories/university-calendar?year=2027",
+  "https://www.anu.edu.au/students/program-administration/program-management/census-dates"
+ ],
+ "fetched": "2026-10-29",
+ "notes": "Both 2026 and 2027 are published on the ANU University Calendar. Teaching-break entries give only the start date and a separate 'return' date; the end date was not stated, so none is inferred. Ranges (end) appear only where the page states both a begin and an end. 2027 'Semester 2 deferred examination period 1' is a two-week period starting 22 Nov; the page gave no end date so none is set. 2027 census-dates page lists no 2027 dates, but the University Calendar does. Dates in the calendar can change; labels were paraphrased into the requested shape. Public holidays are those listed on the ANU calendar (ACT). Calendar rows omitted as non-calendar events: graduations, Open Day, fee due dates, enrolment reminders.",
+ "events": [
+  {
+   "date": "2026-01-01",
+   "title": "Summer Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2026-01-01",
+   "title": "New Year's Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-01-26",
+   "title": "Australia Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-02-16",
+   "title": "ANU Orientation Week (O-Week)",
+   "kind": "other",
+   "end": "2026-02-20"
+  },
+  {
+   "date": "2026-02-16",
+   "title": "Semester 2 (2025) deferred and supplementary exam period",
+   "kind": "exam",
+   "end": "2026-02-20"
+  },
+  {
+   "date": "2026-02-23",
+   "title": "Semester 1 classes begin",
+   "kind": "teaching"
+  },
+  {
+   "date": "2026-03-02",
+   "title": "Last day to add Semester 1 courses",
+   "kind": "other"
+  },
+  {
+   "date": "2026-03-09",
+   "title": "Canberra Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-03-31",
+   "title": "Summer Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2026-03-31",
+   "title": "Semester 1 census date",
+   "kind": "census"
+  },
+  {
+   "date": "2026-04-01",
+   "title": "Autumn Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2026-04-03",
+   "title": "Good Friday (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-04-06",
+   "title": "Semester 1 teaching break begins",
+   "kind": "break"
+  },
+  {
+   "date": "2026-04-06",
+   "title": "Easter Monday (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-04-20",
+   "title": "Return from Semester 1 teaching break",
+   "kind": "teaching"
+  },
+  {
+   "date": "2026-04-27",
+   "title": "ANZAC Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-05-08",
+   "title": "Last day to drop Semester 1 courses without failure",
+   "kind": "other"
+  },
+  {
+   "date": "2026-05-29",
+   "title": "Semester 1 classes end",
+   "kind": "teaching"
+  },
+  {
+   "date": "2026-05-29",
+   "title": "Last day to drop Semester 1 courses with failure",
+   "kind": "other"
+  },
+  {
+   "date": "2026-06-01",
+   "title": "Reconciliation Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-06-04",
+   "title": "Semester 1 examination period",
+   "kind": "exam",
+   "end": "2026-06-20"
+  },
+  {
+   "date": "2026-06-08",
+   "title": "King's Birthday (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-06-30",
+   "title": "Autumn Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2026-07-01",
+   "title": "Winter Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2026-07-08",
+   "title": "Semester 1 results published",
+   "kind": "other"
+  },
+  {
+   "date": "2026-07-20",
+   "title": "ANU Orientation Week (O-Week)",
+   "kind": "other"
+  },
+  {
+   "date": "2026-07-20",
+   "title": "Deferred/supplementary exam period",
+   "kind": "exam"
+  },
+  {
+   "date": "2026-07-27",
+   "title": "Semester 2 classes begin",
+   "kind": "teaching"
+  },
+  {
+   "date": "2026-08-03",
+   "title": "Last day to add Semester 2 courses",
+   "kind": "other"
+  },
+  {
+   "date": "2026-08-31",
+   "title": "Semester 2 census date",
+   "kind": "census"
+  },
+  {
+   "date": "2026-09-07",
+   "title": "Semester 2 teaching break begins",
+   "kind": "break"
+  },
+  {
+   "date": "2026-09-21",
+   "title": "Return from Semester 2 teaching break",
+   "kind": "teaching"
+  },
+  {
+   "date": "2026-09-30",
+   "title": "Winter Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2026-10-01",
+   "title": "Spring Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2026-10-05",
+   "title": "Labour Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-10-09",
+   "title": "Last day to drop Semester 2 courses without failure",
+   "kind": "other"
+  },
+  {
+   "date": "2026-10-30",
+   "title": "Semester 2 classes end",
+   "kind": "teaching"
+  },
+  {
+   "date": "2026-10-30",
+   "title": "Last day to drop Semester 2 courses with failure",
+   "kind": "other"
+  },
+  {
+   "date": "2026-11-05",
+   "title": "Semester 2 examination period",
+   "kind": "exam",
+   "end": "2026-11-21"
+  },
+  {
+   "date": "2026-11-23",
+   "title": "Semester 2 end-of-semester deferred examination period",
+   "kind": "exam",
+   "end": "2026-12-04"
+  },
+  {
+   "date": "2026-12-09",
+   "title": "Semester 2 results published",
+   "kind": "other"
+  },
+  {
+   "date": "2026-12-25",
+   "title": "Christmas Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-12-26",
+   "title": "Boxing Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2026-12-31",
+   "title": "Spring Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2027-01-01",
+   "title": "Summer Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2027-01-01",
+   "title": "New Year's Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-01-26",
+   "title": "Australia Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-02-15",
+   "title": "ANU Orientation Week (O-Week)",
+   "kind": "other"
+  },
+  {
+   "date": "2027-02-15",
+   "title": "Semester 2 (2026) deferred and supplementary exams (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-02-22",
+   "title": "Semester 1 classes begin",
+   "kind": "teaching"
+  },
+  {
+   "date": "2027-03-01",
+   "title": "Last day to add Semester 1 courses",
+   "kind": "other"
+  },
+  {
+   "date": "2027-03-08",
+   "title": "Canberra Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-03-26",
+   "title": "Good Friday (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-03-29",
+   "title": "Semester 1 mid-semester examinations week 1 (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-03-29",
+   "title": "Easter Monday (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-03-31",
+   "title": "Summer Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2027-03-31",
+   "title": "Semester 1 census date",
+   "kind": "census"
+  },
+  {
+   "date": "2027-04-01",
+   "title": "Autumn Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2027-04-05",
+   "title": "Semester 1 teaching break begins",
+   "kind": "break"
+  },
+  {
+   "date": "2027-04-19",
+   "title": "Return from Semester 1 teaching break",
+   "kind": "teaching"
+  },
+  {
+   "date": "2027-04-19",
+   "title": "Semester 1 mid-semester examinations week 2 (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-04-26",
+   "title": "ANZAC Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-05-07",
+   "title": "Last day to drop Semester 1 courses without failure (WD)",
+   "kind": "other"
+  },
+  {
+   "date": "2027-05-10",
+   "title": "Semester 1 deferred and supplementary mid-semester exams (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-05-28",
+   "title": "Semester 1 classes end",
+   "kind": "teaching"
+  },
+  {
+   "date": "2027-05-31",
+   "title": "Reconciliation Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-06-02",
+   "title": "Last day to drop courses with failure (WN)",
+   "kind": "other"
+  },
+  {
+   "date": "2027-06-03",
+   "title": "Semester 1 examination period",
+   "kind": "exam",
+   "end": "2027-06-19"
+  },
+  {
+   "date": "2027-06-14",
+   "title": "King's Birthday (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-06-23",
+   "title": "Semester 1 deferred examination period 1",
+   "kind": "exam",
+   "end": "2027-07-02"
+  },
+  {
+   "date": "2027-06-30",
+   "title": "Autumn Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2027-07-01",
+   "title": "Winter Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2027-07-07",
+   "title": "Semester 1 results published",
+   "kind": "other"
+  },
+  {
+   "date": "2027-07-19",
+   "title": "ANU Orientation Week (O-Week)",
+   "kind": "other"
+  },
+  {
+   "date": "2027-07-19",
+   "title": "Semester 1 deferred examination period 2 (concurrent with O-Week)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-07-26",
+   "title": "Semester 2 classes begin",
+   "kind": "teaching"
+  },
+  {
+   "date": "2027-08-02",
+   "title": "Last day to add Semester 2 courses",
+   "kind": "other"
+  },
+  {
+   "date": "2027-08-30",
+   "title": "Semester 2 mid-semester examinations week 1 (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-08-31",
+   "title": "Semester 2 census date",
+   "kind": "census"
+  },
+  {
+   "date": "2027-09-06",
+   "title": "Semester 2 teaching break begins",
+   "kind": "break"
+  },
+  {
+   "date": "2027-09-20",
+   "title": "Return from Semester 2 teaching break",
+   "kind": "teaching"
+  },
+  {
+   "date": "2027-09-20",
+   "title": "Semester 2 mid-semester examinations week 2 (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-09-30",
+   "title": "Winter Session ends",
+   "kind": "other"
+  },
+  {
+   "date": "2027-10-01",
+   "title": "Spring Session begins",
+   "kind": "other"
+  },
+  {
+   "date": "2027-10-04",
+   "title": "Labour Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-10-08",
+   "title": "Last day to drop Semester 2 courses without failure (WD)",
+   "kind": "other"
+  },
+  {
+   "date": "2027-10-11",
+   "title": "Semester 2 deferred and supplementary mid-semester exams (concurrent with teaching)",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-10-29",
+   "title": "Semester 2 classes end",
+   "kind": "teaching"
+  },
+  {
+   "date": "2027-11-04",
+   "title": "Semester 2 examination period",
+   "kind": "exam",
+   "end": "2027-11-20"
+  },
+  {
+   "date": "2027-11-22",
+   "title": "Semester 2 deferred examination period 1",
+   "kind": "exam"
+  },
+  {
+   "date": "2027-12-08",
+   "title": "Semester 2 results published",
+   "kind": "other"
+  },
+  {
+   "date": "2027-12-25",
+   "title": "Christmas Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-12-26",
+   "title": "Boxing Day (public holiday)",
+   "kind": "holiday"
+  },
+  {
+   "date": "2027-12-31",
+   "title": "Spring Session ends",
+   "kind": "other"
+  }
+ ]
+}

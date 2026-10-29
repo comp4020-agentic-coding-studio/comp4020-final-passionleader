@@ -45,7 +45,10 @@ export const SPACES: Record<string, Space> = {
   anusa: { label: "ANUSA Student Lounge", halfX: 10, halfZ: 7, spawn: { x: -8.4, z: 5 } },
   // An easter egg (plan 62): crit 8's Poop Room, behind a "Staff only" door
   // at the far end of Lab Coffee (client/src/spaces/poop.ts).
-  poop: { label: "a small room", halfX: 6, halfZ: 4.5, spawn: { x: 0, z: 2.4 } },
+  // 1.5 times its first size, the way out on the north wall, the stalls down the west (plan 104).
+  poop: { label: "a small room", halfX: 9, halfZ: 6.75, spawn: { x: 6, z: -4.5 } },
+  // In the O'Donoghue centre's ground floor, across the north road (plan 111; client/src/spaces/careers.ts).
+  careers: { label: "Career Hub", halfX: 14, halfZ: 10, spawn: { x: 0, z: 7.6 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
@@ -86,6 +89,8 @@ export function spaceInfo(id: SpaceId): Space | undefined {
 export const ROOM_CAP = 6;
 export const ROOM: Omit<Space, "label"> = { halfX: 5, halfZ: 4, spawn: { x: 0, z: -2 } };
 const COUNSEL_DOORS = [-10, -6, -2, 2, 6, 10].map((z) => ({ x: 18.9, z }));
+// The Career Hub's six interview rooms (counselling kind), three down each side (client/src/spaces/meeting.ts CAREER_DOORS).
+const CAREER_DOORS = [...[-6, -2, 2].map((z) => ({ x: -12.9, z })), ...[-6, -2, 2].map((z) => ({ x: 12.9, z }))];
 const CLASSROOM_TEAM_DOORS = [-3, 0.5, 4].map((z) => ({ x: -8.9, z }));
 const LIBRARY_TEAM_DOORS = [
   { x: -14.9, z: -1.5 },
@@ -114,6 +119,11 @@ export function roomOf(id: unknown): Room | undefined {
   if (counsel) {
     const door = COUNSEL_DOORS[Number(counsel[1]) - 1];
     return door && { kind: "counselling", parent: "hub", door };
+  }
+  const career = /^career-([1-9])$/.exec(id);
+  if (career) {
+    const door = CAREER_DOORS[Number(career[1]) - 1];
+    return door && { kind: "counselling", parent: "careers", door };
   }
   const team = /^team-([a-z0-9]+)-([1-9])$/.exec(id);
   if (!team) return undefined;
@@ -158,7 +168,7 @@ export function clampToAreas(areas: Area[], x: number, z: number): { x: number; 
 // first (client/src/main.ts noteSpotError), so people get told straight away.
 
 export const NOTE_CLEARANCE = 2;
-export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa", "poop"]);
+export const NO_NOTE_SPACES: ReadonlySet<SpaceId> = new Set(["hub", "anusa", "poop", "careers"]);
 const BUILDINGS: Area[] = [
   { minX: -28, maxX: -10, minZ: -2, maxZ: 16 }, // 155
   { minX: 6, maxX: 26, minZ: -20, maxZ: 14 }, // 154
@@ -172,10 +182,12 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 24.5, z: -21 }, // a "Staff only" door at Lab Coffee's far end (the easter egg)
   { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
   { x: -2, z: 21.6 }, // Chifley Library's front door (E at the end of the bridge)
+  { x: 18, z: -39 }, // the Career Hub's door, at the O'Donoghue centre (client/src/spaces/outdoor.ts)
   { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
   { x: 12, z: -21.4 }, // Lab Coffee's menu board (client/src/spaces/labcoffee.ts CAFE_MENU)
   { x: -45.5, z: -30.2 }, // ANU Sport's tent PC (client/src/spaces/sportstent.ts SPORT_PC)
-  { x: -24.8, z: -28.8 }, // in front of ANU Sport's assistant (server/npcs.ts)
+  { x: -37.6, z: -29.3 }, // in front of the accommodation tent's assistant (HOUSING_TENT)
+  { x: -43.8, z: -29.5 }, // in front of ANU Sport's assistant (server/npcs.ts)
 ];
 const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 0, z: -9.9 }, // the way out, on the north wall
@@ -185,6 +197,7 @@ const LIBRARY_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: -9, z: -2.8 },
   { x: -7, z: -2.8 },
   { x: -9, z: -5.7 }, // in front of the library's assistant (server/npcs.ts)
+  { x: -4.6, z: -2.8 }, // Academic Skills' PC (client/src/spaces/library.ts ACADEMIC_PC)
   ...LIBRARY_TEAM_DOORS,
 ];
 // The Student Hub (staff only): its way out, the counselling doors, reception's
@@ -211,7 +224,8 @@ export function noteSpotError(space: SpaceId, x: number, z: number, staff = fals
     if (HUB_KEEP_CLEAR.some((p) => Math.hypot(p.x - x, p.z - z) < NOTE_CLEARANCE)) return "Too close to a door or something you can use. Step away a little.";
     return null;
   }
-  if (NO_NOTE_SPACES.has(space)) return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : space === "poop" ? "Not in here." : "Only staff stick notes in the Student Hub.";
+  if (NO_NOTE_SPACES.has(space))
+    return space === "anusa" ? "No sticky notes in the ANUSA Student Lounge." : space === "poop" ? "Not in here." : space === "careers" ? "No sticky notes in the Career Hub." : "Only staff stick notes in the Student Hub.";
   if (roomOf(space)) return "No sticky notes in meeting rooms.";
   const outside = space === "outdoor";
   if (outside && BUILDINGS.some((b) => x >= b.minX && x <= b.maxX && z >= b.minZ && z <= b.maxZ)) return "Not inside a building.";

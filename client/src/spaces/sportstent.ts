@@ -6,17 +6,36 @@ import { block, mat, place, solid, textPlane, type Box } from "../world.ts";
 // straight legs, a shallow pyramid roof, a valance with the name), a feather
 // banner beside it, and a folding table with a PC that opens ANU Sport's site
 // (in a new tab: it refuses to be framed). All our own shapes and type, no
-// logo. One of the AI campus assistants will stand beside it.
+// logo. One of the AI campus assistants stands beside it. East of it, the
+// same tent in green for accommodation (plan 95), with its own assistant.
 
 /** The PC on the tent's table; E from the south of it. */
 export const SPORT_PC = { x: -45.5, z: -30.2 };
+/** The accommodation tent's table (plan 95), just east of ANU Sport's: an assistant behind it, no PC. */
+export const HOUSING_TENT = { x: -39.3, z: -30.2 };
 
 const BLUE = 0x1f5fae;
 const BANNER_BLUE = 0x1a73e8;
 
 export function sportsTent(g: THREE.Group, colliders: Box[]): void {
-  const cx = SPORT_PC.x;
-  const cz = SPORT_PC.z - 0.4; // the table is at the tent's back
+  popupTent(g, colliders, SPORT_PC, { colour: BLUE, bg: "#1f5fae", name: "ANU Sport", tag: ["ANU Sport", "gym · clubs · classes"], pc: true });
+  featherBanner(g, colliders, SPORT_PC.x - 2.6, SPORT_PC.z - 0.4 + 1.2);
+}
+
+/** The accommodation tent (plan 95): the same pop-up gazebo in green, where an assistant compares the residences. */
+export function housingTent(g: THREE.Group, colliders: Box[]): void {
+  popupTent(g, colliders, HOUSING_TENT, { colour: 0x2e7d5b, bg: "#2e7d5b", name: "Accommodation", tag: ["Accommodation", "residences · prices"], pc: false });
+}
+
+function popupTent(
+  g: THREE.Group,
+  colliders: Box[],
+  at: { x: number; z: number },
+  look: { colour: number; bg: string; name: string; tag: string[]; pc: boolean },
+): void {
+  const BLUE = look.colour;
+  const cx = at.x;
+  const cz = at.z - 0.4; // the table is at the tent's back
   const w = 4;
   const d = 3;
   const legH = 2.4;
@@ -64,7 +83,7 @@ export function sportsTent(g: THREE.Group, colliders: Box[]): void {
     g.add(v);
   }
   // The name on the front valance, big enough to read from the road (+z).
-  const name = textPlane(["ANU Sport"], rw - 0.3, vh - 0.03, { bg: "#1f5fae", fg: "#ffffff", font: 0.28 });
+  const name = textPlane([look.name], rw - 0.3, vh - 0.03, { bg: look.bg, fg: "#ffffff", font: 0.28 });
   name.position.set(cx, vy, cz + rd / 2 + 0.025);
   g.add(name);
 
@@ -72,19 +91,17 @@ export function sportsTent(g: THREE.Group, colliders: Box[]): void {
   const tableZ = cz - 0.6;
   const tableD = 0.7;
   block(g, colliders, [2.4, 0.75, tableD], [cx, tableZ], 0xe9ecef);
-  place(g, "computerScreen.glb", 0.5, SPORT_PC.x, cz - 0.65, 0, true, 0.75);
-  // Kai's end of the table: a laptop and a box of flyers (Kenney, CC0).
+  if (look.pc) place(g, "computerScreen.glb", 0.5, cx, cz - 0.65, 0, true, 0.75);
+  // The assistant's end of the table: a laptop and a box of flyers (Kenney, CC0).
   place(g, "laptop.glb", 0.22, cx + 0.9, cz - 0.55, Math.PI, true, 0.75);
   place(g, "cardboardBoxClosed.glb", 0.35, cx + 1.6, cz - 1.2, 0.3);
-  const tag = textPlane(["ANU Sport", "gym · clubs · classes"], 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
-  tag.position.set(SPORT_PC.x, 1.7, cz - 0.95);
+  const tag = textPlane(look.tag, 1.6, 0.42, { bg: "#1f2d3d", fg: "#ffffff", font: 0.17 });
+  tag.position.set(cx, 1.7, cz - 0.95);
   g.add(tag);
   // A cloth sign on the front of the table, facing south (the PC above it stays visible).
-  const cloth = textPlane(["ANU Sport"], 1.4, 0.55, { bg: "#1f5fae", fg: "#ffffff", font: 0.32 });
+  const cloth = textPlane([look.name], 1.4, 0.55, { bg: look.bg, fg: "#ffffff", font: look.name.length > 10 ? 0.2 : 0.32 });
   cloth.position.set(cx, 0.4, tableZ + tableD / 2 + 0.01);
   g.add(cloth);
-
-  featherBanner(g, colliders, cx - 2.6, cz + 1.2);
 }
 
 /** A tall feather banner on a pole: blue flag with "ANU" large over "Sport", hanging west of the pole, readable from both sides. */

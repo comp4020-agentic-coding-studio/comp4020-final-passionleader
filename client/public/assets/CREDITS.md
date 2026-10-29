@@ -36,12 +36,11 @@ shows in reflections; it isn't drawn as the backdrop.
 
 ## Sky backdrop (`sky/campus_sky.jpg`, generated with Google Gemini)
 
-The sky you see. Made from an image generated with Google AI (Gemini) for
-this project: only the clouds and blue sky were kept (the generated picture
-also had buildings and trees along the bottom, which were cropped out), the
-strip was made to wrap seamlessly and repeated twice round a 4096×2048
-panorama, with a gradient up to a deep blue zenith and a soft haze below the
-horizon. 0.24 MB.
+The sky you see (replaced 29 October 2026: the earlier one read as storm
+clouds). Made from a sky image generated with Google AI (Gemini) for this
+project (`cloud_bg`): the picture fills the upper half of a 4096×2048
+panorama, once and then mirrored so it wraps round seamlessly, with the
+horizon's colours fading to a pale haze below it. 0.5 MB.
 
 ## Nature (`nature/`, Quaternius Stylized Nature MegaKit, CC0)
 
@@ -137,6 +136,7 @@ storey of facade).
 | `tex/ai/library_wall.jpg` | Chifley Library's wood panelling |
 | `tex/ai/wood_tabletop.jpg` | desks, tables and the lectern |
 | `tex/ai/poster_hub.jpg`, `poster_classroom.jpg`, `poster_meeting.jpg` | framed posters (flat illustrations, no text) |
+| `tex/ai/poster_art.jpg` | an abstract painting, framed on bare walls (the classrooms, the ANUSA lounge and the Career Hub; scaled down to 1200 px) |
 
 ## Sound effects (`sfx/`, Kenney, CC0)
 
@@ -158,10 +158,11 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 
 ## Music
 
-`Noon_On_The_Green.mp3`, `Dappled_Sunlight_Trail.mp3` and
-`Windows_Down_in_July.mp3` (campus), `Margin_Notes.mp3`,
-`The_Library_Window.mp3`, `Common_Room_Afternoon.mp3` and
-`The_Velvet_Clearing.mp3` (shared by the Student Hub, the classrooms and
+`Noon_On_The_Green.mp3`, `Dappled_Sunlight_Trail.mp3`,
+`Windows_Down_in_July.mp3` and `Along_the_Griffin_Lake.mp3` (campus),
+`Margin_Notes.mp3`, `The_Library_Window.mp3`, `Common_Room_Afternoon.mp3`,
+`The_Velvet_Clearing.mp3` and `Midnight_Rain_on_the_Glass.mp3` (shared by the
+Student Hub, the classrooms, the ANUSA Student Lounge, the Career Hub and
 their meeting rooms),
 `Sunlight_on_Glass.mp3` and `Where_The_Light_Settles.mp3` (Chifley Library
 and its team rooms) — Music generated with Google AI (Gemini) for this project.
@@ -179,6 +180,15 @@ The Poop Room's fart is synthesised in the browser with the Web Audio API
 
 Everything else in the scene (room shells, characters, sticky notes, UI) is
 built from Three.js primitives and HTML/CSS in code.
+
+## Seongsu's ghost
+
+`npc/boo.glb`: "Boo", a little ghost in sneakers, from Fab
+(https://www.fab.com/listings/a1830c99-ca66-48e0-aea3-b3d0fa6ebf12), licensed
+under Creative Commons Attribution 4.0 (CC BY 4.0,
+https://creativecommons.org/licenses/by/4.0/). Used unchanged as the model
+for the author's assistant on the picnic bench north of Badger & Co; its
+backdrop plane and turntable are hidden in code, not edited out of the file.
 
 ## Map data
 

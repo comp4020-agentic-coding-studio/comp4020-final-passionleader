@@ -585,6 +585,25 @@ export const markRead = (id: number): void => void db.prepare("UPDATE mail SET r
 /** The reader throws it away; the sender keeps their copy in Sent until the 30 days are up. */
 export const deleteMail = (id: number, reader: string): void => void db.prepare("UPDATE mail SET reader_deleted = 1 WHERE id = ? AND reader = ?").run(id, reader);
 export const unreadCount = (name: string): number => (db.prepare(`SELECT COUNT(*) AS n FROM mail WHERE reader = ? AND reader_deleted = 0 AND read_at IS NULL AND ${freshMail}`).get(name) as { n: number }).n;
+// --- the Poop Room's poops (plan 62, kept since plan 104) -----------------------
+// One each (a new one replaces your last), kept across restarts and deploys,
+// gone 30 days after it was made.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS poops (
+    name TEXT PRIMARY KEY COLLATE NOCASE,
+    x    REAL NOT NULL,
+    z    REAL NOT NULL,
+    at   TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+`);
+const freshPoop = "at > datetime('now', '-30 days')";
+/** Puts down this person's poop, in place of their last. */
+export const putPoop = (name: string, x: number, z: number): void =>
+  void db.prepare("INSERT INTO poops (name, x, z) VALUES (?, ?, ?) ON CONFLICT(name) DO UPDATE SET x = excluded.x, z = excluded.z, at = datetime('now')").run(name, x, z);
+export const poopsNow = (): { name: string; x: number; z: number }[] =>
+  db.prepare(`SELECT name, x, z FROM poops WHERE ${freshPoop} ORDER BY at`).all() as { name: string; x: number; z: number }[];
+export const purgeOldPoops = (): number => Number(db.prepare(`DELETE FROM poops WHERE NOT (${freshPoop})`).run().changes);
+
 // --- saved meeting-room chats (plan 37) ---------------------------------------
 // A member in a meeting room can keep its chat so far (text lines and the
 // names of files shared, not the files), for themselves only, 30 days.

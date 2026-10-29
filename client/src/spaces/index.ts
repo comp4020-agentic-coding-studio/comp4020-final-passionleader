@@ -1,5 +1,6 @@
 import type { SpaceDef, SpaceId } from "../world.ts";
 import { buildAnusa } from "./anusa.ts";
+import { buildCareers } from "./careers.ts";
 import { buildClassroom } from "./classroom.ts";
 import { buildHub } from "./hub.ts";
 import { buildLibrary } from "./library.ts";
@@ -19,6 +20,7 @@ const fixed: Record<string, () => SpaceDef> = {
   hub: buildHub,
   library: buildLibrary,
   anusa: buildAnusa,
+  careers: buildCareers,
   poop: buildPoop,
 };
 const built = new Map<SpaceId, SpaceDef>();

@@ -30,6 +30,8 @@ export interface BoardDef {
   space?: string;
   /** Posts are study groups: the writer sets how many people (2-20) and others join. */
   groups?: boolean;
+  /** A button in the board's header to a page elsewhere (a classroom's: Canvas, plan 98), opened in a new tab. */
+  link?: { label: string; url: string };
 }
 
 const UNOFFICIAL = "Not an official ANU service. Posters' identities aren't verified.";
@@ -88,7 +90,7 @@ export const expiringBoards = (): [string, number][] =>
 
 export function boardOf(key: unknown): BoardDef | undefined {
   if (typeof key !== "string") return undefined;
-  if (isClassroom(key)) return { title: `${key.toUpperCase()} board`, tabs: CLASSROOM_TABS };
+  if (isClassroom(key)) return { title: `${key.toUpperCase()} board`, tabs: CLASSROOM_TABS, link: { label: "Open Canvas", url: "https://canvas.anu.edu.au/" } };
   return Object.hasOwn(FIXED, key) ? FIXED[key] : undefined;
 }
 

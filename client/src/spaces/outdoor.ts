@@ -3,7 +3,7 @@ import { chalkboard, doorway, floor, mat, scatter, solid, texMat, textPlane, typ
 import { HIGH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
-import { SPORT_PC, sportsTent } from "./sportstent.ts";
+import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { SEAT_WALL_SEATS, buildStreetscape } from "./streetscape.ts";
@@ -79,6 +79,7 @@ export function buildOutdoor(): SpaceDef {
   noticeboard(g, colliders, STUDY_BOARD, Math.PI / 2, ["Study groups", "start one · join one"]);
   // ANU Sport's blue tent at the north-west end, south of Symposium's bed.
   sportsTent(g, colliders);
+  housingTent(g, colliders);
   if (HIGH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
 
   // Bushes every 3 m round each building, a metre out from the wall, with
@@ -201,8 +202,10 @@ export function buildOutdoor(): SpaceDef {
       { x: 4.6, z: 3, label: "Enter 154 (Student Hub)", to: "hub", arrive: { x: -18.4, z: 6 } },
       // North of the Hub's door, on the ground floor: the ANUSA Student Lounge.
       { x: 4.6, z: -5, label: "Enter the ANUSA Student Lounge", to: "anusa", arrive: { x: -8.4, z: 5 } },
+      // The Career Hub (plan 111), in the O'Donoghue centre's lit ground floor across the road.
+      { x: 18, z: -39, label: "Enter the Career Hub", to: "careers", arrive: { x: 0, z: 7.6 } },
       // An easter egg: an unmarked staff door at the far end of Lab Coffee.
-      { x: 24.5, z: -21, label: "Staff only", to: "poop", arrive: { x: 0, z: 2.4 }, secret: true },
+      { x: 24.5, z: -21, label: "Staff only", to: "poop", arrive: { x: 6, z: -4.5 }, secret: true },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.
       { x: -2, z: 21.6, label: "Enter Chifley Library", to: "library", arrive: { x: 0, z: -8.5 } },
     ],
@@ -215,7 +218,7 @@ export function buildOutdoor(): SpaceDef {
       { minX: 6, maxX: 26, minZ: -20, maxZ: 14 },
       { minX: -50, maxX: -38, minZ: -2, maxZ: 16 },
     ],
-    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, STUDY_BOARD],
+    noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, HOUSING_TENT, STUDY_BOARD],
     tick: dog,
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
@@ -231,7 +234,7 @@ export function buildOutdoor(): SpaceDef {
     // Chifley Library closes the south: walking up the bridge to its door,
     // the camera climbs over your head instead of going into the building.
     southWall: { from: 12, z: 22 },
-    bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3"],
+    bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3", "Along_the_Griffin_Lake.mp3"],
     outdoor: true,
     // The two lawn benches, two people each.
     seats: [...[-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))), ...SEAT_WALL_SEATS, ...PICNIC_SEATS],

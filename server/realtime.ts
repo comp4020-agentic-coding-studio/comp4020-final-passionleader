@@ -1,9 +1,9 @@
-import { randomUUID } from "node:crypto";
+import { randomBytes, randomUUID } from "node:crypto";
 import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
+import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -16,17 +16,16 @@ import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 // the spaces and what people do in them can keep changing.
 
 /** `seat` is the seat they're sitting on ("<space>:<n>"), if any; `look` how their figure looks. */
-export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null };
+export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true };
 /** Who's behind a socket, for the activity log only: never sent to anyone. */
 const owners = new WeakMap<WebSocket, { name: string; token: string; role: string }>();
 
 const EMOTES = new Set(["wave", "yes", "no", "mate", "dance"]);
-// The Poop Room (plan 62): one poop each, in memory only, five seconds apart;
-// a new one replaces your last. Only in the poop space.
-// The Poop Room easter egg: one poop per person (keyed by lower-case name),
-// in memory only, five seconds apart; a new one replaces your last.
-const poops = new Map<string, { name: string; x: number; z: number; at: number }>();
-const poopList = (): { name: string; x: number; z: number }[] => [...poops.values()].map((p) => ({ name: p.name, x: p.x, z: p.z }));
+// The Poop Room easter egg (plan 62): one poop per person, five seconds
+// apart; a new one replaces your last. Kept in SQLite for 30 days (plan 104:
+// they used to vanish on every deploy), sent only to whoever is in the room.
+const lastPoop = new Map<string, number>();
+const poopList = poopsNow;
 const MAX_JUMP = 3;
 // Positions go out ten times a second, only for spaces where someone moved.
 const TICK_MS = 100;
@@ -92,6 +91,8 @@ interface RoomState {
   /** The shared notes (plan 39): one Markdown text, last write wins; goes with the room. */
   pad: string;
   padBy: string | null;
+  /** The room's whiteboard (plan 85): an Excalidraw collaboration link, made when first asked for, gone with the room. */
+  board?: string;
 }
 const PAD_MAX = 5000;
 const rooms = new Map<SpaceId, RoomState>();
@@ -364,21 +365,34 @@ function onMessage(ws: WebSocket, raw: string): void {
     state.pad = msg.text.slice(0, PAD_MAX);
     state.padBy = player.name;
     for (const [other, p] of players) if (p.space === player.space && other !== ws) send(other, { t: "action", kind: "pad", text: state.pad, by: player.name });
-  } else if (msg.t === "save-chat") {
-    // Keep this room's chat so far, for this member, 30 days (db.ts saveChat);
-    // everyone inside is told, since it's their words too.
+  } else if (msg.t === "whiteboard") {
+    // One shared Excalidraw board per room while it lasts: a random room id
+    // and key, so only people given the link (those inside) find it. The
+    // drawing travels end-to-end encrypted through Excalidraw's own relay;
+    // nothing of it reaches this server.
     const state = rooms.get(player.space);
-    if (!state || !isMember(owners.get(ws) ?? { role: "guest" })) {
-      send(ws, { t: "action", kind: "chat-saved", ok: false, reason: state ? "guest" : "not in a room" });
+    if (!state) return;
+    state.board ??= `https://excalidraw.com/#room=${randomBytes(10).toString("hex")},${randomBytes(16).toString("base64url").slice(0, 22)}`;
+    send(ws, { t: "action", kind: "whiteboard", url: state.board });
+  } else if (msg.t === "save-chat") {
+    // Keep this room's chat so far (or, with what: "notes", just its shared
+    // notes), for this member, 30 days (db.ts saveChat); everyone inside is
+    // told, since it's their words too.
+    const notes = msg.what === "notes";
+    const state = rooms.get(player.space);
+    if (!state || !isMember(owners.get(ws) ?? { role: "guest" }) || (notes && !state.pad.trim())) {
+      send(ws, { t: "action", kind: "chat-saved", ok: false, what: notes ? "notes" : "chat", reason: !state ? "not in a room" : notes && isMember(owners.get(ws) ?? { role: "guest" }) ? "empty" : "guest" });
       return;
     }
-    const lines = state.lines.map((l) => ({ name: l.name, text: l.text, ...(l.system ? { system: true } : {}) }));
-    // The shared notes go with it, as a last line.
-    if (state.pad.trim()) lines.push({ name: "Notes", text: state.pad });
-    const id = saveChat(player.name, player.space, lines);
-    log("chat-saved", owners.get(ws) ?? null, { space: player.space, lines: lines.length });
-    send(ws, { t: "action", kind: "chat-saved", ok: true, id });
-    roomSay(player.space, { name: player.name, text: `${player.name} saved this chat (kept 30 days, for them only)`, system: true });
+    const lines = notes
+      ? [{ name: "Notes", text: state.pad }]
+      : state.lines.map((l) => ({ name: l.name, text: l.text, ...(l.system ? { system: true } : {}) }));
+    // A saved chat takes the shared notes with it, as a last line.
+    if (!notes && state.pad.trim()) lines.push({ name: "Notes", text: state.pad });
+    const id = saveChat(player.name, player.space, lines, notes ? "notes" : "chat");
+    log("chat-saved", owners.get(ws) ?? null, { space: player.space, lines: lines.length, what: notes ? "notes" : "chat" });
+    send(ws, { t: "action", kind: "chat-saved", ok: true, id, what: notes ? "notes" : "chat" });
+    roomSay(player.space, { name: player.name, text: `${player.name} saved ${notes ? "the shared notes" : "this chat"} (kept 30 days, for them only)`, system: true });
     roomChanged(player.space);
   } else if (msg.t === "invite" && typeof msg.name === "string") {
     // Anyone in a counselling room may invite someone in, by user name.
@@ -399,8 +413,9 @@ function onMessage(ws: WebSocket, raw: string): void {
   } else if (msg.t === "poop" && player.space === "poop") {
     const key = player.name.toLowerCase();
     const now = Date.now();
-    if (now - (poops.get(key)?.at ?? 0) < 5000) return;
-    poops.set(key, { name: player.name, x: player.x, z: player.z, at: now });
+    if (now - (lastPoop.get(key) ?? 0) < 5000) return;
+    lastPoop.set(key, now);
+    putPoop(player.name, player.x, player.z);
     broadcastSpace("poop", { t: "action", kind: "poops", poops: poopList() });
   } else if (msg.t === "emote" && typeof msg.kind === "string" && EMOTES.has(msg.kind)) {
     if (msg.kind !== "dance") {
@@ -423,6 +438,8 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   const room = roomOf(spot.space);
   const start = room ? { space: room.parent, x: room.door.x, z: room.door.z } : spot;
   const player: Player = { id: randomUUID(), name, space: start.space, x: start.x, y: 0, z: start.z, rot: 0, look: lookOf(name) };
+  // Staff (and the admin) carry a "staff" mark on their name tag (1c), so people know whom they're talking to.
+  if (visitor.role === "staff" || visitor.role === "admin") player.staff = true;
   players.set(ws, player);
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });

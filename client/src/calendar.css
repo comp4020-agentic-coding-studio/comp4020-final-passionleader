@@ -1,0 +1,23 @@
+/* The Hub's academic calendar (plan 103), in the settings dialog's style. */
+#hub-calendar { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(20, 20, 20, 0.45); }
+#hub-calendar[hidden] { display: none; }
+.cal-card { width: min(520px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; overflow-y: auto; }
+.cal-head { display: flex; align-items: center; gap: 6px; }
+.cal-head h2 { flex: 1; margin: 0; text-align: center; font-size: 1.2rem; }
+.cal-head button { min-width: 44px; min-height: 44px; border: 0; border-radius: 8px; background: rgba(0, 0, 0, 0.08); color: var(--ink); font-size: 1.2rem; cursor: pointer; }
+.cal-head button:disabled { opacity: 0.35; cursor: default; }
+.cal-grid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 3px; margin: 10px 0; text-align: center; }
+.cal-dow { font-size: 0.72rem; font-weight: 700; opacity: 0.6; }
+.cal-day { padding: 6px 0; border-radius: 6px; background: rgba(255, 255, 255, 0.55); font-size: 0.85rem; }
+.cal-day.is-today { outline: 2px solid var(--accent); font-weight: 800; }
+.is-teaching { --cal: #2f7d4f; }
+.is-census { --cal: #c0392b; }
+.is-exam { --cal: #7b3fa0; }
+.is-break { --cal: #2f6fa8; }
+.is-holiday { --cal: #d4860b; }
+.is-other { --cal: #6b5a43; }
+.cal-day[class*="is-"]:not(.is-today) { background: var(--cal, transparent); color: #fff; font-weight: 700; }
+.cal-day.is-today[class*=" is-"] { background: var(--cal); color: #fff; }
+.cal-list { list-style: none; margin: 0 0 6px; padding: 0; display: grid; gap: 4px; font-size: 0.88rem; }
+.cal-list li { padding: 4px 8px; border-left: 4px solid var(--cal, #aaa); border-radius: 4px; background: rgba(255, 255, 255, 0.5); }
+.cal-list small { margin-left: 4px; padding: 0 6px; border-radius: 999px; background: var(--cal, #aaa); color: #fff; font-size: 0.7rem; }

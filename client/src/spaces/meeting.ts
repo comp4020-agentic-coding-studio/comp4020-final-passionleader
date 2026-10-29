@@ -30,6 +30,8 @@ export const ANUSA_TEAM_DOORS = [
   { x: 8.9, z: -2.5 },
   { x: 8.9, z: 5.2 },
 ];
+/** The Career Hub's six interview rooms, three down each side wall (same as server/spaces.ts, client/src/spaces/careers.ts). */
+export const CAREER_DOORS = [...[-6, -2, 2].map((z) => ({ x: -12.9, z })), ...[-6, -2, 2].map((z) => ({ x: 12.9, z }))];
 /** Where the room's own door is along its side wall. */
 const INNER_DOOR_Z = -1.5;
 /** -1 if the room's door is on its west wall (you came in heading east), +1 if east. */
@@ -45,6 +47,13 @@ export interface RoomRef {
 
 /** The meeting room behind a space id, if it is one; `classroomCode` names a classroom's code. */
 export function roomRef(id: SpaceId, classroomCode: (space: SpaceId) => string | undefined): RoomRef | undefined {
+  // The Career Hub's interview rooms (plan 111): counselling rooms, invite only.
+  const career = /^career-([1-9])$/.exec(id);
+  if (career) {
+    const n = Number(career[1]);
+    const door = CAREER_DOORS[n - 1];
+    return door && { kind: "counselling", title: `Career Hub · Interview room ${n}`, parent: "careers", door };
+  }
   const counsel = /^counsel-([1-9])$/.exec(id);
   if (counsel) {
     const n = Number(counsel[1]);

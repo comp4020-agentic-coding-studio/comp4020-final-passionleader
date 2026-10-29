@@ -31,6 +31,10 @@ export interface Npc {
   sources: string[];
   /** Sits (on a bench) rather than stands. */
   seated?: boolean;
+  /** A model of its own instead of a person (assets/npc/<model>.glb). */
+  model3d?: string;
+  /** Not ready to answer yet: says this instead of asking the model (Seongsu, until his pages are written). */
+  notYet?: string;
   /** "haiku" for the careful ones (courses, careers), "nova" for the rest (plan 78, 10/29). */
   model: "haiku" | "nova";
 }
@@ -130,11 +134,12 @@ export const NPCS: Npc[] = [
     id: "careers",
     name: "Alex",
     role: "Careers adviser",
-    space: "hub",
-    x: -9.4,
-    z: -7.4,
-    rot: Math.PI / 2,
-    reach: 2.3,
+    // Behind the Career Hub's desk, facing the room (plan 111; client/src/spaces/careers.ts).
+    space: "careers",
+    x: 0.6,
+    z: -7.5,
+    rot: 0,
+    reach: 2.1,
     look: { body: 0, skin: 0, hair: 2, top: 1, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "Careers & Employability", url: "https://www.anu.edu.au/students/careers-opportunities/careers" },
@@ -146,6 +151,72 @@ export const NPCS: Npc[] = [
     voice: "male",
     sources: ["careers", "computing"],
     model: "haiku",
+  },
+  {
+    id: "housing",
+    name: "Jordan",
+    role: "Accommodation",
+    space: "outdoor",
+    // Behind the green tent's table, at its east end (client/src/spaces/sportstent.ts HOUSING_TENT).
+    x: -37.6,
+    z: -31,
+    rot: 0,
+    reach: 1.5,
+    look: { body: 0, skin: 3, hair: 4, top: 6, bottom: 1, hat: 0, hatColour: 1 },
+    links: [
+      { label: "Compare residences", url: "https://study.anu.edu.au/accommodation/compare-residences" },
+      { label: "Our residences", url: "https://study.anu.edu.au/accommodation/our-residences" },
+      { label: "Applying", url: "https://study.anu.edu.au/accommodation/application-advice" },
+      { label: "Fees & agreements", url: "https://study.anu.edu.au/accommodation/support-resources/fees-occupancy-agreements" },
+    ],
+    greeting: "Hi! I can compare ANU's residences for you: prices, catered or self-catered, and how to apply.",
+    voice: "male",
+    sources: ["housing"],
+    model: "nova",
+  },
+  {
+    id: "intl",
+    name: "Mei",
+    role: "International students",
+    space: "hub",
+    // Behind reception's short leg, where the careers adviser stood before the Career Hub opened.
+    x: -9.4,
+    z: -7.4,
+    rot: Math.PI / 2,
+    reach: 2.3,
+    look: { body: 1, skin: 1, hair: 5, top: 8, bottom: 1, hat: 0, hatColour: 1 },
+    links: [
+      { label: "Current international students", url: "https://www.anu.edu.au/students/information-for/current-international-students" },
+      { label: "Student visa conditions", url: "https://www.anu.edu.au/students/program-administration/program-management/information-for-international-student-visa-holders-studying-in-australia" },
+      { label: "OSHC (health cover)", url: "https://study.anu.edu.au/apply/overseas-student-health-cover-oshc" },
+    ],
+    greeting: "Welcome! Ask me about student visas, OSHC health cover and settling in at ANU.",
+    voice: "female",
+    sources: ["intl"],
+    model: "nova",
+  },
+  {
+    id: "seongsu",
+    name: "Seongsu",
+    role: "Who made this",
+    space: "outdoor",
+    // Sitting on the east bench of the east picnic table north of Badger & Co, facing east (client/src/spaces/creek.ts PICNIC).
+    x: -38.38,
+    z: -11.55,
+    rot: Math.PI / 2,
+    reach: 1.3,
+    seated: true,
+    model3d: "boo",
+    look: { body: 0, skin: 0, hair: 0, top: 0, bottom: 0, hat: 0, hatColour: 0 },
+    links: [
+      { label: "This project's README", url: "/readme/" },
+      { label: "The code (GitHub)", url: "https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader" },
+    ],
+    greeting: "Boo! I'm Seongsu, the student who built this campus with Claude Code. Ask me how it works.",
+    voice: "male",
+    sources: ["project"],
+    model: "haiku",
+    notYet: "I'm still writing down how I built this place, so I can't answer yet, sorry! Come back in a few days, or read the README below.",
   },
 ];
 
@@ -213,6 +284,7 @@ const dontKnow = (npc: Npc): string =>
 
 /** What the assistant says back: the model's answer from the pages, or an honest note and its pages. */
 export async function answer(npc: Npc, question: string): Promise<string> {
+  if (npc.notYet) return npc.notYet;
   const offline = `I'm ${npc.name}, and I'm not connected to my AI brain right now, sorry! The pages below have what you need.`;
   if (!client && !bedrock) return offline;
   const pieces = search(npc.sources, question, 5);

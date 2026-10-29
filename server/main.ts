@@ -55,6 +55,7 @@ import {
   unreadCount,
   purgeOldMail,
   purgeOldChats,
+  purgeOldPoops,
   savedChatsOf,
   savedChat,
   deleteSavedChat,
@@ -125,6 +126,21 @@ app.get("/readme/", (c) => {
 <title>README · ANU Crossing</title>
 <style>body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:1rem/1.6 system-ui,sans-serif}img{max-width:100%}</style>
 </head><body><main>${body}</main><p><a href="/">Back to the campus</a></p></body></html>`);
+});
+
+// Credits and licences (13): the assets' sources and licences, from the same
+// file the build ships (client/public/assets/CREDITS.md), as a page the
+// settings dialog opens in the in-app window.
+app.get("/credits/", (c) => {
+  const file = ["client/dist/assets/CREDITS.md", "client/public/assets/CREDITS.md"].find((f) => existsSync(f));
+  if (!file) return c.text("No credits file.", 404);
+  const body = marked.parse(readFileSync(file, "utf8"), { async: false });
+  return c.html(`<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Credits and licences · ANU Crossing</title>
+<style>body{max-width:46rem;margin:1.5rem auto;padding:0 1rem;font:0.95rem/1.55 system-ui,sans-serif;color:#2b2418;background:#f7f1e3}table{border-collapse:collapse;font-size:0.85rem}td,th{border:1px solid #e4d7ba;padding:3px 6px;text-align:left;vertical-align:top}code{font-size:0.85em}a{color:#6b3f1d}</style>
+</head><body><main><p><strong>ANU Crossing</strong> is an unofficial, fan-made student project, not an ANU service. The code is the author's (see the repository's LICENSE). Everything it uses from elsewhere, and its licence:</p>${body}</main></body></html>`);
 });
 
 type Body = Record<string, unknown>;
@@ -487,7 +503,9 @@ app.delete("/api/chats/:id", async (c) => {
 // too, one question every three seconds, thirty a day, 500 characters;
 // nothing is stored or logged but that someone asked whom.
 app.get("/api/npcs", (c) =>
-  c.json(NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated }))),
+  c.json(
+    NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d })),
+  ),
 );
 
 const lastAsked = new Map<string, number>();
@@ -1412,6 +1430,7 @@ const purge = (): void => {
   purgeOldChat();
   purgeOldMail();
   purgeOldChats();
+  purgeOldPoops();
   const guestsGone = purgeIdleGuests();
   if (guestsGone) log("guests-purged", null, { count: guestsGone });
   removeObjects(purgeFiles());

@@ -25,6 +25,8 @@ export interface BoardConfig {
   allowPrivate?: boolean;
   /** Posts are study groups with a size that people join (the ANUSA board). */
   groups?: boolean;
+  /** A button in the header to a page elsewhere (a classroom's Canvas), in a new tab. */
+  link?: { label: string; url: string };
 }
 
 export interface BoardPost {
@@ -152,7 +154,13 @@ export function mountBoard(h: {
   closeBtn.className = "board-close";
   closeBtn.textContent = "✕";
   closeBtn.setAttribute("aria-label", "Close");
-  head.append(title, closeBtn);
+  // A classroom's board links to Canvas (plan 98): ANU's own site, which won't be framed, so a new tab.
+  const extLink = document.createElement("a");
+  extLink.className = "board-ext";
+  extLink.target = "_blank";
+  extLink.rel = "noopener";
+  extLink.hidden = true;
+  head.append(title, extLink, closeBtn);
 
   const tablist = document.createElement("div");
   tablist.className = "board-tabs";
@@ -970,6 +978,11 @@ export function mountBoard(h: {
       title.textContent = config.title;
       boardNotice.textContent = config.notice ?? "";
       boardNotice.hidden = !config.notice;
+      extLink.hidden = !config.link;
+      if (config.link) {
+        extLink.textContent = `${config.link.label} ↗`;
+        extLink.href = config.link.url;
+      }
       posts.classList.toggle("is-grid", config.layout === "grid");
       buildTabs();
       tab = config.tabs[0]?.id ?? "";

@@ -616,3 +616,21 @@
   flex-basis: 100%;
   font-size: 0.85rem;
 }
+
+/* A classroom board's "Open Canvas ↗" (plan 98), beside the close button. */
+.board-ext {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
+  padding: 0 12px;
+  margin-left: auto;
+  border-radius: 8px;
+  background: #b5372a;
+  color: #fff;
+  font-weight: 700;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.board-ext[hidden] { display: none; }
+.board-ext + .board-close { margin-left: 0; }

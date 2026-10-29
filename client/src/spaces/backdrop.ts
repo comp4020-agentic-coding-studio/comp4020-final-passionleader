@@ -283,6 +283,10 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   const name = textPlane(["Lowitja O'Donoghue", "Cultural Centre"], 11, 2.3, { bg: "#2a3743", fg: "#ffffff", font: 0.8 });
   name.position.set(px + 1.5, ph * 0.75, pz + pd / 2 + 0.1);
   backdrop.add(name);
+  // The Career Hub on its lit ground floor (plan 111; its door is outdoor.ts's, E from the road).
+  const careers = textPlane(["Career Hub", "internships · jobs"], 4, 1.1, { bg: "#23404f", fg: "#ffffff", font: 0.42 });
+  careers.position.set(px, 2.6, pz + pd / 2 + 0.1);
+  backdrop.add(careers);
 
   // Low red-brick buildings beyond the east road.
   const red = facadeTexture("#9b5a44", "#8a4d39", "#2f3a42", "#d8cfc2");

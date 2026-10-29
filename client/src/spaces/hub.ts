@@ -229,13 +229,13 @@ export function buildHub(): SpaceDef {
       // The research portal won't be framed, so a new tab. Used from the
       // south of reception's bar.
       { x: FIND_PC.x, z: RECEPTION_SPOT_Z, label: "Find an ANU researcher (new tab)", url: "https://researchportalplus.anu.edu.au/", embeddable: false },
-      // ANU's events listing refuses to be framed: a new tab.
-      { x: CALENDAR.x, z: -HALF.halfZ + 1.9, label: "Open ANU's university calendar (new tab)", url: `https://www.anu.edu.au/directories/university-calendar?audience=All&year=${new Date().getFullYear()}`, embeddable: false },
     ],
     // The board PC on reception's bar: you stand south of it.
     spots: [
       { x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the lab matching board" },
       { x: ASK_PC.x, z: RECEPTION_SPOT_Z, id: "enquiries", label: "Ask the Hub a question" },
+      // The wall calendar opens ANU's academic dates for 2026–2027 in our own window (plan 103, calendar.ts).
+      { x: CALENDAR.x, z: -HALF.halfZ + 1.9, id: "calendar", label: "See ANU's academic dates (2026–2027)" },
     ],
   };
 }

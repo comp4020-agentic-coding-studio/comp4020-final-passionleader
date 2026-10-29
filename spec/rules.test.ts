@@ -270,3 +270,14 @@ describe("roles (the top admin's Roles tab)", () => {
     expect(["qa_bot01", "qa_bot05", "qa_bot09", "qa_master"].map(db.qaRole)).toEqual(["staff", "student", "guest", "admin"]);
   });
 });
+
+describe("the Poop Room keeps its poops (plan 104)", () => {
+  it("keeps one each in the database, a new one replacing the last, and drops them after 30 days", () => {
+    db.putPoop("pooper", 1, 2);
+    db.putPoop("POOPER", 3, 4);
+    expect(db.poopsNow().filter((p) => p.name.toLowerCase() === "pooper")).toEqual([{ name: "pooper", x: 3, z: 4 }]);
+    raw.prepare("UPDATE poops SET at = datetime('now', '-31 days') WHERE name = 'pooper'").run();
+    expect(db.poopsNow().some((p) => p.name === "pooper")).toBe(false);
+    expect(db.purgeOldPoops()).toBe(1);
+  });
+});
