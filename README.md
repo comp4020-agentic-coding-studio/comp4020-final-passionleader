@@ -90,8 +90,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    whoever someone inside has invited by name. Coming in opens the room's
    menu: a group chat of what's been said since the room last emptied (📎
    shares a file), Shared notes (one Markdown page, pictures too), a shared
-   whiteboard (Excalidraw), and Save chat or Save notes, which keep a copy
-   for you alone for 30 days (✉️ → Saved); the room is told. Close the menu
+   whiteboard (Excalidraw, in a new tab), and Save chat or Save notes, which
+   keep a copy for you alone for 30 days (the menu's 📂, or ✉️ → Saved); the
+   room is told. Close the menu
    to see the room, and walk out by the door to leave; when the last person
    leaves, the chat, the notes, the files and the invites are gone.
 8. Something broken? The gear's dialog has **Report a bug**: a short note,

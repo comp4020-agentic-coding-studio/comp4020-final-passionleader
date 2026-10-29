@@ -779,7 +779,13 @@ const roomPanel = mountRoomPanel({
     if (open) stopMoving();
   },
   onHelp: () => guide.open("rooms"),
-  onWhiteboard: () => net?.whiteboard(),
+  onWhiteboard: () => {
+    // The tab opens now, on the tap (a tab opened later, when the link arrives, is blocked as a pop-up); the link fills it.
+    boardTab = window.open("about:blank", "_blank");
+    net?.whiteboard();
+  },
+  // Saved chats and notes are in the mailbox's Saved tab; the mail button is hidden in a room, so the menu opens it.
+  onSaved: () => (isMember(session) ? mailbox.open(undefined, true) : signupPrompt.open("keep chats and notes")),
   onLeave: () => {
     const out = space?.doors[0];
     if (out) setSpace(out.to, out.arrive, true);
@@ -789,6 +795,8 @@ const roomPanel = mountRoomPanel({
   onImageLink: async (id) => (session ? imageLink(session.token, id) : null),
   maxLength: 200,
 });
+/** The tab opened for the room's whiteboard, waiting for its link. */
+let boardTab: Window | null = null;
 const roomInfo = (id: SpaceId, room: RoomState): RoomInfo => ({ title: meetingRoom(id)?.title ?? "Room", ...room });
 
 const radial = mountRadial(
@@ -1537,15 +1545,18 @@ function goOnline(token: string): void {
       else chat.add({ ...line, whisper: true });
     },
     whiteboard(url) {
-      // In the in-app window over the room; a phone may prefer its own tab, which the window offers.
-      webview.open({ label: "Room whiteboard (Excalidraw)", url, embeddable: true });
+      // Its own tab: Excalidraw turns live collaboration off inside an iframe,
+      // so in the in-app window nobody saw anyone else's drawing (10/30).
+      if (boardTab && !boardTab.closed) boardTab.location.href = url;
+      else webview.open({ label: "Room whiteboard (Excalidraw, draws together in a new tab)", url, embeddable: false });
+      boardTab = null;
     },
     chatSaved(ok, what, reason) {
       const thing = what === "notes" ? "Notes" : "Chat";
       if (ok) {
         sfx("note");
         toast(`${thing} saved: ✉️ → Saved (30 days, only you).`);
-        roomPanel.add({ name: "", text: `${thing} saved for you: find it under ✉️ → Saved (30 days).`, system: true });
+        roomPanel.add({ name: "", text: `${thing} saved for you (30 days): room menu → 📂 Saved, or ✉️ → Saved.`, system: true });
       } else {
         sfx("error");
         if (!isMember(session)) signupPrompt.open(what === "notes" ? "save the notes" : "save a chat");

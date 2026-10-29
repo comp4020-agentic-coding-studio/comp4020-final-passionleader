@@ -63,6 +63,8 @@ export function mountRoomPanel(opts: {
   onHelp(): void;
   /** Opens the room's shared whiteboard (plan 85). */
   onWhiteboard(): void;
+  /** Opens your saved chats and notes (the mailbox's Saved tab). */
+  onSaved(): void;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -177,7 +179,7 @@ export function mountRoomPanel(opts: {
   addItem("📝", "Shared notes", "One Markdown page for the room", () =>
     show("notes"),
   );
-  addItem("🖍️", "Whiteboard", "Draw together (Excalidraw; everyone here sees the same board)", () => opts.onWhiteboard());
+  addItem("🖍️", "Whiteboard", "Draw together in a new tab (Excalidraw; everyone here gets the same board)", () => opts.onWhiteboard());
   addItem(
     "💾",
     "Save chat",
@@ -187,6 +189,7 @@ export function mountRoomPanel(opts: {
   addItem("🗒️", "Save notes", "Keep the shared notes 30 days (only you)", () =>
     opts.onSave("notes"),
   );
+  addItem("📂", "My saved chats and notes", "Read what you've saved (yours only, 30 days)", () => opts.onSaved());
   addItem("❓", "Help", "How rooms work, in the Campus Guide", () => opts.onHelp());
   const leaveHint = document.createElement("p");
   leaveHint.className = "room-note room-leave-hint";
