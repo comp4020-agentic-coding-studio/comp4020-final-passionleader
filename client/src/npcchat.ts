@@ -153,6 +153,25 @@ export function mountNpcChat(opts: {
     say("you", text);
     input.value = "";
     send.disabled = true;
+    // While the answer is on its way (a few seconds: the search, then the model), the assistant is
+    // seen "thinking" with three moving dots, so nobody thinks it ignored them (the user's ask, 10/30).
+    const thinking = document.createElement("div");
+    thinking.className = "npc-line is-them npc-thinking";
+    thinking.setAttribute("role", "status");
+    const who = document.createElement("strong");
+    who.textContent = npc.name;
+    const dots = document.createElement("span");
+    dots.className = "npc-dots";
+    dots.textContent = "Thinking";
+    for (let i = 0; i < 3; i++) {
+      const d = document.createElement("i");
+      d.textContent = ".";
+      dots.append(d);
+    }
+    dots.setAttribute("aria-label", `${npc.name} is writing an answer`);
+    thinking.append(who, dots);
+    log.append(thinking);
+    log.scrollTop = log.scrollHeight;
     void opts
       .ask(npc.id, text)
       .then((r) => {
@@ -160,6 +179,7 @@ export function mountNpcChat(opts: {
           say("them", typeof r === "string" ? r : r.reply);
       })
       .finally(() => {
+        thinking.remove();
         send.disabled = false;
         input.focus();
       });

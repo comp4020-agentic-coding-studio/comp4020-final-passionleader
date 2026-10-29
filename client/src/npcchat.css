@@ -38,3 +38,11 @@
 .npc-notice { width: min(420px, 100%); }
 .npc-notice ul { margin: 0 0 14px; padding-left: 20px; line-height: 1.45; }
 .npc-notice li + li { margin-top: 4px; }
+
+/* Waiting for the answer: "Thinking" and three dots that light up in turn (no content animation: Safari ignores it). */
+.npc-thinking .npc-dots { font-style: italic; opacity: 0.85; }
+.npc-thinking .npc-dots i { font-style: normal; font-weight: 700; opacity: 0.15; animation: npc-dot 1.2s infinite; }
+.npc-thinking .npc-dots i:nth-child(2) { animation-delay: 0.2s; }
+.npc-thinking .npc-dots i:nth-child(3) { animation-delay: 0.4s; }
+@keyframes npc-dot { 0%, 60%, 100% { opacity: 0.15; } 30% { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .npc-thinking .npc-dots i { animation: none; opacity: 0.8; } }
