@@ -364,9 +364,10 @@ function applyDaylight(): void {
   // The sky's reflected light dims with it; at night a cool, faint fill.
   scene.environmentIntensity = 0.12 + 0.88 * (1 - d.lamps);
   space.group.traverse((o) => {
-    if (!o.userData.lamp) return;
-    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial;
-    m.emissiveIntensity = 0.8 + d.lamps * 3.2;
+    if (o.userData.lamp) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = 0.8 + d.lamps * 3.2;
+    // The pool of light under each lamp and the halo round its bulb, only as it gets dark.
+    else if (o.userData.lampPool) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = d.lamps * 0.6;
+    else if (o.userData.lampHalo) ((o as THREE.Sprite).material as THREE.SpriteMaterial).opacity = d.lamps * 0.9;
   });
 }
 window.setInterval(applyDaylight, 60_000);

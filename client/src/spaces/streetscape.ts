@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { mat, scatter, solid, type Box, type Spot } from "../world.ts";
+import { lightPool, mat, scatter, solid, type Box, type Spot } from "../world.ts";
 
 // Street furniture along the path, from my own photos (kept out of the repo):
 // tall black lamp posts, a low concrete wall with a timber seat along the
@@ -32,6 +32,51 @@ function lamp(g: THREE.Group, colliders: Box[], x: number, z: number, face: numb
   l.rotation.y = face;
   g.add(l);
   solid(colliders, 0.3, 0.3, x, z);
+  // At night (daylight.ts): a warm pool on the ground under the head and a soft halo round the bulb. A
+  // painted glow, not a real light: dozens of real lights would cost every phone its frame rate.
+  const under = { x: x + Math.cos(face) * 0.55, z: z - Math.sin(face) * 0.55 };
+  const pool = lightPool(g, under.x, under.z, 7, 7, 0xffc878, 0);
+  pool.userData.lampPool = true;
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffd28a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  halo.scale.set(1.6, 1.6, 1);
+  halo.position.set(under.x, 5.0, under.z);
+  halo.userData.lampHalo = true;
+  g.add(halo);
+}
+
+let glow: THREE.Texture | null = null;
+function glowTexture(): THREE.Texture {
+  if (glow) return glow;
+  const c = document.createElement("canvas");
+  c.width = c.height = 64;
+  const ctx = c.getContext("2d")!;
+  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
+  grad.addColorStop(0, "rgba(255,255,255,1)");
+  grad.addColorStop(0.3, "rgba(255,255,255,0.5)");
+  grad.addColorStop(1, "rgba(255,255,255,0)");
+  ctx.fillStyle = grad;
+  ctx.fillRect(0, 0, 64, 64);
+  glow = new THREE.CanvasTexture(c);
+  return glow;
+}
+
+/**
+ * Lamp posts down both sides of the north road, evenly, like a highway's
+ * (the user's call, 10/30: none on the lawn or in the middle of a path).
+ * The north row stands at the east end of each flower bed, inside the bed,
+ * so it blocks no gap you walk through; the south row stands opposite, on
+ * the road's edge where it meets the lawn. A spot too near a door, a board
+ * or an assistant is skipped.
+ */
+export function roadLamps(g: THREE.Group, colliders: Box[], keepClear: { x: number; z: number }[]): void {
+  const north = BED_Z[0] + (BED_Z[1] - BED_Z[0]) / 2;
+  const south = -22.6;
+  for (const [, x1] of BED_RUNS) {
+    const x = x1 - 0.4;
+    const ok = (z: number): boolean => !keepClear.some((p) => Math.hypot(p.x - x, p.z - z) < 2.5);
+    if (ok(north)) lamp(g, [], x, north, Math.PI / 2); // in the bed: the bed is already solid
+    if (ok(south)) lamp(g, colliders, x, south, -Math.PI / 2);
+  }
 }
 
 /** A timber picnic table with two benches, long side along z; `y` is the floor it stands on. */
@@ -101,17 +146,20 @@ const BED_Z = [-36.4, -32.8] as const;
  * Low concrete-kerbed beds of shrubs, tall grass and flowers, broken by gaps
  * so you can cross to the buildings (one in line with the passage at x 7).
  */
+/** The flower beds along the north road, west to east (x from, x to), with gaps to walk through. */
+const BED_RUNS: [number, number][] = [
+  [-49.5, -42],
+  [-39.5, -32],
+  [-29.5, -22.5],
+  [-20, -13],
+  [-10.5, -3.5],
+  [-1, 4.5],
+  [9.5, 16.5],
+  [19, 26],
+];
+
 function flowerBeds(g: THREE.Group, colliders: Box[]): void {
-  const runs: [number, number][] = [
-    [-49.5, -42],
-    [-39.5, -32],
-    [-29.5, -22.5],
-    [-20, -13],
-    [-10.5, -3.5],
-    [-1, 4.5],
-    [9.5, 16.5],
-    [19, 26],
-  ];
+  const runs = BED_RUNS;
   const depth = BED_Z[1] - BED_Z[0] - 0.6; // a little paving either side
   const cz = (BED_Z[0] + BED_Z[1]) / 2;
   const kerb = mat(0xcfccc4);

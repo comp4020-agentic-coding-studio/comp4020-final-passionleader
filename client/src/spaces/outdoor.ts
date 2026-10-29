@@ -6,7 +6,7 @@ import { DOG_SPOT, addDog } from "./dog.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
-import { SEAT_WALL_SEATS, buildStreetscape } from "./streetscape.ts";
+import { SEAT_WALL_SEATS, buildStreetscape, roadLamps } from "./streetscape.ts";
 import { BADGER, LAWN_WEST_X, PICNIC_SEATS, buildCreek } from "./creek.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
@@ -234,6 +234,14 @@ export function buildOutdoor(): SpaceDef {
   fascia(g, ["Student Hub"], 5, "#1f2d3d", 3);
   // Chifley Library's front door, facing the bridge.
   doorway(g, -2, 27.85, Math.PI, "Chifley Library"); // on its front (z 28; moved 3 m south, 10/30)
+
+  // Lamp posts down both sides of the north road (10/30). The assistants (server/npcs.ts) and
+  // Seongsu's bench aren't solid, so they're named here with the doors and boards.
+  roadLamps(g, colliders, [
+    { x: -8.6, z: 7 }, { x: 4.6, z: 3 }, { x: 4.6, z: -5 }, { x: 18, z: -39 }, { x: 24.5, z: -21 },
+    DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, HOUSING_TENT, STUDY_BOARD,
+    { x: -43.8, z: -31 }, { x: -37.6, z: -31 }, { x: -36.4, z: -29.1 },
+  ]);
 
   return {
     id: "outdoor",
