@@ -236,7 +236,7 @@ export function buildHub(): SpaceDef {
       { x: BOARD_PC.x, z: RECEPTION_SPOT_Z, id: "board", label: "Open the lab matching board" },
       { x: ASK_PC.x, z: RECEPTION_SPOT_Z, id: "enquiries", label: "Ask the Hub a question" },
       // The wall calendar opens ANU's academic dates for 2026–2027 in our own window (plan 103, calendar.ts).
-      { x: CALENDAR.x, z: -HALF.halfZ + 1.9, id: "calendar", label: "See ANU's academic dates (2026–2027)" },
+      { x: CALENDAR.x, z: -HALF.halfZ + 2.3, id: "calendar", label: "See ANU's academic dates (2026–2027)" },
     ],
   };
 }
