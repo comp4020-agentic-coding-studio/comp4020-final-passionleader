@@ -550,7 +550,7 @@ app.post("/api/npc/:id/ask", async (c) => {
   if (text.length > 500) return c.json({ error: "Up to 500 characters." }, 400);
   const now = Date.now();
   const key = v.name.toLowerCase();
-  if (now - (lastAsked.get(key) ?? 0) < 3000) return c.json({ error: "One question every few seconds." }, 429);
+  if (now - (lastAsked.get(key) ?? 0) < 2000) return c.json({ error: "Still thinking about your last one: ask again in a moment." }, 429);
   // Thirty a person a day (a paid model answers): kept in memory, by day.
   const day = new Date().toISOString().slice(0, 10);
   const asked = askedBy.get(key);

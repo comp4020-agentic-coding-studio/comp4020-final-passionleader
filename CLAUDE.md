@@ -119,7 +119,7 @@ Read before planning or building: `README.md` (what good means for this app),
   reader is online their mailbox lights up at once. The log notes that mail
   went and to whom, never what it said. Guests neither send nor receive it.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
-  too, one question every three seconds and thirty a day each, 500
+  too, one question every two seconds and thirty a day each, 500
   characters; fifty a day per assistant (`NPC_PER_DAY`), which is the only
   thing that caps the bill (AWS's budget only warns). They answer only from
   public ANU pages crawled into `knowledge.db` (server/crawl.ts, beside the

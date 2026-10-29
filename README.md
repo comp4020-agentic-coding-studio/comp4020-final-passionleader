@@ -161,7 +161,7 @@ and new notes reach the same space within a second, and no other
 hidden room's one-poop-each rule); study
 groups never fill past their size, private questions reach only their
 writer and staff, mail only its reader, guests can't send it, and the
-assistants answer one question every three seconds (`board.test.ts`) and
+assistants answer one question every two seconds (`board.test.ts`) and
 only from their own crawled pages, never asking the model when none match
 (`knowledge.test.ts`); only the admin reads the seven-day log and the bug
 reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a

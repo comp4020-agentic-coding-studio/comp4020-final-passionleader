@@ -1,6 +1,6 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { BedrockRuntimeClient, ConverseCommand } from "@aws-sdk/client-bedrock-runtime";
-import { search, type Piece } from "./knowledge.ts";
+import { keywords, search, type Piece } from "./knowledge.ts";
 
 // The AI campus assistants (plan 56, 78): people standing about campus who
 // answer questions about one part of ANU each, only from its public pages
@@ -35,6 +35,8 @@ export interface Npc {
   model3d?: string;
   /** Not ready to answer yet: says this instead of asking the model (Seongsu, until his pages are written). */
   notYet?: string;
+  /** What a short, vague question to it is about ("price" at the gym means a gym membership). */
+  topic: string;
   /** Two questions it can answer, offered when someone just says hello. */
   examples: string[];
   /** "haiku" for the careful ones (courses, careers, and accommodation's price comparisons), "nova" for the rest (plan 78). */
@@ -60,6 +62,7 @@ export const NPCS: Npc[] = [
       { label: "Book a room or desk", url: "https://anu.libcal.com/" },
       { label: "Academic Skills", url: "https://www.anu.edu.au/students/contacts/academic-skills" },
     ],
+    topic: "Chifley library hours borrowing rooms",
     examples: ["When is Chifley Library open this week?", "How do I book an Academic Skills appointment?"],
     greeting: "Hi! Ask me about library hours, borrowing, booking a room, or Academic Skills (writing, study and referencing help).",
     voice: "female",
@@ -83,6 +86,7 @@ export const NPCS: Npc[] = [
       { label: "Clubs", url: "https://anu-sport.com.au/clubs" },
       { label: "FAQs", url: "https://anu-sport.com.au/footer/faqs" },
     ],
+    topic: "gym membership",
     examples: ["How much is a student gym membership?", "What sports clubs are there?"],
     greeting: "G'day! Ask me about the gym, memberships and sports clubs.",
     voice: "male",
@@ -107,6 +111,7 @@ export const NPCS: Npc[] = [
       { label: "Services (pantry, meals)", url: "https://anusa.com.au/services/" },
       { label: "Clubs", url: "https://anusa.com.au/clubs/" },
     ],
+    topic: "ANUSA student services",
     examples: ["Is there a free food pantry?", "Can ANUSA help me with a legal problem?"],
     greeting: "Hey! I can tell you about ANUSA's support, legal help, the pantry and clubs.",
     voice: "female",
@@ -130,6 +135,7 @@ export const NPCS: Npc[] = [
       { label: "Computing degrees and majors", url: "https://comp.anu.edu.au/study/bachelor/" },
       { label: "Programs and Courses", url: "https://programsandcourses.anu.edu.au/" },
     ],
+    topic: "course program requirements",
     examples: ["What are the prerequisites for COMP2300?", "When is the Semester 2 census date?"],
     greeting: "Hello! Ask me about any ANU course, degree, major or its requirements (say the year if it isn't this one), key dates and enrolment rules.",
     voice: "female",
@@ -153,6 +159,7 @@ export const NPCS: Npc[] = [
       { label: "Computing internships", url: "https://systems.anu.edu.au/students/student-employability/internships/computing/" },
       { label: "Research and Honours projects", url: "https://comp.anu.edu.au/study/projects/" },
     ],
+    topic: "careers internships jobs",
     examples: ["How do I find a computing internship?", "Can I get help with my CV?"],
     greeting: "Hi! Cloud, security, AI, data, research: let's talk about where you'd like to go.",
     voice: "male",
@@ -176,6 +183,7 @@ export const NPCS: Npc[] = [
       { label: "Applying", url: "https://study.anu.edu.au/accommodation/application-advice" },
       { label: "Fees & agreements", url: "https://study.anu.edu.au/accommodation/support-resources/fees-occupancy-agreements" },
     ],
+    topic: "residence accommodation",
     examples: ["What is the cheapest catered residence?", "How do I apply for accommodation?"],
     greeting: "Hi! I can compare ANU's residences for you: prices, catered or self-catered, and how to apply.",
     voice: "male",
@@ -198,6 +206,7 @@ export const NPCS: Npc[] = [
       { label: "Student visa conditions", url: "https://www.anu.edu.au/students/program-administration/program-management/information-for-international-student-visa-holders-studying-in-australia" },
       { label: "OSHC (health cover)", url: "https://study.anu.edu.au/apply/overseas-student-health-cover-oshc" },
     ],
+    topic: "international students visa",
     examples: ["What is OSHC?", "How many hours can I work on a student visa?"],
     greeting: "Welcome! Ask me about student visas, OSHC health cover and settling in at ANU.",
     voice: "female",
@@ -221,6 +230,7 @@ export const NPCS: Npc[] = [
       { label: "This project's README", url: "/readme/" },
       { label: "The code (GitHub)", url: "https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader" },
     ],
+    topic: "project",
     examples: ["How did you build this?", "What does this run on?"],
     greeting: "Boo! I'm Seongsu, the student who built this campus with Claude Code. Ask me how it works.",
     voice: "male",
@@ -318,7 +328,17 @@ const dontKnow = (npc: Npc, question: string): string =>
     .join(" or ")}.`;
 
 /** A hello, a thanks, or "what can you do?": nothing to look up, so it introduces itself (no model, no search). */
-const SMALL_TALK = /^\s*(hi|hello|hey|g'?day|yo|hiya|howdy|thanks?|thank you|cheers|ok(ay)?|bye|good (morning|afternoon|evening))\b[\s!.?~]*$|^\s*(what|how)\b.*\b(can|do)\b.*\byou\b.*(do|help)|^\s*who are you|^\s*help\s*[?!.]*\s*$/i;
+const SMALL_TALK = new RegExp(
+  [
+    // hello, thanks, bye (with a word or two after: "hi there", "thanks a lot")
+    "^\\s*(hi|hello|hey|heya|g'?day|yo|hiya|howdy|sup|thanks?|thx|ty|thank (you|u)|cheers|ok(ay)?|cool|bye|good (morning|afternoon|evening|day))\\b[\\w\\s']{0,12}[\\s!.?~]*$",
+    // who are you / what can you do / what do you do / help (also "r u", "u")
+    "^\\s*(who|what)\\s+(are|r)\\s+(you|u|ya)\\b",
+    "^\\s*(what|how)\\b.{0,20}\\b(can|do|could)\\s+(you|u|ya)\\b.{0,20}$",
+    "^\\s*(help|help me|menu|options)\\s*[?!.]*\\s*$",
+  ].join("|"),
+  "i",
+);
 const intro = (npc: Npc): string =>
   `${npc.greeting} I answer from ANU's own pages and link them. Try asking something like: ${npc.examples.map((e) => `"${e}"`).join(" or ")}.`;
 
@@ -332,7 +352,9 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   // into English search words by the cheap model, then searched; the answer still comes in its language.
   const foreign = /[^\x00-\x7F]/.test(question) && !/[a-z]{3,}/i.test(question.replace(/[^\x00-\x7F]/g, " "));
   const query = foreign ? ((await englishQuery(question)) ?? question) : question;
-  const pieces = search(npc.sources, query, 5);
+  // A short, vague question ("what's the price?", "where is it?") is about this assistant's own topic.
+  const vague = keywords(query).filter((w) => !/^\d+$/.test(w)).length <= 1;
+  const pieces = search(npc.sources, vague ? `${query} ${npc.topic}` : query, 5);
   if (!pieces.length) return dontKnow(npc, question);
   if (!takeOne(npc)) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
   const system = systemFor(npc, pieces);
