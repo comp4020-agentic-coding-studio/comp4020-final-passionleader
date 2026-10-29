@@ -328,7 +328,11 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   if (SMALL_TALK.test(question) || /^\s*(안녕|감사|고마워|뭐\s*할\s*수|도와)[^\n]{0,12}$/u.test(question)) return intro(npc);
   const offline = `I'm ${npc.name}, and I'm not connected to my AI brain right now, sorry! The pages below have what you need.`;
   if (!client && !bedrock) return offline;
-  const pieces = search(npc.sources, question, 5);
+  // The pages are in English: a question in another language (Korean, Chinese…) is first turned
+  // into English search words by the cheap model, then searched; the answer still comes in its language.
+  const foreign = /[^\x00-\x7F]/.test(question) && !/[a-z]{3,}/i.test(question.replace(/[^\x00-\x7F]/g, " "));
+  const query = foreign ? ((await englishQuery(question)) ?? question) : question;
+  const pieces = search(npc.sources, query, 5);
   if (!pieces.length) return dontKnow(npc, question);
   if (!takeOne(npc)) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
   const system = systemFor(npc, pieces);
@@ -362,6 +366,27 @@ export async function answer(npc: Npc, question: string): Promise<string> {
 }
 
 const CREDIT_OUT = "My AI's credit has run out for now (error NPC-CREDIT), so I can't answer. Please let the app's author know at u8321477@anu.edu.au. The pages below still work.";
+
+/** A question in another language as a short English search query (a few words), or null without a model. */
+async function englishQuery(question: string): Promise<string | null> {
+  const ask = "Rewrite this question as a short English search query of 3 to 8 keywords for ANU's websites (course codes and names kept as they are). Reply with the keywords only.";
+  try {
+    if (bedrock) {
+      const res = await bedrock.send(
+        new ConverseCommand({ modelId: MODELS.nova, system: [{ text: ask }], messages: [{ role: "user", content: [{ text: question.slice(0, 500) }] }], inferenceConfig: { maxTokens: 40, temperature: 0 } }),
+        { abortSignal: AbortSignal.timeout(10_000) },
+      );
+      return (res.output?.message?.content ?? []).flatMap((b) => (b.text ? [b.text] : [])).join(" ").trim() || null;
+    }
+    if (client) {
+      const res = await client.messages.create({ model: API_MODEL, max_tokens: 40, system: ask, messages: [{ role: "user", content: question.slice(0, 500) }] }, { timeout: 10_000, maxRetries: 0 });
+      return res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join(" ").trim() || null;
+    }
+  } catch {
+    // No translation: the search just won't find much.
+  }
+  return null;
+}
 
 /** The same question through Bedrock's Converse API, on the assistant's own model. A refused call reads as out of credit. */
 async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, offline: string, system: string): Promise<string> {

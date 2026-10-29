@@ -127,7 +127,10 @@ Read before planning or building: `README.md` (what good means for this app),
   sources, with their addresses, go to the model, told to use nothing else,
   link what it used, name the academic year it answers for, and say when the
   pages don't say. No piece matches and the model is never asked: it says it
-  couldn't find it and points to its pages. Courses, careers and accommodation run on Claude
+  couldn't find it and points to its pages. A question in another language
+  is first turned into English search words by the cheap model (the pages
+  are English), and answered in its own language; a hello gets the
+  assistant's introduction and two example questions, with no model call. Courses, careers and accommodation run on Claude
   Haiku, the rest on Amazon Nova 2 Lite, both on Amazon Bedrock with the S3
   keys (no new key; or Claude by `ANTHROPIC_API_KEY` when `NPC_MODEL` names
   one); no key is ever in the repo. 400 tokens at most, told it's an
