@@ -143,20 +143,24 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
   const money = /\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|how much|\$)/i.test(question);
   const terms = [...words, ...extra].map((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,4}($|[^\\p{L}\\p{N}])`, "u"));
   // Numbers ("2", "2026") are in half the catalogue's titles: only words weigh in a title.
-  const wordTerms = terms.filter((_, i) => !/^\d+$/.test([...words, ...extra][i]!));
+  // (Nor the added synonyms: every course page has "First Semester" and "Second Semester" headings.)
+  const wordTerms = terms.filter((_, i) => i < words.length && !/^\d+$/.test(words[i]!) && !["semester", "date", "dates"].includes(words[i]!));
+  const catalogueLast = (r: { url: string; source: string }): number => (!codes.length && r.source === "catalogue" && /\/course\//.test(r.url) ? 1 : 0);
   const scored = rows
     .filter((r) => !(asked && r.year !== null && r.year !== year))
     .map((r, i) => {
       const text = `${r.title} ${r.body}`.toLowerCase();
       const hits = terms.filter((t) => t.test(text)).length;
       // A word in the title counts twice: the page is about it, not just mentioning it.
-      const title = r.title.toLowerCase();
+      // The piece's own headings ("## Majors") count like its title: that part of the page is about it.
+      const title = `${r.title} ${(r.body.match(/^## .*$/gm) ?? []).join(" ")}`.toLowerCase();
       const weight = hits + wordTerms.filter((t) => t.test(title)).length;
       const prices = money ? Math.min(6, (r.body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length) : 0;
       return { r, text, hits, weight, prices, i };
     })
     .filter((x) => x.hits >= need && (!codes.length || codes.some((c) => x.text.includes(c))))
-    .sort((a, b) => b.weight - a.weight || b.prices - a.prices || a.i - b.i);
+    // On a tie, a general page before one of the catalogue's thousands of course pages, unless a course code was asked about.
+    .sort((a, b) => b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
   for (const { r } of scored) {
