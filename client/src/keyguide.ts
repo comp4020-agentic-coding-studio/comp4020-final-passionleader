@@ -67,12 +67,12 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
   enter.classList.add("keyguide-wide");
 
   // Move on the left, at the bottom; to its right two straight rows, each key over its caption:
-  // E Q R V on top, Shift Space Enter below (the user's layout, 10/30).
+  // Q E R V on top, Shift Space Enter below (the user's layout, 10/30).
   const rows = document.createElement("div");
   rows.className = "keyguide-rows";
   const row1 = document.createElement("div");
   row1.className = "keyguide-row";
-  row1.append(group("Interact", e), group("Emotes", q), group("Turn view", r), group("Talk (hold)", vk));
+  row1.append(group("Emotes", q), group("Interact", e), group("Turn view", r), group("Talk (hold)", vk));
   const row2 = document.createElement("div");
   row2.className = "keyguide-row";
   row2.append(group("Run", shift), group("Jump", space), group("Chat", enter));
