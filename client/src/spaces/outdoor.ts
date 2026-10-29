@@ -55,13 +55,13 @@ export function buildOutdoor(): SpaceDef {
   grass(312, 290, -194, 205); // south of the creek's end (x -350..-38, z 60..350)
   grass(381, 324, 159.5, 188); // south, east of the turn (x -31..350)
   grass(7, 290, -34.5, 205); // south of where the turn ends (z 60..350)
-  // The campus paving (x -92..92, z -27..17), open over the ramp down to the sunken road (x 31.5..40.5, z 4..17).
-  // West of x -57.6 nothing is paved: that's the creek and its far bank (creek.ts).
-  floor(g, 149.6, 31, 17.2, -11.5, texMat("ai/paving.jpg", 30, 15.5, 0xd6d2ca)); // z -27..4, x -57.6..92
-  floor(g, 89.1, 13, -13.05, 10.5, texMat("ai/paving.jpg", 17, 6.5, 0xd6d2ca)); // z 4..17, x -57.6..31.5
-  floor(g, 51.5, 13, 66.25, 10.5, texMat("ai/paving.jpg", 10, 6.5, 0xd6d2ca)); // x 40.5..92
+  // The campus paving (x -35..35, z -27..17; the grass round Badger & Co's
+  // picnic tables shows west of it), open over the ramp down to the sunken
+  // road (x 31.5..40.5, z 4..17).
+  floor(g, 70, 31, 0, -11.5, texMat("ai/paving.jpg", 35, 15.5, 0xd6d2ca)); // z -27..4
+  floor(g, 66.5, 13, -1.75, 10.5, texMat("ai/paving.jpg", 33, 6.5, 0xd6d2ca)); // z 4..17, x -35..31.5
   // A paved strip south of the cutting (backdrop.ts, z 17..26), in front of the library (moved 3 m south, 10/30).
-  floor(g, 149.6, 2, 17.2, 27, texMat("ai/paving.jpg", 30, 1, 0xd6d2ca)); // x -57.6..92
+  floor(g, 70, 2, 0, 27, texMat("ai/paving.jpg", 35, 1, 0xd6d2ca)); // x -35..35
   // The path runs from the north edge to the library's forecourt (backdrop.ts,
   // from z 26.2), and stops there so the two don't overlap and flicker.
   const pathFrom = -OUTDOOR.halfZ - 3;

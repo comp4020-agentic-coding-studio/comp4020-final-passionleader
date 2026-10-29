@@ -174,7 +174,9 @@ const SHOPS = [
 /** West of Symposium: an unlet unit or a nameless office, glass front and a plain grey awning, no name. */
 const UNLET = [{ name: "", w: 9, board: "", fg: "", awning: 0x8a8d90 }];
 
-function shopfronts(g: THREE.Group, x0: number, x1: number, z: number, shops = SHOPS): void {
+function shopfronts(parent: THREE.Group, x0: number, x1: number, z: number, shops = SHOPS): THREE.Group {
+  const g = new THREE.Group();
+  parent.add(g);
   const h = FLOOR_H;
   const wall = mat(0xd9c8a9);
   const frame = mat(0x2a2a2a);
@@ -207,6 +209,7 @@ function shopfronts(g: THREE.Group, x0: number, x1: number, z: number, shops = S
     }
     x += s.w + 0.5;
   }
+  return g;
 }
 
 export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
@@ -230,20 +233,23 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // The row's upper floors fade when the camera, turned to look north to
   // south, stands behind them (the user, 10/30); facing north they're never in the way.
   const rowBlocks: THREE.Mesh[] = [];
+  // Its ground floor too (the shopfronts and awnings): that was what still hid you.
+  const rowParts: THREE.Group[] = [];
   // The row of pale-brick buildings along the road's north side, with a
   // two-storey passage under it in line with 154's west side.
   const beige = facadeTexture("#d9c8a9", "#cbb995", "#3d4a55", "#ece2cf");
   // Its ground floor along the road is shops and cafes, not windows.
   rowBlocks.push(block(backdrop, beige, -18, -47, 44, 14, 6, 1));
-  shopfronts(backdrop, -40, 4, -40);
+  rowParts.push(shopfronts(backdrop, -40, 4, -40));
   // The row carries on west to x -51, leaving a white path and the creek's
   // boardwalk (each 3.2 m) before the creek: the same block over a glass
   // ground floor, an unlet unit or nameless office.
   rowBlocks.push(block(backdrop, beige, -45.5, -47, 11, 14, 6, 1));
-  shopfronts(backdrop, -51, -40, -40, UNLET);
+  rowParts.push(shopfronts(backdrop, -51, -40, -40, UNLET));
   rowBlocks.push(block(backdrop, beige, 7, -47, 6, 14, 5, 2));
   road(6, 22, 7, -51);
   for (const m of rowBlocks) markOccluder(g, m);
+  for (const part of rowParts) markOccluderGroup(g, part);
   block(backdrop, beige, 7, -68, 18, 12, 5); // seen through the passage
   block(backdrop, beige, 20, -57, 20, 14, 7);
 
