@@ -174,7 +174,9 @@ crawls itself (`server/crawl.ts`). They are kept in `knowledge.db`, beside
 overrides it).
 
 - **It refreshes itself.** In production the server checks once a day and
-  crawls again when the last finished crawl is over 30 days old. A full crawl
+  crawls again when the last finished crawl is over 30 days old. The very
+  first crawl is seeded by hand (below), unless `CRAWL_FIRST=1` tells a new
+  server to start it itself. A full crawl
   is about 8,000 pages, two seconds apart: roughly five to six hours, a
   hundred-odd MB. It needs no AI model and no Claude, only the network.
   `CRAWL_AUTO=0` turns this off.

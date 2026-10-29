@@ -1444,6 +1444,10 @@ setInterval(purge, 60 * 60 * 1000).unref();
 let crawling = false;
 const crawlIfDue = (): void => {
   const last = lastCrawl();
+  // The first full crawl is seeded by hand (docs/self-hosting.md), so a fresh
+  // deploy doesn't spend hours on a crawl about to be replaced; CRAWL_FIRST=1
+  // lets a new server start one itself.
+  if (!last && process.env.CRAWL_FIRST !== "1") return;
   if (crawling || (last && Date.now() - Date.parse(`${last}Z`) < 30 * 86400_000)) return;
   crawling = true;
   void crawl()

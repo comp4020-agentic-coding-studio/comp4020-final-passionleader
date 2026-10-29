@@ -141,8 +141,8 @@ Read before planning or building: `README.md` (what good means for this app),
   seconds apart (more if robots.txt asks), obeys the sites' robots.txt for
   `*`, names the project and the author's email in its User-Agent and never
   passes for a named AI bot. It runs with no model, by `node server/crawl.ts`
-  or by the server itself once a month (production only); a page that fails
-  keeps what it had.
+  or by the server itself once a month (production only, once a first crawl
+  has been seeded); a page that fails keeps what it had.
 - The Poop Room (an easter egg behind the "Staff only" door at the far end
   of Lab Coffee): in there the Q menu's first item poops instead of sticking
   a note. One poop per person, anyone joined (guests too), five seconds
