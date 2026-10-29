@@ -186,6 +186,7 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
   const requisite = (r: { body: string }): number => (needsQ && /must have (successfully )?completed|not able to enrol in this course if/i.test(r.body) ? 1 : 0);
   const placed = (r: { body: string }): number => (WHERE_Q.test(question) && ADDRESS.test(r.body) ? 1 : 0);
   const hoursFirst = (r: { title: string }): number => (when && /\bhours\b/i.test(r.title) ? 1 : 0);
+  const ownCourse = (r: { url: string }): number => (codes.length === 1 && r.url.toLowerCase().endsWith(`/course/${codes[0]}`) ? 1 : 0);
   const catalogueLast = (r: { url: string; source: string }): number => (!codes.length && r.source === "catalogue" && /\/course\//.test(r.url) ? 1 : 0);
   const scored = rows
     .filter((r) => !(asked && r.year !== null && r.year !== year))
@@ -201,16 +202,19 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     })
     .filter((x) => x.hits >= need && (!codes.length || codes.some((c) => x.text.includes(c))))
     // On a tie, a general page before one of the catalogue's thousands of course pages, unless a course code was asked about.
-    .sort((a, b) => hoursFirst(b.r) - hoursFirst(a.r) || requisite(b.r) - requisite(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
+    // Asked about one course by its code, its own page comes before others that only mention it (as a prerequisite, say).
+    .sort((a, b) => ownCourse(b.r) - ownCourse(a.r) || hoursFirst(b.r) - hoursFirst(a.r) || requisite(b.r) - requisite(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
   for (const { r } of scored) {
-    // At most three pieces of one page, so a long page doesn't crowd the rest out.
+    // At most three pieces of one page, so a long page doesn't crowd the rest out; but asked about one
+    // course by its code, its own page comes whole (when it runs and what it needs are different pieces).
     const n = perUrl.get(r.url) ?? 0;
-    if (n >= 3) continue;
+    const ownPage = codes.length === 1 && r.url.toLowerCase().endsWith(`/course/${codes[0]}`);
+    if (n >= (ownPage ? 12 : 3)) continue;
     perUrl.set(r.url, n + 1);
     picked.push({ title: r.title, body: r.body, url: r.url, source: r.source, year: r.year });
-    if (picked.length >= limit) break;
+    if (picked.length >= (codes.length === 1 ? Math.max(limit, 12) : limit)) break;
   }
   return picked;
 }
