@@ -288,7 +288,6 @@ body.room-open #keyguide, body.in-room #hud-name, body.in-room #hud-online { dis
     padding-left: calc(16px + env(safe-area-inset-left));
     padding-right: calc(16px + env(safe-area-inset-right));
   }
-  #room-reopen { top: calc(12px + env(safe-area-inset-top)); left: calc(16px + env(safe-area-inset-left)); }
 }
 /* Turning the view outside (plan 34): one round button, bottom centre on a computer, above the pad's row on a phone. */
 #turn-btn {

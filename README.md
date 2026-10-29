@@ -93,7 +93,8 @@ should feel at home in a virtual space shaped like the real campus they know.
    whiteboard (Excalidraw, in a new tab), and Save chat or Save notes, which
    keep a copy for you alone for 30 days (the menu's 📂, or ✉️ → Saved); the
    room is told. Close the menu
-   to see the room, and walk out by the door to leave; when the last person
+   to see the room (the "Open Room UI" button at the top right brings it back);
+   leave from the menu or by the door; when the last person
    leaves, the chat, the notes, the files and the invites are gone.
 8. Something broken? The gear's dialog has **Report a bug**: a short note,
    with a screenshot if you like, that only the admin reads. Someone being

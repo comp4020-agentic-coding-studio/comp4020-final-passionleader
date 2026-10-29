@@ -150,8 +150,18 @@
   margin-left: auto;
 }
 
-.room-leave-hint {
-  padding: 0 14px 12px;
+.room-leave-btn {
+  margin: 4px 14px 14px;
+  min-height: 48px;
+  border: 2px solid #9a2a1a;
+  border-radius: 10px;
+  background: #fff4f0;
+  color: #9a2a1a;
+  font-weight: 700;
+}
+
+.room-leave-btn:hover {
+  background: #ffe6de;
 }
 
 .room-secondary {
@@ -168,20 +178,21 @@
 /* Closed: a small button to open the menu again, top left where the name was (the HUD steps aside in a room). */
 #room-reopen {
   position: fixed;
-  top: 12px;
-  left: 16px;
+  top: calc(64px + env(safe-area-inset-top, 0px)); /* under the round buttons at the top right */
+  right: calc(12px + env(safe-area-inset-right, 0px));
   z-index: 17;
   display: inline-flex;
   align-items: center;
-  gap: 6px;
-  min-height: 44px;
-  padding: 6px 14px;
+  gap: 8px;
+  min-height: 52px;
+  padding: 8px 18px;
   border: 0;
-  border-radius: 22px;
+  border-radius: 26px;
   background: var(--accent, #6b3f1d);
   color: #fff;
-  font-weight: 700;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
 }
 
 .room-badge {

@@ -191,10 +191,14 @@ export function mountRoomPanel(opts: {
   );
   addItem("📂", "My saved chats and notes", "Read what you've saved (yours only, 30 days)", () => opts.onSaved());
   addItem("❓", "Help", "How rooms work, in the Campus Guide", () => opts.onHelp());
-  const leaveHint = document.createElement("p");
-  leaveHint.className = "room-note room-leave-hint";
-  leaveHint.textContent = "To leave, close this and walk out by the door.";
-  menu.append(menuHead, members, invite, items, leaveHint);
+  // Last on the menu: leaving (the user's call, 10/30), the same as walking
+  // out by the door, so the last one out is warned first.
+  const leaveBtn = document.createElement("button");
+  leaveBtn.type = "button";
+  leaveBtn.className = "room-leave-btn";
+  leaveBtn.textContent = "🚪 Leave the room";
+  leaveBtn.addEventListener("click", () => askLeave());
+  menu.append(menuHead, members, invite, items, leaveBtn);
 
   // --- the chat view ------------------------------------------------------------
   const chatView = document.createElement("div");
@@ -262,7 +266,7 @@ export function mountRoomPanel(opts: {
   reopen.id = "room-reopen";
   reopen.hidden = true;
   const reopenLabel = document.createElement("span");
-  reopenLabel.textContent = "🚪 Room";
+  reopenLabel.textContent = "Open Room UI";
   const reopenBadge = document.createElement("span");
   reopenBadge.className = "room-badge";
   reopenBadge.hidden = true;

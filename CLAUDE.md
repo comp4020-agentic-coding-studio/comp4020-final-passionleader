@@ -169,9 +169,9 @@ Read before planning or building: `README.md` (what good means for this app),
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
   chat, host, invites and files go, and the last one out is warned of
-  that before leaving by the door (there is no Leave button: the room's
-  window opens on coming in, closes to a small "Room" button, and you walk
-  out). One exception: a member may save the chat so far (its lines, not
+  that before leaving (by the room menu's Leave, last on it, or the door;
+  the menu opens on coming in and closes to an "Open Room UI" button under the
+  round buttons at the top right). One exception: a member may save the chat so far (its lines, not
   the files), or the shared notes alone, for themselves only, kept 30 days
   in SQLite and then purged, at most 50 each; everyone inside is told in the
   room that they saved it. Only its owner lists,
