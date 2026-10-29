@@ -7,11 +7,11 @@
   left: 12px;
   bottom: 12px;
   z-index: 15;
-  width: 184px;
   pointer-events: none;
   user-select: none;
-  display: grid;
-  gap: 8px;
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
   font-family: system-ui, sans-serif;
 }
 
@@ -102,3 +102,12 @@
 
 /* Captions sit over brick and pavement outdoors: give them a light backing. */
 .keyguide-caption { padding: 0 4px; border-radius: 4px; background: rgba(255, 251, 224, 0.85); }
+
+/* Two straight rows right of Move, keys centred over their captions. */
+.keyguide-rows { display: flex; flex-direction: column; gap: 8px; }
+.keyguide-row { display: flex; align-items: flex-end; gap: 10px; }
+.keyguide-row .keyguide-group { min-width: 52px; }
+.keyguide-move { align-self: flex-end; }
+.keyguide-wide { min-width: 56px; font-size: 9px; }
+.keyguide-space { min-width: 96px; flex: none; }
+.keyguide-caption { white-space: nowrap; }

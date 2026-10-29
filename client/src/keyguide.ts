@@ -60,26 +60,26 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
   const enter = key("enter", "ENTER");
   enter.classList.add("keyguide-e", "keyguide-enter");
 
-  const main = document.createElement("div");
-  main.className = "keyguide-main";
-  main.append(group("Move", wasd), group("Interact", e), group("Emotes", q), group("Turn view", r), group("Talk (hold)", vk), group("Chat", enter));
-
   const space = key("space", "SPACE");
   space.classList.add("keyguide-space");
-  const spaceRow = document.createElement("div");
-  spaceRow.className = "keyguide-space-row";
   const shift = key("shift", "SHIFT");
-  shift.classList.add("keyguide-e", "keyguide-enter");
-  spaceRow.append(shift, space);
-  const spaceGroup = document.createElement("div");
-  spaceGroup.className = "keyguide-group";
-  spaceGroup.append(spaceRow);
-  const spaceCaption = document.createElement("span");
-  spaceCaption.className = "keyguide-caption";
-  spaceCaption.textContent = "Shift run · Space jump";
-  spaceGroup.append(spaceCaption);
+  shift.classList.add("keyguide-wide");
+  enter.classList.add("keyguide-wide");
 
-  root.append(main, spaceGroup);
+  // Move on the left, at the bottom; to its right two straight rows, each key over its caption:
+  // E Q R V on top, Shift Space Enter below (the user's layout, 10/30).
+  const rows = document.createElement("div");
+  rows.className = "keyguide-rows";
+  const row1 = document.createElement("div");
+  row1.className = "keyguide-row";
+  row1.append(group("Interact", e), group("Emotes", q), group("Turn view", r), group("Talk (hold)", vk));
+  const row2 = document.createElement("div");
+  row2.className = "keyguide-row";
+  row2.append(group("Run", shift), group("Jump", space), group("Chat", enter));
+  rows.append(row1, row2);
+  const moveGroup = group("Move", wasd);
+  moveGroup.classList.add("keyguide-move");
+  root.append(moveGroup, rows);
   document.body.append(root);
 
   const keycaps: Record<TrackedCode, HTMLDivElement> = {
