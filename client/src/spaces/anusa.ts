@@ -15,8 +15,8 @@ import { roomShell, westWindows } from "./room.ts";
 export const ANUSA = { halfX: 10, halfZ: 7 };
 /** The PC on the counter; E from the south of it. */
 export const ANUSA_PC = { x: -4, z: -4.9 };
-/** On the north wall, where a sign to the study-group board hung (plan 102: taken down), a picture. */
-const NORTH_ART = { x: 4.5, z: -6.7 };
+/** On the north wall, where a sign to the study-group board hung: the clubs board (plan 102), its two halves used from in front. */
+const CLUBS_BOARD = { x: 4.5, z: -6.7 };
 
 const GREEN = 0x1e6b52;
 
@@ -47,9 +47,12 @@ export function buildAnusa(): SpaceDef {
   place(g, "coatRackStanding.glb", 1.8, -8.8, -6.2);
   solid(colliders, 0.5, 0.5, -8.8, -6.2);
 
-  const north = poster("ai/poster_art.jpg", 2.4, 1.75);
-  north.position.set(NORTH_ART.x, 1.9, -halfZ + 0.02);
-  g.add(north);
+  // The clubs board (plan 102): ANU's clubs and their events come from the
+  // Rubric listing ANUSA itself embeds on its site; E shows it in the
+  // in-app window, the clubs on the left half, upcoming events on the right.
+  const board = textPlane(["ANU clubs & societies", "← Clubs list    ·    Club events →"], 3.6, 1.3, { bg: "#1e6b52", fg: "#ffffff", font: 0.26 });
+  board.position.set(CLUBS_BOARD.x, 1.9, -halfZ + 0.02);
+  g.add(board);
   const art = poster("ai/poster_hub.jpg", 1.4, 2.1);
   art.position.set(halfX - 0.01, 2, -4.4);
   art.rotation.y = -Math.PI / 2;
@@ -147,7 +150,12 @@ export function buildAnusa(): SpaceDef {
     bgm: SHARED_BGM,
     floor: "carpet",
     seats,
-    links: [{ x: ANUSA_PC.x, z: ANUSA_PC.z + 1.3, label: "Open ANUSA's site", url: "https://anusa.com.au/", embeddable: true }],
+    links: [
+      { x: ANUSA_PC.x, z: ANUSA_PC.z + 1.3, label: "Open ANUSA's site", url: "https://anusa.com.au/", embeddable: true },
+      // The listing ANUSA embeds on its clubs pages (Rubric, ANU = university 1): framed the same way here.
+      { x: CLUBS_BOARD.x - 0.9, z: -halfZ + 1.3, label: "See ANU's clubs and societies", url: "https://campus.hellorubric.com/search?type=societies&universityid=1&country=AU&state=NSW&iframe=true", embeddable: true },
+      { x: CLUBS_BOARD.x + 0.9, z: -halfZ + 1.3, label: "See upcoming club events", url: "https://campus.hellorubric.com/search?type=events&universityid=1&country=AU&state=NSW&iframe=true&tab=events", embeddable: true },
+    ],
     // A place to sit and talk; notes go up outside and in classrooms.
     noNotes: true,
   };
