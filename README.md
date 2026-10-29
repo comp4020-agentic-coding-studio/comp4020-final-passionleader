@@ -56,9 +56,13 @@ should feel at home in a virtual space shaped like the real campus they know.
    whisper to one signed-up person wherever they are (only the two of you
    see it, and it isn't kept).
    Under your name, how many people are on campus, in the Hub, the
-   library, the Career Hub, the classrooms and the meeting rooms (numbers
-   only, never who; a phone shows the total),
-   and the classroom picker shows how many are in each.
+   library, the Career Hub, the classrooms and the meeting rooms (a phone
+   shows the total); press it to see who is in the same place as you, by
+   name (elsewhere, numbers only), and press a name to whisper. Beside your
+   name, say whether you're happy to chat, studying or away; everyone
+   there sees it on your name tag. The classroom picker shows how many are
+   in each. Outside follows Canberra's clock: a golden hour, dusk, and a
+   night with the lamps lit down the north road.
    Lab Coffee wraps round 154's north-west corner, with a terrace; its menu
    board (**E**) lists the cafés on campus, where each is and roughly what
    it sells, gathered from public pages (not an official list).
@@ -70,7 +74,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    Haiku for courses, careers and accommodation, Amazon Nova for the rest) answers in their
    name only from public ANU pages the app crawls each month, linking the
    pages it used; if those pages don't cover it, it says so instead of
-   guessing. Ask in any language. It can still be wrong. What you ask isn't kept.
+   guessing. Ask in any language; it answers in yours. It can still be wrong. What you ask isn't kept.
    Signed up, the ✉️ button writes to someone by name and keeps your mail
    for 30 days; it lights up when something arrives. Across the north road,
    the Career Hub (the O'Donoghue centre) has the careers adviser and six
@@ -157,14 +161,17 @@ may not do, password resets (`campus.test.ts`); notes and comments
 persist, stay in their space, keep their limits, and only their author or an
 admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
 and new notes reach the same space within a second, and no other
-(`realtime.test.ts`, with whispers reaching only their reader and the
+(`realtime.test.ts`, with whispers reaching only their reader, a status
+being one of three values at most every two seconds, and the
 hidden room's one-poop-each rule); study
 groups never fill past their size, private questions reach only their
 writer and staff, mail only its reader, guests can't send it, and the
 assistants answer one question every two seconds (`board.test.ts`) and
-only from their own crawled pages, stating no facts when none match
-(`knowledge.test.ts`); only the admin reads the seven-day log and the bug
-reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
+only from their own crawled pages, stating no facts when none match, in
+the asker's language, linking each page once (`knowledge.test.ts`); only
+the admin reads the seven-day log and the bug reports, finds people in it
+by part of a name, a student number or an email, and the log leaves chat
+out (`admin.test.ts`, `rules.test.ts`); a
 meeting room holds six and a counselling room only
 the invited, and a saved chat is its saver's alone (`rooms.test.ts`); files are checked by type, size and who may
 attach or fetch them (`files.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
@@ -193,8 +200,8 @@ unless someone inside saves the chat: then a copy is kept for them alone for
 
 ## What I chose not to build (yet)
 
-Voice chat, and keeping a meeting room's files beyond the room (a saved chat
-keeps its lines only). Staff are whoever signs up with a staff @anu.edu.au
+Keeping a meeting room's files beyond the room (a saved chat keeps its
+lines only). Staff are whoever signs up with a staff @anu.edu.au
 address; nothing yet tells a lecturer from other staff. The buildings are
 simplified, not surveyed.
 

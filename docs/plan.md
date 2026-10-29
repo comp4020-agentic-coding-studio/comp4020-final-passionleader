@@ -109,84 +109,122 @@ won't fit is dropped from the end of bundle 3 (below), not cut in advance.
 
 *Small fixes and comfort*
 
-40. Esc closes the lawn noticeboard
-41. "Open in new tab" opens the page you'd reached in the in-app window, if
+40. ✅ Esc closes the lawn noticeboard
+41. ✅ "Open in new tab" opens the page you'd reached in the in-app window, if
     the browser lets the app read it (checked first)
-45. A sticky note opens scrolled to the top
-46. Hearts on comments (the most-hearted pinned first), reporting a post or
+45. ✅ A sticky note opens scrolled to the top
+46. ✅ Hearts on comments (the most-hearted pinned first), reporting a post or
     comment, and a confirm before deleting, on notes and every board
-47. Lawn noticeboard posts go after 30 days, and the write form says so
-49. Times shown in Canberra time (stored as UTC)
-50. Emotes other than dance and notes once every two seconds, checked on the
+47. ✅ Lawn noticeboard posts go after 30 days, and the write form says so
+49. ✅ Times shown in Canberra time (stored as UTC)
+50. ✅ Emotes other than dance and notes once every two seconds, checked on the
     server
-51. `/all message` reaches the chat log in every space; bubbles stay local
-54. The admin's "coming in" restriction kicks at once; a plain kick with no
+51. ✅ `/all message` reaches the chat log in every space; bubbles stay local
+54. ✅ The admin's "coming in" restriction kicks at once; a plain kick with no
     restriction
-55. Jumping over sofas
-57. Signs say what a thing is, not "press E" (the E badge already does)
-74. The lit E badge sits over the thing you use, not behind it
-75. The meeting room door label isn't cut off by the chat column
+55. ✅ Jumping over sofas
+57. ✅ Signs say what a thing is, not "press E" (the E badge already does)
+74. ✅ The lit E badge sits over the thing you use, not behind it
+75. ✅ The meeting room door label isn't cut off by the chat column
 
 *Looks*
 
-42. A hat colour (the hair palette)
-43. A yellow hard hat only `qa_` accounts may wear, checked on the server
-44. The dog barks happily when you press "Buy me a feed"
-52. A coat-hanger button left of settings opens Customise look (it leaves
+42. ✅ A hat colour (the hair palette)
+43. ✅ A yellow hard hat only `qa_` accounts may wear, checked on the server
+44. ✅ The dog barks happily when you press "Buy me a feed"
+52. ✅ A coat-hanger button left of settings opens Customise look (it leaves
     the settings dialog); faces stay visible when skin and hair match
 
 *Places*
 
-58. The lawn noticeboard moves south of Broger's garden bed, facing the main
+58. ✅ The lawn noticeboard moves south of Broger's garden bed, facing the main
     path
-59. An ANU Sports tent at the east end with a PC to its site
-60. The lawn to the creek west of it, closer to the real place
-61. The east–west white path carries on across the asphalt
-62. An easter egg: a hidden toilet back to Poop Room
-63. The Hub's board: staff–student matching, without Ask the Hub
-64. Behind the Hub desk: two AI advisers (56) and a PC for enquiries, public
+59. ✅ An ANU Sports tent at the east end with a PC to its site
+60. ✅ The lawn to the creek west of it, closer to the real place
+61. ✅ The east–west white path carries on across the asphalt
+62. ✅ An easter egg: a hidden toilet back to Poop Room
+63. ✅ The Hub's board: staff–student matching, without Ask the Hub
+64. ✅ Behind the Hub desk: two AI advisers (56) and a PC for enquiries, public
     or private (private ones only the writer and staff see)
-65. Hub reception in order: matching board, researcher search, AI essentials
+65. ✅ Hub reception in order: matching board, researcher search, AI essentials
     as a pile of papers
-66. A large wall calendar of campus events in the Hub
-67. Classroom boards as PCs
-68. COMMON is replaced by the ANUSA Student Lounge, on the ground floor left of the Hub's
+66. ✅ A large wall calendar of campus events in the Hub
+67. ✅ Classroom boards as PCs
+68. ✅ COMMON is replaced by the ANUSA Student Lounge, on the ground floor left of the Hub's
     entrance, a place to rest with two meeting rooms; 68a. a study-group board
     beside 155's door: a size, and who has joined
-69. The admin picks "new tab" or "in-app window" for a classroom link
-70. Research Ethics in the library as a pile of papers
+69. ✅ The admin picks "new tab" or "in-app window" for a classroom link
+70. ✅ Research Ethics in the library as a pile of papers
 
 *Bigger features*
 
-56. AI campus assistants: one each in the library, the ANU Sports tent and
+56. ✅ AI campus assistants: one each in the library, the ANU Sports tent and
     the ANUSA Student Lounge, and a course adviser and a careers adviser in the Hub;
     answers drawn from ANU pages fetched weekly; nothing said is stored, and
     the window says so; a per-person daily limit (the model runs on the
     course budget)
-38. Sign-up by student number with an emailed code (AWS SES), guest log-in,
+38. ✅ Sign-up by student number with an emailed code (AWS SES), guest log-in,
     and roles: guest, student, staff, admin; guests read and stick notes but
     get a sign-up prompt when they try to post
-16. Mail to someone who isn't online, from a mailbox button beside the coat
+16. ✅ Mail to someone who isn't online, from a mailbox button beside the coat
     hanger; 17, 36. one-to-one chat and counselling; 18. files on them
-37. Meeting rooms for working together, and saving a room's chat and files to
+37. ✅ Meeting rooms for working together, and saving a room's chat and files to
     your own archive; 39. a shared Markdown document in team rooms
-72. A skippable tutorial of small quests ("Go to the library" ✓)
-53. A minimap outside, desktop only, with the names of buildings you can enter
-33. The rest of reporting: mute
-35. Shaders for High graphics; 35a. the sky drifts left to right
-34. A camera button that turns 90° outside (last)
-31. Voice (last; needs a relay server)
-20. Club, residence and college / course spaces (last, if at all)
+72. ✅ A skippable tutorial of small quests ("Go to the library" ✓)
+53. ✅ A minimap outside, desktop only, with the names of buildings you can enter
+33. ✅ The rest of reporting: mute
+35. Shaders for High graphics (→ 105, next week); 35a. ✅ the sky drifts left to right
+34. ✅ A camera button that turns 90° outside (last)
+31. ✅ Voice, through the author's LiveKit server on EC2 (86)
+20. Club, residence and college / course spaces (last, if at all; partly covered by the ANUSA clubs board and the accommodation tent)
 —   After the course, before Fly.io is taken back: a backup server on EC2
     (`docs/self-hosting.md`)
 
 *Review*
 
-73. Multi-agent review runs: before each push, several reviewers (bugs,
+73. (In part: one review run on 30 October, the assistants' search only; the rest joins the 6 November audit, 97.) Multi-agent review runs: before each push, several reviewers (bugs,
     `CLAUDE.md` rules, missing specs, phone and keyboard-only, security) with
     each finding checked again; research runs before the big items; and one
     full audit on 6 November (README ↔ spec ↔ `CLAUDE.md` ↔ the live app,
     screenshots of every space on desktop and phone)
+
+**Bundle 2 as built (29–30 October)** — numbers as in the checklist and the
+commit messages. All pushed and deployed.
+
+78. ✅ The assistants answer from crawled ANU pages (RAG): a polite crawler
+    (`server/crawl.ts`), a full-text index (`knowledge.db`), each assistant's
+    own sources, a model per assistant (Haiku for courses, careers and
+    housing; Nova 2 Lite for the rest), daily limits; then, from the user's
+    live checks, a reply in the asker's language, a model brief with no
+    facts when nothing matches, a small source sent whole, the asked
+    course's own page first, and "Thinking…" while it answers
+79. ✅ Assistants greet you aloud; 106. ✅ and wave now and then
+81, 83, 84, 87–90, 109. ✅ Phone fixes, the room menu (Chat, Shared notes,
+    Mic, Whiteboard, Save chat / notes, saved copies, Help, Leave) closing to
+    an "Open Room UI" button, an AI notice, full screen, a cleaner HUD,
+    popup keys
+85. ✅ A whiteboard per meeting room (Excalidraw, in a new tab)
+86. ✅ Voice through LiveKit on the author's EC2: heard by everyone there,
+    Mic or hold V to talk, quieter with distance outside
+92. ✅ Background music after automatic sign-in
+93, 99, 101. ✅ Test accounts by role, staff notes in the Hub, the Roles tab
+94. ✅ (looks only) Seongsu, a ghost on a picnic bench; his answers next week
+95, 96. ✅ Jordan (accommodation tent) and Mei (international students)
+98, 100, 103, 104, 107, 110. ✅ Canvas links, Academic Skills, the Hub's
+    academic calendar, the Poop Room kept 30 days, two more tracks, a sky
+102. ✅ The ANUSA clubs board (Rubric's public list)
+111. ✅ The Career Hub in the O'Donoghue centre, with six interview rooms
+112, 116. ✅ The Campus Guide, a first-visit tour, the quest arrow, and
+    sixteen short clips (re-recorded on 30 October)
+115. ✅ (in part) A staff mark on name tags, pictures in shared notes,
+    credits, the turn-the-view button (34)
+—   ✅ Invitations ask the invitee at once (Accept takes them in), good for
+    one visit; the admin log searchable by role, part of a name, student
+    number or email, and by events ticked one by one
+—   ✅ From RICE v2 (30 October): Who's here (names in this space, counts
+    elsewhere), a chat status (Happy to chat / Studying / Away), Canberra's
+    time of day outside (golden hour, dusk, night with lamps lit, dark
+    windows indoors), lamp posts down both sides of the north road
 
 ## Final project (due Monday 9 November, 12:00)
 
@@ -204,7 +242,8 @@ expired classrooms (11); hearts and reports (46); the enquiry PC and the
 ANU Sports tent (64, 59); research for 56 and 68; COMMON becomes the ANUSA
 office (68).
 
-**Bundle 2 — 29 October to 4 November: big features.** The AI assistants
+**Bundle 2 — 29 October to 4 November: big features.** (Done by 30
+October; what was built is listed above, under "Bundle 2 as built".) The AI assistants
 (56); sign-up and roles (38; AWS SES production access is requested on 24
 October); mail and one-to-one chat (16, 17, 36, 18); the study-group board
 and the tutorial (68a, 72); the minimap and the wall calendar (53, 66).
@@ -212,7 +251,8 @@ Shaders and the easter egg (35, 62) only if it runs to spare. Big
 implementation ends Friday 30 October; the rest of the week catches up.
 
 **Bundle 3 — 5 to 9 November: finish, check, write.** On 5 November what
-bundle 2 left and the collaborative rooms (37, 39); from 6 November the full
+bundle 2 left (105 graphics levels, 94 Seongsu's answers, the rest of the
+2027 catalogue crawl); from 6 November the full
 audit (73), then bugs, hotfixes and small things only, and the documents:
 README (400–600 words), PROCESS rewritten from scratch, `CLAUDE.md`, `spec/`,
 `reflections/crit-8.md` cut to 300 words. If anything has to go, it goes from

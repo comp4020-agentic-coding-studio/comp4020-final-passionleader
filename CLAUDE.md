@@ -123,15 +123,18 @@ Read before planning or building: `README.md` (what good means for this app),
   characters; fifty a day per assistant (`NPC_PER_DAY`), which is the only
   thing that caps the bill (AWS's budget only warns). They answer only from
   public ANU pages crawled into `knowledge.db` (server/crawl.ts, beside the
-  app's database): the question's best few pieces from that assistant's own
-  sources, with their addresses, go to the model, told to use nothing else,
-  link what it used, name the academic year it answers for, and say when the
-  pages don't say. No piece matches: the model gets no sources and a brief that
+  app's database): the question's best pieces from that assistant's own
+  sources (eight; a small source whole; a course asked by its code, its own
+  page whole), with their addresses, go to the model, told to use nothing
+  else (its own words allowed, no outside facts), link each page once, name
+  the academic year it answers for, and say when the pages don't say. No piece matches: the model gets no sources and a brief that
   allows no facts at all: a hello or "what can you do?" gets an
   introduction and example questions, anything else "I couldn't find that
   in my pages" and its links. A question in another language is first
   turned into English search words by the cheap model (the pages are
-  English), and every reply is in the language it was asked in. Courses, careers and accommodation run on Claude
+  English); the reply's language is named in the brief from the question's
+  letters (Hangul Korean, Latin English…). The window shows "Thinking…"
+  while it waits. Courses, careers and accommodation run on Claude
   Haiku, the rest on Amazon Nova 2 Lite, both on Amazon Bedrock with the S3
   keys (no new key; or Claude by `ANTHROPIC_API_KEY` when `NPC_MODEL` names
   one); no key is ever in the repo. 400 tokens at most, told it's an
@@ -221,7 +224,15 @@ Read before planning or building: `README.md` (what good means for this app),
   stdout (`flyctl logs`).
 - Everything a person does reaches only the people in the same space. The
   one exception is head counts per space (meeting rooms summed), sent to
-  everyone when they change: never names or positions.
+  everyone when they change: never names or positions. "Who's here"
+  (pressing the online line) lists by name only the people in your own
+  space, whose name tags you can already see; elsewhere, the counts.
+- A status beside your name ("Happy to chat", "Studying", "Away", or none)
+  is one of those three values, never free text, at most one change every
+  two seconds, checked on the server; kept in server memory with the
+  socket (and in your browser), shown to your space only.
+- Outside follows Canberra's time of day (client only: sky, sun, lamps;
+  rooms' windows dark at night); `?hour=` shows another hour for checking.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
