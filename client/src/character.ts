@@ -287,6 +287,27 @@ function hatMesh(kind: number, colour: number): THREE.Object3D | null {
   return g;
 }
 
+/** Where a shirt's print sits from the torso bone (m, before the bone's scale): up the chest, on its front. */
+const PRINT_AT: Record<Variant, { y: number; z: number }> = { "male-a": { y: 0.3, z: 0.19 }, "female-a": { y: 0.28, z: 0.17 } };
+
+/** Light brown letters on a transparent label, about a chest's width. */
+function shirtPrint(text: string): THREE.Mesh {
+  const c = document.createElement("canvas");
+  c.width = 256;
+  c.height = 96;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#c8a46a";
+  ctx.font = "900 78px system-ui, sans-serif";
+  ctx.textAlign = "center";
+  ctx.textBaseline = "middle";
+  ctx.fillText(text, 128, 52);
+  const tex = new THREE.CanvasTexture(c);
+  tex.colorSpace = THREE.SRGBColorSpace;
+  const m = new THREE.Mesh(new THREE.PlaneGeometry(0.36, 0.135), new THREE.MeshStandardMaterial({ map: tex, transparent: true, roughness: 0.9, depthWrite: false }));
+  m.renderOrder = 3;
+  return m;
+}
+
 export class Avatar {
   readonly group = new THREE.Group();
   private mixer: THREE.AnimationMixer | null = null;
@@ -301,9 +322,12 @@ export class Avatar {
   private look: Look;
   private hat: THREE.Object3D | null = null;
   private loading = 0;
+  /** Words printed on the shirt's front (the AI assistants' "ANU" tee), or none. */
+  private print: string | null;
 
-  constructor(look: Look) {
+  constructor(look: Look, print: string | null = null) {
     this.look = look;
+    this.print = print;
     this.fallback = buildPlayer();
     this.group.add(this.fallback);
     this.build();
@@ -353,7 +377,20 @@ export class Avatar {
       }
       this.actions.get(this.motion)?.play();
       this.putHat();
+      this.putPrint();
     });
+  }
+
+  /** The shirt's print, on the torso bone so it moves with the body. */
+  private putPrint(): void {
+    const torso = this.bones.torso;
+    if (!this.print || !torso) return;
+    const s = new THREE.Vector3();
+    torso.getWorldScale(s);
+    const decal = shirtPrint(this.print);
+    decal.scale.setScalar(1 / (s.x || 1));
+    decal.position.set(0, PRINT_AT[variantOf(this.look)].y / (s.y || 1), PRINT_AT[variantOf(this.look)].z / (s.z || 1));
+    torso.add(decal);
   }
 
   /** The hat goes on the head bone, so it nods and dances with the head. */

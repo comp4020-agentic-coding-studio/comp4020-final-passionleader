@@ -1252,7 +1252,8 @@ function placeNpcs(s: SpaceDef): void {
       s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * reach, z: n.z + Math.cos(n.rot) * reach, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
       continue;
     }
-    const a = new Avatar(n.look);
+    // The assistants all wear the same black tee with "ANU" in light brown (the user's call, 10/30).
+    const a = new Avatar({ ...n.look, top: 7 }, "ANU");
     a.group.position.set(n.x, 0, n.z);
     a.group.rotation.y = n.rot;
     // Just the name over them (side by side, a role made the tags overlap); the E hint says the role.

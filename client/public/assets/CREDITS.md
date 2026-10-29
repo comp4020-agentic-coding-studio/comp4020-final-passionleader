@@ -182,7 +182,7 @@ AI assistants answer from ANU's public pages, read by the app's own crawler.
 
 ## Seongsu's ghost
 
-`npc/boo.glb`: "Boo", a little ghost in sneakers, from Fab
+`npc/boo.glb`: "Boo", a little ghost in sneakers, by dm-mayu, from Fab
 (https://www.fab.com/listings/a1830c99-ca66-48e0-aea3-b3d0fa6ebf12), licensed
 under Creative Commons Attribution 4.0 (CC BY 4.0,
 https://creativecommons.org/licenses/by/4.0/). Used unchanged as the model
