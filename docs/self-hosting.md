@@ -165,3 +165,28 @@ Only `qa_` accounts for live testing; `GAME_TEST_HOOKS` never in production;
 no secrets in the repo; positions are never written per move; chat in
 meeting rooms is never stored; the admin's log keeps seven days and never
 chat text or tokens. Read `CLAUDE.md` before changing behaviour.
+
+## The assistants' pages (`knowledge.db`)
+
+The AI campus assistants answer only from public ANU pages that the app
+crawls itself (`server/crawl.ts`). They are kept in `knowledge.db`, beside
+`app.db` on the volume (`/data/knowledge.db` on Fly; `KNOWLEDGE_PATH`
+overrides it).
+
+- **It refreshes itself.** In production the server checks once a day and
+  crawls again when the last finished crawl is over 30 days old. A full crawl
+  is about 8,000 pages, two seconds apart: roughly five to six hours, a
+  hundred-odd MB. It needs no AI model and no Claude, only the network.
+  `CRAWL_AUTO=0` turns this off.
+- **By hand:** `node server/crawl.ts` (everything), or name sources:
+  `node server/crawl.ts housing sport`. Pages read in the last 20 days are
+  skipped (`CRAWL_FRESH_DAYS`), so a crawl that stopped picks up where it was.
+- **Seeding a new server** without waiting a night: crawl on your own
+  machine (`KNOWLEDGE_PATH=./knowledge.db node server/crawl.ts`), then copy
+  the file up while the app is stopped, e.g. on Fly:
+  `flyctl ssh sftp shell` → `put knowledge.db /data/knowledge.db`, and restart.
+- **Models:** courses and careers use `NPC_MODEL_HAIKU` (default Claude Haiku
+  4.5 on Bedrock, `au.anthropic.claude-haiku-4-5-20251001-v1:0`), the others
+  `NPC_MODEL_NOVA` (default `global.amazon.nova-2-lite-v1:0`). The server's
+  IAM user needs only `bedrock:InvokeModel` on those. Each assistant answers
+  at most 50 questions a day (`NPC_PER_DAY`).

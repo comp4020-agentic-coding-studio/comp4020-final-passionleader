@@ -1,0 +1,144 @@
+import { DatabaseSync } from "node:sqlite";
+import { dirname, join } from "node:path";
+import { mkdirSync } from "node:fs";
+
+// What the AI campus assistants know (plan 78): public ANU pages, crawled by
+// server/crawl.ts, cut into short pieces and kept in their own SQLite file
+// beside the app's (so it can be rebuilt or copied up on its own). A question
+// is matched against the pieces with SQLite's full-text search (FTS5, no
+// outside service); only the few best pieces and their addresses go to the
+// model. No match at all, and the model isn't asked (npcs.ts).
+
+const path = process.env.KNOWLEDGE_PATH ?? join(dirname(process.env.DATABASE_PATH ?? "data/app.db"), "knowledge.db");
+mkdirSync(dirname(path), { recursive: true });
+const db = new DatabaseSync(path);
+db.exec(`
+  PRAGMA journal_mode = WAL;
+  PRAGMA busy_timeout = 5000;
+  CREATE TABLE IF NOT EXISTS pages (
+    url        TEXT PRIMARY KEY,
+    source     TEXT NOT NULL,
+    year       INTEGER,
+    title      TEXT NOT NULL,
+    fetched_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS pages_by_source ON pages (source, fetched_at);
+  CREATE VIRTUAL TABLE IF NOT EXISTS pieces USING fts5(
+    title, body, url UNINDEXED, source UNINDEXED, year UNINDEXED,
+    tokenize = 'porter unicode61'
+  );
+  CREATE TABLE IF NOT EXISTS crawl_runs (
+    id       INTEGER PRIMARY KEY AUTOINCREMENT,
+    started  TEXT NOT NULL DEFAULT (datetime('now')),
+    finished TEXT,
+    pages    INTEGER NOT NULL DEFAULT 0,
+    failed   INTEGER NOT NULL DEFAULT 0
+  );
+`);
+
+export interface Piece {
+  title: string;
+  body: string;
+  url: string;
+  source: string;
+  year: number | null;
+}
+
+/** Puts a page's pieces in place of what it had (a page that changed loses its old pieces). */
+export function savePage(page: { url: string; source: string; year: number | null; title: string; pieces: string[] }): void {
+  db.exec("BEGIN");
+  try {
+    db.prepare("DELETE FROM pieces WHERE url = ?").run(page.url);
+    const add = db.prepare("INSERT INTO pieces (title, body, url, source, year) VALUES (?, ?, ?, ?, ?)");
+    for (const body of page.pieces) add.run(page.title, body, page.url, page.source, page.year);
+    db.prepare("INSERT INTO pages (url, source, year, title) VALUES (?, ?, ?, ?) ON CONFLICT(url) DO UPDATE SET source = excluded.source, year = excluded.year, title = excluded.title, fetched_at = datetime('now')").run(
+      page.url,
+      page.source,
+      page.year,
+      page.title,
+    );
+    db.exec("COMMIT");
+  } catch (err) {
+    db.exec("ROLLBACK");
+    throw err;
+  }
+}
+
+/** When `url` was last read (UTC "YYYY-MM-DD HH:MM:SS"), or undefined. */
+export const fetchedAt = (url: string): string | undefined =>
+  (db.prepare("SELECT fetched_at AS at FROM pages WHERE url = ?").get(url) as { at: string } | undefined)?.at;
+
+export const startRun = (): number => Number(db.prepare("INSERT INTO crawl_runs DEFAULT VALUES").run().lastInsertRowid);
+export const finishRun = (id: number, pages: number, failed: number): void =>
+  void db.prepare("UPDATE crawl_runs SET finished = datetime('now'), pages = ?, failed = ? WHERE id = ?").run(pages, failed, id);
+/** When the last whole crawl finished (UTC), or undefined if none has. */
+export const lastFinished = (): string | undefined =>
+  (db.prepare("SELECT finished FROM crawl_runs WHERE finished IS NOT NULL ORDER BY id DESC LIMIT 1").get() as { finished: string } | undefined)?.finished;
+
+export function stats(): { pages: number; pieces: number; bySource: Record<string, number>; lastFinished?: string } {
+  const pages = (db.prepare("SELECT COUNT(*) AS n FROM pages").get() as { n: number }).n;
+  const pieces = (db.prepare("SELECT COUNT(*) AS n FROM pieces").get() as { n: number }).n;
+  const bySource = Object.fromEntries((db.prepare("SELECT source, COUNT(*) AS n FROM pages GROUP BY source").all() as { source: string; n: number }[]).map((r) => [r.source, r.n]));
+  return { pages, pieces, bySource, lastFinished: lastFinished() };
+}
+
+// --- matching a question ---------------------------------------------------------
+
+const STOP = new Set(
+  (
+    "a an and are as at be but by can could do does did for from had has have how i if in into is it its me my of on or our should so than that the their them then there these they this to us was we what when where which who why will with would you your " +
+    "about any anything tell know please hi hello hey thanks thank want need get give find help much many some there's i'm what's ok okay also just like really"
+  ).split(" "),
+);
+
+/** The words worth searching for in a question (lowercase, no stopwords), course codes kept whole. */
+export function keywords(question: string): string[] {
+  const words = question.toLowerCase().normalize("NFKC").match(/[\p{L}\p{N}]+/gu) ?? [];
+  return [...new Set(words.filter((w) => (w.length > 1 || /\d/.test(w)) && !STOP.has(w)))].slice(0, 12);
+}
+
+const YEAR = /\b(20\d\d)\b/;
+/** A word without a plural or -ing/-ed ending, escaped for a RegExp. */
+const stem = (w: string): string => (w.length > 4 ? w.replace(/(ies|es|s|ing|ed)$/, "") : w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/**
+ * The best few pieces for a question from these sources. A piece counts only
+ * if it holds enough of the question's words (one if there are one or two,
+ * else at least half and never fewer than two, or a course code); none, and the caller says it doesn't
+ * know. A year in the question picks that year's catalogue; otherwise this
+ * year's comes first, and pieces from other years still show their year.
+ */
+export function search(sources: string[], question: string, limit = 5): Piece[] {
+  if (!sources.length) return [];
+  const words = keywords(question).filter((w) => !YEAR.test(w));
+  if (!words.length) return [];
+  const asked = question.match(YEAR)?.[1];
+  const year = asked ? Number(asked) : new Date().getFullYear();
+  const codes = words.filter((w) => /^[a-z]{4}\d{4}$/.test(w));
+  const match = words.map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
+  const rows = db
+    .prepare(
+      `SELECT title, body, url, source, year, bm25(pieces, 4.0, 1.0) AS score FROM pieces
+       WHERE pieces MATCH ? AND source IN (${sources.map(() => "?").join(",")})
+       ORDER BY (year IS NOT NULL AND year != ?) , score LIMIT 60`,
+    )
+    .all(match, ...sources, year) as unknown as (Piece & { score: number })[];
+  const need = codes.length ? 1 : words.length <= 2 ? 1 : Math.max(2, Math.ceil(words.length / 2));
+  const picked: Piece[] = [];
+  const perUrl = new Map<string, number>();
+  for (const r of rows) {
+    if (asked && r.year !== null && r.year !== year) continue;
+    const text = `${r.title} ${r.body}`.toLowerCase();
+    if (codes.length && !codes.some((c) => text.includes(c))) continue;
+    // Whole words, give or take an ending ("residence" counts for "residences", "won" not for "wonderful").
+    const hits = words.filter((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,3}($|[^\\p{L}\\p{N}])`, "u").test(text)).length;
+    if (hits < need) continue;
+    // At most two pieces of one page, so a long page doesn't crowd the rest out.
+    const n = perUrl.get(r.url) ?? 0;
+    if (n >= 2) continue;
+    perUrl.set(r.url, n + 1);
+    picked.push({ title: r.title, body: r.body, url: r.url, source: r.source, year: r.year });
+    if (picked.length >= limit) break;
+  }
+  return picked;
+}

@@ -63,9 +63,11 @@ should feel at home in a virtual space shaped like the real campus they know.
    it sells, gathered from public pages (not an official list).
    The Student Hub's wall calendar shows this month and opens ANU's
    university calendar for the year. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
-   careers) stand in their places: **E** to ask one. Claude answers in
-   their name, briefly, from what their pages cover; it can be wrong, so
-   each points to its pages too. What you ask isn't kept.
+   careers) stand in their places: **E** to ask one. An AI model (Claude
+   Haiku for courses and careers, Amazon Nova for the rest) answers in their
+   name only from public ANU pages the app crawls each month, linking the
+   pages it used; if those pages don't cover it, it says so instead of
+   guessing. It can still be wrong. What you ask isn't kept.
    Signed up, the ✉️ button writes to someone by name and keeps your mail
    for 30 days; it lights up when something arrives.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
@@ -144,7 +146,9 @@ and new notes reach the same space within a second, and no other
 hidden room's one-poop-each rule); study
 groups never fill past their size, private questions reach only their
 writer and staff, mail only its reader, guests can't send it, and the
-assistants answer one question every three seconds (`board.test.ts`); only the admin reads the seven-day log and the bug
+assistants answer one question every three seconds (`board.test.ts`) and
+only from their own crawled pages, never asking the model when none match
+(`knowledge.test.ts`); only the admin reads the seven-day log and the bug
 reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
 meeting room holds six and a counselling room only
 the invited, and a saved chat is its saver's alone (`rooms.test.ts`); files are checked by type, size and who may

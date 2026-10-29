@@ -120,17 +120,29 @@ Read before planning or building: `README.md` (what good means for this app),
   went and to whom, never what it said. Guests neither send nor receive it.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
   too, one question every three seconds and thirty a day each, 500
-  characters; 200 a day in all (`NPC_PER_DAY`). A cheap model answers:
-  on Amazon Bedrock when the Fly secret `NPC_MODEL` names a Bedrock model
-  (the S3 keys, no new one), else Claude by the Fly secret
-  `ANTHROPIC_API_KEY`; no key is ever in the repo. 400 tokens at most,
-  told it's an unofficial character, to say when it isn't sure and point
-  to its pages. What's asked goes to the model only: not stored, not
-  logged (the log notes who asked which assistant and how long it was).
-  Without a model, or past the day's limit, they say so and point to
-  their pages; out of credit (or refused by the monthly budget's deny
-  policy), they say that plainly with the author's email (NPC-CREDIT), so
-  a marker knows whom to tell.
+  characters; fifty a day per assistant (`NPC_PER_DAY`), which is the only
+  thing that caps the bill (AWS's budget only warns). They answer only from
+  public ANU pages crawled into `knowledge.db` (server/crawl.ts, beside the
+  app's database): the question's best few pieces from that assistant's own
+  sources, with their addresses, go to the model, told to use nothing else,
+  link what it used, name the academic year it answers for, and say when the
+  pages don't say. No piece matches and the model is never asked: it says it
+  couldn't find it and points to its pages. Courses and careers run on Claude
+  Haiku, the rest on Amazon Nova 2 Lite, both on Amazon Bedrock with the S3
+  keys (no new key; or Claude by `ANTHROPIC_API_KEY` when `NPC_MODEL` names
+  one); no key is ever in the repo. 400 tokens at most, told it's an
+  unofficial AI character and to say so if asked. What's asked goes to the
+  model only: not stored, not logged (the log notes who asked which
+  assistant and how long it was). Without a model, or past the day's limit,
+  they say so and point to their pages; out of credit (or refused by AWS),
+  they say that plainly with the author's email (NPC-CREDIT), so a marker
+  knows whom to tell.
+- The crawler (server/crawl.ts) reads one page at a time, at least two
+  seconds apart (more if robots.txt asks), obeys the sites' robots.txt for
+  `*`, names the project and the author's email in its User-Agent and never
+  passes for a named AI bot. It runs with no model, by `node server/crawl.ts`
+  or by the server itself once a month (production only); a page that fails
+  keeps what it had.
 - The Poop Room (an easter egg behind the "Staff only" door at the far end
   of Lab Coffee): in there the Q menu's first item poops instead of sticking
   a note. One poop per person, anyone joined (guests too), five seconds

@@ -1,6 +1,8 @@
 import { createHash, randomInt, randomUUID } from "node:crypto";
 import { MailFailure, lastMail, mailReady, sendMail, testOutbox } from "./mail.ts";
 import { NPCS, answer, npcById } from "./npcs.ts";
+import { crawl } from "./crawl.ts";
+import { lastFinished as lastCrawl } from "./knowledge.ts";
 import { existsSync, readFileSync } from "node:fs";
 import type { Server } from "node:http";
 import { serve } from "@hono/node-server";
@@ -477,9 +479,11 @@ app.delete("/api/chats/:id", async (c) => {
 
 // --- the AI campus assistants (plan 56) ---------------------------------------
 // Where they stand and what they cover (npcs.ts). Anyone joined may ask, guests
-// too, one question every three seconds, 500 characters; nothing is stored or
-// logged but that someone asked whom. Not connected to a model yet.
-app.get("/api/npcs", (c) => c.json(NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting }))));
+// too, one question every three seconds, thirty a day, 500 characters;
+// nothing is stored or logged but that someone asked whom.
+app.get("/api/npcs", (c) =>
+  c.json(NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated }))),
+);
 
 const lastAsked = new Map<string, number>();
 const askedBy = new Map<string, { day: string; n: number }>();
@@ -1365,6 +1369,23 @@ const purge = (): void => {
 };
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();
+
+// The assistants' pages are read again once a month, by the server itself
+// (crawl.ts; no Claude needed, so it keeps going after the course). Checked
+// daily; only in production (CRAWL_AUTO=0 turns it off), one crawl at a time.
+let crawling = false;
+const crawlIfDue = (): void => {
+  const last = lastCrawl();
+  if (crawling || (last && Date.now() - Date.parse(`${last}Z`) < 30 * 86400_000)) return;
+  crawling = true;
+  void crawl()
+    .catch((err: Error) => console.error(JSON.stringify({ at: new Date().toISOString(), event: "crawl-error", name: err.name })))
+    .finally(() => (crawling = false));
+};
+if (process.env.NODE_ENV === "production" && process.env.CRAWL_AUTO !== "0") {
+  setTimeout(crawlIfDue, 10 * 60_000).unref();
+  setInterval(crawlIfDue, 24 * 3600_000).unref();
+}
 
 // The 3D client, once Vite has built it.
 const dist = "client/dist";
