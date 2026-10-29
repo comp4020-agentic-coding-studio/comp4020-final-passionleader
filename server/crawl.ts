@@ -95,7 +95,7 @@ const decode = (t: string): string =>
   t.replace(/&(#x?[0-9a-f]+|[a-z]+);/gi, (m, e: string) => {
     if (e[0] === "#") {
       const n = e[1] === "x" || e[1] === "X" ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10);
-      return Number.isFinite(n) ? String.fromCodePoint(n) : m;
+      return Number.isInteger(n) && n >= 0 && n <= 0x10ffff ? String.fromCodePoint(n) : m; // &#99999999; would throw and stop the crawl
     }
     return ENTITIES[e.toLowerCase()] ?? m;
   });
@@ -108,7 +108,7 @@ export function pageText(html: string): { title: string; text: string } {
   const title =
     clean(html.match(/class="intro__degree-title"[^>]*>([\s\S]*?)<\/h1>/i)?.[1]) ||
     clean([...html.matchAll(/<h1[^>]*>([\s\S]*?)<\/h1>/gi)].map((m) => m[1]).find((h) => clean(h) && clean(h) !== "Programs and Courses")) ||
-    clean(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]).replace(/\s*[|–-]\s*[^|–-]*$/, "");
+    clean(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]).replace(/\s+[|–-]\s+[^|–]*$/, "");
   // The main content: <main>, or the catalogue's from its intro on (its banner and year menu are noise), or the body.
   const intro = html.indexOf('class="intro__inner"');
   let body = html.match(/<main[\s>][\s\S]*?<\/main>/i)?.[0] ?? (intro > 0 ? html.slice(html.lastIndexOf("<", intro)) : undefined) ?? html.match(/<body[\s>][\s\S]*<\/body>/i)?.[0] ?? html;

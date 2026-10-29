@@ -287,7 +287,8 @@ const sourcesBlock = (pieces: Piece[]): string =>
   pieces.map((p) => `<source url="${p.url}" title="${p.title.replace(/"/g, "'")}">\n${p.body}\n</source>`).join("\n\n");
 
 const RULES = [
-  "Use ONLY the facts written in the <source> blocks. Nothing from your own knowledge: no names, phone numbers, emails, prices, dates, hours, rules or services that aren't written there word for word.",
+  "Use ONLY the facts in the <source> blocks: put them in your own words, put two together, but add nothing from your own knowledge (no names, phone numbers, emails, prices, dates, hours, rules or services the sources don't give).",
+  "Answer the question directly and specifically first (the address, the price, the date, the steps), with the details the sources give, then link where it came from. Don't send the person off to a page for something the sources already say.",
   "If the exact thing asked (a date, a price, a requirement) isn't in the sources, say plainly that you couldn't find it in the pages you have and link the closest source. A nearby date or price is not an answer: don't swap one for another.",
   "Link every source you use as a Markdown link with its real url, like [title](url). Never write [1], [source 3] or other numbered references, and never a bare <url>.",
 ];
@@ -340,6 +341,10 @@ export function tidy(text: string): string {
     .replace(/\[\[(?:source\s*)?\d+\]\]\((https?:\/\/[^)\s]+)\)/gi, "[source]($1)")
     .replace(/\s?\[(?:source\s*)?\d+(?:\s*,\s*\d+)*\](?!\()/gi, "")
     .replace(/<(https?:\/\/[^>\s]+)>/g, "[$1]($1)")
+    // Nova sometimes opens a link with a CJK bracket (【title](url) … )] ) and repeats the same link.
+    .replace(/【/g, "[")
+    .replace(/\)\](?=[\s.,;]|$)/g, ")")
+    .replace(/(\[[^\]]+\]\([^)\s]+\))(?:,?\s*\1)+/g, "$1")
     .replace(/\s+([,.;:])/g, "$1")
     .replace(/,([.;:])/g, "$1")
     .trim();
@@ -354,7 +359,7 @@ export function tidy(text: string): string {
  * and a pointer, with no facts at all. With nothing to draw on there's
  * nothing to make up; the brief forbids it anyway.
  */
-const noSourcesFor = (npc: Npc, lang: string): string =>
+export const noSourcesFor = (npc: Npc, lang: string): string =>
   [
     lang,
     `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character, not ANU staff; say so if asked.`,
@@ -378,12 +383,16 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   if (!client && !bedrock) return offline;
   // The pages are in English: a question in another language (Korean, Chinese…) is first turned
   // into English search words by the cheap model, then searched; the answer still comes in its language.
-  const foreign = /[^\x00-\x7F]/.test(question) && !/[a-z]{3,}/i.test(question.replace(/[^\x00-\x7F]/g, " "));
-  const query = foreign ? ((await englishQuery(question)) ?? question) : question;
-  // A short, vague question ("what's the price?", "where is it?") is about this assistant's own topic.
-  const vague = keywords(query).filter((w) => !/^\d+$/.test(w)).length <= 1;
-  const pieces = search(npc.sources, vague ? `${query} ${npc.topic}` : query, 5);
+  // Mixed ("COMP2300은 언제 열려?") counts too: the particle stuck to the code would match nothing.
+  // Checked against the day's limit first: the translation is a model call as well.
   if (!takeOne(npc)) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
+  const foreign = /[^\p{Script=Latin}\P{L}]/u.test(question);
+  const query = foreign ? ((await englishQuery(question)) ?? question) : question;
+  // A short, vague question ("what's the price?", "where is it?") is about this assistant's own
+  // topic, but only if its one word finds nothing alone ("Where is Fenner?" must stay about Fenner).
+  const vague = keywords(query).filter((w) => !/^\d+$/.test(w)).length <= 1;
+  let pieces = search(npc.sources, query, 8);
+  if (!pieces.length && vague) pieces = search(npc.sources, `${query} ${npc.topic}`, 8);
   // No sources: the model still replies, under a brief that allows no facts (see noSourcesFor).
   const lang = replyIn(question);
   const system = pieces.length ? systemFor(npc, pieces, lang) : noSourcesFor(npc, lang);

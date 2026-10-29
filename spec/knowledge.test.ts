@@ -44,6 +44,13 @@ describe("what the assistants know", () => {
     expect(k.search(["catalogue"], "When is COMP2300 offered in 2027?").map((p) => p.year)).toEqual([2027]);
   });
 
+  it("sends a small source whole, best first, so an answer on the page isn't lost; a 'where' question puts the address first", () => {
+    k.savePage({ url: "https://example.anu/gym", source: "tiny", year: null, title: "Gym", pieces: ["The gym has a cardio theatre. Gym memberships for everyone."] });
+    k.savePage({ url: "https://example.anu/faq", source: "tiny", year: null, title: "FAQs", pieces: ["Where is it? ANU Sport is located at Building 19, North Road."] });
+    const hit = k.search(["tiny"], "where is the gym");
+    expect(hit.map((p) => p.url)).toEqual(["https://example.anu/faq", "https://example.anu/gym"]);
+  });
+
   it("answers when something closes from an hours page, not from pages that say the place's name more", () => {
     k.savePage({ url: "https://example.anu/lib", source: "library", year: null, title: "Using the Library", pieces: ["The library lends books. Library rooms close for cleaning at times; library printing and library study spaces."] });
     k.savePage({ url: "https://example.anu/hours", source: "library", year: null, title: "Opening Hours", pieces: ["Library opening hours this week.\nChifley | 24 hours | 24 hours |"] });
@@ -59,6 +66,17 @@ describe("what the assistants know", () => {
     // No model here, so an answer only proves the order: with no key it says it's offline.
     const robin = NPCS.find((n) => n.id === "library")!;
     expect(await answer(robin, "Who won the 2022 world cup?")).toMatch(/not connected|couldn't find/);
+  });
+
+  it("with nothing on its pages, the model's brief allows no facts: an introduction for a hello, else 'couldn't find' and links", async () => {
+    const { noSourcesFor, NPCS } = await import("../server/npcs.ts");
+    const kai = NPCS.find((n) => n.id === "sport")!;
+    const brief = noSourcesFor(kai, "Reply in English.");
+    expect(brief).toContain("NO source pages");
+    expect(brief).toMatch(/do NOT state any fact/);
+    expect(brief).toMatch(/couldn't find that/);
+    expect(brief).toContain(kai.links[0]!.url);
+    expect(brief).not.toContain("<source");
   });
 });
 
@@ -85,6 +103,7 @@ describe("the crawler's manners", () => {
 describe("tidy answers", () => {
   it("drops numbered references and links bare addresses", async () => {
     const { tidy } = await import("../server/npcs.ts");
+    expect(tidy("Five items【Pantry](https://a.anu/p), [Pantry](https://a.anu/p)].")).toBe("Five items[Pantry](https://a.anu/p).");
     expect(tidy("Open 24 hours [1]. See [[2]](https://a.b/c) and <https://x.y/h> [source 3].")).toBe(
       "Open 24 hours. See [source](https://a.b/c) and [https://x.y/h](https://x.y/h).",
     );
