@@ -25,6 +25,8 @@ const DOOR = { x: 0, z: -HALF.halfZ + 1.1 };
 const RECEPTION = { x: -9, z: -8 };
 /** The search computers' desk's centre (6 m wide, 1 deep): south of reception, north of team room 1's door. */
 const COMPUTERS = { x: -9, z: -4 };
+/** Academic Skills' PC, on a desk of its own east of the search computers. */
+const ACADEMIC_PC = { x: -4.6, z: -4 };
 
 export function buildLibrary(): SpaceDef {
   const g = new THREE.Group();
@@ -64,6 +66,14 @@ export function buildLibrary(): SpaceDef {
     tag.position.set(x, 1.75, COMPUTERS.z + 0.51);
     g.add(tag);
   }
+
+  // Academic Skills (plan 100): its own PC on a small desk east of the search
+  // computers; E opens our short summary of their services, in the window.
+  block(g, colliders, [1.6, 0.9, 1], [ACADEMIC_PC.x, ACADEMIC_PC.z], texMat("ai/wood_tabletop.jpg", 1, 1, 0xb08a64));
+  place(g, "computerScreen.glb", 0.45, ACADEMIC_PC.x, ACADEMIC_PC.z - 0.1, Math.PI, true, 0.9);
+  const skillsTag = textPlane(["Academic Skills", "writing · study · referencing"], 1.9, 0.42, { bg: "#2e6b4f", fg: "#ffffff", font: 0.17 });
+  skillsTag.position.set(ACADEMIC_PC.x, 1.75, ACADEMIC_PC.z + 0.51);
+  g.add(skillsTag);
 
   // North-east of the door: rows of bookcases facing the room, full of books.
   // The north-west holds reception (above); the windows' light falls across it.
@@ -128,6 +138,7 @@ export function buildLibrary(): SpaceDef {
     // it: one E each, not one per side (six read as clutter). LIBRARY_KEEP_CLEAR
     // in server/spaces.ts lists these spots, so notes stay off them.
     links: [1.2].flatMap((dz) => [
+      { x: ACADEMIC_PC.x, z: ACADEMIC_PC.z + dz, label: "Academic Skills (writing, study, referencing help)", url: "/academic-skills/", embeddable: true },
       { x: COMPUTERS.x - 2, z: COMPUTERS.z + dz, label: "Book a library room", url: "https://anu.libcal.com/", embeddable: true },
       // The catalogue refuses to be shown inside another page (tried 10/16): a new tab.
       { x: COMPUTERS.x, z: COMPUTERS.z + dz, label: "Search the library catalogue (new tab)", url: "https://anulib.anu.edu.au/", embeddable: false },
