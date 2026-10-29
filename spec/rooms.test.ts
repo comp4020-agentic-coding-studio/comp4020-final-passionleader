@@ -35,9 +35,10 @@ describe("meeting rooms", () => {
   }, 15_000); // seven people in a row, while the other spec files sign people up
 
   it("gives everyone in a room the same whiteboard, and another room another", async () => {
-    const a = await inRoom("team-library-2");
-    const b = await inRoom("team-library-2");
-    const c = await inRoom("team-library-1");
+    // The ANUSA lounge's rooms, which no other test fills.
+    const a = await inRoom("team-anusa-1");
+    const b = await inRoom("team-anusa-1");
+    const c = await inRoom("team-anusa-2");
     const board = (m: { t: string; kind?: unknown }) => m.t === "action" && m.kind === "whiteboard";
     a.s.send({ t: "whiteboard" });
     b.s.send({ t: "whiteboard" });
