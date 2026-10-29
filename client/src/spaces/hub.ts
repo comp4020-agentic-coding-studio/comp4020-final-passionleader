@@ -127,7 +127,8 @@ export function buildHub(): SpaceDef {
   // A coffee bar on the back wall, east of the calendar (the north-west corner is the admin's).
   for (const x of [8.5, 9.5]) place(g, "kitchenBar.glb", 0.95, x, -HALF.halfZ + 0.5);
   place(g, "kitchenCoffeeMachine.glb", 0.4, 8.5, -HALF.halfZ + 0.5, 0, true, 0.95);
-  solid(colliders, 2.2, 0.8, 9, -HALF.halfZ + 0.5);
+  // Out to the first arcade machine (x 10.5): a gap narrower than a person there trapped people between the two.
+  solid(colliders, 2.6, 0.8, 9.2, -HALF.halfZ + 0.5);
 
   // The lounge half, at the front: three corners of two sofas facing each
   // other across a glass coffee table, on a rug, with a floor lamp.
