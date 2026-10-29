@@ -40,7 +40,8 @@ export function buildOutdoor(): SpaceDef {
     floor(g, w, d, x, z, texMat("ai/grass.jpg", w / 3.9, d / 3.9, 0xb4c49c), -0.02);
   };
   // The creek's channel (x -75.2..-57.6, z -160..60, creek.ts) is left open: its water lies below the grass.
-  grass(274.8, 367, -212.6, -166.5); // x -350..-75.2
+  // South of the avenue (z -22) it bends west, and creek.ts lays the ground west of x -57.6 along the bend.
+  grass(274.8, 328, -212.6, -186); // x -350..-75.2, z -350..-22
   grass(407.6, 354, 146.2, -173); // x -57.6..350, z -350..4
   // z 4..17, leaving the ramp down to the sunken road open (x 31.5..40.5, backdrop.ts).
   grass(89.1, 13, -13.05, 10.5); // x -57.6..31.5
@@ -48,17 +49,19 @@ export function buildOutdoor(): SpaceDef {
   grass(17.6, 190, -66.4, -255); // between them, north of the channel (z -350..-160)
   // Around the sunken road (backdrop.ts buildSouth): its cutting runs x -38..40.5
   // at z 17..26 and turns south at x -38..-31 down to z 60. No grass over it.
-  grass(312, 9, -194, 21.5); // west of the cutting, z 17..26 (x -350..-38)
+  grass(19.6, 9, -47.8, 21.5); // west of the cutting, z 17..26 (x -57.6..-38; west of that, creek.ts)
   grass(309.5, 9, 195.25, 21.5); // east of it (x 40.5..350)
-  grass(312, 324, -194, 188); // south, west of the turn (x -350..-38)
+  grass(19.6, 34, -47.8, 43); // south, west of the turn, east of the creek (x -57.6..-38, z 26..60)
+  grass(312, 290, -194, 205); // south of the creek's end (x -350..-38, z 60..350)
   grass(381, 324, 159.5, 188); // south, east of the turn (x -31..350)
   grass(7, 290, -34.5, 205); // south of where the turn ends (z 60..350)
   // The campus paving (x -92..92, z -27..17), open over the ramp down to the sunken road (x 31.5..40.5, z 4..17).
-  floor(g, OUTDOOR.halfX * 2 + 6, 31, 0, -11.5, texMat("ai/paving.jpg", 35, 15.5, 0xd6d2ca)); // z -27..4
-  floor(g, 123.5, 13, -30.25, 10.5, texMat("ai/paving.jpg", 23.5, 6.5, 0xd6d2ca)); // z 4..17, x -92..31.5
+  // West of x -57.6 nothing is paved: that's the creek and its far bank (creek.ts).
+  floor(g, 149.6, 31, 17.2, -11.5, texMat("ai/paving.jpg", 30, 15.5, 0xd6d2ca)); // z -27..4, x -57.6..92
+  floor(g, 89.1, 13, -13.05, 10.5, texMat("ai/paving.jpg", 17, 6.5, 0xd6d2ca)); // z 4..17, x -57.6..31.5
   floor(g, 51.5, 13, 66.25, 10.5, texMat("ai/paving.jpg", 10, 6.5, 0xd6d2ca)); // x 40.5..92
   // A paved strip south of the cutting (backdrop.ts, z 17..26), in front of the library (moved 3 m south, 10/30).
-  floor(g, OUTDOOR.halfX * 2 + 6, 2, 0, 27, texMat("ai/paving.jpg", 35, 1, 0xd6d2ca));
+  floor(g, 149.6, 2, 17.2, 27, texMat("ai/paving.jpg", 30, 1, 0xd6d2ca)); // x -57.6..92
   // The path runs from the north edge to the library's forecourt (backdrop.ts,
   // from z 26.2), and stops there so the two don't overlap and flicker.
   const pathFrom = -OUTDOOR.halfZ - 3;

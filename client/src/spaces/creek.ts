@@ -188,6 +188,14 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   // road with a dashed centre line, both running north-south as far as the
   // creek does; the avenue meets the road at a crossing. Scenery only. ----
   const walk = { x0: WEST_TOP - 3.4, x1: WEST_TOP - 0.2 };
+  // The ground either side, following the bend south of the avenue (outdoor.ts lays it elsewhere):
+  // west of the far road out to the horizon, and on the east bank up to x -57.6.
+  const field = texMat("ai/grass.jpg", 1, 1, 0xb4c49c);
+  field.side = THREE.DoubleSide;
+  ribbon(g, -350, walk.x0 - 7.25, -0.02, -0.02, BEND_FROM, CREEK_Z.to, field, 3.9);
+  ribbon(g, EAST_TOP, -57.6, -0.02, -0.02, BEND_FROM, CREEK_Z.to, field, 3.9, false);
+  // The 0.2 m between the far bank's top and its footpath.
+  ribbon(g, WEST_TOP - 0.2, WEST_TOP, -0.02, -0.02, BEND_FROM, CREEK_Z.to, field, 3.9);
   ribbon(g, walk.x0, walk.x1, 0.02, 0.02, CREEK_Z.from, CREEK_Z.to, mat(0xcfccc5));
   // The slabs' joints every 1.5 m, and the kerb on the road side.
   const joints: Inst[] = [];
