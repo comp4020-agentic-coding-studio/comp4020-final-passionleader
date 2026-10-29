@@ -55,7 +55,7 @@ button, [role="button"], .use-badge, .player-label, .door-label, canvas {
 #hud-online[hidden] { display: none; }
 /* Phones: keep the HUD's lines clear of the guide, mail, hanger and gear at the top right (4 x 44 px + gaps). */
 @media (max-width: 700px) {
-  #hud p { max-width: calc(100vw - 252px); }
+  #hud p { max-width: calc(100vw - 268px); }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }

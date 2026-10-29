@@ -17,18 +17,18 @@ export interface GuideEntry {
   touch?: string;
   /** In the first-visit tour, in this order. */
   intro?: number;
-  /** A short clip exists in assets/guide/. */
+  /** A short clip exists in assets/guide/ (none recorded yet: a box with no clip would paint black). */
   clip?: boolean;
 }
 
 export const GUIDE: GuideEntry[] = [
   { id: "welcome", section: "Getting around", intro: 1, title: "Welcome to ANU Crossing", text: "An unofficial, fan-made 3D campus for the ANU community: bump into people, ask what you don't know, find study mates. It isn't run by ANU." },
-  { id: "move", section: "Getting around", intro: 2, clip: true, title: "Walk around", text: "Walk anywhere on the paths and lawns, run, jump onto kerbs and sit on benches.", keys: "WASD or the arrows to walk, Shift to run, Space to jump", touch: "the arrow pad to walk, Jump to jump" },
-  { id: "use", section: "Getting around", intro: 3, clip: true, title: "Use things", text: "Doors, boards, PCs, seats and the AI assistants show a key badge when you're close. Press it to go in, read, sit or talk.", keys: "E", touch: "the Use button" },
-  { id: "turn", section: "Getting around", clip: true, title: "Turn the view", text: "Outside, turn the camera a quarter round you. Walking keeps going away from the camera.", keys: "R, or the ⟳ button", touch: "the ⟳ button" },
-  { id: "chat", section: "Talking", intro: 4, clip: true, title: "Chat and emotes", text: "Say something to everyone in the same place; it shows over your head for a minute. \"/all message\" reaches every space, \"/w name message\" whispers to one member. Wave, nod or dance with the emote menu.", keys: "Enter to chat, hold Q for emotes", touch: "Chat, and the Emotes button" },
-  { id: "notes", section: "Talking", clip: true, title: "Sticky notes", text: "Stick a note (up to 100 words) where you stand, outside or in a classroom; others read it, heart it and reply. Notes go after a month.", keys: "hold Q, then 1", touch: "Emotes, then Sticky note" },
-  { id: "npcs", section: "Talking", intro: 5, clip: true, title: "AI campus assistants", text: "People with a green \"AI\" tag answer questions from ANU's public pages and link them: Robin (library), Kai (sport), Jordan (accommodation), Sam (ANUSA), Priya (courses), Mei (international students), Alex (careers). They can be wrong: check the pages they link." },
+  { id: "move", section: "Getting around", intro: 2, title: "Walk around", text: "Walk anywhere on the paths and lawns, run, jump onto kerbs and sit on benches.", keys: "WASD or the arrows to walk, Shift to run, Space to jump", touch: "the arrow pad to walk, Jump to jump" },
+  { id: "use", section: "Getting around", intro: 3, title: "Use things", text: "Doors, boards, PCs, seats and the AI assistants show a key badge when you're close. Press it to go in, read, sit or talk.", keys: "E", touch: "the Use button" },
+  { id: "turn", section: "Getting around", title: "Turn the view", text: "Outside, turn the camera a quarter round you. Walking keeps going away from the camera.", keys: "R, or the ⟳ button", touch: "the ⟳ button" },
+  { id: "chat", section: "Talking", intro: 4, title: "Chat and emotes", text: "Say something to everyone in the same place; it shows over your head for a minute. \"/all message\" reaches every space, \"/w name message\" whispers to one member. Wave, nod or dance with the emote menu.", keys: "Enter to chat, hold Q for emotes", touch: "Chat, and the Emotes button" },
+  { id: "notes", section: "Talking", title: "Sticky notes", text: "Stick a note (up to 100 words) where you stand, outside or in a classroom; others read it, heart it and reply. Notes go after a month.", keys: "hold Q, then 1", touch: "Emotes, then Sticky note" },
+  { id: "npcs", section: "Talking", intro: 5, title: "AI campus assistants", text: "People with a green \"AI\" tag answer questions from ANU's public pages and link them: Robin (library), Kai (sport), Jordan (accommodation), Sam (ANUSA), Priya (courses), Mei (international students), Alex (careers). They can be wrong: check the pages they link." },
   { id: "mail", section: "Talking", title: "Mail", text: "Signed up, the ✉️ button writes to another member by name; mail is kept 30 days, and the button lights up when something arrives. Saved room chats and notes are there too." },
   { id: "hub", section: "Places", title: "Student Hub (154)", text: "Sofas to sit together, the lab matching board, \"Ask the Hub\" (public or private questions), the academic calendar on the wall, arcade games, and counselling rooms (invite only)." },
   { id: "library", section: "Places", title: "Chifley Library", text: "Over the bridge to the south: book a room, search the catalogue, Academic Skills (writing and study help), quiet desks and four team rooms anyone can use." },
@@ -36,9 +36,9 @@ export const GUIDE: GuideEntry[] = [
   { id: "anusa", section: "Places", title: "ANUSA Student Lounge", text: "North of the Hub's door: the students' association, with its own meeting rooms. Sam answers questions about ANUSA's help, legal service and pantry." },
   { id: "careers", section: "Places", title: "Career Hub", text: "Across the north road in the O'Donoghue centre: Alex, the careers adviser, a jobs board and six interview rooms (invite only) for mock interviews and CV reviews." },
   { id: "outside", section: "Places", title: "Around the lawn", text: "The study-group board by 155's door (start or join a group), the advertising board by the flower beds, Lab Coffee's café list, the ANU Sport and Accommodation tents, and picnic tables by Badger & Co." },
-  { id: "rooms", section: "Rooms", intro: 6, clip: true, title: "Team and counselling rooms", text: "Up to six people. Coming in opens the room menu: Chat (share files too), Shared notes (Markdown, pictures), Save chat and Save notes. Close it to see the room; walk out by the door to leave. Counselling and interview rooms let in only those invited from inside." },
+  { id: "rooms", section: "Rooms", intro: 6, title: "Team and counselling rooms", text: "Up to six people. Coming in opens the room menu: Chat (share files too), Shared notes (Markdown, pictures), Save chat and Save notes. Close it to see the room; walk out by the door to leave. Counselling and interview rooms let in only those invited from inside." },
   { id: "save", section: "Rooms", title: "Keeping a room's chat or notes", text: "A room's chat, notes and files go when the last person leaves. Save chat or Save notes keeps a copy for you for 30 days, under ✉️ → Saved." },
-  { id: "look", section: "Your account", clip: true, title: "Change your look", text: "The coat hanger picks your figure, skin, hair, clothes and hat." },
+  { id: "look", section: "Your account", title: "Change your look", text: "The coat hanger picks your figure, skin, hair, clothes and hat." },
   { id: "settings", section: "Your account", title: "Settings", text: "The gear: music and effects volume, graphics quality, full screen on a phone, report a bug or a person, mute someone, credits and licences, and signing out." },
   { id: "guest", section: "Your account", title: "Guests and members", text: "Guests walk, chat, emote, stick notes and use team rooms. Signing up with an ANU email lets you post, comment, heart, join study groups, send mail and share files." },
 ];
@@ -93,7 +93,7 @@ function card(e: GuideEntry): HTMLElement {
   return el;
 }
 
-export function mountGuide(opts: { onTourDone(): void }): {
+export function mountGuide(opts: { onTourDone(): void; onTourStart(): void }): {
   /** The guide, optionally scrolled to one entry. */
   open(at?: string): void;
   /** The first-visit tour, unless it was seen or skipped; resolves when it's done (or straight away). */
@@ -189,6 +189,7 @@ export function mountGuide(opts: { onTourDone(): void }): {
     next.focus();
   }
   function startTour(): void {
+    opts.onTourStart();
     tour = true;
     step = 0;
     root.hidden = false;

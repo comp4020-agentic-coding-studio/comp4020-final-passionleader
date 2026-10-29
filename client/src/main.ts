@@ -205,7 +205,8 @@ guideBtn.title = "Campus Guide";
 guideBtn.setAttribute("aria-label", "Campus Guide");
 guideBtn.setAttribute("aria-haspopup", "dialog");
 document.body.append(guideBtn);
-const guide = mountGuide({ onTourDone: () => quests.show(playing) });
+// The tour and the quests never show together: the quests wait while the tour is up.
+const guide = mountGuide({ onTourDone: () => quests.show(playing), onTourStart: () => quests.show(false) });
 guideBtn.addEventListener("click", () => guide.open());
 
 // The mailbox (plan 16): left of the hanger, with a count of unread mail.
