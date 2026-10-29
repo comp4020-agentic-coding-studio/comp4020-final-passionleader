@@ -196,11 +196,11 @@ hangerBtn.setAttribute("aria-haspopup", "dialog");
 hangerBtn.addEventListener("click", () => openLookPicker());
 document.body.append(hangerBtn);
 
-// The Campus Guide (plan 112): a 📖 button left of the mail; the first visit opens its short tour, then the quests.
+// The Campus Guide (plan 112): a ❓ button left of the mail; the first visit opens its short tour, then the quests.
 const guideBtn = document.createElement("button");
 guideBtn.type = "button";
 guideBtn.id = "guide-btn";
-guideBtn.textContent = "📖";
+guideBtn.textContent = "❓";
 guideBtn.title = "Campus Guide";
 guideBtn.setAttribute("aria-label", "Campus Guide");
 guideBtn.setAttribute("aria-haspopup", "dialog");
@@ -1185,7 +1185,7 @@ function placeNpcs(s: SpaceDef): void {
       ghost.add(body);
       s.group.add(ghost);
       ghosts.push(body);
-      void loadModel(`npc/${n.model3d}.glb`, 1.15).then((m) => {
+      void loadModel(`npc/${n.model3d}.glb`, 2.3).then((m) => {
         if (!m) return;
         const model = m.clone(true);
         // The file brings its own backdrop (a big plane) and its turntable: not wanted here.
@@ -1194,7 +1194,7 @@ function placeNpcs(s: SpaceDef): void {
         });
         body.add(model);
       });
-      npcTags.push({ obj: tag(ghost, `${n.name} · AI`, 1.6, "player-label npc-label"), at: ghost });
+      npcTags.push({ obj: tag(ghost, `${n.name} · AI`, 2.8, "player-label npc-label"), at: ghost });
       const reach = n.reach ?? 1.6;
       s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * reach, z: n.z + Math.cos(n.rot) * reach, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];
       continue;
@@ -1238,7 +1238,7 @@ const minimap = mountMinimap({
     { x: 12, z: -21, name: "Lab Coffee" },
     { x: -45.5, z: -30, name: "ANU Sport" },
     { x: -39.3, z: -30, name: "Housing" },
-    { x: 18, z: -39, name: "Career Hub" },
+    { x: 9, z: -43.5, name: "Career Hub" },
     { x: 1.75, z: -31.6, name: "Ad board" },
     { x: -8.6, z: 2.3, name: "Study groups" },
   ],
@@ -2042,20 +2042,29 @@ function cameraOffset(s: SpaceDef, z: number): THREE.Vector3 {
 }
 
 // --- the quest arrow (plan 112) ---------------------------------------------
-// For a quest that means going somewhere, a big arrow bobs over where to go
-// in the space you're in, until it's done or the quests are skipped: the
-// library's door outside; a team room's door in the library; the nearest AI
-// assistant for "ask one something".
+// For a quest that means going somewhere, an arrow floats over your own head
+// and turns, as you move, to point at where to go in the space you're in
+// (the user's call, 10/30: an arrow over the target was easy to miss off
+// screen): the library's door outside, a team room's door in the library,
+// the nearest AI assistant. It goes when the quest is done or skipped, and
+// shrinks into a ring when you're there.
 const questArrow = new THREE.Group();
 {
-  const orange = new THREE.MeshBasicMaterial({ color: 0xff7a1a, depthTest: false, transparent: true, opacity: 0.95 });
-  const head = new THREE.Mesh(new THREE.ConeGeometry(0.45, 0.8, 4), orange);
-  head.rotation.x = Math.PI; // pointing down
-  head.position.y = 0.4;
-  const shaft = new THREE.Mesh(new THREE.BoxGeometry(0.22, 0.7, 0.22), orange);
-  shaft.position.y = 1.15;
-  questArrow.add(head, shaft);
-  questArrow.renderOrder = 10;
+  const orange = new THREE.MeshBasicMaterial({ color: 0xff7a1a, depthTest: false, transparent: true, opacity: 0.9 });
+  // Flat, lying on the ground's plane, pointing along +z (rotated toward the target).
+  const shape = new THREE.Shape();
+  shape.moveTo(0, 0.75);
+  shape.lineTo(0.45, 0.2);
+  shape.lineTo(0.17, 0.2);
+  shape.lineTo(0.17, -0.45);
+  shape.lineTo(-0.17, -0.45);
+  shape.lineTo(-0.17, 0.2);
+  shape.lineTo(-0.45, 0.2);
+  shape.closePath();
+  const flat = new THREE.Mesh(new THREE.ShapeGeometry(shape), orange);
+  flat.rotation.x = -Math.PI / 2; // shape's +y becomes the world's -z; turned round below
+  flat.rotation.z = Math.PI;
+  questArrow.add(flat);
   questArrow.traverse((o) => (o.renderOrder = 10));
   questArrow.visible = false;
   scene.add(questArrow);
@@ -2114,7 +2123,8 @@ function update(dt: number, now: number): void {
     if (!busy()) {
       move.set(Number(dirs.right) - Number(dirs.left), 0, Number(dirs.down) - Number(dirs.up));
       // Turned outside (plan 34), up stays "away from the camera".
-      if (camYaw) move.applyAxisAngle(Y_AXIS, camYaw);
+      // Indoors the view is always from the south, so the turn mustn't steer there (it did: 6, 10/30).
+      if (camYaw && space.outdoor) move.applyAxisAngle(Y_AXIS, camYaw);
       // Walking gets you up.
       if (mySeat && move.lengthSq() > 0) standUp();
       if (move.lengthSq() > 0) {
@@ -2175,10 +2185,11 @@ function update(dt: number, now: number): void {
   me.update(dt);
   for (const a of npcFigures) a.update(dt);
   const qt = questTarget();
-  questArrow.visible = !!qt;
-  if (qt) {
-    questArrow.position.set(qt.x, qt.y + Math.sin(now / 250) * 0.25, qt.z);
-    questArrow.rotation.y += dt * 2;
+  const far = qt ? Math.hypot(qt.x - player.position.x, qt.z - player.position.z) : 0;
+  questArrow.visible = !!qt && far > 1.5;
+  if (qt && questArrow.visible) {
+    questArrow.position.set(player.position.x, player.position.y + 2.55 + Math.sin(now / 250) * 0.06, player.position.z);
+    questArrow.rotation.y = Math.atan2(qt.x - player.position.x, qt.z - player.position.z);
   }
   for (const body of ghosts) {
     body.userData.bob = (body.userData.bob ?? Math.random() * 6) + dt;

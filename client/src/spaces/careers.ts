@@ -108,7 +108,7 @@ export function buildCareers(): SpaceDef {
     colliders,
     doors: [
       // Back out under the O'Donoghue centre's front (outdoor.ts), facing the road.
-      { x: EXIT.x, z: EXIT.z, label: "Go outside", to: "outdoor", arrive: { x: 18, z: -37.5 } },
+      { x: EXIT.x, z: EXIT.z, label: "Go outside", to: "outdoor", arrive: { x: 7.4, z: -43.5 } },
       ...roomDoors("career", CAREER_DOORS, (n) => `Enter interview room ${n}`),
     ],
     ...HALF,

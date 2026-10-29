@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { block, enableShadows, floor, loadModel, mat, scatter, solid, texMat, textPlane, type Box, type Spot } from "../world.ts";
 import { HIGH } from "../settings.ts";
 import { markOccluderGroup } from "./occluders.ts";
+import { asphaltMat } from "./backdrop.ts";
 
 // West of the lawn: the lawn carries on, and the white road north of it
 // (University Avenue, z -40..-22) runs on west and crosses Sullivans Creek on
@@ -105,19 +106,20 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     floor(g, x1 - x0, AVE.w, (x0 + x1) / 2, AVE.z, texMat("ai/paving.jpg", (x1 - x0) / 2, AVE.w / 2), 0.012);
   };
   paving(EAST_TOP + 1.4, -40); // from the bridge's east end to the north road at -40
-  paving(-90, WEST_TOP - 1.4);
+  paving(WEST_TOP - 3.4, WEST_TOP - 1.4); // the far bank's footpath (the road is below)
+  paving(-110, WEST_TOP - 11.2); // and on past the road
   // A planter row along the road's south edge, where it meets the grass.
   const shrubs: Spot[] = [];
   const z = AVE.z + AVE.w / 2 + 0.35;
   for (const [x0, x1] of [
     [-54.5, -42],
-    [-87, -78.5],
+    [-107, -94],
   ] as const) {
     block(g, null, [x1 - x0, 0.4, 0.5], [(x0 + x1) / 2, z], CONCRETE);
     for (let x = x0 + 0.8; x < x1; x += 2.4) shrubs.push({ x, z, rotY: x * 2.3 });
   }
   scatter(g, "nature/Bush_Hedge.glb", 0.9, shrubs, false);
-  lamp(g, colliders, -82, AVE.z + 7.5);
+  lamp(g, colliders, WEST_TOP - 2.6, AVE.z + 10);
 
   // ---- The bridge: the avenue's paving over the creek, dark rails, white end pillars ----
   // Narrower than the avenue: its north 6.4 m (two boardwalks' width) cut off (the user's call).
@@ -147,10 +149,36 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     }
   }
 
-  // ---- The far bank: the path stops at a low hedge ----
-  const hedge: Spot[] = [];
-  for (let z = -39; z <= -22.5; z += 1.2) hedge.push({ x: -88.6, z, rotY: z });
-  scatter(g, "nature/Bush_Hedge.glb", 1.2, hedge, false);
+  // ---- The far bank (the user's call, 10/30): a footpath along the creek,
+  // poured concrete in slabs with a kerb, and beyond it a two-lane asphalt
+  // road with a dashed centre line, both running north-south as far as the
+  // creek does; the avenue meets the road at a crossing. Scenery only. ----
+  const zLen = CREEK_Z.to - CREEK_Z.from;
+  const zMid = (CREEK_Z.from + CREEK_Z.to) / 2;
+  const walk = { x0: WEST_TOP - 3.4, x1: WEST_TOP - 0.2 };
+  floor(g, walk.x1 - walk.x0, zLen, (walk.x0 + walk.x1) / 2, zMid, mat(0xcfccc5), 0.02);
+  // The slabs' joints every 1.5 m, and the kerb on the road side.
+  const joints: Inst[] = [];
+  for (let z = CREEK_Z.from; z < CREEK_Z.to; z += 1.5) if (z < AVE.z - AVE.w / 2 || z > AVE.z + AVE.w / 2) joints.push({ x: (walk.x0 + walk.x1) / 2, y: 0.026, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  instanced(g, new THREE.BoxGeometry(walk.x1 - walk.x0, 0.004, 0.04), mat(0xa9a6a0), joints);
+  const kerb = new THREE.Mesh(new THREE.BoxGeometry(0.25, 0.15, zLen), mat(0xbdbab3));
+  kerb.position.set(walk.x0 - 0.12, 0.075, zMid);
+  g.add(kerb);
+  const road = { x0: walk.x0 - 7.25, x1: walk.x0 - 0.25 };
+  floor(g, road.x1 - road.x0, zLen, (road.x0 + road.x1) / 2, zMid, asphaltMat(road.x1 - road.x0, zLen), 0.01);
+  // Two lanes: a dashed white centre line, solid edge lines (not across the avenue's crossing).
+  const dashes: Inst[] = [];
+  for (let z = CREEK_Z.from; z < CREEK_Z.to; z += 6) if (z < AVE.z - AVE.w / 2 - 1 || z > AVE.z + AVE.w / 2 + 1) dashes.push({ x: (road.x0 + road.x1) / 2, y: 0.016, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  instanced(g, new THREE.BoxGeometry(0.15, 0.004, 3), new THREE.MeshBasicMaterial({ color: 0xf2f2f2 }), dashes);
+  for (const x of [road.x0 + 0.3, road.x1 - 0.3]) {
+    const line = new THREE.Mesh(new THREE.BoxGeometry(0.12, 0.004, zLen), new THREE.MeshBasicMaterial({ color: 0xe8e8e8 }));
+    line.position.set(x, 0.015, zMid);
+    g.add(line);
+  }
+  // A zebra crossing where the avenue meets the road.
+  const stripes: Inst[] = [];
+  for (let z = AVE.z - 4; z <= AVE.z + 4; z += 1) stripes.push({ x: (road.x0 + road.x1) / 2, y: 0.017, z, sx: 1, sy: 1, sz: 1, rot: 0 });
+  instanced(g, new THREE.BoxGeometry(road.x1 - road.x0 - 1.2, 0.004, 0.5), new THREE.MeshBasicMaterial({ color: 0xf4f4f4 }), stripes);
 
   // ---- Trees ----
   // Big ones on the lawn's extension (the models the lawn's edge uses).
@@ -175,8 +203,8 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
     { x: WEST_TOP - 0.5, z: 14 },
     { x: WEST_TOP - 0.5, z: -11 },
     { x: WEST_TOP - 0.5, z: 1 },
-    { x: -81, z: -14 },
-    { x: -84, z: -3 },
+    { x: -88, z: -14 },
+    { x: -89, z: -3 },
   ];
   // The lawn's own tree models, so they sit with the rest: willows a wide
   // CommonTree_4 with golden leaves, poplars a CommonTree_5 squeezed narrow

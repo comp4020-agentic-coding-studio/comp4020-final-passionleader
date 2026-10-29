@@ -106,7 +106,8 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
     root.hidden = !wanted || finished();
   }
   /** True if the list can be seen right now (not hidden by a phone's width, a room's window or a closed list). */
-  const onScreen = (): boolean => !root.hidden && root.offsetParent !== null;
+  // (offsetParent is always null for a fixed element, so it can't say: ask for its boxes instead. That silenced every ding.)
+  const onScreen = (): boolean => !root.hidden && root.getClientRects().length > 0;
 
   title.addEventListener("click", () => {
     open = !open;

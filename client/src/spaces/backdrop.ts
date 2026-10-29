@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { floor, mat, solid, texMat, textPlane, type Box } from "../world.ts";
+import { doorway, floor, mat, solid, texMat, textPlane, type Box } from "../world.ts";
 
 // Scenery past the map's edges, laid out from my own sketch and photos (kept
 // out of the repo), not surveyed, so the campus ends in buildings rather than
@@ -103,7 +103,7 @@ function chifleyMat(len: number): THREE.MeshStandardMaterial {
 
 /** Asphalt, drawn on a canvas: dark grey grain, no markings (a one-lane road). */
 let asphaltTex: THREE.CanvasTexture | null = null;
-function asphaltMat(w: number, d: number): THREE.MeshStandardMaterial {
+export function asphaltMat(w: number, d: number): THREE.MeshStandardMaterial {
   if (!asphaltTex) {
     const c = document.createElement("canvas");
     c.width = c.height = 256;
@@ -283,10 +283,18 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   const name = textPlane(["Lowitja O'Donoghue", "Cultural Centre"], 11, 2.3, { bg: "#2a3743", fg: "#ffffff", font: 0.8 });
   name.position.set(px + 1.5, ph * 0.75, pz + pd / 2 + 0.1);
   backdrop.add(name);
-  // The Career Hub on its lit ground floor (plan 111; its door is outdoor.ts's, E from the road).
-  const careers = textPlane(["Career Hub", "internships · jobs"], 4, 1.1, { bg: "#23404f", fg: "#ffffff", font: 0.42 });
+  // The Career Hub on its lit ground floor (plan 111): its name on the front,
+  // and its door on the west side, in the passage under the white row (the
+  // user's call, 10/30), with an arrow at the road pointing in.
+  const careers = textPlane(["← Career Hub", "door in the passage to the left"], 4.6, 1.1, { bg: "#23404f", fg: "#ffffff", font: 0.36 });
   careers.position.set(px, 2.6, pz + pd / 2 + 0.1);
   backdrop.add(careers);
+  const sideX = px - pw / 2 - 0.02;
+  doorway(backdrop, sideX + 0.06, -43.5, -Math.PI / 2, "");
+  const over = textPlane(["Career Hub"], 2.2, 0.55, { bg: "#23404f", fg: "#ffffff", font: 0.32 });
+  over.position.set(sideX, 3, -43.5);
+  over.rotation.y = -Math.PI / 2;
+  backdrop.add(over);
 
   // Low red-brick buildings beyond the east road.
   const red = facadeTexture("#9b5a44", "#8a4d39", "#2f3a42", "#d8cfc2");

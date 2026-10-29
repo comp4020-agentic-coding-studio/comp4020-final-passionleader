@@ -269,7 +269,7 @@ const sourcesBlock = (pieces: Piece[]): string =>
 const RULES = [
   "Use ONLY the facts written in the <source> blocks. Nothing from your own knowledge: no names, phone numbers, emails, prices, dates, hours, rules or services that aren't written there word for word.",
   "If the exact thing asked (a date, a price, a requirement) isn't in the sources, say plainly that you couldn't find it in the pages you have and link the closest source. A nearby date or price is not an answer: don't swap one for another.",
-  "Link every source you use as a Markdown link with its real url, like [title](url). Never write [1] or other numbered references.",
+  "Link every source you use as a Markdown link with its real url, like [title](url). Never write [1], [source 3] or other numbered references, and never a bare <url>.",
 ];
 
 const systemFor = (npc: Npc, pieces: Piece[]): string =>

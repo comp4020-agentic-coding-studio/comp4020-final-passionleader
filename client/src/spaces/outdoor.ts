@@ -25,6 +25,7 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 const OUTDOOR_AREAS: Box[] = [
   { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the white building's west end (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
+  { minX: 4.6, maxX: 9.4, minZ: -46, maxZ: -39.4 }, // into the passage under the white row, to the Career Hub's side door
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 22 },
 ];
 
@@ -203,7 +204,8 @@ export function buildOutdoor(): SpaceDef {
       // North of the Hub's door, on the ground floor: the ANUSA Student Lounge.
       { x: 4.6, z: -5, label: "Enter the ANUSA Student Lounge", to: "anusa", arrive: { x: -8.4, z: 5 } },
       // The Career Hub (plan 111), in the O'Donoghue centre's lit ground floor across the road.
-      { x: 18, z: -39, label: "Enter the Career Hub", to: "careers", arrive: { x: 0, z: 7.6 } },
+      // Its door is on the centre's west side, in the passage under the white row (the user's call, 10/30).
+      { x: 9.1, z: -43.5, label: "Enter the Career Hub", to: "careers", arrive: { x: 0, z: 7.6 } },
       // An easter egg: an unmarked staff door at the far end of Lab Coffee.
       { x: 24.5, z: -21, label: "Staff only", to: "poop", arrive: { x: 6, z: -4.5 }, secret: true },
       // E at the end of the bridge: you stop 3 m short of the library, so it never fades.

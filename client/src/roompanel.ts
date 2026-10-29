@@ -177,6 +177,7 @@ export function mountRoomPanel(opts: {
   addItem("📝", "Shared notes", "One Markdown page for the room", () =>
     show("notes"),
   );
+  addItem("🖍️", "Whiteboard", "Draw together (Excalidraw; everyone here sees the same board)", () => opts.onWhiteboard());
   addItem(
     "💾",
     "Save chat",
@@ -186,6 +187,7 @@ export function mountRoomPanel(opts: {
   addItem("🗒️", "Save notes", "Keep the shared notes 30 days (only you)", () =>
     opts.onSave("notes"),
   );
+  addItem("❓", "Help", "How rooms work, in the Campus Guide", () => opts.onHelp());
   const leaveHint = document.createElement("p");
   leaveHint.className = "room-note room-leave-hint";
   leaveHint.textContent = "To leave, close this and walk out by the door.";

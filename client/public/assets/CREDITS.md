@@ -3,8 +3,7 @@
 ## Characters (`char/`, Kenney Mini Characters, CC0)
 
 Rigged humanoid characters with a shared skeleton and animation set (idle,
-walk, sprint, jump, emotes and more — see the PROCESS/handoff notes for the
-full clip list). `Textures/colormap.png` is one shared texture atlas used by
+walk, sprint, jump, emotes and more). `Textures/colormap.png` is one shared texture atlas used by
 both files (and by every other variant in the pack), so it must ship
 alongside them.
 
@@ -38,9 +37,9 @@ shows in reflections; it isn't drawn as the backdrop.
 
 The sky you see (replaced 29 October 2026: the earlier one read as storm
 clouds). Made from a sky image generated with Google AI (Gemini) for this
-project (`cloud_bg`): the picture fills the upper half of a 4096×2048
-panorama, once and then mirrored so it wraps round seamlessly, with the
-horizon's colours fading to a pale haze below it. 0.5 MB.
+project: the picture fills the upper half of a 4096×2048 panorama, twice,
+each copy blended into the next so it wraps round without a seam, with the
+horizon's colours fading to a pale haze below it.
 
 ## Nature (`nature/`, Quaternius Stylized Nature MegaKit, CC0)
 
@@ -58,19 +57,13 @@ low-poly scene needs.
 
 | File | Used as | Size |
 | --- | --- | --- |
-| `nature/CommonTree_5.glb` | tree | 277 KB |
-| `nature/CommonTree_3.glb` | tree | 320 KB |
-| `nature/CommonTree_4.glb` | tree | 330 KB |
+| `nature/CommonTree_5.glb` | trees along the road and the creek (squeezed narrow as poplars) | 277 KB |
+| `nature/CommonTree_3.glb` | trees in the grove north of Badger & Co | 320 KB |
+| `nature/CommonTree_4.glb` | the willows along Sullivans Creek (leaves tinted gold) | 330 KB |
 | `nature/Bush_Hedge.glb` | the pack's `Bush_Common`, leaf texture recoloured from red to green | 149 KB |
 | `nature/Bush_Common_Flowers.glb` | bush (flowering) | 218 KB |
 | `nature/Grass_Common_Tall.glb` | grass clump | 20 KB |
 | `nature/Flower_3_Group.glb` | flower patch | 168 KB |
-
-Note on the 300 KB/file target: `CommonTree_3` and `CommonTree_4` land at
-~320–330 KB (textures are already down to 128px; the rest is mesh data I
-have no tool here to simplify further, e.g. Blender). If that's a hard
-limit, `CommonTree_5` (277 KB) is the one that fits cleanly, and I can drop
-to two tree variants instead of three.
 
 ## Animals (`animals/`, Quaternius Low Poly Animals, CC0)
 
@@ -109,13 +102,13 @@ All from the Furniture Kit, `Models/GLTF format/`, unmodified.
 | `tableCoffeeGlass.glb` | coffee table |
 | `lampRoundFloor.glb` | floor lamp |
 | `kitchenBar.glb` | coffee bar counter |
-| `loungeSofa.glb`, `loungeSofaLong.glb`, `loungeChair.glb` | sofas and armchairs in the COMMON lounge |
-| `stoolBar.glb` | stools at the big reading table (COMMON) |
+| `loungeSofa.glb`, `loungeSofaLong.glb`, `loungeChair.glb` | sofas and armchairs in the ANUSA Student Lounge (and the Career Hub's waiting sofas) |
+| `stoolBar.glb` | stools at the ANUSA lounge's and Lab Coffee's counters |
 | `trashcan.glb`, `coatRackStanding.glb`, `plantSmall2.glb`, `plantSmall3.glb`, `books.glb`, `rugRectangle.glb` | small props (bins, coat stand, desk plants, books, doormat) |
-| `bookcaseOpen.glb` | open shelves in the COMMON lounge |
-| `kitchenCoffeeMachine.glb` | coffee machine |
+| `bookcaseOpen.glb` | open shelves in the ANUSA Student Lounge |
+| `kitchenCoffeeMachine.glb` | coffee machines (Hub, ANUSA, Lab Coffee) |
 | `toilet.glb` | the toilets in the Poop Room's stalls (brought over from crit 8) |
-| `laptop.glb`, `computerKeyboard.glb`, `computerMouse.glb`, `lampSquareTable.glb` | the staff's desks (Hub reception and back desk, library reception) |
+| `laptop.glb`, `computerKeyboard.glb`, `computerMouse.glb`, `lampSquareTable.glb` | the staff's desks (Hub, library, Career Hub, the tents) |
 | `bookcaseClosedDoors.glb`, `cardboardBoxClosed.glb` | a cupboard and archive boxes behind them |
 
 ## Textures (`tex/ai/`, generated with Google Gemini)
@@ -129,7 +122,7 @@ storey of facade).
 | `tex/ai/facade_154.jpg` | building 154's white cladding with a ribbon window |
 | `tex/ai/paving.jpg` | outdoor paving and the path |
 | `tex/ai/grass.jpg` | the lawn and the grass round the campus |
-| `tex/ai/carpet.jpg` | classroom carpet tiles |
+| `tex/ai/carpet.jpg` | carpet tiles (classrooms, meeting rooms, ANUSA, the Career Hub) |
 | `tex/ai/wood_floor.jpg` | Student Hub floorboards |
 | `tex/ai/library_floor.jpg` | Chifley Library's dark floorboards |
 | `tex/ai/interior_wall.jpg` | painted plaster on indoor walls (tinted per room) |
@@ -178,8 +171,11 @@ and its team rooms) — Music generated with Google AI (Gemini) for this project
 The Poop Room's fart is synthesised in the browser with the Web Audio API
 (`client/src/sfx.ts`, crit 8's sound); no recorded asset is used.
 
-Everything else in the scene (room shells, characters, sticky notes, UI) is
-built from Three.js primitives and HTML/CSS in code.
+Everything else in the scene (room shells, buildings, tents, sticky notes,
+the UI, the app's icons) is built from Three.js primitives and HTML/CSS in
+code. The academic calendar's dates are from ANU's University Calendar and
+the Academic Skills summary from ANU's pages (both linked where shown); the
+AI assistants answer from ANU's public pages, read by the app's own crawler.
 
 ## Seongsu's ghost
 

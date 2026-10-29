@@ -134,7 +134,7 @@ export function mountGuide(opts: { onTourDone(): void; onTourStart(): void }): {
 
   function showGuide(at?: string): void {
     tour = false;
-    title.textContent = "📖 Campus Guide";
+    title.textContent = "❓ Campus Guide";
     const sections = [...new Set(GUIDE.map((e) => e.section))];
     body.replaceChildren(
       ...sections.map((s) => {
