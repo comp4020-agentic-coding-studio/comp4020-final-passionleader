@@ -62,20 +62,27 @@ function glowTexture(): THREE.Texture {
 
 /**
  * Lamp posts down both sides of the north road, evenly, like a highway's
- * (the user's call, 10/30: none on the lawn or in the middle of a path).
- * The north row stands at the east end of each flower bed, inside the bed,
- * so it blocks no gap you walk through; the south row stands opposite, on
- * the road's edge where it meets the lawn. A spot too near a door, a board
- * or an assistant is skipped.
+ * (the user's call, 10/30), every head leaning out over the road. The north
+ * row stands at the east end of each flower bed, inside it, so it blocks no
+ * gap you walk through. The south row stands opposite, on the road's edge,
+ * but only where grass meets it: never across a path's mouth (the path to
+ * the library, x -9..5; the curved path by Badger & Co, x -35..-29; the
+ * paving east of x 5 in front of Lab Coffee). A spot too near a door, a
+ * board or an assistant is skipped.
  */
+const PATH_MOUTHS: [number, number][] = [
+  [-36, -28],
+  [-10, 100],
+];
 export function roadLamps(g: THREE.Group, colliders: Box[], keepClear: { x: number; z: number }[]): void {
   const north = BED_Z[0] + (BED_Z[1] - BED_Z[0]) / 2;
   const south = -22.6;
   for (const [, x1] of BED_RUNS) {
     const x = x1 - 0.4;
     const ok = (z: number): boolean => !keepClear.some((p) => Math.hypot(p.x - x, p.z - z) < 2.5);
-    if (ok(north)) lamp(g, [], x, north, Math.PI / 2); // in the bed: the bed is already solid
-    if (ok(south)) lamp(g, colliders, x, south, -Math.PI / 2);
+    // The arm points along the lamp's +x, turned by `face`: -π/2 leans it south, π/2 north.
+    if (ok(north)) lamp(g, [], x, north, -Math.PI / 2); // in the bed: the bed is already solid
+    if (ok(south) && !PATH_MOUTHS.some(([a, b]) => x > a && x < b)) lamp(g, colliders, x, south, Math.PI / 2);
   }
 }
 
