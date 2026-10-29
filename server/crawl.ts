@@ -114,6 +114,12 @@ export function pageText(html: string): { title: string; text: string } {
   let body = html.match(/<main[\s>][\s\S]*?<\/main>/i)?.[0] ?? (intro > 0 ? html.slice(html.lastIndexOf("<", intro)) : undefined) ?? html.match(/<body[\s>][\s\S]*<\/body>/i)?.[0] ?? html;
   // The catalogue's list of academic years to switch between.
   body = body.replace(/<select[\s\S]*?<\/select>/gi, " ").replace(/<ul[^>]*academic-year[\s\S]*?<\/ul>/gi, " ");
+  // ANU's "principal dates" boxes put the date before its label (day, month, year, then the heading):
+  // made into one line, label first, so the date can't pair with the next heading instead.
+  body = body.replace(
+    /<div class="dateblock[^"]*">\s*<div class="day">\s*(\d+)\s*<\/div>\s*<div class="month">\s*(\w+)\s*<\/div>\s*<div class="year">\s*(\d+)\s*<\/div>\s*<\/div>\s*<div class="datetext">\s*<h\d[^>]*>([\s\S]*?)<\/h\d>/gi,
+    (_m, d: string, mo: string, y: string, label: string) => `<p>${label.replace(/<[^>]+>/g, " ").trim()}: ${Number(d)} ${mo} ${y}</p>`,
+  );
   body = body
     .replace(/<(script|style|nav|header|footer|svg|noscript|form|button|iframe|template)\b[\s\S]*?<\/\1>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
