@@ -47,7 +47,7 @@
 /* Phones (plan 87): one line at the top, under the HUD, the next quest and Skip; the touch controls own the bottom. */
 @media (max-width: 700px), (pointer: coarse) {
   #quests {
-    left: 50%; right: auto; bottom: auto; top: calc(58px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
+    left: 50%; right: auto; bottom: auto; top: calc(86px + env(safe-area-inset-top, 0px)); transform: translateX(-50%);
     width: min(440px, calc(100vw - 32px)); padding: 2px 4px 2px 12px; display: flex; align-items: center; gap: 6px;
   }
   #quests[hidden] { display: none; }
