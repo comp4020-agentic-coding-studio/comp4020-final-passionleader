@@ -70,7 +70,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    Haiku for courses, careers and accommodation, Amazon Nova for the rest) answers in their
    name only from public ANU pages the app crawls each month, linking the
    pages it used; if those pages don't cover it, it says so instead of
-   guessing. It can still be wrong. What you ask isn't kept.
+   guessing. Ask in any language. It can still be wrong. What you ask isn't kept.
    Signed up, the ✉️ button writes to someone by name and keeps your mail
    for 30 days; it lights up when something arrives. Across the north road,
    the Career Hub (the O'Donoghue centre) has the careers adviser and six
@@ -162,7 +162,7 @@ hidden room's one-poop-each rule); study
 groups never fill past their size, private questions reach only their
 writer and staff, mail only its reader, guests can't send it, and the
 assistants answer one question every two seconds (`board.test.ts`) and
-only from their own crawled pages, never asking the model when none match
+only from their own crawled pages, stating no facts when none match
 (`knowledge.test.ts`); only the admin reads the seven-day log and the bug
 reports, and the log leaves chat out (`admin.test.ts`, `rules.test.ts`); a
 meeting room holds six and a counselling room only

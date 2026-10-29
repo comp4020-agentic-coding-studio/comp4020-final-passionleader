@@ -294,6 +294,7 @@ const RULES = [
 
 const systemFor = (npc: Npc, pieces: Piece[]): string =>
   [
+    "Always reply in the same language as the user's message (Korean if it's Korean, and so on), even though the sources are in English.",
     `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character in it, not ANU staff or an ANU service; if anyone asks whether you're official or real, say so plainly.`,
     ...RULES,
     "A source titled with an academic year is that year's catalogue: say which year you're answering for, and if the person didn't say a year, answer for the current one and say so.",
@@ -318,34 +319,36 @@ export function tidy(text: string): string {
     .trim();
 }
 
-/** What it says when the pages it has don't cover the question (the model isn't asked). */
-const dontKnow = (npc: Npc, question: string): string =>
-  `I couldn't find that in the ANU pages I read, so I'd rather not guess.${
-    /[^\x00-\x7F]/.test(question) && !/[a-z]{3}/i.test(question) ? " (I search ANU's pages in English: asking in English works best.)" : ""
-  } I can help with things like ${npc.examples.map((e) => `"${e}"`).join(" or ")}. Or have a look at ${npc.links
-    .slice(0, 2)
-    .map((l) => `[${l.label}](${l.url})`)
-    .join(" or ")}.`;
 
 /** A hello, a thanks, or "what can you do?": nothing to look up, so it introduces itself (no model, no search). */
-const SMALL_TALK = new RegExp(
+/**
+ * No piece matched: the model still answers, but with no sources and a
+ * strict brief (the user's design, 10/30): a hello, thanks or "what can you
+ * do?" (in any wording, language or spelling) gets an introduction and two
+ * example questions; anything else gets "I couldn't find that in my pages"
+ * and a pointer, with no facts at all. With nothing to draw on there's
+ * nothing to make up; the brief forbids it anyway.
+ */
+const noSourcesFor = (npc: Npc): string =>
   [
-    // hello, thanks, bye (with a word or two after: "hi there", "thanks a lot")
-    "^\\s*(hi|hello|hey|heya|g'?day|yo|hiya|howdy|sup|thanks?|thx|ty|thank (you|u)|cheers|ok(ay)?|cool|bye|good (morning|afternoon|evening|day))\\b[\\w\\s']{0,12}[\\s!.?~]*$",
-    // who are you / what can you do / what do you do / help (also "r u", "u")
-    "^\\s*(who|what)\\s+(are|r)\\s+(you|u|ya)\\b",
-    "^\\s*(what|how)\\b.{0,20}\\b(can|do|could)\\s+(you|u|ya)\\b.{0,20}$",
-    "^\\s*(help|help me|menu|options)\\s*[?!.]*\\s*$",
-  ].join("|"),
-  "i",
-);
-const intro = (npc: Npc): string =>
-  `${npc.greeting} I answer from ANU's own pages and link them. Try asking something like: ${npc.examples.map((e) => `"${e}"`).join(" or ")}.`;
+    "Always reply in the same language as the user's message (Korean if it's Korean, and so on).",
+    `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character, not ANU staff; say so if asked.`,
+    `What you help with: ${npc.greeting}`,
+    `Questions you can answer from ANU's pages, as examples: ${npc.examples.map((e) => `"${e}"`).join(", ")}.`,
+    "For this message you have NO source pages.",
+    "If it is a greeting, thanks, small talk, or a question about you or what you can do: reply warmly in one to three sentences, say what you help with, and offer the example questions.",
+    "Otherwise: do NOT state any fact (no prices, dates, hours, names, rules, numbers, places). Say plainly that you couldn't find that in the ANU pages you have, suggest asking with different words or one of the example questions, and point to these pages as Markdown links: " +
+      npc.links
+        .slice(0, 2)
+        .map((l) => `[${l.label}](${l.url})`)
+        .join(", ") +
+      ".",
+    "Reply in the language the message is written in, and only that language. Never write numbered references.",
+  ].join("\n\n");
 
 /** What the assistant says back: the model's answer from the pages, or an honest note and its pages. */
 export async function answer(npc: Npc, question: string): Promise<string> {
   if (npc.notYet) return npc.notYet;
-  if (SMALL_TALK.test(question) || /^\s*(안녕|감사|고마워|뭐\s*할\s*수|도와)[^\n]{0,12}$/u.test(question)) return intro(npc);
   const offline = `I'm ${npc.name}, and I'm not connected to my AI brain right now, sorry! The pages below have what you need.`;
   if (!client && !bedrock) return offline;
   // The pages are in English: a question in another language (Korean, Chinese…) is first turned
@@ -355,9 +358,9 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   // A short, vague question ("what's the price?", "where is it?") is about this assistant's own topic.
   const vague = keywords(query).filter((w) => !/^\d+$/.test(w)).length <= 1;
   const pieces = search(npc.sources, vague ? `${query} ${npc.topic}` : query, 5);
-  if (!pieces.length) return dontKnow(npc, question);
   if (!takeOne(npc)) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
-  const system = systemFor(npc, pieces);
+  // No sources: the model still replies, under a brief that allows no facts (see noSourcesFor).
+  const system = pieces.length ? systemFor(npc, pieces) : noSourcesFor(npc);
   if (bedrock) return askBedrock(bedrock, npc, question, offline, system);
   try {
     const res = await client!.messages.create(

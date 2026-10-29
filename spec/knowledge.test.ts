@@ -90,11 +90,11 @@ describe("voice tickets", () => {
   });
 });
 
-describe("small talk", () => {
-  it("answers a hello with what it can help with, not with 'couldn't find'", async () => {
+describe("assistants with nothing to go on", () => {
+  it("each has example questions to offer, and with no model they say so rather than guess", async () => {
     const { answer, NPCS } = await import("../server/npcs.ts");
-    const kai = NPCS.find((n) => n.id === "sport")!;
-    for (const q of ["hello", "Hi!", "What can you do?", "who r u", "what can u do", "안녕하세요"]) expect(await answer(kai, q)).toContain(kai.greeting);
     for (const n of NPCS) expect(n.examples.length).toBeGreaterThan(0);
+    // The spec has no model: any message gets the honest "not connected" line, never an invented fact.
+    expect(await answer(NPCS.find((n) => n.id === "sport")!, "who r u")).toMatch(/not connected/);
   });
 });
