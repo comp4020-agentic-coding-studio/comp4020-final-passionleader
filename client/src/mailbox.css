@@ -33,3 +33,5 @@
 .saved-chat { max-height: 50vh; overflow-y: auto; }
 .saved-chat p { margin: 0 0 6px; }
 .saved-chat .saved-system { font-style: italic; opacity: 0.7; }
+.saved-notes { margin: 8px 0; padding: 8px 10px; border-radius: 8px; background: #fffdf5; border: 1px solid #e4d7ba; }
+.saved-notes > strong { display: block; margin-bottom: 4px; font-size: 0.85rem; opacity: 0.8; }

@@ -1,5 +1,6 @@
 import "./mailbox.css";
 import { canberraTime } from "./when.ts";
+import { renderMarkdown } from "./markdown.ts";
 
 // The mailbox (plan 16): messages to and from people signed up, by name,
 // read whenever you come in. Four views in one window: Inbox, Sent, Write,
@@ -283,6 +284,16 @@ export function mountMailbox(opts: {
     const lines = document.createElement("div");
     lines.className = "mail-text saved-chat";
     for (const l of c.lines) {
+      // The shared notes (saved alone, or as a saved chat's last line) are Markdown: shown as such.
+      if (!l.system && l.name === "Notes") {
+        const notes = document.createElement("div");
+        notes.className = "saved-notes";
+        const h = document.createElement("strong");
+        h.textContent = "📝 Shared notes";
+        notes.append(h, renderMarkdown(l.text));
+        lines.append(notes);
+        continue;
+      }
       const p = document.createElement("p");
       if (l.system) {
         p.className = "saved-system";
