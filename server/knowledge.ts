@@ -87,7 +87,7 @@ export function stats(): { pages: number; pieces: number; bySource: Record<strin
 const STOP = new Set(
   (
     "a an and are as at be but by can could do does did for from had has have how i if in into is it its me my of on or our should so than that the their them then there these they this to us was we what when where which who why will with would you your " +
-    "about any anything tell know please hi hello hey thanks thank want need get give find help much many some there's i'm what's ok okay also just like really"
+    "about any anything tell know please hi hello hey thanks thank want need get give find help much many some there's i'm what's ok okay also just like really per a"
   ).split(" "),
 );
 
@@ -118,12 +118,18 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
   const match = words.map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
   const rows = db
     .prepare(
-      `SELECT title, body, url, source, year, bm25(pieces, 4.0, 1.0) AS score FROM pieces
+      `SELECT title, body, url, source, year, bm25(pieces, 2.0, 1.0) AS score FROM pieces
        WHERE pieces MATCH ? AND source IN (${sources.map(() => "?").join(",")})
        ORDER BY (year IS NOT NULL AND year != ?) , score LIMIT 60`,
     )
     .all(match, ...sources, year) as unknown as (Piece & { score: number })[];
-  const need = codes.length ? 1 : words.length <= 2 ? 1 : Math.max(2, Math.ceil(words.length / 2));
+  const need = codes.length ? 1 : words.length <= 2 ? 1 : Math.max(2, Math.floor(words.length / 2));
+  // Asked about money: pieces with prices in them come first (the price table, not the overview).
+  if (/\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|how much|\$)/i.test(question)) {
+    // The more prices a piece lists, the earlier (a price table beats a page that mentions one).
+    const prices = (r: { body: string }): number => Math.min(6, (r.body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length);
+    rows.sort((a, b) => prices(b) - prices(a));
+  }
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
   for (const r of rows) {

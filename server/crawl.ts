@@ -102,7 +102,9 @@ const decode = (t: string): string =>
 
 /** The page's readable text: the main content if it can be found, headings kept as "## …" lines so pieces can carry them. */
 export function pageText(html: string): { title: string; text: string } {
-  const title = decode((html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1] ?? html.match(/<title>([\s\S]*?)<\/title>/i)?.[1] ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  const clean = (t: string | undefined): string => decode((t ?? "").replace(/<[^>]+>/g, " ")).replace(/\s+/g, " ").trim();
+  // The page's heading, or its <title> without the site's name when the heading is empty.
+  const title = clean(html.match(/<h1[^>]*>([\s\S]*?)<\/h1>/i)?.[1]) || clean(html.match(/<title>([\s\S]*?)<\/title>/i)?.[1]).replace(/\s*[|–-]\s*[^|–-]*$/, "");
   let body = html.match(/<main[\s>][\s\S]*?<\/main>/i)?.[0] ?? html.match(/<body[\s>][\s\S]*<\/body>/i)?.[0] ?? html;
   body = body
     .replace(/<(script|style|nav|header|footer|svg|noscript|form|button|iframe|template)\b[\s\S]*?<\/\1>/gi, " ")
@@ -116,6 +118,8 @@ export function pageText(html: string): { title: string; text: string } {
     .split("\n")
     .map((l) => l.replace(/[ \t ]+/g, " ").trim())
     .filter((l) => l && l !== "-" && l !== "|")
+    // Site furniture that isn't content: page owners, feedback, sign-up buttons, share and cookie lines.
+    .filter((l) => !/^(page owner:?|university feedback|send email|join now|sign up online|share this|back to top|skip to (main )?content|accept( all)? cookies?|location)$/i.test(l.replace(/^- /, "")))
     // A heading with nothing under it (galleries, menus) is just noise.
     .filter((l, i, all) => !l.startsWith("## ") || !(all[i + 1] ?? "## ").startsWith("## "))
     .join("\n")
