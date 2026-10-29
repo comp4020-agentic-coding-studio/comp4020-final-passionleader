@@ -1,5 +1,6 @@
 import * as THREE from "three";
 import { doorway, floor, mat, solid, texMat, textPlane, type Box } from "../world.ts";
+import { markOccluderGroup } from "./occluders.ts";
 
 // Scenery past the map's edges, laid out from my own sketch and photos (kept
 // out of the repo), not surveyed, so the campus ends in buildings rather than
@@ -244,6 +245,10 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // The pavilion, built onto the row east of the passage, as wide as 154:
   // dark glass upstairs, a warm lit ground floor, and a thin dark roof
   // overhanging on three sides with warm timber underneath.
+  // The pavilion's parts in a group of their own, so it fades when it stands
+  // between the camera and you (a turned view looks at it from the north).
+  const pavilion = new THREE.Group();
+  backdrop.add(pavilion);
   const px = 18;
   const pz = -45;
   const pw = 16;
@@ -259,42 +264,44 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
     new THREE.MeshStandardMaterial({ color: 0x4a4436, emissive: 0x3a2c18, roughness: 0.4 }),
   );
   lobby.position.set(px, ph / 4, pz);
-  backdrop.add(upper, lobby);
+  pavilion.add(upper, lobby);
   const mullion = mat(0x2b2b2b);
   for (let x = -pw / 2 + 1.5; x < pw / 2; x += 2.2) {
     const m = new THREE.Mesh(new THREE.BoxGeometry(0.12, ph, 0.12), mullion);
     m.position.set(px + x, ph / 2, pz + pd / 2 + 0.06);
-    backdrop.add(m);
+    pavilion.add(m);
   }
   const band = new THREE.Mesh(new THREE.BoxGeometry(pw + 0.1, 0.35, pd + 0.1), mullion);
   band.position.set(px, ph * 0.5, pz);
-  backdrop.add(band);
+  pavilion.add(band);
   const roof = new THREE.Mesh(new THREE.BoxGeometry(pw + 4, 0.7, pd + 3), mat(0x23272b));
   roof.position.set(px, ph + 0.35, pz + 1.5);
-  backdrop.add(roof);
+  pavilion.add(roof);
   const soffit = new THREE.Mesh(
     new THREE.PlaneGeometry(pw + 4, pd + 3),
     new THREE.MeshStandardMaterial({ color: 0xc89a62, emissive: 0x5a3818, roughness: 0.8 }),
   );
   soffit.rotation.x = Math.PI / 2; // faces down
   soffit.position.set(px, ph - 0.01, pz + 1.5);
-  backdrop.add(soffit);
+  pavilion.add(soffit);
   // Its name in white on the dark glass, facing the road.
   const name = textPlane(["Lowitja O'Donoghue", "Cultural Centre"], 11, 2.3, { bg: "#2a3743", fg: "#ffffff", font: 0.8 });
   name.position.set(px + 1.5, ph * 0.75, pz + pd / 2 + 0.1);
-  backdrop.add(name);
+  pavilion.add(name);
   // The Career Hub on its lit ground floor (plan 111): its name on the front,
   // and its door on the west side, in the passage under the white row (the
   // user's call, 10/30), with an arrow at the road pointing in.
   const careers = textPlane(["← Career Hub", "door in the passage to the left"], 4.6, 1.1, { bg: "#23404f", fg: "#ffffff", font: 0.36 });
   careers.position.set(px, 2.6, pz + pd / 2 + 0.1);
-  backdrop.add(careers);
+  pavilion.add(careers);
   const sideX = px - pw / 2 - 0.02;
-  doorway(backdrop, sideX + 0.06, -43.5, -Math.PI / 2, "");
+  doorway(pavilion, sideX + 0.06, -43.5, -Math.PI / 2, "");
   const over = textPlane(["Career Hub"], 2.2, 0.55, { bg: "#23404f", fg: "#ffffff", font: 0.32 });
   over.position.set(sideX, 3, -43.5);
   over.rotation.y = -Math.PI / 2;
-  backdrop.add(over);
+  pavilion.add(over);
+
+  markOccluderGroup(g, pavilion, new THREE.Box3(new THREE.Vector3(px - pw / 2 - 2, 0, pz - pd / 2 - 1.5), new THREE.Vector3(px + pw / 2 + 2, ph + 0.7, pz + pd / 2 + 3)));
 
   // Low red-brick buildings beyond the east road.
   const red = facadeTexture("#9b5a44", "#8a4d39", "#2f3a42", "#d8cfc2");
