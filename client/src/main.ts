@@ -1940,7 +1940,9 @@ function nearestTarget(): Target | null {
   }
   for (const spot of space.spots ?? []) {
     const d = Math.hypot(player.position.x - spot.x, player.position.z - spot.z);
-    if (d < DOOR_RANGE && d < bestD) [best, bestD] = [{ kind: "spot", id: spot.id, label: spot.label }, d];
+    // An assistant reaches a little further, so a bench beside one (Seongsu's) doesn't win the Use button.
+    const range = spot.id.startsWith("npc:") ? DOOR_RANGE + 0.8 : DOOR_RANGE;
+    if (d < range && d < bestD) [best, bestD] = [{ kind: "spot", id: spot.id, label: spot.label }, d];
   }
   // Every note in reach comes along, so stacked ones can all be picked.
   const here: NoteChoice[] = [];
