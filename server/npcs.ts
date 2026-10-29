@@ -289,6 +289,7 @@ const systemFor = (npc: Npc, pieces: Piece[]): string =>
  */
 export function tidy(text: string): string {
   return text
+    .replace(/\[(\[[^\]]+\]\(https?:\/\/[^)\s]+\))\]/g, "$1")
     .replace(/\[\[(?:source\s*)?\d+\]\]\((https?:\/\/[^)\s]+)\)/gi, "[source]($1)")
     .replace(/\s?\[(?:source\s*)?\d+(?:\s*,\s*\d+)*\](?!\()/gi, "")
     .replace(/<(https?:\/\/[^>\s]+)>/g, "[$1]($1)")
@@ -318,7 +319,7 @@ export async function answer(npc: Npc, question: string): Promise<string> {
     const res = await client!.messages.create(
       {
         model: API_MODEL,
-        max_tokens: 300,
+        max_tokens: 400,
         output_config: { effort: "low" },
         system,
         messages: [{ role: "user", content: question }],
@@ -352,11 +353,14 @@ async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, 
         modelId: MODELS[npc.model],
         system: [{ text: system }],
         messages: [{ role: "user", content: [{ text: question }] }],
-        inferenceConfig: { maxTokens: 300, temperature: 0 },
+        inferenceConfig: { maxTokens: 400, temperature: 0 },
       }),
       { abortSignal: AbortSignal.timeout(25_000) },
     );
-    const text = tidy((res.output?.message?.content ?? []).flatMap((b) => (b.text ? [b.text] : [])).join("\n"));
+    let raw = (res.output?.message?.content ?? []).flatMap((b) => (b.text ? [b.text] : [])).join("\n");
+    // Cut off at the token limit: end at the last whole line rather than mid-link.
+    if (res.stopReason === "max_tokens" && raw.includes("\n")) raw = raw.slice(0, raw.lastIndexOf("\n"));
+    const text = tidy(raw);
     return text || offline;
   } catch (err) {
     const name = (err as { name?: string }).name ?? "";

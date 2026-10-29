@@ -310,7 +310,10 @@ export async function crawl(opts: { only?: string[]; log?: (line: string) => voi
     // A catalogue page's code leads its title ("COMP2300 Computer Architecture"), so a code in a question finds it.
     const code = t.source === "catalogue" ? `${decodeURIComponent(t.url.split("/").pop() ?? "").toUpperCase()} ` : "";
     try {
-      savePage({ url: t.url, source: t.source, year: t.year, title: `${code}${title}${year}`, pieces: pieces(text) });
+      // An hours page lists weeks far ahead; the first few (this week and the next) are the ones worth asking about.
+      const all = pieces(text);
+      const kept = /libcal\.com\/hours/.test(t.url) ? all.slice(0, 3) : all;
+      savePage({ url: t.url, source: t.source, year: t.year, title: `${code}${title}${year}`, pieces: kept });
       saved++;
     } catch {
       failed++;
