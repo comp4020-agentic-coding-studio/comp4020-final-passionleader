@@ -63,7 +63,7 @@ export type Event =
   | "refused";
 
 /** What the admin's seven-day copy keeps (the rest only goes to stdout). */
-const KEPT: ReadonlySet<Event> = new Set<Event>([
+export const KEPT: ReadonlySet<Event> = new Set<Event>([
   "join",
   "join-refused",
   "connect",

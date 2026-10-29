@@ -56,6 +56,19 @@
   #signin { max-width: 360px; margin: 40px auto; background: var(--card); border: 1px solid var(--line); border-radius: 12px; padding: 16px; }
   #signin input { width: 100%; margin-bottom: 8px; }
   [hidden] { display: none !important; }
+  /* Who: a small "by" picker inside the box (name, email or student number). */
+  .who-box { display: inline-flex; align-items: stretch; border: 1px solid #bba57a; border-radius: 8px; background: #fff; }
+  .who-box select { border: 0; border-right: 1px solid var(--line); border-radius: 8px 0 0 8px; font-size: 0.8rem; padding: 0 4px; background: #f7f0de; }
+  .who-box input { border: 0; border-radius: 0 8px 8px 0; }
+  details.events { position: relative; }
+  details.events summary { list-style: none; cursor: pointer; min-height: 36px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid #bba57a; border-radius: 8px; background: #fff; }
+  details.events summary::-webkit-details-marker { display: none; }
+  details.events .box { position: absolute; z-index: 3; top: 40px; left: 0; width: min(560px, 92vw); max-height: 60vh; overflow-y: auto; background: var(--card); border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; box-shadow: 0 6px 20px rgba(0,0,0,0.15); }
+  details.events .group { margin: 6px 0; }
+  details.events .group strong { display: block; font-size: 0.8rem; color: var(--muted); margin-bottom: 2px; }
+  details.events .ticks { display: flex; flex-wrap: wrap; gap: 2px 12px; }
+  details.events .row { display: flex; gap: 6px; margin-bottom: 6px; }
+  details.events .row button { min-height: 28px; font-size: 0.8rem; }
   @media (max-width: 640px) {
     thead { display: none; }
     table, tbody, tr, td { display: block; width: 100%; }
@@ -88,15 +101,33 @@
       <span class="me" id="me"></span>
     </div>
     <form class="bar" id="filters">
-      <input id="f-who" placeholder="who" aria-label="Filter by name" size="10">
-      <input id="f-space" placeholder="space" aria-label="Filter by space" size="10">
-      <select id="f-event" aria-label="Filter by event">
-        <option value="">All events</option>
-        <option value="content">Content (notes, comments, posts, files)</option>
-        <option value="signin">Sign-ins</option>
-        <option value="refused">Refused only</option>
-        <option value="admin">Admin actions</option>
+      <select id="f-role" aria-label="Whose entries">
+        <option value="">Everyone</option>
+        <option value="member">Members (students)</option>
+        <option value="guest">Guests</option>
+        <option value="staff">Staff</option>
+        <option value="admin">Admins</option>
       </select>
+      <span class="who-box">
+        <select id="f-by" aria-label="Search who by">
+          <option value="name">Name</option>
+          <option value="studentNo">Student no.</option>
+          <option value="email">Email</option>
+        </select>
+        <input id="f-who" placeholder="part of a name" aria-label="Who (part of it is enough)" size="12">
+      </span>
+      <input id="f-space" placeholder="space" aria-label="Filter by space" size="10">
+      <details class="events" id="f-events">
+        <summary id="f-events-sum">All events ▾</summary>
+        <div class="box">
+          <div class="row">
+            <button type="button" id="ev-all">All</button>
+            <button type="button" id="ev-none">None</button>
+            <button type="button" id="ev-noconn">All but connect/disconnect</button>
+          </div>
+          <div id="ev-groups"></div>
+        </div>
+      </details>
       <button type="submit" class="primary">Apply</button>
       <button type="button" id="f-clear">Clear</button>
     </form>
@@ -276,13 +307,67 @@
     if (entries.length) oldest = entries[entries.length - 1].id;
   }
 
+  // --- which events: ticked one by one, in groups (all ticked = no filter) ---
+  const EVENT_GROUPS = [
+    ["Sign-ins", ["join", "join-refused", "connect", "disconnect", "signed-up", "password-reset"]],
+    ["Content", ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-edited", "post-removed", "post-expired", "post-comment", "post-comment-edited", "post-comment-removed", "file"]],
+    ["Reports and refusals", ["bug-report", "person-report", "refused"]],
+    ["Admin and rooms", ["restricted", "restriction-lifted", "kicked", "role-changed", "classroom-created", "classroom-removed", "classroom-link", "room-invite"]],
+  ];
+  const ticks = new Map();
+  function drawEvents(known) {
+    // The server says which events it keeps; any not grouped above go in "Other".
+    const grouped = new Set(EVENT_GROUPS.flatMap(([, evs]) => evs));
+    const groups = [...EVENT_GROUPS.map(([t, evs]) => [t, evs.filter((e) => known.includes(e))]), ["Other", known.filter((e) => !grouped.has(e))]];
+    const was = new Map([...ticks].map(([e, box]) => [e, box.checked]));
+    ticks.clear();
+    const root = $("ev-groups");
+    root.replaceChildren();
+    for (const [title, evs] of groups) {
+      if (!evs.length) continue;
+      const g = el("div", "group");
+      g.append(el("strong", "", title));
+      const row = el("div", "ticks");
+      for (const e of evs) {
+        const label = el("label", "check");
+        const box = el("input");
+        box.type = "checkbox";
+        box.checked = was.get(e) ?? true;
+        box.addEventListener("change", eventsChanged);
+        ticks.set(e, box);
+        label.append(box, el("span", `pill ${kindOf(e)}`, e));
+        row.append(label);
+      }
+      g.append(row);
+      root.append(g);
+    }
+    summarise();
+  }
+  function summarise() {
+    const on = [...ticks.values()].filter((b) => b.checked).length;
+    $("f-events-sum").textContent = !ticks.size || on === ticks.size ? "All events ▾" : `${on} of ${ticks.size} events ▾`;
+  }
+  function eventsChanged() { summarise(); loadLog(); }
+  const tickAll = (f) => { for (const [e, box] of ticks) box.checked = f(e); eventsChanged(); };
+  $("ev-all").addEventListener("click", () => tickAll(() => true));
+  $("ev-none").addEventListener("click", () => tickAll(() => false));
+  $("ev-noconn").addEventListener("click", () => tickAll((e) => e !== "connect" && e !== "disconnect"));
+
   function filters() {
-    return { who: $("f-who").value, space: $("f-space").value, event: $("f-event").value };
+    const on = [...ticks].filter(([, b]) => b.checked).map(([e]) => e);
+    return {
+      who: $("f-who").value,
+      by: $("f-by").value,
+      role: $("f-role").value,
+      space: $("f-space").value,
+      events: ticks.size && on.length < ticks.size ? on : undefined,
+    };
   }
   async function loadLog(append = false) {
     $("log-error").textContent = "";
     try {
       const data = await api("/api/admin/log", "POST", { ...filters(), limit: 200, before: append ? oldest : undefined });
+      if (data.events && ticks.size !== data.events.length) drawEvents(data.events);
       addRows(data.entries, append);
       $("older").hidden = data.entries.length < 200;
     } catch (err) {
@@ -489,7 +574,17 @@
   $("refresh").addEventListener("click", () => LOADERS[tab]());
   $("older").addEventListener("click", () => loadLog(true));
   $("filters").addEventListener("submit", (e) => { e.preventDefault(); loadLog(); });
-  $("f-clear").addEventListener("click", () => { $("f-who").value = ""; $("f-space").value = ""; $("f-event").value = ""; loadLog(); });
+  $("f-clear").addEventListener("click", () => {
+    $("f-who").value = ""; $("f-space").value = ""; $("f-role").value = ""; $("f-by").value = "name";
+    for (const box of ticks.values()) box.checked = true;
+    summarise();
+    loadLog();
+  });
+  $("f-role").addEventListener("change", () => loadLog());
+  $("f-by").addEventListener("change", () => {
+    $("f-who").placeholder = { name: "part of a name", studentNo: "part of a student no.", email: "part of an email" }[$("f-by").value];
+    if ($("f-who").value) loadLog();
+  });
   setInterval(() => {
     // Only the newest page, and not while someone is reading further back.
     if ($("auto").checked && tab === "log" && !document.hidden && $("rows").children.length <= 230) loadLog();

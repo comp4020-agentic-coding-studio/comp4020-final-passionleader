@@ -106,7 +106,7 @@ import {
   setClassroomLink,
   type Visitor,
 } from "./db.ts";
-import { browserTag, keepIn, log } from "./log.ts";
+import { browserTag, KEPT, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, tellPerson, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
@@ -1152,10 +1152,15 @@ app.post("/api/admin/log", async (c) => {
   const { b } = r;
   const str = (x: unknown): string | undefined => (typeof x === "string" && x.trim() ? x.trim().slice(0, 80) : undefined);
   const event = str(b.event);
-  const events = event ? (AUDIT_GROUPS[event] ?? [event]) : undefined;
+  // The events ticked (the page's checkboxes: everything but connect and disconnect, say), or one group.
+  const ticked = Array.isArray(b.events) ? b.events.filter((e): e is string => typeof e === "string" && KEPT.has(e as never)) : undefined;
+  const events = ticked ?? (event ? (AUDIT_GROUPS[event] ?? [event]) : undefined);
+  if (ticked && !ticked.length) return c.json({ entries: [], keepDays: AUDIT_DAYS, events: [...KEPT] });
+  const by = b.by === "email" || b.by === "studentNo" ? b.by : "name";
+  const role = b.role === "member" || b.role === "guest" || b.role === "staff" || b.role === "admin" ? b.role : undefined;
   const limit = typeof b.limit === "number" ? Math.max(1, Math.min(500, Math.floor(b.limit))) : 200;
   const before = typeof b.before === "number" && Number.isFinite(b.before) ? b.before : undefined;
-  return c.json({ entries: auditEntries({ who: str(b.who), space: str(b.space), events, before, limit }), keepDays: AUDIT_DAYS });
+  return c.json({ entries: auditEntries({ who: str(b.who), by, role, space: str(b.space), events, before, limit }), keepDays: AUDIT_DAYS, events: [...KEPT] });
 });
 
 app.post("/api/admin/bugs", async (c) => {

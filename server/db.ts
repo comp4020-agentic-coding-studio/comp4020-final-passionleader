@@ -938,7 +938,11 @@ export function addAudit(e: Omit<AuditEntry, "id">): void {
 }
 
 export interface AuditQuery {
+  /** Part of a name, email or student number (`by`), any case: "yu" finds YUE. */
   who?: string;
+  by?: "name" | "email" | "studentNo";
+  /** Whose entries: members (students), guests, staff, or admins (the admin and admin-PC holders), as they were when logged. */
+  role?: "member" | "guest" | "staff" | "admin";
   space?: string;
   events?: string[];
   before?: number;
@@ -950,9 +954,23 @@ export function auditEntries(q: AuditQuery): AuditEntry[] {
   const where: string[] = [`at > strftime('%Y-%m-%dT%H:%M:%fZ', 'now', '-${AUDIT_DAYS} days')`];
   const args: (string | number)[] = [];
   if (q.who) {
-    where.push("who = ? COLLATE NOCASE");
-    args.push(q.who);
+    const part = (v: string): string => `%${v.replace(/[\\%_]/g, (m) => `\\${m}`)}%`;
+    if (q.by === "email") {
+      where.push("who IN (SELECT name FROM visitors WHERE email LIKE ? ESCAPE '\\')");
+      args.push(part(q.who));
+    } else if (q.by === "studentNo") {
+      // Students' emails are their numbers (uNNNNNNN@anu.edu.au): "832" or "u832" finds u8321477.
+      where.push("who IN (SELECT name FROM visitors WHERE email LIKE ? ESCAPE '\\')");
+      args.push(`u${part(q.who.replace(/^u/i, "")).slice(0, -1)}%@anu.edu.au`);
+    } else {
+      where.push("who LIKE ? ESCAPE '\\'");
+      args.push(part(q.who));
+    }
   }
+  if (q.role === "member") where.push("role = 'student'");
+  else if (q.role === "guest") where.push("role = 'guest'");
+  else if (q.role === "staff") where.push("role = 'staff'");
+  else if (q.role === "admin") where.push("(role = 'admin' OR who IN (SELECT name FROM visitors WHERE admin_pc = 1))");
   if (q.space) {
     where.push("space = ?");
     args.push(q.space.toLowerCase());

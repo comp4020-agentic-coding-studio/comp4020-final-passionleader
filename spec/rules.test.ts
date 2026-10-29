@@ -204,6 +204,24 @@ describe("the admin's seven-day log", () => {
     expect(JSON.stringify(mine)).not.toContain("t-writer");
   });
 
+  it("finds part of a name, any case, by role, and by a student number or email; '%' is just a character", () => {
+    keepIn(db.addAudit);
+    const stop = captureLog(() => {});
+    try {
+      log("note", { name: "YUEzz", token: "t-yue", role: "student" }, { space: "outdoor", note: 9 });
+      log("note", { name: "gstzz", token: "t-gst", role: "guest" }, { space: "outdoor", note: 10 });
+    } finally {
+      stop();
+    }
+    raw.prepare("INSERT OR IGNORE INTO visitors (name, token, role, email) VALUES ('YUEzz', 'tok-yue', 'student', 'u7654321@anu.edu.au')").run();
+    expect(db.auditEntries({ who: "yue", limit: 10 }).map((e) => e.who)).toEqual(["YUEzz"]);
+    expect(db.auditEntries({ who: "zz", role: "guest", limit: 10 }).map((e) => e.who)).toEqual(["gstzz"]);
+    expect(db.auditEntries({ who: "zz", role: "member", limit: 10 }).map((e) => e.who)).toEqual(["YUEzz"]);
+    expect(db.auditEntries({ who: "765432", by: "studentNo", limit: 10 }).map((e) => e.who)).toEqual(["YUEzz"]);
+    expect(db.auditEntries({ who: "u7654", by: "email", limit: 10 }).map((e) => e.who)).toEqual(["YUEzz"]);
+    expect(db.auditEntries({ who: "%", limit: 10 })).toEqual([]);
+  });
+
   it("filters by event and forgets entries older than seven days", () => {
     keepIn(db.addAudit);
     const stop = captureLog(() => {});
