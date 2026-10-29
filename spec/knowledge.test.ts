@@ -65,3 +65,12 @@ describe("the crawler's manners", () => {
     expect(Number(src.match(/CRAWL_GAP_MS\) \|\| (\d+)/)?.[1])).toBeGreaterThanOrEqual(2000);
   });
 });
+
+describe("tidy answers", () => {
+  it("drops numbered references and links bare addresses", async () => {
+    const { tidy } = await import("../server/npcs.ts");
+    expect(tidy("Open 24 hours [1]. See [[2]](https://a.b/c) and <https://x.y/h> [source 3].")).toBe(
+      "Open 24 hours. See [source](https://a.b/c) and [https://x.y/h](https://x.y/h).",
+    );
+  });
+});

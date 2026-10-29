@@ -282,6 +282,21 @@ const systemFor = (npc: Npc, pieces: Piece[]): string =>
     `Again, before you answer: ${RULES.join(" ")}`,
   ].join("\n\n");
 
+/**
+ * Tidies a model's answer: numbered references ([1], [source 2], [[3]](url))
+ * become plain links or go, and a bare <https://…> becomes a link. Models
+ * slip into these even when told not to.
+ */
+export function tidy(text: string): string {
+  return text
+    .replace(/\[\[(?:source\s*)?\d+\]\]\((https?:\/\/[^)\s]+)\)/gi, "[source]($1)")
+    .replace(/\s?\[(?:source\s*)?\d+(?:\s*,\s*\d+)*\](?!\()/gi, "")
+    .replace(/<(https?:\/\/[^>\s]+)>/g, "[$1]($1)")
+    .replace(/\s+([,.;:])/g, "$1")
+    .replace(/,([.;:])/g, "$1")
+    .trim();
+}
+
 /** What it says when the pages it has don't cover the question (the model isn't asked). */
 const dontKnow = (npc: Npc): string =>
   `Sorry, I couldn't find that in the ANU pages I have, so I'd rather not guess. Try asking with different words (a course code or a place name helps), or have a look at ${npc.links
@@ -303,7 +318,7 @@ export async function answer(npc: Npc, question: string): Promise<string> {
     const res = await client!.messages.create(
       {
         model: API_MODEL,
-        max_tokens: 400,
+        max_tokens: 300,
         output_config: { effort: "low" },
         system,
         messages: [{ role: "user", content: question }],
@@ -311,7 +326,7 @@ export async function answer(npc: Npc, question: string): Promise<string> {
       { timeout: 20_000, maxRetries: 1 },
     );
     if (res.stop_reason === "refusal") return "That's not something I can help with here. The pages below may.";
-    const text = res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n").trim();
+    const text = tidy(res.content.flatMap((b) => (b.type === "text" ? [b.text] : [])).join("\n"));
     return text || offline;
   } catch (err) {
     // Out of credit (or past the account's spend limit): say so plainly, so a
@@ -337,11 +352,11 @@ async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, 
         modelId: MODELS[npc.model],
         system: [{ text: system }],
         messages: [{ role: "user", content: [{ text: question }] }],
-        inferenceConfig: { maxTokens: 400, temperature: 0 },
+        inferenceConfig: { maxTokens: 300, temperature: 0 },
       }),
       { abortSignal: AbortSignal.timeout(25_000) },
     );
-    const text = (res.output?.message?.content ?? []).flatMap((b) => (b.text ? [b.text] : [])).join("\n").trim();
+    const text = tidy((res.output?.message?.content ?? []).flatMap((b) => (b.text ? [b.text] : [])).join("\n"));
     return text || offline;
   } catch (err) {
     const name = (err as { name?: string }).name ?? "";

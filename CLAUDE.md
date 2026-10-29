@@ -130,7 +130,7 @@ Read before planning or building: `README.md` (what good means for this app),
   couldn't find it and points to its pages. Courses and careers run on Claude
   Haiku, the rest on Amazon Nova 2 Lite, both on Amazon Bedrock with the S3
   keys (no new key; or Claude by `ANTHROPIC_API_KEY` when `NPC_MODEL` names
-  one); no key is ever in the repo. 400 tokens at most, told it's an
+  one); no key is ever in the repo. 300 tokens at most, told it's an
   unofficial AI character and to say so if asked. What's asked goes to the
   model only: not stored, not logged (the log notes who asked which
   assistant and how long it was). Without a model, or past the day's limit,
