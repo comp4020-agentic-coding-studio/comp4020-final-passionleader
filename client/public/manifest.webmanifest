@@ -1,0 +1,16 @@
+{
+  "name": "ANU Crossing (Unofficial)",
+  "short_name": "ANU Crossing",
+  "description": "An unofficial, fan-made 3D campus for the ANU community.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "fullscreen",
+  "display_override": ["fullscreen", "standalone"],
+  "orientation": "any",
+  "background_color": "#bfdcf2",
+  "theme_color": "#6b3f1d",
+  "icons": [
+    { "src": "/icon-192.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any maskable" }
+  ]
+}

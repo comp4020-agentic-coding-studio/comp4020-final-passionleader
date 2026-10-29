@@ -2,7 +2,15 @@
 <html lang="en">
   <head>
     <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover" />
+    <!-- Added to a phone's home screen it opens without the browser's bars (plan 88). -->
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <meta name="theme-color" content="#6b3f1d" />
+    <meta name="apple-mobile-web-app-capable" content="yes" />
+    <meta name="mobile-web-app-capable" content="yes" />
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent" />
+    <meta name="apple-mobile-web-app-title" content="ANU Crossing" />
+    <link rel="apple-touch-icon" href="/icon-192.png" />
     <title>ANU Crossing (Unofficial)</title>
     <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
   </head>
@@ -13,7 +21,6 @@
     <div id="hud" hidden>
       <p id="hud-name"></p>
       <p id="hud-online" hidden></p>
-      <p id="hud-help" class="touch-help">Move: arrow pad &middot; Use, Menu and Jump: the buttons</p>
       <p id="toast" role="status" aria-live="polite"></p>
     </div>
 
@@ -27,7 +34,7 @@
         <button type="button" data-dir="down" tabindex="-1" aria-label="Move down">&#9660;</button>
       </div>
       <div id="actions">
-        <button type="button" id="menu-btn" tabindex="-1">Menu</button>
+        <button type="button" id="menu-btn" tabindex="-1">Emotes</button>
         <button type="button" id="jump-btn" tabindex="-1">Jump</button>
         <button type="button" id="use-btn" tabindex="-1">Use</button>
       </div>
