@@ -7,6 +7,7 @@
 // is created.
 
 import { getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from "./audio.ts";
+import { readVoiceVolume, saveVoiceVolume } from "./voicechat.ts";
 
 export type Quality = "low" | "high";
 const KEY = "campus.quality";
@@ -51,6 +52,8 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const sliders: [string, string, () => number, (v: number) => void][] = [
     ["volume-music", "Music", getBgmVolume, setBgmVolume],
     ["volume-sfx", "Sound effects", getSfxVolume, setSfxVolume],
+    // Other people's voices (plan 86): in a room's voice, and outside (hold V to talk, on a computer).
+    ["volume-voice", "Voices", readVoiceVolume, saveVoiceVolume],
   ];
   for (const [id, text, get, set] of sliders) {
     const row = document.createElement("div");

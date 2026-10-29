@@ -8,6 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
+    "livekit-client": "^2.23.0",
     "three": "^0.186.1"
   },
   "devDependencies": {

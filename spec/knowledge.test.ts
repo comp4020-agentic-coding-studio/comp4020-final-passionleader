@@ -74,3 +74,18 @@ describe("tidy answers", () => {
     );
   });
 });
+
+describe("voice tickets", () => {
+  it("are LiveKit tokens for one room, signed with the secret, short-lived", async () => {
+    process.env.LIVEKIT_API_KEY = "key1";
+    process.env.LIVEKIT_API_SECRET = "s3cret";
+    process.env.LIVEKIT_URL = "wss://voice.example";
+    const { voiceToken } = await import("../server/voice.ts");
+    const { createHmac } = await import("node:crypto");
+    const t = voiceToken("ann", "room-team-library-1-abc", 600, 1_700_000_000_000);
+    const [h, p, sig] = t.split(".");
+    expect(createHmac("sha256", "s3cret").update(`${h}.${p}`).digest("base64url")).toBe(sig);
+    const claims = JSON.parse(Buffer.from(p!, "base64url").toString());
+    expect(claims).toMatchObject({ iss: "key1", sub: "ann", exp: 1_700_000_600, video: { room: "room-team-library-1-abc", roomJoin: true } });
+  });
+});

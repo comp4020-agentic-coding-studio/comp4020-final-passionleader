@@ -63,6 +63,8 @@ export function mountRoomPanel(opts: {
   onHelp(): void;
   /** Opens the room's shared whiteboard (plan 85). */
   onWhiteboard(): void;
+  /** Turns the room's voice on or off for you (plan 86). */
+  onVoice(): void;
   /** Opens your saved chats and notes (the mailbox's Saved tab). */
   onSaved(): void;
   maxLength: number;
@@ -78,6 +80,8 @@ export function mountRoomPanel(opts: {
   focusInput(): void;
   /** Shows a view (the menu, chat, notes) or hides the window. */
   show(view: View): void;
+  /** Says on the menu whether your voice is on. */
+  setVoice(on: boolean): void;
   /**
    * Leaving: straight out if anyone else is inside; if you're the last, a
    * warning first that the room's chat and files go when it empties.
@@ -179,6 +183,7 @@ export function mountRoomPanel(opts: {
   addItem("📝", "Shared notes", "One Markdown page for the room", () =>
     show("notes"),
   );
+  const voiceItem = addItem("🎙️", "Voice: off", "Talk with everyone here who has voice on (microphone)", () => opts.onVoice());
   addItem("🖍️", "Whiteboard", "Draw together in a new tab (Excalidraw; everyone here gets the same board)", () => opts.onWhiteboard());
   addItem(
     "💾",
@@ -603,6 +608,11 @@ export function mountRoomPanel(opts: {
     isTyping: () => isOpen && (view !== "closed" || !lastOut.hidden),
     askLeave,
     show,
+    setVoice(on) {
+      const label = voiceItem.querySelector(".room-item-label");
+      if (label?.firstChild) label.firstChild.textContent = on ? "Voice: on" : "Voice: off";
+      voiceItem.classList.toggle("is-on", on);
+    },
     focusInput() {
       if (!isOpen) return;
       show("chat");

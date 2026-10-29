@@ -6,7 +6,7 @@
 
 import "./keyguide.css";
 
-const TRACKED_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyE", "KeyQ", "KeyR", "Enter", "Space", "ShiftLeft"] as const;
+const TRACKED_CODES = ["KeyW", "KeyA", "KeyS", "KeyD", "KeyE", "KeyQ", "KeyR", "KeyV", "Enter", "Space", "ShiftLeft"] as const;
 type TrackedCode = (typeof TRACKED_CODES)[number];
 
 function isTracked(code: string): code is TrackedCode {
@@ -55,12 +55,14 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
   q.classList.add("keyguide-e");
   const r = key("r", "R");
   r.classList.add("keyguide-e");
+  const vk = key("v", "V");
+  vk.classList.add("keyguide-e");
   const enter = key("enter", "ENTER");
   enter.classList.add("keyguide-e", "keyguide-enter");
 
   const main = document.createElement("div");
   main.className = "keyguide-main";
-  main.append(group("Move", wasd), group("Interact", e), group("Emotes", q), group("Turn view", r), group("Chat", enter));
+  main.append(group("Move", wasd), group("Interact", e), group("Emotes", q), group("Turn view", r), group("Talk (hold)", vk), group("Chat", enter));
 
   const space = key("space", "SPACE");
   space.classList.add("keyguide-space");
@@ -88,6 +90,7 @@ export function mountKeyGuide(): { show(): void; hide(): void; press(code: strin
     KeyE: e,
     KeyQ: q,
     KeyR: r,
+    KeyV: vk,
     Enter: enter,
     Space: space,
     ShiftLeft: shift,

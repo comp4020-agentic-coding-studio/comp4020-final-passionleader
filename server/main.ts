@@ -2,6 +2,7 @@ import { createHash, randomInt, randomUUID } from "node:crypto";
 import { MailFailure, lastMail, mailReady, sendMail, testOutbox } from "./mail.ts";
 import { NPCS, answer, npcById } from "./npcs.ts";
 import { crawl } from "./crawl.ts";
+import { voiceReady, voiceToken, voiceUrl } from "./voice.ts";
 import { lastFinished as lastCrawl } from "./knowledge.ts";
 import { existsSync, readFileSync } from "node:fs";
 import type { Server } from "node:http";
@@ -496,6 +497,34 @@ app.delete("/api/chats/:id", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
   return deleteSavedChat(v.name, Number(c.req.param("id"))) ? c.json({ ok: true }) : c.json({ error: "That chat is gone." }, 404);
+});
+
+// --- voice (plan 86) -------------------------------------------------------------
+// A ticket to talk: in a meeting room, its voice, only while you're inside
+// (so its cap and its invites hold); outside, the open voice of the space
+// you're in. Anyone joined, guests too, as for the rooms. The log notes who
+// joined which voice, never what was said (it isn't recorded anywhere).
+app.post("/api/voice", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  if (!voiceReady()) return c.json({ error: "Voice isn't available right now. Error code: VOICE-CONFIG" }, 503);
+  const barred = stopped(c, v, "chat", { action: "voice" });
+  if (barred) return barred;
+  const p = livePlayer(v.name);
+  if (!p) return c.json({ error: "Come onto the campus first." }, 400);
+  let room: string;
+  if (roomOf(p.space)) {
+    const sitting = roomSessionOf(v.name, p.space);
+    if (!sitting) return c.json({ error: "You're not in that room." }, 403);
+    room = `room-${p.space}-${sitting}`;
+  } else if (p.space === "outdoor") room = "space-outdoor";
+  else {
+    log("refused", v, { action: "voice", space: p.space, reason: "no voice here" }, { ip: ipOf(c) });
+    return c.json({ error: "Voice works in meeting rooms and outside." }, 400);
+  }
+  log("voice-joined", v, { space: p.space }, { ip: ipOf(c) });
+  return c.json({ url: voiceUrl(), token: voiceToken(v.name, room), room, space: p.space });
 });
 
 // --- the AI campus assistants (plan 56) ---------------------------------------

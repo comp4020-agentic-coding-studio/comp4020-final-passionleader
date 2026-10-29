@@ -183,6 +183,15 @@ Read before planning or building: `README.md` (what good means for this app),
   Excalidraw collaboration link the server makes at random for that room
   when first asked, given only to people inside, forgotten when it empties
   (the drawing goes through Excalidraw's own encrypted relay, never ours).
+- Voice (through the author's LiveKit server on EC2; never recorded, never
+  through this app): the server gives a ticket (a LiveKit token signed with
+  the Fly secret, two hours) only for the voice of where you are now: a
+  meeting room's voice only to someone inside it this sitting (so its cap
+  and invites hold), the open voice outside (hold V, on a computer; quieter
+  with distance, silent past 18 m) only to someone outside. Turned on from
+  the room menu; leaving the place ends it. Muting someone silences their
+  voice too. The chat restriction stops voice as well. The log notes who
+  joined which voice, never what was said.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

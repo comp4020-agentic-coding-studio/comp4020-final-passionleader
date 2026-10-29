@@ -32,6 +32,14 @@ describe("the admin's log and bug reports", () => {
     expect((await api("/api/admin/restrictions", "DELETE", { token: v.token, name: v.name, what: "chat" })).status).toBe(403);
   });
 
+  it("gives no voice ticket without joining, and says so plainly when voice isn't set up", async () => {
+    expect((await api("/api/voice", "POST", { token: "nope" })).status).toBe(401);
+    const v = await visitor();
+    // The spec's server has no LiveKit secrets: a clear error code, not a crash.
+    const res = await api("/api/voice", "POST", { token: v.token });
+    expect([400, 503]).toContain(res.status);
+  });
+
   it("refuses the Roles tab to anyone but the top admin", async () => {
     const v = await visitor();
     expect((await api("/api/admin/roles", "POST", { token: v.token })).status).toBe(403);

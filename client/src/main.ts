@@ -12,6 +12,7 @@ import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type L
 import { mountLookPicker } from "./lookpicker.ts";
 import { fart, sfx, step, warmUp } from "./sfx.ts";
 import {
+  voiceTicket,
   ApiError,
   RESERVED_RE,
   createClassroom,
@@ -93,6 +94,7 @@ import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
 import { mountGuide } from "./guide.ts";
+import { mountVoice } from "./voicechat.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
@@ -779,6 +781,17 @@ const roomPanel = mountRoomPanel({
     if (open) stopMoving();
   },
   onHelp: () => guide.open("rooms"),
+  onVoice: () => {
+    if (voice.isOn()) {
+      voice.leave();
+      roomPanel.setVoice(false);
+      toast("Voice off.");
+    } else
+      void voice.join(false).then((ok) => {
+        roomPanel.setVoice(ok);
+        if (ok) toast("🎙 Voice on: everyone in the room with voice on hears you.");
+      });
+  },
   onWhiteboard: () => {
     // The tab opens now, on the tap (a tab opened later, when the link arrives, is blocked as a pop-up); the link fills it.
     boardTab = window.open("about:blank", "_blank");
@@ -1155,6 +1168,29 @@ let nextNpcWave = 0;
 /** Each assistant's name tag, shown only within NPC_TAG_RANGE (from across a space they cluttered the view). */
 const npcTags: { obj: CSS2DObject; at: THREE.Object3D }[] = [];
 const NPC_TAG_RANGE = 5.5;
+// Voice (plan 86): a meeting room's voice from its menu; outside on a computer, hold V.
+const voice = mountVoice({
+  async ticket() {
+    if (!session) return "Join first.";
+    try {
+      return await voiceTicket(session.token);
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Voice isn't available right now.";
+    }
+  },
+  whereIs(name) {
+    for (const v of others.values()) if (v.name === name) return { x: v.group.position.x, z: v.group.position.z };
+    return null;
+  },
+  me: () => ({ x: player.position.x, z: player.position.z }),
+  isMuted: (name) => muteDialog.isMuted(name),
+  say: (msg) => toast(msg),
+  talking(names) {
+    for (const v of others.values()) v.group.userData.talking = names.has(v.name);
+    roomPanel.setVoice(voice.isOn());
+  },
+});
+
 const npcChat = mountNpcChat({
   async ask(id, text) {
     if (!session) return "Join first.";
@@ -1262,6 +1298,8 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   for (const nid of [...notes.keys()]) removeNote(nid);
   for (const oid of [...others.keys()]) removeOther(oid);
   noteRequest++;
+  // Voice belongs to where you are: going anywhere else ends it.
+  if (voice.isOn()) voice.leave();
   if (roomPanel.isOpen() && !meetingRoom(id)) {
     roomPad.close();
     roomPanel.close();
@@ -1729,6 +1767,19 @@ window.addEventListener("keydown", (e) => {
       e.preventDefault();
       if (!e.repeat) interact();
       return;
+    case "KeyV":
+      // Outside, on a computer: hold V to talk to the people near you.
+      if (space?.outdoor && !touchScreen.matches && !e.repeat) {
+        e.preventDefault();
+        void voice.join(true).then((ok) => {
+          if (ok && vHeld) {
+            voice.talk(true);
+            toast("🎙 Talking… (let go of V to stop)");
+          }
+        });
+        vHeld = true;
+      }
+      return;
     case "KeyQ":
       e.preventDefault();
       if (!e.repeat && !radial.isOpen()) radial.open();
@@ -1746,8 +1797,13 @@ window.addEventListener("keydown", (e) => {
     dirs[dir] = true;
   }
 });
+let vHeld = false;
 window.addEventListener("keyup", (e) => {
   keyGuide.press(e.code, false);
+  if (e.code === "KeyV" && vHeld) {
+    vHeld = false;
+    voice.talk(false);
+  }
   if (e.key === "Shift") running = false;
   if (e.code === "KeyQ" && radial.isOpen()) radial.close();
   const dir = KEY_MAP[e.code];
@@ -2195,6 +2251,7 @@ function update(dt: number, now: number): void {
   const ease = 1 - Math.exp(-12 * dt);
   me.update(dt);
   for (const a of npcFigures) a.update(dt);
+  voice.tick();
   const qt = questTarget();
   const far = qt ? Math.hypot(qt.x - player.position.x, qt.z - player.position.z) : 0;
   questArrow.visible = !!qt && far > 1.5;

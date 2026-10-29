@@ -131,6 +131,8 @@ export const getSavedChats = (token: string): Promise<{ id: number; space: Space
 export const getSavedChat = (token: string, id: number): Promise<{ id: number; space: SpaceId; kind?: "chat" | "notes"; savedAt: string; lines: { name: string; text: string; system?: boolean }[] }> =>
   request(`/api/chats/${id}`, "POST", { token });
 export const deleteSavedChat = (token: string, id: number): Promise<unknown> => request(`/api/chats/${id}`, "DELETE", { token });
+/** A ticket for the voice where you are now (plan 86). */
+export const voiceTicket = (token: string): Promise<{ url: string; token: string; room: string }> => request("/api/voice", "POST", { token });
 export const getNpcs = (): Promise<NpcDef[]> => request<NpcDef[]>("/api/npcs");
 export const askNpc = (token: string, id: string, text: string): Promise<{ reply: string }> => request(`/api/npc/${id}/ask`, "POST", { token, text });
 

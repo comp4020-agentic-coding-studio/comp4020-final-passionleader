@@ -45,6 +45,7 @@ export type Event =
   | "guests-purged"
   | "chat-saved"
   | "role-changed"
+  | "voice-joined"
   | "post-comment"
   | "post-comment-edited"
   | "post-comment-removed"
