@@ -35,7 +35,7 @@ export interface Npc {
   model3d?: string;
   /** Not ready to answer yet: says this instead of asking the model (Seongsu, until his pages are written). */
   notYet?: string;
-  /** "haiku" for the careful ones (courses, careers), "nova" for the rest (plan 78, 10/29). */
+  /** "haiku" for the careful ones (courses, careers, and accommodation's price comparisons), "nova" for the rest (plan 78). */
   model: "haiku" | "nova";
 }
 
@@ -172,7 +172,7 @@ export const NPCS: Npc[] = [
     greeting: "Hi! I can compare ANU's residences for you: prices, catered or self-catered, and how to apply.",
     voice: "male",
     sources: ["housing"],
-    model: "nova",
+    model: "haiku",
   },
   {
     id: "intl",

@@ -67,7 +67,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    assistants (the library, ANU Sport, accommodation, ANUSA, the course
    desk, international students and careers, and a ghost of the author)
    stand in their places, tagged "AI": **E** to ask one. An AI model (Claude
-   Haiku for courses and careers, Amazon Nova for the rest) answers in their
+   Haiku for courses, careers and accommodation, Amazon Nova for the rest) answers in their
    name only from public ANU pages the app crawls each month, linking the
    pages it used; if those pages don't cover it, it says so instead of
    guessing. It can still be wrong. What you ask isn't kept.
