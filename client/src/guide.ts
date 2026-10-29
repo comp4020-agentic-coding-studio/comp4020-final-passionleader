@@ -4,7 +4,7 @@ import "./guide.css";
 // lives in GUIDE below, one list: the tour shows the entries marked `intro`
 // in order, the guide shows them all by section, and a room's Help opens the
 // guide at the rooms. A feature that isn't built yet isn't in it. Each entry
-// may have a short looping clip (assets/guide/<id>.webm, muted); without one
+// may have a short looping clip (assets/guide/<id>.webp, animated); without one
 // it's text only. Seen or skipped is kept in this browser.
 
 export interface GuideEntry {
@@ -17,7 +17,7 @@ export interface GuideEntry {
   touch?: string;
   /** In the first-visit tour, in this order. */
   intro?: number;
-  /** A short clip exists in assets/guide/ (none recorded yet: a box with no clip would paint black). */
+  /** A short clip exists in assets/guide/<id>.webp (recorded by the author's clips tool). */
   clip?: boolean;
 }
 
@@ -67,16 +67,14 @@ function card(e: GuideEntry): HTMLElement {
   el.className = "guide-entry";
   el.id = `guide-${e.id}`;
   if (e.clip) {
-    const v = document.createElement("video");
-    v.src = `${import.meta.env.BASE_URL}assets/guide/${e.id}.webm`;
-    v.muted = true;
-    v.loop = true;
-    v.autoplay = true;
-    v.playsInline = true;
-    v.setAttribute("aria-hidden", "true");
-    // No clip recorded yet: just the words.
-    v.addEventListener("error", () => v.remove());
-    el.append(v);
+    // A short looping clip: an animated WebP (lighter than a video, and it plays by itself, silently).
+    const img = document.createElement("img");
+    img.className = "guide-clip";
+    img.src = `${import.meta.env.BASE_URL}assets/guide/${e.id}.webp`;
+    img.alt = "";
+    img.loading = "lazy";
+    img.addEventListener("error", () => img.remove());
+    el.append(img);
   }
   const h = document.createElement("h3");
   h.textContent = e.title;
