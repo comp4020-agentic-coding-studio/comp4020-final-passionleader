@@ -95,6 +95,7 @@ import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
 import { mountGuide } from "./guide.ts";
 import { mountVoice } from "./voicechat.ts";
+import { mountInvitePopup } from "./invitepopup.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
@@ -102,6 +103,7 @@ import { mountBugReport } from "./bugreport.ts";
 import { imageLink, openFile, upload } from "./uploads.ts";
 import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
+import { roomArrival } from "./spaces/meeting.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { canberraTime } from "./when.ts";
@@ -782,15 +784,11 @@ const roomPanel = mountRoomPanel({
   },
   onHelp: () => guide.open("rooms"),
   onVoice: () => {
-    if (voice.isOn()) {
-      voice.leave();
-      roomPanel.setVoice(false);
-      toast("Voice off.");
-    } else
-      void voice.join(false).then((ok) => {
-        roomPanel.setVoice(ok);
-        if (ok) toast("🎙 Voice on: everyone in the room with voice on hears you.");
-      });
+    // Everyone in the room already hears; this is whether they hear you.
+    void voice.mic(!voice.micOn()).then((on) => {
+      roomPanel.setVoice(on);
+      toast(on ? "🎙 Mic on: everyone in the room hears you." : "Mic off: you're still listening.");
+    });
   },
   onWhiteboard: () => {
     // The tab opens now, on the tap (a tab opened later, when the link arrives, is blocked as a pop-up); the link fills it.
@@ -1100,7 +1098,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-ca
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 installDialogKeys();
 
@@ -1168,6 +1166,18 @@ let nextNpcWave = 0;
 /** Each assistant's name tag, shown only within NPC_TAG_RANGE (from across a space they cluttered the view). */
 const npcTags: { obj: CSS2DObject; at: THREE.Object3D }[] = [];
 const NPC_TAG_RANGE = 5.5;
+// An invitation into a counselling or interview room: accept to be taken straight in.
+const invitePopup = mountInvitePopup({
+  accept(to) {
+    const ref = meetingRoom(to);
+    if (!ref) return;
+    stopMoving();
+    if (mySeat) standUp();
+    const at = roomArrival(ref);
+    net?.enter(to, at.x, at.z);
+  },
+});
+
 // Voice (plan 86): a meeting room's voice from its menu; outside on a computer, hold V.
 const voice = mountVoice({
   async ticket() {
@@ -1187,7 +1197,6 @@ const voice = mountVoice({
   say: (msg) => toast(msg),
   talking(names) {
     for (const v of others.values()) v.group.userData.talking = names.has(v.name);
-    roomPanel.setVoice(voice.isOn());
   },
 });
 
@@ -1331,6 +1340,10 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   poopsShown = null;
   minimap.show(!!space.outdoor);
   turnBtn.hidden = !space.outdoor;
+  // Outside, everyone hears the voices near them (hold V to talk, on a computer).
+  if (space.outdoor && playing) window.setTimeout(() => space?.outdoor && void voice.join(true), 1500);
+  // Indoors the ⟳ slot stays empty, so the guide's button closes the gap.
+  document.body.classList.toggle("no-turn", !space.outdoor);
   if (id === "library") quests.done("library");
   if (meetingRoom(id)?.kind === "team") quests.done("room");
   placeNpcs(space);
@@ -1582,6 +1595,10 @@ function goOnline(token: string): void {
       if (roomPanel.isOpen()) roomPanel.add(line);
       else chat.add({ ...line, whisper: true });
     },
+    invited(to, from) {
+      sfx("message");
+      invitePopup.show(to, from, meetingRoom(to)?.title ?? "a room");
+    },
     whiteboard(url) {
       // Its own tab: Excalidraw turns live collaboration off inside an iframe,
       // so in the in-app window nobody saw anyone else's drawing (10/30).
@@ -1669,6 +1686,9 @@ function goOnline(token: string): void {
       players.forEach(upsertOther);
       chat.hide();
       document.body.classList.add("in-room");
+      // Its voice, listening (the menu's Mic switch makes you heard).
+      void voice.join(false);
+      roomPanel.setVoice(false);
       roomPanel.open(
         roomInfo(id, room),
         lines.map((l) => ({ ...l, self: !l.system && l.name === session?.name })),

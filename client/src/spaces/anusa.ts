@@ -153,8 +153,8 @@ export function buildAnusa(): SpaceDef {
     links: [
       { x: ANUSA_PC.x, z: ANUSA_PC.z + 1.3, label: "Open ANUSA's site", url: "https://anusa.com.au/", embeddable: true },
       // The listing ANUSA embeds on its clubs pages (Rubric, ANU = university 1): framed the same way here.
-      { x: CLUBS_BOARD.x - 0.9, z: -halfZ + 1.3, label: "See ANU's clubs and societies", url: "https://campus.hellorubric.com/search?type=societies&universityid=1&country=AU&state=NSW&iframe=true", embeddable: true },
-      { x: CLUBS_BOARD.x + 0.9, z: -halfZ + 1.3, label: "See upcoming club events", url: "https://campus.hellorubric.com/search?type=events&universityid=1&country=AU&state=NSW&iframe=true&tab=events", embeddable: true },
+      { x: CLUBS_BOARD.x - 0.9, z: -halfZ + 1.3, label: "See ANU's clubs and societies", url: "https://campus.hellorubric.com/search?type=societies&universityid=1&country=AU&state=NSW", embeddable: true },
+      { x: CLUBS_BOARD.x + 0.9, z: -halfZ + 1.3, label: "See upcoming club events", url: "https://campus.hellorubric.com/search?type=events&universityid=1&country=AU&state=NSW&tab=events", embeddable: true },
     ],
     // A place to sit and talk; notes go up outside and in classrooms.
     noNotes: true,

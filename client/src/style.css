@@ -55,11 +55,11 @@ button, [role="button"], .use-badge, .player-label, .door-label, canvas {
 #hud-online[hidden] { display: none; }
 /* A computer: the line stops short of the music box and the round buttons (about 500 px from the right). */
 @media (min-width: 701px) {
-  #hud-online { max-width: calc(100vw - 560px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+  #hud-online { max-width: calc(100vw - 612px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
 }
 /* Phones: keep the HUD's lines clear of the guide, mail, hanger and gear at the top right (4 x 44 px + gaps). */
 @media (max-width: 700px) {
-  #hud p { max-width: calc(100vw - 268px); }
+  #hud p { max-width: calc(100vw - 320px); }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
@@ -289,12 +289,11 @@ body.room-open #keyguide, body.in-room #hud-name, body.in-room #hud-online { dis
     padding-right: calc(16px + env(safe-area-inset-right));
   }
 }
-/* Turning the view outside (plan 34): one round button, bottom centre on a computer, above the pad's row on a phone. */
+/* Turning the view outside (plan 34): a round ⟳ button in the top-right row, between the guide and the mail. */
 #turn-btn {
-  position: fixed; left: 50%; bottom: 16px; transform: translateX(-50%); z-index: 6;
-  width: 48px; height: 48px; border-radius: 50%; border: 0; cursor: pointer;
-  background: rgba(255, 255, 255, 0.9); color: var(--ink); font-size: 1.5rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.25);
+  position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(168px + env(safe-area-inset-right, 0px)); z-index: 20;
+  width: 44px; height: 44px; border-radius: 50%; border: 0; cursor: pointer;
+  background: rgba(255, 255, 255, 0.9); font-size: 1.2rem; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 #turn-btn:focus-visible { outline: 3px solid #6b3f1d; outline-offset: 2px; }
-@media (pointer: coarse), (max-width: 700px) { #turn-btn { bottom: calc(150px + env(safe-area-inset-bottom, 0px)); left: auto; right: 16px; transform: none; } }
 body.room-open #turn-btn { display: none !important; }

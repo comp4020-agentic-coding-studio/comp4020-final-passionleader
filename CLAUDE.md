@@ -165,7 +165,9 @@ Read before planning or building: `README.md` (what good means for this app),
 - Meeting rooms (counselling rooms off the Hub, interview rooms off the
   Career Hub, team rooms off classrooms, the library and the ANUSA lounge)
   hold six people at most. Team rooms are open; a counselling or interview
-  room lets in only those someone inside has invited. Both are
+  room lets in only those someone inside has invited; the invitee, if on
+  campus, is asked at once (Accept takes them straight in), and an
+  invitation is good for one visit. Both are
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
   chat, host, invites and files go, and the last one out is warned of
@@ -188,8 +190,10 @@ Read before planning or building: `README.md` (what good means for this app),
   the Fly secret, two hours) only for the voice of where you are now: a
   meeting room's voice only to someone inside it this sitting (so its cap
   and invites hold), the open voice outside (hold V, on a computer; quieter
-  with distance, silent past 18 m) only to someone outside. Turned on from
-  the room menu; leaving the place ends it. Muting someone silences their
+  with distance, silent past 18 m) only to someone outside. Everyone there
+  hears without doing anything; to be heard, the room menu's Mic switch in
+  a room, or hold V outside. Leaving the place ends it; the Voices volume
+  at 0 turns it off. Muting someone silences their
   voice too. The chat restriction stops voice as well. The log notes who
   joined which voice, never what was said.
 - Files (a bug report's screenshot, up to five on your own board post within

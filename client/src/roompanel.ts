@@ -183,7 +183,7 @@ export function mountRoomPanel(opts: {
   addItem("📝", "Shared notes", "One Markdown page for the room", () =>
     show("notes"),
   );
-  const voiceItem = addItem("🎙️", "Voice: off", "Talk with everyone here who has voice on (microphone)", () => opts.onVoice());
+  const voiceItem = addItem("🎙️", "Mic: off", "You hear everyone here; turn your mic on to be heard", () => opts.onVoice());
   addItem("🖍️", "Whiteboard", "Draw together in a new tab (Excalidraw; everyone here gets the same board)", () => opts.onWhiteboard());
   addItem(
     "💾",
@@ -610,7 +610,7 @@ export function mountRoomPanel(opts: {
     show,
     setVoice(on) {
       const label = voiceItem.querySelector(".room-item-label");
-      if (label?.firstChild) label.firstChild.textContent = on ? "Voice: on" : "Voice: off";
+      if (label?.firstChild) label.firstChild.textContent = on ? "Mic: on" : "Mic: off";
       voiceItem.classList.toggle("is-on", on);
     },
     focusInput() {

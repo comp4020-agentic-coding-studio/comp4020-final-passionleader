@@ -21,9 +21,10 @@
 .guide-foot button:first-child { margin-right: auto; }
 /* The guide's own button, left of the mail. */
 #guide-btn {
-  position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(168px + env(safe-area-inset-right, 0px)); z-index: 20;
+  position: fixed; top: calc(10px + env(safe-area-inset-top, 0px)); right: calc(220px + env(safe-area-inset-right, 0px)); z-index: 20;
   width: 44px; height: 44px; border-radius: 50%; border: 0; background: rgba(255, 255, 255, 0.9);
   font-size: 1.2rem; cursor: pointer; box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
 }
 #guide-btn:focus-visible { outline: 3px solid #6b3f1d; outline-offset: 2px; }
 body.room-open #guide-btn { display: none !important; }
+body.no-turn #guide-btn { right: calc(168px + env(safe-area-inset-right, 0px)); }

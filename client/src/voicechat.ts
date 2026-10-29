@@ -2,12 +2,13 @@
 // hands out a ticket for one voice room after checking you may be there
 // (server/voice.ts). Nothing is recorded.
 //
-// - In a meeting room, the room menu's "Voice" switch: on, you're heard by
-//   everyone inside with voice on (computer or phone); off, you leave it.
-// - Outside, on a computer: hold V to talk to the people around you; the
-//   further away they are, the quieter they sound, and past 18 m not at all.
-// Someone you've muted (mute.ts) is silent here too. The voice volume is in
-// the settings. livekit-client loads only when voice is first used.
+// Everyone hears without doing anything (the user's call, 10/30): coming into
+// a meeting room, or outside, you join its voice listening only. To be
+// heard: the room menu's Mic switch in a room (computer or phone), or hold V
+// outside (computer). Outside, voices are quieter the further away they
+// are, and silent past 18 m; in a room everyone sounds the same. Someone
+// you've muted is silent here too; the settings' Voices volume at 0 turns
+// voice off altogether. livekit-client loads only when voice is first used.
 
 import type { RemoteParticipant, RemoteTrack, Room } from "livekit-client";
 
@@ -45,8 +46,11 @@ export function saveVoiceVolume(v: number): void {
 }
 
 export function mountVoice(deps: VoiceDeps): {
-  /** Joins the voice of where you are now (`spatial`: outside, push to talk, by distance). */
+  /** Joins the voice of where you are now, listening (`spatial`: outside, by distance). */
   join(spatial: boolean): Promise<boolean>;
+  /** Your microphone on or off (in a room, the menu's switch). Resolves to whether it's on. */
+  mic(on: boolean): Promise<boolean>;
+  micOn(): boolean;
   leave(): void;
   isOn(): boolean;
   /** Push to talk (outside): true while V is held. */
@@ -73,6 +77,7 @@ export function mountVoice(deps: VoiceDeps): {
 
   async function join(asSpatial: boolean): Promise<boolean> {
     if (room) return true;
+    if (readVoiceVolume() === 0) return false;
     if (joining) return joining;
     joining = (async () => {
       const t = await deps.ticket();
@@ -97,13 +102,11 @@ export function mountVoice(deps: VoiceDeps): {
       }
       room = r;
       spatial = asSpatial;
-      // In a room the mic is on at once; outside it waits for V.
-      if (!spatial) {
-        try {
-          await r.localParticipant.setMicrophoneEnabled(true);
-        } catch {
-          deps.say("Allow the microphone to talk (your browser asked). You can still listen.");
-        }
+      // Audio may need a tap first (browsers block sound until then): the next one starts it.
+      if (!r.canPlaybackAudio) {
+        const go = (): void => void r.startAudio().catch(() => {});
+        window.addEventListener("pointerdown", go, { once: true, capture: true });
+        window.addEventListener("keydown", go, { once: true, capture: true });
       }
       return true;
     })().finally(() => (joining = null));
@@ -113,12 +116,28 @@ export function mountVoice(deps: VoiceDeps): {
   function cleanup(): void {
     for (const who of [...audio.keys()]) detachAll(who);
     room = null;
+    micState = false;
     deps.talking(new Set());
   }
 
   let pushing = false;
+  let micState = false;
+  async function mic(on: boolean): Promise<boolean> {
+    if (on && !room && !(await join(spatial))) return false;
+    if (!room) return false;
+    try {
+      await room.localParticipant.setMicrophoneEnabled(on);
+      micState = on;
+    } catch {
+      deps.say("Allow the microphone to talk (your browser asked). You can still listen.");
+      micState = false;
+    }
+    return micState;
+  }
   return {
     join,
+    mic,
+    micOn: () => micState,
     leave() {
       const r = room;
       cleanup();
@@ -128,7 +147,7 @@ export function mountVoice(deps: VoiceDeps): {
     talk(on) {
       if (!room || !spatial || on === pushing) return;
       pushing = on;
-      void room.localParticipant.setMicrophoneEnabled(on).catch(() => deps.say("Allow the microphone to talk (your browser asked)."));
+      void mic(on);
     },
     tick() {
       if (!room) return;

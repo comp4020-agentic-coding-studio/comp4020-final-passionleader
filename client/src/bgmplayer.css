@@ -4,7 +4,7 @@
 #bgm-player {
   position: fixed;
   top: 10px;
-  right: 220px; /* left of the guide, mail, hanger and gear */
+  right: 272px; /* left of the guide, the camera turn, mail, hanger and gear */
   z-index: 20;
   box-sizing: border-box;
   height: 44px;
@@ -92,3 +92,4 @@
     display: none;
   }
 }
+body.no-turn #bgm-player { right: 220px; }

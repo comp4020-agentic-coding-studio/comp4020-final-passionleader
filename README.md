@@ -76,8 +76,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    the Career Hub (the O'Donoghue centre) has the careers adviser and six
    interview rooms. The ❓ button is the Campus Guide, and a first visit
    starts with a short tour, then a few things to try. Outside, ⟳ (or R)
-   turns the view, and on a computer holding V talks to the people near you
-   (quieter the further they are). Voice is never recorded.
+   turns the view; you hear the people near you (quieter the further they
+   are), and on a computer holding V lets them hear you. Voice is never
+   recorded; the settings' Voices volume turns it down or off.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier
    course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
@@ -89,7 +90,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    the library and two off the ANUSA lounge. Up to six people each. Team
    rooms are open to anyone; counselling and interview rooms let in only
    whoever someone inside has invited by name. Coming in opens the room's
-   menu: Voice (talk with everyone inside), a group chat of what's been said since the room last emptied (📎
+   menu: Mic (everyone inside hears each other; the mic makes you heard), a group chat of what's been said since the room last emptied (📎
    shares a file), Shared notes (one Markdown page, pictures too), a shared
    whiteboard (Excalidraw, in a new tab), and Save chat or Save notes, which
    keep a copy for you alone for 30 days (the menu's 📂, or ✉️ → Saved); the

@@ -89,3 +89,7 @@
     border-radius: 10px;
   }
 }
+
+/* The page in the window scrolls by touch: the game's "no panning" (style.css) mustn't reach it. */
+#webview, #webview iframe { touch-action: auto; }
+#webview iframe { -webkit-overflow-scrolling: touch; overscroll-behavior: contain; }
