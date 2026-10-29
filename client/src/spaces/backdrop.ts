@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { doorway, floor, mat, solid, texMat, textPlane, type Box } from "../world.ts";
-import { markOccluderGroup } from "./occluders.ts";
+import { markOccluder, markOccluderGroup } from "./occluders.ts";
 
 // Scenery past the map's edges, laid out from my own sketch and photos (kept
 // out of the repo), not surveyed, so the campus ends in buildings rather than
@@ -149,7 +149,7 @@ function block(
   storeys: number,
   fromStorey = 0,
   roof = 0xb9ad98,
-): void {
+): THREE.Mesh {
   const h = storeys * FLOOR_H;
   const sides = facadeMat(tex, d, storeys);
   const front = facadeMat(tex, w, storeys);
@@ -157,6 +157,7 @@ function block(
   const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), [sides, sides, top, top, front, front]);
   m.position.set(x, fromStorey * FLOOR_H + h / 2, z);
   g.add(m);
+  return m;
 }
 
 /**
@@ -226,19 +227,23 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // the asphalt cuts across it (drawn on top), rather than the road ending in grass.
   road(60, 18, 70.5, -31); // x 40.5..100.5
 
+  // The row's upper floors fade when the camera, turned to look north to
+  // south, stands behind them (the user, 10/30); facing north they're never in the way.
+  const rowBlocks: THREE.Mesh[] = [];
   // The row of pale-brick buildings along the road's north side, with a
   // two-storey passage under it in line with 154's west side.
   const beige = facadeTexture("#d9c8a9", "#cbb995", "#3d4a55", "#ece2cf");
   // Its ground floor along the road is shops and cafes, not windows.
-  block(backdrop, beige, -18, -47, 44, 14, 6, 1);
+  rowBlocks.push(block(backdrop, beige, -18, -47, 44, 14, 6, 1));
   shopfronts(backdrop, -40, 4, -40);
   // The row carries on west to x -51, leaving a white path and the creek's
   // boardwalk (each 3.2 m) before the creek: the same block over a glass
   // ground floor, an unlet unit or nameless office.
-  block(backdrop, beige, -45.5, -47, 11, 14, 6, 1);
+  rowBlocks.push(block(backdrop, beige, -45.5, -47, 11, 14, 6, 1));
   shopfronts(backdrop, -51, -40, -40, UNLET);
-  block(backdrop, beige, 7, -47, 6, 14, 5, 2);
+  rowBlocks.push(block(backdrop, beige, 7, -47, 6, 14, 5, 2));
   road(6, 22, 7, -51);
+  for (const m of rowBlocks) markOccluder(g, m);
   block(backdrop, beige, 7, -68, 18, 12, 5); // seen through the passage
   block(backdrop, beige, 20, -57, 20, 14, 7);
 

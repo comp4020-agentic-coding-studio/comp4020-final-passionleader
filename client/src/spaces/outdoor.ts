@@ -201,7 +201,7 @@ export function buildOutdoor(): SpaceDef {
   fascia(g, ["ANUSA Student Lounge"], 4, "#1e6b52", -5);
   fascia(g, ["Student Hub"], 5, "#1f2d3d", 3);
   // Chifley Library's front door, facing the bridge.
-  doorway(g, -2, 24.85, Math.PI, "Chifley Library");
+  doorway(g, -2, 27.85, Math.PI, "Chifley Library"); // on its front (z 28; moved 3 m south, 10/30)
 
   return {
     id: "outdoor",
