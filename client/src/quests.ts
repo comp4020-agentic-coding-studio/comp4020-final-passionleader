@@ -15,8 +15,8 @@ const QUESTS: { id: QuestId; text: string }[] = [
   { id: "walk", text: "Walk around (WASD, or the pad)" },
   { id: "wave", text: "Wave to someone (hold Q, then Wave)" },
   { id: "chat", text: "Say hello in the chat (Enter)" },
-  { id: "npc", text: "Ask an AI assistant something (follow the arrow)" },
   { id: "library", text: "Go into Chifley Library (follow the arrow)" },
+  { id: "npc", text: "Ask Robin, the AI at the library desk, something (follow the arrow)" },
   { id: "room", text: "Step into a team room (follow the arrow)" },
   { id: "look", text: "Change your look (the hanger)" },
 ];

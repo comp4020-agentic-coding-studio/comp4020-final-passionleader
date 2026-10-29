@@ -2136,7 +2136,7 @@ function cameraOffset(s: SpaceDef, z: number): THREE.Vector3 {
 // and turns, as you move, to point at where to go in the space you're in
 // (the user's call, 10/30: an arrow over the target was easy to miss off
 // screen): the library's door outside, a team room's door in the library,
-// the nearest AI assistant. It goes when the quest is done or skipped, and
+// Robin at the library desk (the cheaper model's). It goes when the quest is done or skipped, and
 // shrinks into a ring when you're there.
 const questArrow = new THREE.Group();
 {
@@ -2165,11 +2165,11 @@ function questTarget(): { x: number; z: number; y: number } | null {
   if (q === "library" && space.id === "outdoor") return { x: -2, z: 26.4, y: 3.2 };
   if (q === "room" && space.id === "library") return { x: -14.9, z: -1.5, y: 3.2 };
   if (q === "room" && space.id === "outdoor") return { x: -2, z: 26.4, y: 3.2 }; // team rooms are in the library
+  // The tutorial's question goes to Robin in the library: the library runs on the cheaper model (Nova).
+  if (q === "npc" && space.id === "outdoor") return { x: -2, z: 26.4, y: 3.2 };
   if (q === "npc") {
-    const here = npcList.filter((n) => n.space === space?.id && !n.model3d);
-    let best: (typeof here)[number] | undefined;
-    for (const n of here) if (!best || Math.hypot(n.x - player.position.x, n.z - player.position.z) < Math.hypot(best.x - player.position.x, best.z - player.position.z)) best = n;
-    return best ? { x: best.x, z: best.z, y: 3 } : null;
+    const robin = npcList.find((n) => n.id === "library" && n.space === space?.id);
+    return robin ? { x: robin.x, z: robin.z, y: 3 } : null;
   }
   return null;
 }
