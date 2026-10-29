@@ -171,7 +171,7 @@ describe("where a note may go", () => {
     expect(noteSpotError("outdoor", -19, 7)).not.toBeNull(); // inside 155
     expect(noteSpotError("outdoor", -44, 6)).not.toBeNull(); // inside Badger & Co, west of 155
     expect(noteSpotError("outdoor", -35, -26)).toBeNull(); // the avenue west of the lawn (ANU Sport's tent is at -45.5)
-    expect(noteSpotError("outdoor", 3.4, -8)).not.toBeNull(); // on the dog
+    expect(noteSpotError("outdoor", -19, -10.6)).not.toBeNull(); // on the dog, on the lawn
     expect(noteSpotError("outdoor", 1.75, -30.6)).not.toBeNull(); // at the advertising board, south of the bed east of Broger's
     expect(noteSpotError("outdoor", -8.6, 3.2)).not.toBeNull(); // at the study-group board beside 155's door
     expect(noteSpotError("outdoor", -19.5, -21.6)).toBeNull(); // where it used to stand

@@ -78,7 +78,7 @@ triangles, one 512x512 colour palette texture (6 KB), rigged with eight clips
 
 | File | Used as | Size |
 | --- | --- | --- |
-| `animals/dog.glb` | the dog in front of building 154 | 290 KB |
+| `animals/dog.glb` | the dog on the lawn | 290 KB |
 
 ## Furniture (Kenney Furniture Kit)
 
@@ -142,7 +142,7 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 - Source: https://kenney.nl/assets/interface-sounds and https://kenney.nl/assets/impact-sounds
 - Licence: Creative Commons Zero (CC0 1.0), stated in each pack's `License.txt`.
 
-`dog_bark.ogg` (the dog in front of 154): two barks cut from "Barking dog #1"
+`dog_bark.ogg` (the dog on the lawn): two barks cut from "Barking dog #1"
 (0.9 s from 3.75 s), levelled, faded and re-encoded at 22 kHz mono.
 
 - Author: Joseph Sardin, BigSoundBank

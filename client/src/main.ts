@@ -956,7 +956,7 @@ async function loadClassrooms(): Promise<void> {
 // Web pages from the classroom board (and later the library desks) open over
 // the game when the site allows it, or in a new tab when it doesn't.
 const webview = mountWebView();
-// The dog in front of 154 asks for a feed: a link to my Buy Me a Coffee page.
+// The dog on the lawn asks for a feed: a link to my Buy Me a Coffee page.
 // Woof woof, woof woof, woof: five barks in a happy rhythm, and a jump.
 const HAPPY_BARKS_MS = [0, 260, 700, 960, 1450];
 const dogPrompt = mountDogPrompt({

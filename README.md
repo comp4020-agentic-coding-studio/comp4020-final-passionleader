@@ -79,7 +79,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    turns the view; you hear the people near you (quieter the further they
    are), and on a computer holding V lets them hear you. Voice is never
    recorded; the settings' Voices volume turns it down or off.
-6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
+6. Say hello to the dog on the lawn. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier
    course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
    catalogue desk opens room booking, the catalogue and research ethics,

@@ -2,13 +2,14 @@ import * as THREE from "three";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
 import { solid, type Box } from "../world.ts";
 
-// The dog in front of building 154 (Quaternius, CC0, credited in
-// assets/CREDITS.md). It stands by the colonnade, mostly idling, now and then
+// The dog on the lawn (Quaternius, CC0, credited in assets/CREDITS.md; moved
+// from in front of 154 by the user's call, 10/30). It stands among the flower
+// bushes, mostly idling, now and then
 // putting its head down as if sniffing for food. Press E beside it and it
 // asks for a feed (main.ts handles that).
 
-/** Where it stands: on the path, just clear of 154's hedges. */
-export const DOG_SPOT = { x: 3.4, z: -9 };
+/** Where it stands: on the lawn, between its flower bushes (outdoor.ts). */
+export const DOG_SPOT = { x: -19, z: -11.4 };
 /** About knee-high on a Kenney figure. */
 const HEIGHT = 0.85;
 const CLIP_PREFIX = /^.*\|/;

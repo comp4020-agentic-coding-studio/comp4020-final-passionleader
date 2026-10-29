@@ -137,7 +137,7 @@ export const NPCS: Npc[] = [
     // Behind the Career Hub's desk, facing the room (plan 111; client/src/spaces/careers.ts).
     space: "careers",
     x: 0.6,
-    z: -7.5,
+    z: -7.4,
     rot: 0,
     reach: 2.1,
     look: { body: 0, skin: 0, hair: 2, top: 1, bottom: 1, hat: 0, hatColour: 1 },

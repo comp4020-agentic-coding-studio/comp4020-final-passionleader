@@ -1,6 +1,6 @@
 import "./dogprompt.css";
 
-// The dog in front of 154 looks hungry. Pressing E beside it asks whether to
+// The dog on the lawn looks hungry. Pressing E beside it asks whether to
 // buy it some food; yes shows a "Buy me a feed" button that opens my Buy Me
 // a Coffee page in a new tab (the site refuses to be framed, so no in-app
 // window). The button is drawn here to match Buy Me a Coffee's own widget:

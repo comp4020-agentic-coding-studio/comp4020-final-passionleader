@@ -109,7 +109,8 @@ export function buildOutdoor(): SpaceDef {
   for (let x = -26; x <= -12; x += 4.6) {
     for (let z = -19.5; z <= -8.5; z += 5.5) {
       lawnBushes.push({ x, z, rotY: x + z });
-      if (x + 2.3 < -10 && z + 2.75 < -7) clumps.push({ x: x + 2.3, z: z + 2.75, rotY: x });
+      // (Not where the dog stands, dog.ts.)
+      if (x + 2.3 < -10 && z + 2.75 < -7 && Math.hypot(x + 2.3 - DOG_SPOT.x, z + 2.75 - DOG_SPOT.z) > 1.5) clumps.push({ x: x + 2.3, z: z + 2.75, rotY: x });
     }
   }
   scatter(g, "nature/Bush_Common_Flowers.glb", 1.1, lawnBushes);

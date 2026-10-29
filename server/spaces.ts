@@ -48,7 +48,7 @@ export const SPACES: Record<string, Space> = {
   // 1.5 times its first size, the way out on the north wall, the stalls down the west (plan 104).
   poop: { label: "a small room", halfX: 9, halfZ: 6.75, spawn: { x: 6, z: -4.5 } },
   // In the O'Donoghue centre's ground floor, across the north road (plan 111; client/src/spaces/careers.ts).
-  careers: { label: "Career Hub", halfX: 14, halfZ: 10, spawn: { x: 0, z: 7.6 } },
+  careers: { label: "Career Hub", halfX: 15, halfZ: 10, spawn: { x: 0, z: 7.6 } },
 };
 
 /** Every classroom's bounds (client/src/spaces/classroom.ts). */
@@ -90,7 +90,7 @@ export const ROOM_CAP = 6;
 export const ROOM: Omit<Space, "label"> = { halfX: 5, halfZ: 4, spawn: { x: 0, z: -2 } };
 const COUNSEL_DOORS = [-10, -6, -2, 2, 6, 10].map((z) => ({ x: 18.9, z }));
 // The Career Hub's six interview rooms (counselling kind), three down each side (client/src/spaces/meeting.ts CAREER_DOORS).
-const CAREER_DOORS = [...[-6, -2, 2].map((z) => ({ x: -12.9, z })), ...[-6, -2, 2].map((z) => ({ x: 12.9, z }))];
+const CAREER_DOORS = [...[-6, -2, 2].map((z) => ({ x: -13.9, z })), ...[-6, -2, 2].map((z) => ({ x: 13.9, z }))];
 const CLASSROOM_TEAM_DOORS = [-3, 0.5, 4].map((z) => ({ x: -8.9, z }));
 const LIBRARY_TEAM_DOORS = [
   { x: -14.9, z: -1.5 },
@@ -180,7 +180,7 @@ const OUTDOOR_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 4.6, z: -5 }, // the ANUSA Student Lounge's door, north of the Hub's
   { x: -8.6, z: 2.3 }, // the study-group board beside 155's door (client/src/spaces/outdoor.ts STUDY_BOARD)
   { x: 24.5, z: -21 }, // a "Staff only" door at Lab Coffee's far end (the easter egg)
-  { x: 3.4, z: -9 }, // the dog in front of 154 (client/src/spaces/dog.ts)
+  { x: -19, z: -11.4 }, // the dog on the lawn (client/src/spaces/dog.ts)
   { x: -2, z: 26.4 }, // Chifley Library's front door (E at the end of the bridge)
   { x: 18, z: -39 }, // the Career Hub's door, in the O'Donoghue centre's front (client/src/spaces/outdoor.ts)
   { x: 1.75, z: -31.6 }, // the lawn noticeboard, south of the bed east of Broger's (client/src/spaces/outdoor.ts LAWN_BOARD)
