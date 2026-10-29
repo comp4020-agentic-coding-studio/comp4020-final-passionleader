@@ -59,6 +59,8 @@ button, [role="button"], .use-badge, .player-label, .door-label, canvas {
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+  /* Under the name, not beside it: side by side they ran under the round buttons. */
+  #hud-online:not([hidden]) { display: table; }
 }
 /* A room's window open (plan 83): everything else steps aside, so the window
    has the screen (on a phone, the pad and buttons too). Closed, the HUD's

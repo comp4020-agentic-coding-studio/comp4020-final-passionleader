@@ -5,7 +5,7 @@
   padding: 16px; background: rgba(20, 20, 20, 0.45);
 }
 #npc-chat[hidden] { display: none; }
-.npc-card { width: min(460px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
+.npc-card { min-width: 0; width: min(460px, 100%); max-height: calc(100vh - 32px); display: flex; flex-direction: column; }
 .npc-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 .npc-head h2 { margin: 0; font-size: 1.1rem; }
 .npc-close { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.1rem; cursor: pointer; }
@@ -25,7 +25,7 @@
 /* Phones (81a): the window fits above the keyboard (--vvh, main.ts), the
    conversation gets the room, and the page links shrink to one scrolling row. */
 @media (max-width: 700px), (pointer: coarse) {
-  #npc-chat { padding: 0; place-items: start stretch; top: var(--vvtop, 0); bottom: auto; height: var(--vvh, 100dvh); }
+  #npc-chat { padding: 0; place-items: start stretch; grid-template-columns: minmax(0, 1fr); top: var(--vvtop, 0); bottom: auto; height: var(--vvh, 100dvh); }
   .npc-card { width: 100%; height: 100%; max-height: none; border-radius: 0; padding: 10px 12px; }
   .npc-head h2 { font-size: 1rem; }
   .npc-log { max-height: none; min-height: 60px; }
