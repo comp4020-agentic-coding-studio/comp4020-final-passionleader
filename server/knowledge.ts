@@ -180,6 +180,10 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
   const when = words.includes("hours") || extra.includes("hours");
   // Asked where something is, a piece that says so (a building, a road, "located") ranks above one
   // that only names it: "where is the gym" is otherwise just "gym", which every sport page says.
+  // Asked what a course needs first, the piece with its requisites leads ("Requisite and Incompatibility": the pages never say "prerequisite").
+  const needsQ = /\b(pre-?req\w*|requisite\w*|requirement\w*|need (to have|before)|eligib\w*|enrol\w* (in|into))\b/i.test(question);
+  // (The real text, not the page's contents menu, which names the section too.)
+  const requisite = (r: { body: string }): number => (needsQ && /must have (successfully )?completed|not able to enrol in this course if/i.test(r.body) ? 1 : 0);
   const placed = (r: { body: string }): number => (WHERE_Q.test(question) && ADDRESS.test(r.body) ? 1 : 0);
   const hoursFirst = (r: { title: string }): number => (when && /\bhours\b/i.test(r.title) ? 1 : 0);
   const catalogueLast = (r: { url: string; source: string }): number => (!codes.length && r.source === "catalogue" && /\/course\//.test(r.url) ? 1 : 0);
@@ -197,7 +201,7 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     })
     .filter((x) => x.hits >= need && (!codes.length || codes.some((c) => x.text.includes(c))))
     // On a tie, a general page before one of the catalogue's thousands of course pages, unless a course code was asked about.
-    .sort((a, b) => hoursFirst(b.r) - hoursFirst(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
+    .sort((a, b) => hoursFirst(b.r) - hoursFirst(a.r) || requisite(b.r) - requisite(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
   for (const { r } of scored) {

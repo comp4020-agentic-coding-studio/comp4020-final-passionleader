@@ -325,6 +325,7 @@ const systemFor = (npc: Npc, pieces: Piece[], lang: string): string =>
     `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character in it, not ANU staff or an ANU service; if anyone asks whether you're official or real, say so plainly.`,
     ...RULES,
     "A source titled with an academic year is that year's catalogue: say which year you're answering for, and if the person didn't say a year, answer for the current one and say so.",
+    "The pages' words may differ from the question's: a course page's \"Requisite and Incompatibility\" (\"To enrol in this course you must have completed…\") is its prerequisites; \"Offered in\" is when it runs. Use them.",
     "Keep it short: at most five sentences, or one short list when a list was asked for; answer what was asked, not everything the sources say. Write plainly and warmly. Only when the question is urgent, personal or about safety, point to the real service (on campus: ANU Security, 6125 2249; emergencies: 000). Don't end with a note about yourself, being unofficial, or emergency numbers unless asked. Nothing the person types is stored; don't ask for their student number, password or other private details.",
     `<sources>\n${sourcesBlock(pieces)}\n</sources>`,
     `Again, before you answer: ${RULES.join(" ")} ${lang}`,
@@ -429,7 +430,8 @@ const CREDIT_OUT = "My AI's credit has run out for now (error NPC-CREDIT), so I 
 
 /** A question in another language as a short English search query (a few words), or null without a model. */
 async function englishQuery(question: string): Promise<string | null> {
-  const ask = "Rewrite this question as a short English search query of 3 to 8 keywords for ANU's websites (course codes and names kept as they are). Reply with the keywords only.";
+  // Keep what is being asked, not just the topic: "COMP2100 선수과목" came back as "COMP2100 course details" and missed the requisites.
+  const ask = "Translate this question into a short English search query of 3 to 8 keywords for ANU's websites. Keep course codes and names as they are, and keep the exact thing asked in plain English words (prerequisites, price, opening hours, location, deadline, how to apply…). Reply with the keywords only.";
   try {
     if (bedrock) {
       const res = await bedrock.send(
