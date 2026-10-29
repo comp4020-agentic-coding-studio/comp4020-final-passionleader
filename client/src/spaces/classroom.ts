@@ -35,10 +35,14 @@ export function buildClassroom(id: SpaceId, code: string): SpaceDef {
   });
   side.position.set(6.4, 2.2, -HALF.halfZ + 0.01);
   g.add(side);
-  // Where the guestbook will go (plan 11b): a poster on the side wall until then.
+  // Two framed pictures on the bare side wall (plan 110).
   const guestbook = poster("ai/poster_classroom.jpg", 1.4, 2.1);
   guestbook.position.set(HALF.halfX - 0.01, 2, -3.2);
   guestbook.rotation.y = -Math.PI / 2;
+  const painting = poster("ai/poster_art.jpg", 2.2, 1.6);
+  painting.position.set(HALF.halfX - 0.01, 2, 1.6);
+  painting.rotation.y = -Math.PI / 2;
+  g.add(painting);
   // Left of the whiteboard: this classroom's board (Q&A, Notices, Board), on
   // a PC on a small desk, like the Hub's reception PCs.
   block(g, colliders, [1.6, 0.9, 0.8], [-6.4, -HALF.halfZ + 0.6], texMat("ai/wood_tabletop.jpg", 1, 1, 0xb07a4a));
