@@ -35,6 +35,8 @@ export interface Npc {
   model3d?: string;
   /** Not ready to answer yet: says this instead of asking the model (Seongsu, until his pages are written). */
   notYet?: string;
+  /** Two questions it can answer, offered when someone just says hello. */
+  examples: string[];
   /** "haiku" for the careful ones (courses, careers, and accommodation's price comparisons), "nova" for the rest (plan 78). */
   model: "haiku" | "nova";
 }
@@ -58,6 +60,7 @@ export const NPCS: Npc[] = [
       { label: "Book a room or desk", url: "https://anu.libcal.com/" },
       { label: "Academic Skills", url: "https://www.anu.edu.au/students/contacts/academic-skills" },
     ],
+    examples: ["When is Chifley Library open this week?", "How do I book an Academic Skills appointment?"],
     greeting: "Hi! Ask me about library hours, borrowing, booking a room, or Academic Skills (writing, study and referencing help).",
     voice: "female",
     sources: ["library"],
@@ -80,6 +83,7 @@ export const NPCS: Npc[] = [
       { label: "Clubs", url: "https://anu-sport.com.au/clubs" },
       { label: "FAQs", url: "https://anu-sport.com.au/footer/faqs" },
     ],
+    examples: ["How much is a student gym membership?", "What sports clubs are there?"],
     greeting: "G'day! Ask me about the gym, memberships and sports clubs.",
     voice: "male",
     sources: ["sport"],
@@ -103,6 +107,7 @@ export const NPCS: Npc[] = [
       { label: "Services (pantry, meals)", url: "https://anusa.com.au/services/" },
       { label: "Clubs", url: "https://anusa.com.au/clubs/" },
     ],
+    examples: ["Is there a free food pantry?", "Can ANUSA help me with a legal problem?"],
     greeting: "Hey! I can tell you about ANUSA's support, legal help, the pantry and clubs.",
     voice: "female",
     sources: ["anusa"],
@@ -125,6 +130,7 @@ export const NPCS: Npc[] = [
       { label: "Computing degrees and majors", url: "https://comp.anu.edu.au/study/bachelor/" },
       { label: "Programs and Courses", url: "https://programsandcourses.anu.edu.au/" },
     ],
+    examples: ["What are the prerequisites for COMP2300?", "When is the Semester 2 census date?"],
     greeting: "Hello! Ask me about any ANU course, degree, major or its requirements (say the year if it isn't this one), key dates and enrolment rules.",
     voice: "female",
     sources: ["catalogue", "computing", "students"],
@@ -147,6 +153,7 @@ export const NPCS: Npc[] = [
       { label: "Computing internships", url: "https://systems.anu.edu.au/students/student-employability/internships/computing/" },
       { label: "Research and Honours projects", url: "https://comp.anu.edu.au/study/projects/" },
     ],
+    examples: ["How do I find a computing internship?", "Can I get help with my CV?"],
     greeting: "Hi! Cloud, security, AI, data, research: let's talk about where you'd like to go.",
     voice: "male",
     sources: ["careers", "computing"],
@@ -169,6 +176,7 @@ export const NPCS: Npc[] = [
       { label: "Applying", url: "https://study.anu.edu.au/accommodation/application-advice" },
       { label: "Fees & agreements", url: "https://study.anu.edu.au/accommodation/support-resources/fees-occupancy-agreements" },
     ],
+    examples: ["What is the cheapest catered residence?", "How do I apply for accommodation?"],
     greeting: "Hi! I can compare ANU's residences for you: prices, catered or self-catered, and how to apply.",
     voice: "male",
     sources: ["housing"],
@@ -190,6 +198,7 @@ export const NPCS: Npc[] = [
       { label: "Student visa conditions", url: "https://www.anu.edu.au/students/program-administration/program-management/information-for-international-student-visa-holders-studying-in-australia" },
       { label: "OSHC (health cover)", url: "https://study.anu.edu.au/apply/overseas-student-health-cover-oshc" },
     ],
+    examples: ["What is OSHC?", "How many hours can I work on a student visa?"],
     greeting: "Welcome! Ask me about student visas, OSHC health cover and settling in at ANU.",
     voice: "female",
     sources: ["intl"],
@@ -212,6 +221,7 @@ export const NPCS: Npc[] = [
       { label: "This project's README", url: "/readme/" },
       { label: "The code (GitHub)", url: "https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader" },
     ],
+    examples: ["How did you build this?", "What does this run on?"],
     greeting: "Boo! I'm Seongsu, the student who built this campus with Claude Code. Ask me how it works.",
     voice: "male",
     sources: ["project"],
@@ -299,19 +309,27 @@ export function tidy(text: string): string {
 }
 
 /** What it says when the pages it has don't cover the question (the model isn't asked). */
-const dontKnow = (npc: Npc): string =>
-  `Sorry, I couldn't find that in the ANU pages I have, so I'd rather not guess. Try asking with different words (a course code or a place name helps), or have a look at ${npc.links
+const dontKnow = (npc: Npc, question: string): string =>
+  `I couldn't find that in the ANU pages I read, so I'd rather not guess.${
+    /[^\x00-\x7F]/.test(question) && !/[a-z]{3}/i.test(question) ? " (I search ANU's pages in English: asking in English works best.)" : ""
+  } I can help with things like ${npc.examples.map((e) => `"${e}"`).join(" or ")}. Or have a look at ${npc.links
     .slice(0, 2)
     .map((l) => `[${l.label}](${l.url})`)
     .join(" or ")}.`;
 
+/** A hello, a thanks, or "what can you do?": nothing to look up, so it introduces itself (no model, no search). */
+const SMALL_TALK = /^\s*(hi|hello|hey|g'?day|yo|hiya|howdy|thanks?|thank you|cheers|ok(ay)?|bye|good (morning|afternoon|evening))\b[\s!.?~]*$|^\s*(what|how)\b.*\b(can|do)\b.*\byou\b.*(do|help)|^\s*who are you|^\s*help\s*[?!.]*\s*$/i;
+const intro = (npc: Npc): string =>
+  `${npc.greeting} I answer from ANU's own pages and link them. Try asking something like: ${npc.examples.map((e) => `"${e}"`).join(" or ")}.`;
+
 /** What the assistant says back: the model's answer from the pages, or an honest note and its pages. */
 export async function answer(npc: Npc, question: string): Promise<string> {
   if (npc.notYet) return npc.notYet;
+  if (SMALL_TALK.test(question) || /^\s*(안녕|감사|고마워|뭐\s*할\s*수|도와)[^\n]{0,12}$/u.test(question)) return intro(npc);
   const offline = `I'm ${npc.name}, and I'm not connected to my AI brain right now, sorry! The pages below have what you need.`;
   if (!client && !bedrock) return offline;
   const pieces = search(npc.sources, question, 5);
-  if (!pieces.length) return dontKnow(npc);
+  if (!pieces.length) return dontKnow(npc, question);
   if (!takeOne(npc)) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
   const system = systemFor(npc, pieces);
   if (bedrock) return askBedrock(bedrock, npc, question, offline, system);

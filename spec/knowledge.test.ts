@@ -89,3 +89,12 @@ describe("voice tickets", () => {
     expect(claims).toMatchObject({ iss: "key1", sub: "ann", exp: 1_700_000_600, video: { room: "room-team-library-1-abc", roomJoin: true } });
   });
 });
+
+describe("small talk", () => {
+  it("answers a hello with what it can help with, not with 'couldn't find'", async () => {
+    const { answer, NPCS } = await import("../server/npcs.ts");
+    const kai = NPCS.find((n) => n.id === "sport")!;
+    for (const q of ["hello", "Hi!", "What can you do?", "안녕하세요"]) expect(await answer(kai, q)).toContain(kai.greeting);
+    for (const n of NPCS) expect(n.examples.length).toBeGreaterThan(0);
+  });
+});
