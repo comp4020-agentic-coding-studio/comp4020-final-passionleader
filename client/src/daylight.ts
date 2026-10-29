@@ -41,6 +41,13 @@ function keys(month: number): Key[] {
   ];
 }
 
+/**
+ * How dark it is outside now, 0 (day) to 1 (night), set by the game loop's
+ * daylight check (main.ts) and read by the rooms' windows: at night their
+ * glass goes dark and the sunbeams through them go out.
+ */
+export const outside = { night: 0 };
+
 /** The hour now in Canberra (0–24, with minutes as a fraction), or `?hour=` when given. */
 export function canberraHour(now = new Date()): { hour: number; month: number } {
   const forced = Number(new URLSearchParams(location.search).get("hour"));

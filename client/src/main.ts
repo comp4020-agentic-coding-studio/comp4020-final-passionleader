@@ -69,7 +69,7 @@ import {
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
 import { mountWhoHere } from "./whohere.ts";
-import { canberraHour, daylightAt } from "./daylight.ts";
+import { canberraHour, daylightAt, outside } from "./daylight.ts";
 import { mountStatus, statusText } from "./status.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
@@ -352,9 +352,11 @@ new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/sky/campus_sky
 });
 // Canberra's time of day, outside (daylight.ts): checked on going out and once a minute.
 function applyDaylight(): void {
-  if (!space?.outdoor) return;
   const { hour, month } = canberraHour();
   const d = daylightAt(hour, month);
+  // Rooms' windows read this (dark glass and no sunbeams at night); the rest is outside only.
+  outside.night = d.lamps;
+  if (!space?.outdoor) return;
   skyDome.material.color.copy(d.sky);
   sun.color.copy(d.sunColour);
   sun.intensity = d.sunIntensity;

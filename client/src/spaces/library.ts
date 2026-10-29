@@ -1,7 +1,8 @@
 import * as THREE from "three";
 import { block, doorway, LIBRARY_BGM, lightPool, paperPile, place, solid, texMat, textPlane, type Box, type SpaceDef } from "../world.ts";
 import { LIBRARY_TEAM_DOORS, roomDoors } from "./meeting.ts";
-import { patchTexture, roomShell, shaftTexture } from "./room.ts";
+import { NIGHT_GLASS, patchTexture, roomShell, shaftTexture } from "./room.ts";
+import { outside } from "../daylight.ts";
 
 // Inside Chifley Library. You come in through the north wall (the front
 // door at the end of the bridge). Reception is in the north-west corner, with
@@ -233,6 +234,7 @@ function archShape(w: number, h: number): THREE.Shape {
  */
 function windows(g: THREE.Group): (dt: number) => void {
   const wall = -HALF.halfZ + 0.02;
+  const day = new THREE.Color(0xfff1cf);
   const glass = new THREE.MeshBasicMaterial({ color: 0xfff1cf });
   const frame = new THREE.MeshStandardMaterial({ color: 0x4a3322, roughness: 0.8 });
   const shaftTex = shaftTexture();
@@ -330,9 +332,14 @@ function windows(g: THREE.Group): (dt: number) => void {
   let t = 0;
   return (dt) => {
     t += dt;
-    // The light breathes a little, and the dust drifts slowly.
-    shaft.opacity = 0.3 + Math.sin(t * 0.5) * 0.03;
+    // The light breathes a little, and the dust drifts slowly; at night (daylight.ts) the arched
+    // windows go dark blue and the sun's shafts, patches and dust go out.
+    const lit = 1 - outside.night;
+    shaft.opacity = (0.3 + Math.sin(t * 0.5) * 0.03) * lit;
+    patch.opacity = 0.42 * lit;
+    glass.color.copy(day).lerp(NIGHT_GLASS, outside.night);
     for (const dust of motes) {
+      dust.visible = lit > 0.05;
       const p = dust.geometry.getAttribute("position") as THREE.BufferAttribute;
       const base = dust.userData.base as Float32Array;
       for (let i = 0; i < p.count; i++) {
