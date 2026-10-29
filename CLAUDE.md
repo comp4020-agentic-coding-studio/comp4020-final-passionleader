@@ -166,8 +166,8 @@ Read before planning or building: `README.md` (what good means for this app),
   Career Hub, team rooms off classrooms, the library and the ANUSA lounge)
   hold six people at most. Team rooms are open; a counselling or interview
   room lets in only those someone inside has invited; the invitee, if on
-  campus, is asked at once (Accept takes them straight in), and an
-  invitation is good for one visit. Both are
+  campus, is asked at once (Accept takes them straight in; they can be asked
+  again, once every ten seconds), and an invitation is good for one visit. Both are
   checked on the server and refusals are logged. A room's chat lives in
   server memory only while someone is inside; when the room empties, its
   chat, host, invites and files go, and the last one out is warned of

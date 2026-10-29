@@ -56,6 +56,9 @@ describe("meeting rooms", () => {
     await sb.next((m) => m.t === "welcome");
     host.s.send({ t: "invite", name: b.name });
     await expect(sb.next((m) => m.t === "action" && m.kind === "room-invited" && m.space === "career-5" && m.from === host.name)).resolves.toBeTruthy();
+    // Asking again at once is refused (ten seconds apart), and nobody is put out of the room for it.
+    host.s.send({ t: "invite", name: b.name });
+    await expect(host.s.next(refused("career-5", "invited a moment ago"))).resolves.toBeTruthy();
     // Accepting from anywhere takes them straight in.
     sb.send({ t: "enter", space: "career-5", x: 0, z: 0 });
     await expect(sb.next(opened("career-5"))).resolves.toBeTruthy();

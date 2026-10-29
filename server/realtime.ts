@@ -25,6 +25,8 @@ const EMOTES = new Set(["wave", "yes", "no", "mate", "dance"]);
 // apart; a new one replaces your last. Kept in SQLite for 30 days (plan 104:
 // they used to vanish on every deploy), sent only to whoever is in the room.
 const lastPoop = new Map<string, number>();
+/** When someone in a room last invited a person ("space:name"): one invitation every ten seconds. */
+const lastAsked = new Map<string, number>();
 const poopList = poopsNow;
 const MAX_JUMP = 3;
 // Positions go out ten times a second, only for spaces where someone moved.
@@ -407,7 +409,18 @@ function onMessage(ws: WebSocket, raw: string): void {
       send(ws, { t: "action", kind: "room-refused", space: player.space, reason });
       return;
     }
-    if (state.invited.has(invitee.name.toLowerCase())) return;
+    // Asking again (they declined by mistake, or missed it) is fine, once every ten seconds per person.
+    const askKey = `${player.space}:${invitee.name.toLowerCase()}`;
+    const now = Date.now();
+    if (now - (lastAsked.get(askKey) ?? 0) < 10_000) {
+      send(ws, { t: "action", kind: "room-refused", space: player.space, reason: "invited a moment ago" });
+      return;
+    }
+    lastAsked.set(askKey, now);
+    if (state.invited.has(invitee.name.toLowerCase())) {
+      tellPerson(invitee.name, { t: "action", kind: "room-invited", space: player.space, from: player.name });
+      return;
+    }
     state.invited.add(invitee.name.toLowerCase());
     log("room-invite", owners.get(ws) ?? null, { space: player.space, invited: invitee.name });
     roomSay(player.space, { name: player.name, text: `${player.name} invited ${invitee.name}`, system: true });
