@@ -171,6 +171,9 @@ and its team rooms) — Music generated with Google AI (Gemini) for this project
 The Poop Room's fart is synthesised in the browser with the Web Audio API
 (`client/src/sfx.ts`, crit 8's sound); no recorded asset is used.
 
+The Campus Guide's clips (`guide/*.webp`) are screen recordings of the app
+itself, made by the author.
+
 Everything else in the scene (room shells, buildings, tents, sticky notes,
 the UI, the app's icons) is built from Three.js primitives and HTML/CSS in
 code. The academic calendar's dates are from ANU's University Calendar and
