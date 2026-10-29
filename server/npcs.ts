@@ -279,9 +279,9 @@ export const modelOf = (npc: Npc): string => API_MODEL || MODELS[npc.model];
 // Before the model is asked, the question is matched against the crawled
 // pieces of this assistant's sources (knowledge.ts). Only the best few go to
 // the model, with their addresses, and it's told to answer from them alone.
-// No piece matches: the model isn't asked at all, and the answer says so and
-// points to the assistant's pages. That rule is the point: an assistant that
-// doesn't know says so rather than guess.
+// No piece matches: the model gets no sources and a brief that allows no
+// facts (noSourcesFor). That rule is the point: an assistant that doesn't
+// know says so rather than guess.
 
 const sourcesBlock = (pieces: Piece[]): string =>
   pieces.map((p) => `<source url="${p.url}" title="${p.title.replace(/"/g, "'")}">\n${p.body}\n</source>`).join("\n\n");
@@ -292,15 +292,41 @@ const RULES = [
   "Link every source you use as a Markdown link with its real url, like [title](url). Never write [1], [source 3] or other numbered references, and never a bare <url>.",
 ];
 
-const systemFor = (npc: Npc, pieces: Piece[]): string =>
+/**
+ * The language to reply in, named in the brief. Left to itself the model
+ * drifted both ways (Nova answered "who r u" in Korean when the brief's
+ * example named Korean, and a Korean hello in English when told "the
+ * user's language"), so the language is named from the question's letters:
+ * Hangul is Korean, kana Japanese, and so on. Latin letters are English,
+ * unless the message is plainly Spanish, French…
+ */
+const SCRIPTS: [RegExp, string][] = [
+  [/\p{Script=Hangul}/u, "Korean"],
+  [/[\p{Script=Hiragana}\p{Script=Katakana}]/u, "Japanese"],
+  [/\p{Script=Han}/u, "Chinese"],
+  [/\p{Script=Cyrillic}/u, "Russian (or the Cyrillic language it's in)"],
+  [/\p{Script=Arabic}/u, "Arabic (or the language in Arabic script it's in)"],
+  [/\p{Script=Thai}/u, "Thai"],
+  [/\p{Script=Devanagari}/u, "Hindi (or the Devanagari language it's in)"],
+  [/\p{Script=Greek}/u, "Greek"],
+  [/\p{Script=Hebrew}/u, "Hebrew"],
+];
+export function replyIn(question: string): string {
+  const named = SCRIPTS.find(([re]) => re.test(question))?.[1];
+  if (named) return `Reply in ${named}, the language of the user's message, even though your pages are in English.`;
+  if (/[^\p{Script=Latin}\P{L}]/u.test(question)) return "Reply in the language of the user's message, even though your pages are in English.";
+  return "Reply in English, unless the user's message is clearly written in another language (Spanish, French…): then in that language.";
+}
+
+const systemFor = (npc: Npc, pieces: Piece[], lang: string): string =>
   [
-    "Always reply in the same language as the user's message (Korean if it's Korean, and so on), even though the sources are in English.",
+    lang,
     `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character in it, not ANU staff or an ANU service; if anyone asks whether you're official or real, say so plainly.`,
     ...RULES,
     "A source titled with an academic year is that year's catalogue: say which year you're answering for, and if the person didn't say a year, answer for the current one and say so.",
-    "Keep it short: at most five sentences, or one short list when a list was asked for; answer what was asked, not everything the sources say. Write plainly and warmly, in the language the question is written in, and only that language. For anything urgent, personal or about safety, point to the real service (on campus: ANU Security, 6125 2249; emergencies: 000). Nothing the person types is stored; don't ask for their student number, password or other private details.",
+    "Keep it short: at most five sentences, or one short list when a list was asked for; answer what was asked, not everything the sources say. Write plainly and warmly. Only when the question is urgent, personal or about safety, point to the real service (on campus: ANU Security, 6125 2249; emergencies: 000). Don't end with a note about yourself, being unofficial, or emergency numbers unless asked. Nothing the person types is stored; don't ask for their student number, password or other private details.",
     `<sources>\n${sourcesBlock(pieces)}\n</sources>`,
-    `Again, before you answer: ${RULES.join(" ")}`,
+    `Again, before you answer: ${RULES.join(" ")} ${lang}`,
   ].join("\n\n");
 
 /**
@@ -320,7 +346,6 @@ export function tidy(text: string): string {
 }
 
 
-/** A hello, a thanks, or "what can you do?": nothing to look up, so it introduces itself (no model, no search). */
 /**
  * No piece matched: the model still answers, but with no sources and a
  * strict brief (the user's design, 10/30): a hello, thanks or "what can you
@@ -329,9 +354,9 @@ export function tidy(text: string): string {
  * and a pointer, with no facts at all. With nothing to draw on there's
  * nothing to make up; the brief forbids it anyway.
  */
-const noSourcesFor = (npc: Npc): string =>
+const noSourcesFor = (npc: Npc, lang: string): string =>
   [
-    "Always reply in the same language as the user's message (Korean if it's Korean, and so on).",
+    lang,
     `You are ${npc.name}, the ${npc.role} assistant in "ANU Crossing", an unofficial, fan-made 3D campus for the Australian National University. You are an AI character, not ANU staff; say so if asked.`,
     `What you help with: ${npc.greeting}`,
     `Questions you can answer from ANU's pages, as examples: ${npc.examples.map((e) => `"${e}"`).join(", ")}.`,
@@ -343,7 +368,7 @@ const noSourcesFor = (npc: Npc): string =>
         .map((l) => `[${l.label}](${l.url})`)
         .join(", ") +
       ".",
-    "Reply in the language the message is written in, and only that language. Never write numbered references.",
+    `Never write numbered references. ${lang}`,
   ].join("\n\n");
 
 /** What the assistant says back: the model's answer from the pages, or an honest note and its pages. */
@@ -360,7 +385,8 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   const pieces = search(npc.sources, vague ? `${query} ${npc.topic}` : query, 5);
   if (!takeOne(npc)) return `I've answered all I can for today, sorry! Try again tomorrow, or have a look at the pages below.`;
   // No sources: the model still replies, under a brief that allows no facts (see noSourcesFor).
-  const system = pieces.length ? systemFor(npc, pieces) : noSourcesFor(npc);
+  const lang = replyIn(question);
+  const system = pieces.length ? systemFor(npc, pieces, lang) : noSourcesFor(npc, lang);
   if (bedrock) return askBedrock(bedrock, npc, question, offline, system);
   try {
     const res = await client!.messages.create(

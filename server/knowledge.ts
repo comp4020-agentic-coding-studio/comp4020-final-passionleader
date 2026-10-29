@@ -145,6 +145,10 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
   // Numbers ("2", "2026") are in half the catalogue's titles: only words weigh in a title.
   // (Nor the added synonyms: every course page has "First Semester" and "Second Semester" headings.)
   const wordTerms = terms.filter((_, i) => i < words.length && !/^\d+$/.test(words[i]!) && !["semester", "date", "dates"].includes(words[i]!));
+  // Asked when something opens or closes, an hours page comes first: "when does the library close"
+  // otherwise goes to pages that say "library" more often than an hours table does.
+  const when = words.includes("hours") || extra.includes("hours");
+  const hoursFirst = (r: { title: string }): number => (when && /\bhours\b/i.test(r.title) ? 1 : 0);
   const catalogueLast = (r: { url: string; source: string }): number => (!codes.length && r.source === "catalogue" && /\/course\//.test(r.url) ? 1 : 0);
   const scored = rows
     .filter((r) => !(asked && r.year !== null && r.year !== year))
@@ -160,7 +164,7 @@ export function search(sources: string[], question: string, limit = 5): Piece[] 
     })
     .filter((x) => x.hits >= need && (!codes.length || codes.some((c) => x.text.includes(c))))
     // On a tie, a general page before one of the catalogue's thousands of course pages, unless a course code was asked about.
-    .sort((a, b) => b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
+    .sort((a, b) => hoursFirst(b.r) - hoursFirst(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
   for (const { r } of scored) {

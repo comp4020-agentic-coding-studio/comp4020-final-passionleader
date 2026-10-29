@@ -44,7 +44,13 @@ describe("what the assistants know", () => {
     expect(k.search(["catalogue"], "When is COMP2300 offered in 2027?").map((p) => p.year)).toEqual([2027]);
   });
 
-  it("says it doesn't know, with its pages, when nothing matches, without asking a model", async () => {
+  it("answers when something closes from an hours page, not from pages that say the place's name more", () => {
+    k.savePage({ url: "https://example.anu/lib", source: "library", year: null, title: "Using the Library", pieces: ["The library lends books. Library rooms close for cleaning at times; library printing and library study spaces."] });
+    k.savePage({ url: "https://example.anu/hours", source: "library", year: null, title: "Opening Hours", pieces: ["Library opening hours this week.\nChifley | 24 hours | 24 hours |"] });
+    expect(k.search(["library"], "what time does the library close")[0]?.url).toBe("https://example.anu/hours");
+  });
+
+  it("each has sources and a model; with no model, it says it's offline", async () => {
     const { answer, NPCS } = await import("../server/npcs.ts");
     for (const n of NPCS) {
       expect(n.sources.length).toBeGreaterThan(0);
@@ -53,6 +59,16 @@ describe("what the assistants know", () => {
     // No model here, so an answer only proves the order: with no key it says it's offline.
     const robin = NPCS.find((n) => n.id === "library")!;
     expect(await answer(robin, "Who won the 2022 world cup?")).toMatch(/not connected|couldn't find/);
+  });
+});
+
+describe("the reply's language", () => {
+  it("is named from the question's letters: English for Latin letters, Korean for Hangul, even beside a course code", async () => {
+    const { replyIn } = await import("../server/npcs.ts");
+    expect(replyIn("who r u")).toMatch(/^Reply in English/);
+    expect(replyIn("COMP1100 언제 해?")).toMatch(/^Reply in Korean/);
+    expect(replyIn("你好")).toMatch(/^Reply in Chinese/);
+    expect(replyIn("こんにちは")).toMatch(/^Reply in Japanese/);
   });
 });
 
