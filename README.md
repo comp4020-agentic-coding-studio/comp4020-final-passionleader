@@ -56,33 +56,44 @@ should feel at home in a virtual space shaped like the real campus they know.
    whisper to one signed-up person wherever they are (only the two of you
    see it, and it isn't kept).
    Under your name, how many people are on campus, in the Hub, the
-   library, the classrooms and the meeting rooms (numbers only, never who),
+   library, the Career Hub, the classrooms and the meeting rooms (numbers
+   only, never who; a phone shows the total),
    and the classroom picker shows how many are in each.
    Lab Coffee wraps round 154's north-west corner, with a terrace; its menu
    board (**E**) lists the cafés on campus, where each is and roughly what
    it sells, gathered from public pages (not an official list).
    The Student Hub's wall calendar shows this month and opens ANU's
-   university calendar for the year. Campus assistants (the library, ANU Sport, ANUSA, the course desk and
-   careers) stand in their places: **E** to ask one. An AI model (Claude
+   academic dates for 2026 and 2027 in a window of its own. Campus
+   assistants (the library, ANU Sport, accommodation, ANUSA, the course
+   desk, international students and careers, and a ghost of the author)
+   stand in their places, tagged "AI": **E** to ask one. An AI model (Claude
    Haiku for courses and careers, Amazon Nova for the rest) answers in their
    name only from public ANU pages the app crawls each month, linking the
    pages it used; if those pages don't cover it, it says so instead of
    guessing. It can still be wrong. What you ask isn't kept.
    Signed up, the ✉️ button writes to someone by name and keeps your mail
-   for 30 days; it lights up when something arrives.
+   for 30 days; it lights up when something arrives. Across the north road,
+   the Career Hub (the O'Donoghue centre) has the careers adviser and six
+   interview rooms. The 📖 button is the Campus Guide, and a first visit
+   starts with a short tour, then a few things to try. Outside, ⟳ (or R)
+   turns the view.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
    Sketch & Guess, a drawing game for everyone there, and two of my earlier
    course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
-   catalogue desk opens room booking, the catalogue and research ethics.
-7. Meeting rooms: six counselling rooms off the Student Hub, three team rooms
-   off every classroom and four off the library. Up to six people each. Team
-   rooms are open to anyone; a counselling room lets in only whoever someone
-   inside has invited by name. Inside, a group chat shows what's been said
-   since the room last emptied, 📝 Notes is one shared Markdown page for
-   everyone inside, and the 📎 button shares a file with the people inside;
-   when the last person leaves the chat, the notes, the files and the
-   invites are gone. 💾 Save chat keeps the chat and the notes for you alone,
-   30 days (✉️ → Saved chats); the room is told you saved it.
+   catalogue desk opens room booking, the catalogue and research ethics,
+   and a PC beside it sums up Academic Skills (writing and study help).
+   A classroom's board links to Canvas.
+7. Meeting rooms: six counselling rooms off the Student Hub, six interview
+   rooms off the Career Hub, three team rooms off every classroom, four off
+   the library and two off the ANUSA lounge. Up to six people each. Team
+   rooms are open to anyone; counselling and interview rooms let in only
+   whoever someone inside has invited by name. Coming in opens the room's
+   menu: a group chat of what's been said since the room last emptied (📎
+   shares a file), Shared notes (one Markdown page, pictures too), a shared
+   whiteboard (Excalidraw), and Save chat or Save notes, which keep a copy
+   for you alone for 30 days (✉️ → Saved); the room is told. Close the menu
+   to see the room, and walk out by the door to leave; when the last person
+   leaves, the chat, the notes, the files and the invites are gone.
 8. Something broken? The gear's dialog has **Report a bug**: a short note,
    with a screenshot if you like, that only the admin reads. Someone being
    abusive? **Report someone** sends their name and, if you like, the last
