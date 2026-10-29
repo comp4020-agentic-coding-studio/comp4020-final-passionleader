@@ -53,6 +53,10 @@ button, [role="button"], .use-badge, .player-label, .door-label, canvas {
   background: rgba(255, 251, 224, 0.7); font-size: 0.8rem;
 }
 #hud-online[hidden] { display: none; }
+/* A computer: the line stops short of the music box and the round buttons (about 500 px from the right). */
+@media (min-width: 701px) {
+  #hud-online { max-width: calc(100vw - 560px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
+}
 /* Phones: keep the HUD's lines clear of the guide, mail, hanger and gear at the top right (4 x 44 px + gaps). */
 @media (max-width: 700px) {
   #hud p { max-width: calc(100vw - 268px); }

@@ -74,7 +74,7 @@ should feel at home in a virtual space shaped like the real campus they know.
    Signed up, the ✉️ button writes to someone by name and keeps your mail
    for 30 days; it lights up when something arrives. Across the north road,
    the Career Hub (the O'Donoghue centre) has the careers adviser and six
-   interview rooms. The 📖 button is the Campus Guide, and a first visit
+   interview rooms. The ❓ button is the Campus Guide, and a first visit
    starts with a short tour, then a few things to try. Outside, ⟳ (or R)
    turns the view.
 6. Say hello to the dog in front of 154. In the Hub, three arcade machines:
