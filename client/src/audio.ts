@@ -75,9 +75,28 @@ function load(i: number): void {
 }
 function resume(): void {
   if (!started || paused || bgmVolume === 0) return;
-  if (ctx?.state === "suspended") void ctx.resume();
-  void bgm.play().catch(() => {});
+  if (ctx?.state === "suspended") void ctx.resume().catch(() => {});
+  // Signed in automatically (a remembered token), nothing was clicked yet, so
+  // the browser may refuse to start sound (92): then the first key, tap or
+  // click starts it. Footsteps worked already, since they wait for a key.
+  void bgm.play().then(
+    // Playing, but through a Web Audio graph the browser still holds suspended: silent until a gesture too.
+    () => ctx?.state === "suspended" && waitForGesture(),
+    () => waitForGesture(),
+  );
 }
+let waiting = false;
+function waitForGesture(): void {
+  if (waiting) return;
+  waiting = true;
+  const kick = (): void => {
+    waiting = false;
+    for (const t of GESTURES) window.removeEventListener(t, kick, true);
+    resume();
+  };
+  for (const t of GESTURES) window.addEventListener(t, kick, true);
+}
+const GESTURES = ["pointerdown", "keydown", "touchend"] as const;
 bgm.addEventListener("ended", () => nextTrack());
 
 /**
