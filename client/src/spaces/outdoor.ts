@@ -313,7 +313,7 @@ export function buildOutdoor(): SpaceDef {
     // Chifley Library closes the south: walking up the bridge to its door,
     // the camera climbs over your head instead of going into the building.
     southWall: { from: 16.6, z: 26.6 },
-    bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3", "Along_the_Griffin_Lake.mp3"],
+    bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3", "Along_the_Lake_Griffin.mp3"],
     outdoor: true,
     // The two café tables in front of 155's shops, a chair either side (cafeTable: 0.7 m out, facing in).
     seats: [...[-23, -16].flatMap((x) => [-1, 1].map((side) => ({ x: x + side * 0.7, z: -5.2, rot: side < 0 ? Math.PI / 2 : -Math.PI / 2, y: 0.47 }))), ...SEAT_WALL_SEATS, ...PICNIC_SEATS],

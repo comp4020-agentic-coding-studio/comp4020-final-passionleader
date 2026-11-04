@@ -152,7 +152,7 @@ From Kenney's "Interface Sounds" (`click_002`, `open_001`, `close_001`,
 ## Music
 
 `Noon_On_The_Green.mp3`, `Dappled_Sunlight_Trail.mp3`,
-`Windows_Down_in_July.mp3` and `Along_the_Griffin_Lake.mp3` (campus),
+`Windows_Down_in_July.mp3` and `Along_the_Lake_Griffin.mp3` (campus),
 `Margin_Notes.mp3`, `The_Library_Window.mp3`, `Common_Room_Afternoon.mp3`,
 `The_Velvet_Clearing.mp3` and `Midnight_Rain_on_the_Glass.mp3` (shared by the
 Student Hub, the classrooms, the ANUSA Student Lounge, the Career Hub and
