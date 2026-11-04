@@ -189,9 +189,12 @@ export function buildOutdoor(): SpaceDef {
     bareRoof: true,
     entrance: { side: "east", at: 0, color: 0xe9e6df },
   });
+  // The upper volume steps in from the lower one on every side (more to the east and south), never
+  // out past it: at -20.5, 5.5 it hung half a metre over the west and north edges, and from the
+  // lawn it looked as if it leant left (the user, 11/4).
   building(g, colliders, {
-    cx: -20.5,
-    cz: 5.5,
+    cx: -19.5,
+    cz: 6.5,
     w: 16,
     d: 16,
     floors: 3,
@@ -200,7 +203,7 @@ export function buildOutdoor(): SpaceDef {
     slabEdge: 0x8a5a32,
     glass: 0xbcd3e0,
     bay: 1.8,
-    roofOverhang: 0.6,
+    roofOverhang: 0.4,
     apex: { color: TIMBER },
   });
   sign(g, ["155", "Marie Reay Teaching Centre"], -9.7, 4.2, 7, Math.PI / 2);
