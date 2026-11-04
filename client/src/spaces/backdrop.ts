@@ -17,25 +17,35 @@ const TILE_W = 6;
 
 const facades = new Map<string, THREE.CanvasTexture>();
 /**
- * The same tile with only its panes, warm on black: the facades' glow map at
- * night. One window in five stays dark, so a lit building looks lived in.
+ * The panes only, warm on black: the facades' glow map at night. Many tiles
+ * wide and high, each window lit or not at random (about seven in ten lit), so
+ * the row's flats look lived in rather than a repeating pattern (the user,
+ * 11/4: these are student halls). Seeded, so every visitor sees the same.
  */
+const GLOW_BAYS = 8; // wall tiles across (16 windows)
+const GLOW_FLOORS = 4; // wall tiles up (8 storeys)
 let paneGlow: THREE.CanvasTexture | null = null;
 function facadeGlow(): THREE.CanvasTexture {
   if (paneGlow) return paneGlow;
+  // Half the wall tile's scale: a window's cell is 64 px, its pane where the wall's is (35..93 of 128).
   const c = document.createElement("canvas");
-  c.width = c.height = 256;
+  c.width = 128 * GLOW_BAYS;
+  c.height = 128 * GLOW_FLOORS;
   const ctx = c.getContext("2d")!;
   ctx.fillStyle = "#000";
-  ctx.fillRect(0, 0, 256, 256);
-  let i = 0;
-  for (const row of [0, 128]) {
-    for (const col of [0, 128]) {
-      if (i++ === 2) continue;
-      ctx.fillStyle = "#ffcf8a";
-      ctx.fillRect(col + 35, row + 35, 58, 60);
+  ctx.fillRect(0, 0, c.width, c.height);
+  let seed = 20261104;
+  const rnd = (): number => (seed = (seed * 1664525 + 1013904223) >>> 0) / 2 ** 32;
+  for (let row = 0; row < c.height; row += 64) {
+    for (let col = 0; col < c.width; col += 64) {
+      if (rnd() < 0.3) continue;
+      // Not every lit room the same: some warmer, some dimmer (a lamp, a screen).
+      ctx.fillStyle = ["#ffcf8a", "#ffd9a0", "#f5c27a", "#ffe3b5"][Math.floor(rnd() * 4)]!;
+      ctx.globalAlpha = 0.65 + rnd() * 0.35;
+      ctx.fillRect(col + 17.5, row + 17.5, 29, 30);
+      ctx.globalAlpha = 1;
       ctx.fillStyle = "#000";
-      ctx.fillRect(col + 62, row + 35, 4, 60);
+      ctx.fillRect(col + 31, row + 17.5, 2, 30);
     }
   }
   paneGlow = new THREE.CanvasTexture(c);
@@ -126,8 +136,32 @@ function chifleyMat(len: number): THREE.MeshStandardMaterial {
   const map = chifleyTex.clone();
   map.needsUpdate = true;
   map.repeat.set(len / 4, 1);
-  return new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0 });
+  // Lit at night like the rest of the campus (the user, 11/4: it stood dark): its windows and
+  // the doorway under each arch, from a glow map of those same shapes.
+  if (!chifleyGlow) {
+    const c = document.createElement("canvas");
+    c.width = 128;
+    c.height = 512;
+    const ctx = c.getContext("2d")!;
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, 128, 512);
+    ctx.fillStyle = "#ffd59a";
+    for (const y of [60, 170, 280]) ctx.fillRect(46, y, 36, 70);
+    ctx.fillRect(40, 470, 48, 42);
+    ctx.fillStyle = "#000";
+    for (const y of [60, 170, 280]) ctx.fillRect(62, y, 4, 70);
+    chifleyGlow = new THREE.CanvasTexture(c);
+    chifleyGlow.colorSpace = THREE.SRGBColorSpace;
+    chifleyGlow.wrapS = THREE.RepeatWrapping;
+  }
+  const emissiveMap = chifleyGlow.clone();
+  emissiveMap.needsUpdate = true;
+  emissiveMap.repeat.copy(map.repeat);
+  const m = new THREE.MeshStandardMaterial({ map, roughness: 0.9, metalness: 0, emissive: 0xffffff, emissiveMap, emissiveIntensity: 0 });
+  nightGlow.push({ m, full: 1 });
+  return m;
 }
+let chifleyGlow: THREE.CanvasTexture | null = null;
 
 /** Asphalt, drawn on a canvas: dark grey grain, no markings (a one-lane road). */
 let asphaltTex: THREE.CanvasTexture | null = null;
@@ -165,7 +199,8 @@ function facadeMat(tex: THREE.CanvasTexture, len: number, storeys: number): THRE
   // At night its windows light up (nightGlow, main.ts applyDaylight).
   const emissiveMap = facadeGlow().clone();
   emissiveMap.needsUpdate = true;
-  emissiveMap.repeat.copy(map.repeat);
+  // The glow map spans many wall tiles, so it repeats that many times less; its panes sit where the wall's do.
+  emissiveMap.repeat.set(map.repeat.x / GLOW_BAYS, map.repeat.y / GLOW_FLOORS);
   const m = new THREE.MeshStandardMaterial({ map, roughness: 0.95, metalness: 0, emissive: 0xffffff, emissiveMap, emissiveIntensity: 0 });
   // Its own already (a fading building keeps this one, not a copy, so the night glow still reaches it).
   m.userData.unique = true;
