@@ -1,6 +1,6 @@
 import * as THREE from "three";
 import { chalkboard, doorway, floor, mat, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
-import { HIGH } from "../settings.ts";
+import { RICH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
@@ -123,7 +123,24 @@ export function buildOutdoor(): SpaceDef {
   // ANU Sport's blue tent at the north-west end, south of Symposium's bed.
   sportsTent(g, colliders);
   housingTent(g, colliders);
-  if (HIGH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
+  if (RICH) scatter(g, "nature/Flower_3_Group.glb", 0.45, clumps, false);
+  // A border of flowers round the lawn's edges (the user's ask, 11/4), half a metre in from the
+  // paving, a clump every 1.1 m with a tuft of tall grass between; clear of the dog, the
+  // benches on the south side and the seat wall on the east. Instanced, so cheap on any phone.
+  const border: Spot[] = [];
+  const tufts: Spot[] = [];
+  const edge = (x: number, z: number, i: number): void => {
+    if (Math.hypot(x - DOG_SPOT.x, z - DOG_SPOT.z) < 1.6) return;
+    if (z > -6.6 && (Math.abs(x + 23) < 1.3 || Math.abs(x + 16) < 1.3)) return; // the benches at z -5.2
+    (i % 2 ? tufts : border).push({ x, z, rotY: x * 1.7 + z, scale: 0.85 + ((i * 37) % 10) / 30 });
+  };
+  let n = 0;
+  for (let x = -28.2; x <= -10.3; x += 0.55) edge(x, -21.5, n++); // north
+  for (let x = -27.6; x <= -10.3; x += 0.55) edge(x, -6.5, n++); // south
+  for (let z = -21; z <= -7; z += 0.55) edge(-10.3, z, n++); // east, inside the seat wall (x -9.3)
+  for (let z = -21; z <= -7; z += 0.55) edge(curveX(-29, z) + 0.6, z, n++); // west, along the curved path
+  scatter(g, "nature/Flower_3_Group.glb", 0.7, border, false);
+  scatter(g, "nature/Grass_Common_Tall.glb", 0.5, tufts, false);
 
   // Bushes every 3 m round each building, a metre out from the wall, with
   // gaps at the doors (and their canopies).
@@ -279,7 +296,11 @@ export function buildOutdoor(): SpaceDef {
       { x: CAFE_MENU.x, z: CAFE_MENU.z + 0.9, id: "cafes", label: "Read Lab Coffee's board (cafés on campus)" },
     ],
     // ANU Sport's site won't be framed, so a new tab.
-    links: [{ x: SPORT_PC.x, z: SPORT_PC.z + 0.9, label: "Open ANU Sport (gym, clubs, classes; new tab)", url: "https://anu-sport.com.au/", embeddable: false }],
+    links: [
+      { x: SPORT_PC.x, z: SPORT_PC.z + 0.9, label: "Open ANU Sport (gym, clubs, classes; new tab)", url: "https://anu-sport.com.au/", embeddable: false },
+      // The accommodation tent's PC, at the table's middle (Jordan stands at its east end): ANU's residences, compared.
+      { x: HOUSING_TENT.x - 0.6, z: HOUSING_TENT.z + 0.9, label: "Open ANU's residences (compare prices; new tab)", url: "https://study.anu.edu.au/accommodation/compare-residences", embeddable: false },
+    ],
     background: 0xbfdcf2,
     // Lower and further back than indoors, so the sky and the buildings' height show.
     camera: new THREE.Vector3(0, 5.5, 10.5),

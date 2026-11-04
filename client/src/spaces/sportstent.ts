@@ -24,7 +24,8 @@ export function sportsTent(g: THREE.Group, colliders: Box[]): void {
 
 /** The accommodation tent (plan 95): the same pop-up gazebo in green, where an assistant compares the residences. */
 export function housingTent(g: THREE.Group, colliders: Box[]): void {
-  popupTent(g, colliders, HOUSING_TENT, { colour: 0x2e7d5b, bg: "#2e7d5b", name: "Accommodation", tag: ["Accommodation", "residences · prices"], pc: false });
+  // A PC like ANU Sport's (the user's ask, 11/4): it opens ANU's residences pages (outdoor.ts links).
+  popupTent(g, colliders, HOUSING_TENT, { colour: 0x2e7d5b, bg: "#2e7d5b", name: "Accommodation", tag: ["Accommodation", "residences · prices"], pc: true });
 }
 
 function popupTent(
