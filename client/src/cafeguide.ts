@@ -24,7 +24,8 @@ export function mountCafeGuide(): { open(): void; isOpen(): boolean } {
   const close = document.createElement("button");
   close.type = "button";
   close.className = "cafe-close";
-  close.textContent = "✕";
+  close.textContent = "Close";
+  close.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
   close.setAttribute("aria-label", "Close");
   head.append(title, close);
   const note = document.createElement("p");

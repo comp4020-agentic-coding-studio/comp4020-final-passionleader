@@ -87,7 +87,12 @@ export function mountSignIn(opts: {
   const sub = el("p", "join-sub", "A small 3D space to run into people: students, staff, anyone. Not an official ANU service.");
   const views = el("div", "si-views");
   const flavour = el("ul", "si-flavour");
-  for (const line of ["WASD to walk, Space to jump.", "Q for the menu: wave, dance, stick a note.", "E to read a note or go through a door. Enter to chat."]) {
+  // A phone has no keyboard: its tips name the on-screen buttons instead (11/4 UI pass).
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  const tips = touch
+    ? ["The arrow pad to walk, Jump to jump.", "Emotes for the menu: wave, dance, stick a note.", "Use to read a note or go through a door. Chat to talk."]
+    : ["WASD to walk, Space to jump.", "Q for the menu: wave, dance, stick a note.", "E to read a note or go through a door. Enter to chat."];
+  for (const line of tips) {
     flavour.append(el("li", undefined, line));
   }
   card.append(title, pitch, sub, views, flavour);

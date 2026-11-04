@@ -39,7 +39,8 @@ export function mountWebView(): { open(link: WebLink): void; close(): void; isOp
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "webview-close";
-  closeBtn.textContent = "✕";
+  closeBtn.textContent = "Close";
+  closeBtn.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
   closeBtn.setAttribute("aria-label", "Close");
   head.append(title, newTab, closeBtn);
 

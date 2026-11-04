@@ -52,7 +52,8 @@ export function mountNpcChat(opts: {
   const close = document.createElement("button");
   close.type = "button";
   close.className = "npc-close";
-  close.textContent = "✕";
+  close.textContent = "Close";
+  close.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
   close.setAttribute("aria-label", "Close");
   head.append(title, ai, close);
   const log = document.createElement("div");

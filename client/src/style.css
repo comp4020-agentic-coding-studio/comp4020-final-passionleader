@@ -67,6 +67,14 @@ body:has(#hud-talking:not([hidden])) #minimap { top: 104px; }
 /* Phones: keep the HUD's lines clear of the guide, mail, hanger and gear at the top right (4 x 44 px + gaps). */
 @media (max-width: 700px) {
   #hud p { max-width: calc(100vw - 320px); }
+  /* The name has its own line, the online count under it and the status under that: beside the name
+     the status button cut it to "Qa1…" (11/4 UI pass). */
+  #hud:not([hidden]) { display: grid; justify-items: start; row-gap: 4px; }
+  #hud > * { margin: 0 !important; }
+  #hud-name { order: 1; max-width: calc(100vw - 280px) !important; }
+  #hud-online { order: 2; }
+  #status-btn { order: 3; }
+  #hud-talking { order: 4; }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }

@@ -31,3 +31,26 @@
 @media (max-width: 700px), (pointer: coarse) {
   #settings .settings-head { position: sticky; top: -20px; z-index: 1; background: var(--paper, #f3e7a6); padding: 4px 0; }
 }
+
+/* Every window's Close (the 11/4 UI pass, stageshow's craft rules: one control,
+   one look). It used to be a bare ✕ in ten windows, each sized its own way and
+   too small for a thumb; now it's a labelled pill like the room menu's Close.
+   The tripled class outranks each window's own close-button rule. */
+.ui-close.ui-close.ui-close {
+  flex: none;
+  width: auto;
+  height: auto;
+  min-width: 0;
+  min-height: 44px;
+  padding: 6px 16px;
+  border: 0;
+  border-radius: 22px;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+  font: 800 0.95rem system-ui, sans-serif;
+  line-height: 1;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+.ui-close.ui-close.ui-close:hover { filter: brightness(1.12); }
+.ui-close.ui-close.ui-close:focus-visible { outline: 3px solid #ffd27a; outline-offset: 2px; }

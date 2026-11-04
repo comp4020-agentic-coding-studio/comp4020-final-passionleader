@@ -46,7 +46,8 @@ export function mountMailbox(opts: {
   const close = document.createElement("button");
   close.type = "button";
   close.className = "mail-close";
-  close.textContent = "✕";
+  close.textContent = "Close";
+  close.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
   close.setAttribute("aria-label", "Close");
   head.append(title, close);
   const tabs = document.createElement("div");

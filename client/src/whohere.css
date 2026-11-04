@@ -9,7 +9,7 @@
 }
 #who-here[hidden] { display: none; }
 #who-here .who-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
-#who-here .who-head button { border: 0; background: none; font-size: 1rem; cursor: pointer; min-width: 32px; min-height: 32px; }
+#who-here .who-head button:not(.ui-close) { border: 0; background: none; font-size: 1rem; cursor: pointer; min-width: 32px; min-height: 32px; }
 #who-here ul { list-style: none; margin: 0; padding: 0; }
 #who-here li { margin: 2px 0; }
 #who-here li button {

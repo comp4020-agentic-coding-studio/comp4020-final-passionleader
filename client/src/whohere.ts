@@ -34,7 +34,8 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
     h.textContent = `Here now (${people.length + 1})`;
     const x = document.createElement("button");
     x.type = "button";
-    x.textContent = "✕";
+    x.textContent = "Close";
+    x.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
     x.setAttribute("aria-label", "Close");
     x.addEventListener("click", close);
     head.append(h, x);

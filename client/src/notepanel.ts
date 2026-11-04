@@ -86,7 +86,8 @@ export function mountNotePanel(h: {
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "note-close";
-  closeBtn.textContent = "✕";
+  closeBtn.textContent = "Close";
+  closeBtn.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
   closeBtn.setAttribute("aria-label", "Close");
   head.append(headInfo, closeBtn);
 

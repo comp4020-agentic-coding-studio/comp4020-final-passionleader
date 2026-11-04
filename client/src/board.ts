@@ -152,7 +152,8 @@ export function mountBoard(h: {
   const closeBtn = document.createElement("button");
   closeBtn.type = "button";
   closeBtn.className = "board-close";
-  closeBtn.textContent = "✕";
+  closeBtn.textContent = "Close";
+  closeBtn.classList.add("ui-close"); // one Close for every window (11/4 UI pass)
   closeBtn.setAttribute("aria-label", "Close");
   // A classroom's board links to Canvas (plan 98): ANU's own site, which won't be framed, so a new tab.
   const extLink = document.createElement("a");

@@ -1019,7 +1019,9 @@ function showOnline(): void {
   // A phone has room for the total only beside its four round buttons; the whole line is its title (and a computer's text).
   const total = Object.values(onlineCounts).reduce((a, b) => a + b, 0);
   hudOnline.title = `Online: ${parts.join(" · ")}`;
-  hudOnline.textContent = short ? `👥 ${total} online` : `Online: ${parts.join(" · ")}`;
+  // A computer's line names only the places with someone in them: all seven ran under the music box (11/4 UI pass).
+  const busy = parts.filter((p) => !p.endsWith(" 0"));
+  hudOnline.textContent = short || !busy.length ? `👥 ${total} online` : `👥 ${total} online: ${busy.join(" · ")}`;
   hudOnline.hidden = false;
 }
 // Your status, beside your name at the top left (status.ts); kept in this browser and sent on each connect.
