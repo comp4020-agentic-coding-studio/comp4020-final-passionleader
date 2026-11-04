@@ -197,6 +197,11 @@ function stopped(c: Context, v: Visitor, what: Restrictable, details: Record<str
   return c.json({ error: `The admin has stopped you ${RESTRICTED_WHAT[what]} until ${when} (Canberra time).`, until: r.until }, 403);
 }
 
+/** The one answer for a student number or email that didn't sign in, whichever the reason. */
+const SIGN_IN_FAILED = "That student number (or email) and password don't match. Check both, reset your password, or sign up.";
+/** A real scrypt hash of nothing anyone types, so a missing account takes as long as a wrong password. */
+const DUMMY_HASH = hashPassword("not-a-real-password-" + Math.random());
+
 app.post("/api/join", async (c) => {
   const b = await body(c);
   const { token, password } = b;
@@ -206,13 +211,19 @@ app.post("/api/join", async (c) => {
 
   // A student number or an ANU address signs in to the account signed up
   // with it, whatever its name (and wins over an old retired name like it).
+  // A student number or email is private, unlike a name (on everyone's name tag): the answer
+  // never says whether one has an account. No account and a wrong password read the same.
+  const privateId = /^u\d{7}$/i.test(name) || /@/.test(name);
   const byEmail = /^u\d{7}$/i.test(name) ? findByEmail(`${name.toLowerCase()}@anu.edu.au`) : /@anu\.edu\.au$/i.test(name) ? findByEmail(name.toLowerCase()) : undefined;
-  if (!byEmail && /@/.test(name)) return c.json({ error: "No account with that email. Sign up with it first." }, 404);
-  if (byEmail?.passwordHash && typeof password === "string" && password.trim()) {
-    if (!checkPassword(password.trim(), byEmail.passwordHash)) {
-      log("join-refused", { name: byEmail.name }, { reason: "wrong password" }, { ip: ipOf(c) });
-      return c.json({ error: "Wrong password." }, 401);
-    }
+  const typed = typeof password === "string" && password.trim() ? password.trim() : "";
+  if (privateId && !typed) return c.json({ error: "Type your password.", password: true }, 401);
+  if (privateId && (!byEmail?.passwordHash || !checkPassword(typed, byEmail.passwordHash))) {
+    // (A wrong password still runs the hash, and a missing account checks against nothing, so both take about as long.)
+    if (!byEmail?.passwordHash) checkPassword(typed, DUMMY_HASH);
+    log("join-refused", byEmail ? { name: byEmail.name } : null, { reason: byEmail ? "wrong password" : "no such account" }, { ip: ipOf(c) });
+    return c.json({ error: SIGN_IN_FAILED }, 401);
+  }
+  if (byEmail?.passwordHash) {
     const barred = stopped(c, byEmail, "join", { action: "join" });
     if (barred) return barred;
     log("join", byEmail, { how: "password, by email" }, { ip: ipOf(c) });

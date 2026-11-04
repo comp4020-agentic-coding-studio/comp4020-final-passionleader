@@ -52,6 +52,14 @@ describe("guests and signing up", () => {
     expect(byNo.status).toBe(200);
     expect(((await byNo.json()) as { name: string }).name).toBe(v.name);
     expect((await api("/api/join", "POST", { name: v.studentNo.toUpperCase(), password: "wrong one!" })).status).toBe(401);
+    // A student number is private: a wrong password and an unknown number get the same answer, so
+    // nobody can learn whether someone has signed up.
+    const wrong = await api("/api/join", "POST", { name: v.studentNo, password: "wrong one!" });
+    const unknown = await api("/api/join", "POST", { name: "u0000001", password: "wrong one!" });
+    expect(unknown.status).toBe(wrong.status);
+    expect(await unknown.json()).toEqual(await wrong.json());
+    const noPassword = await api("/api/join", "POST", { name: "u0000001" });
+    expect(noPassword.status).toBe(401);
     // The code check between steps: a wrong code stops there, the right one keeps for finish.
     const studentNo = `u${Math.floor(1_000_000 + Math.random() * 8_999_999)}`;
     await api("/api/signup/start", "POST", { studentNo });
