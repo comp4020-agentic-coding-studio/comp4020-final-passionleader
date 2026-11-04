@@ -68,6 +68,13 @@ export function buildLabCoffee(space: THREE.Group, colliders: Box[]): void {
   const blade = textPlane(["LAB", "COFFEE", "☕ terrace →"], 1.2, 1.6, { bg: "#2a2420", fg: "#f3d9a4", font: 0.24 });
   blade.position.set(WEST_X - 1.4, 3.1, NORTH_Z + 0.6);
   g.add(blade);
+  // The fascia sits back under 154's upper floor, so from the terrace (the camera turned round:
+  // the user, 11/4) only its foot showed. A second name hangs from the slab's outer edge (154's
+  // north face, z -20), facing out over the terrace.
+  const outer = textPlane(["LAB COFFEE"], 4.4, 0.55, { bg: "#2a2420", fg: "#f3d9a4", font: 0.38 });
+  outer.position.set(15.5, 3.45, -20.08);
+  outer.rotation.y = Math.PI;
+  g.add(outer);
   const bracket = new THREE.Mesh(new THREE.BoxGeometry(1.6, 0.06, 0.06), dark);
   bracket.position.set(WEST_X - 1.4, 3.95, NORTH_Z + 0.6);
   g.add(bracket);
@@ -115,7 +122,12 @@ function menuBoard(g: THREE.Group, colliders: Box[]): void {
   const back = frame.clone();
   back.position.z = -0.09;
   back.rotation.x = 0.15;
-  b.add(frame, face, back);
+  // Its other face, seen with the camera turned round (it was bare timber: the user, 11/4): today's
+  // drinks in chalk, and the same pointer to the cafés.
+  const menu = textPlane(["Lab Coffee", "Flat white · Latte", "Long black · Chai", "Toasties · Muffins", "☕ cafés on campus: E"], 1.1, 1.4, { bg: "#2f4a3a", fg: "#f2f0e6", font: 0.1 });
+  menu.position.set(0, 0.85, -0.12);
+  menu.rotation.set(0.15, Math.PI, 0);
+  b.add(frame, face, back, menu);
   b.position.set(x, 0, z);
   g.add(b);
   solid(colliders, 1.3, 0.5, x, z);
