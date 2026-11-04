@@ -321,50 +321,57 @@ export function buildOutdoor(): SpaceDef {
 }
 
 /**
- * 155's ground floor on the lawn side (north, z -2), from the user's photo, 11/4: left to right as
- * you face it from the lawn (east to west), an empty unit, Yori, Sushi Smith and Rex Espresso.
- * Each a shopfront proud of the glass: a coloured frame, lit glass (warm at night) and its name in
- * plain type over the door, no logos.
+ * 155's ground floor on the lawn side (north), from the user's photo, 11/4: left to right as you
+ * face it from the lawn (east to west), an empty unit, Yori, Sushi Smith and Rex Espresso. They
+ * are the building's ground floor, not boards on it: each fills the bays between the building's
+ * own timber mullions, under its first-floor slab, flush with its glass (a hand in front, so the
+ * building's glass never shows behind them), with a fascia in the shop's colour carrying its
+ * name in plain type (no logos) and warm-lit glass below, like the shops along the north row.
  */
 const SHOPS_155 = [
-  { name: "", frame: 0x55595e, board: "", fg: "" },
-  { name: "Yori", frame: 0x1f4f8a, board: "#173d6b", fg: "#ffffff" },
-  { name: "Sushi Smith", frame: 0x2a2523, board: "#231e1c", fg: "#ff6a4d" },
-  { name: "Rex Espresso", frame: 0x6f9a95, board: "#e9efe9", fg: "#2f4d49" },
+  // East to west, between the mullions (x -10.9 + 1.8 k) and the glass's ends (x -10.25, -27.75).
+  { name: "", from: -10.25, to: -14.5, fascia: 0x4a4e52, board: "", fg: "" },
+  { name: "Yori", from: -14.5, to: -18.1, fascia: 0x1f4f8a, board: "#1f4f8a", fg: "#ffffff" },
+  { name: "Sushi Smith", from: -18.1, to: -23.5, fascia: 0x2a2523, board: "#2a2523", fg: "#ff6a4d" },
+  { name: "Rex Espresso", from: -23.5, to: -27.75, fascia: 0x6f9a95, board: "#6f9a95", fg: "#ffffff" },
 ];
 function shops155(g: THREE.Group): void {
-  const z = -2.12; // just north of the lower volume's glass (z -2 + its 0.25 inset, minus a hand)
-  const x0 = -10.6;
-  const w = (28 - 10.6 - 0.4) / SHOPS_155.length; // x -10.6 → -28, a little short of the corners
-  const glass = new THREE.MeshStandardMaterial({ color: 0x5f7280, emissive: 0xffc878, emissiveIntensity: 0.16, roughness: 0.2, metalness: 0.3 });
-  glass.userData.unique = true;
-  nightGlow.push({ m: glass, full: 1.1, day: 0.16 });
-  const dark = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.4, metalness: 0.2 });
-  SHOPS_155.forEach((s, i) => {
-    // Facing north (the lawn), so the first shop, seen on the left from the lawn, is the east one.
-    const cx = x0 - w * i - w / 2;
-    const f = new THREE.Group();
-    const pane = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.5, 2.6), s.name ? glass : dark);
-    pane.position.set(0, 1.4, 0);
-    f.add(pane);
-    const frame = mat(s.frame);
-    for (const dx of [-(w - 0.5) / 2, 0, (w - 0.5) / 2]) {
-      const m = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.8, 0.1), frame);
-      m.position.set(dx, 1.4, 0.04);
-      f.add(m);
+  const z = -1.8; // the building's glass is at -1.75, its mullions' faces at -1.9, its slab edge at -2
+  const floorTop = 0.42; // the ground slab
+  const slabFoot = 3.8 - 0.21; // the first-floor slab's underside
+  const fasciaFoot = 2.95;
+  const lit = new THREE.MeshStandardMaterial({ color: 0x5f7280, emissive: 0xffc878, emissiveIntensity: 0.16, roughness: 0.2, metalness: 0.3 });
+  lit.userData.unique = true;
+  nightGlow.push({ m: lit, full: 1.1, day: 0.16 });
+  const empty = new THREE.MeshStandardMaterial({ color: 0x2c3237, roughness: 0.25, metalness: 0.3 });
+  const frame = mat(0x2a2a2a);
+  for (const s of SHOPS_155) {
+    const w = s.from - s.to;
+    const cx = (s.from + s.to) / 2;
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(w, fasciaFoot - floorTop), s.name ? lit : empty);
+    pane.position.set(cx, (floorTop + fasciaFoot) / 2, z);
+    pane.rotation.y = Math.PI;
+    g.add(pane);
+    const fascia = new THREE.Mesh(new THREE.BoxGeometry(w, slabFoot - fasciaFoot, 0.12), mat(s.fascia));
+    fascia.position.set(cx, (fasciaFoot + slabFoot) / 2, z - 0.06);
+    g.add(fascia);
+    // The shop's own thin glazing bars: a transom and a bar every metre or so, and a darker door.
+    const transom = new THREE.Mesh(new THREE.BoxGeometry(w, 0.06, 0.05), frame);
+    transom.position.set(cx, 2.35, z - 0.03);
+    g.add(transom);
+    const bars = Math.max(1, Math.round(w / 1.2));
+    for (let k = 1; k < bars; k++) {
+      const bar = new THREE.Mesh(new THREE.BoxGeometry(0.05, fasciaFoot - floorTop, 0.05), frame);
+      bar.position.set(s.from - (w * k) / bars, (floorTop + fasciaFoot) / 2, z - 0.03);
+      g.add(bar);
     }
-    const head = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, 0.7, 0.14), frame);
-    head.position.set(0, 3.1, 0.06);
-    f.add(head);
     if (s.name) {
-      const name = textPlane([s.name], Math.min(w - 1, 3.2), 0.5, { bg: s.board, fg: s.fg, font: 0.34 });
-      name.position.set(0, 3.1, 0.14);
-      f.add(name);
+      const name = textPlane([s.name], Math.min(w - 0.8, 3.2), 0.46, { bg: s.board, fg: s.fg, font: 0.32 });
+      name.position.set(cx, (fasciaFoot + slabFoot) / 2, z - 0.125);
+      name.rotation.y = Math.PI;
+      g.add(name);
     }
-    f.position.set(cx, 0, z);
-    f.rotation.y = Math.PI;
-    g.add(f);
-  });
+  }
 }
 
 /** A building sign on a facade, facing the way `rotY` points. */
