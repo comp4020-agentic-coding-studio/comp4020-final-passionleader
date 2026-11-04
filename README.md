@@ -1,5 +1,33 @@
 # ANU Crossing (Unofficial)
 
+## For markers
+
+This is a space for ANU students and staff, so a guest can only walk, chat,
+emote and use team rooms; signing up with an ANU email unlocks everything
+else (sticky notes, posts, comments, mail, files).
+
+**Signing up (about two minutes, free):** press "Sign up with your ANU
+email", tick "I'm ANU staff" and enter your own @anu.edu.au address. A
+six-digit code arrives by email within a minute. Enter it, then choose a
+name (up to 8 letters, digits or underscores) and a password (8+).
+
+**Two people at once:** use two Chrome profiles. One can be your signed-up
+account and the other a guest ("Continue as a guest", no email needed), so
+you only need one ANU address.
+
+**What to try:**
+- Real time: each sees the other walk; chat with Enter; hold Q for emotes;
+  go into the same team room (off the library or a classroom) and chat or
+  write in its shared notes.
+- Persistence (as the signed-up account): stick a note (hold Q, then 1)
+  outside, or post on the advertising board by the north road; reload, and
+  both windows still show it. The guest sees it too, and comes back as the
+  same guest name after a reload. A team room keeps its chat and notes
+  while anyone is still inside, so one of you can reload and find them.
+
+**Optional, no setup:** the AI assistants (press E near an "AI" tag), and
+voice (allow the microphone; outside, hold V on a computer).
+
 A place where people at ANU cross paths: ask what you don't know, meet
 people you wouldn't otherwise, in a campus you already know.
 
