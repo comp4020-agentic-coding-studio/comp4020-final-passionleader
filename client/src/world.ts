@@ -288,20 +288,37 @@ export function poster(file: string, w: number, h: number): THREE.Group {
  * drawn additively so it brightens what's under it. No real light, so it
  * costs almost nothing, and Low gets it too.
  */
-let poolTexture: THREE.CanvasTexture | null = null;
-export function lightPool(g: THREE.Group, x: number, z: number, w: number, d: number, colour = 0xffd9a0, strength = 0.35): THREE.Mesh {
-  if (!poolTexture) {
-    const c = document.createElement("canvas");
-    c.width = c.height = 64;
-    const ctx = c.getContext("2d")!;
-    const grad = ctx.createRadialGradient(32, 32, 2, 32, 32, 32);
-    grad.addColorStop(0, "rgba(255,255,255,1)");
-    grad.addColorStop(0.6, "rgba(255,255,255,0.45)");
-    grad.addColorStop(1, "rgba(255,255,255,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(0, 0, 64, 64);
-    poolTexture = new THREE.CanvasTexture(c);
+/**
+ * A white disc fading out by `stops` ([distance 0..1 from the centre, alpha]), worked out pixel by
+ * pixel. Not a canvas gradient: iPhone Safari dithers those with coloured noise, which stretched
+ * over a lamp's 10 m pool showed as confetti on the paving (the user, 11/4, twice).
+ */
+export function radialTexture(stops: [number, number][], size = 128): THREE.DataTexture {
+  const data = new Uint8Array(size * size * 4);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
+      const r = Math.min(1, Math.hypot(x + 0.5 - size / 2, y + 0.5 - size / 2) / (size / 2));
+      let i = 0;
+      while (i < stops.length - 2 && stops[i + 1]![0] <= r) i++;
+      const [r0, a0] = stops[i]!;
+      const [r1, a1] = stops[i + 1]!;
+      const t = THREE.MathUtils.smoothstep(r, r0, r1);
+      const o = (y * size + x) * 4;
+      data[o] = data[o + 1] = data[o + 2] = 255;
+      data[o + 3] = Math.round((a0 + (a1 - a0) * t) * 255);
+    }
   }
+  const tex = new THREE.DataTexture(data, size, size);
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+let poolTexture: THREE.Texture | null = null;
+export function lightPool(g: THREE.Group, x: number, z: number, w: number, d: number, colour = 0xffd9a0, strength = 0.35): THREE.Mesh {
+  poolTexture ??= radialTexture([[0, 1], [0.6, 0.45], [1, 0]]);
   const m = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
     // Pulled towards the camera in the depth test: a floor or lawn at the same height made it flicker (11/4).

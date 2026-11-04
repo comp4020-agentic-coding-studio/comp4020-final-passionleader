@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { lightPool, mat, scatter, solid, type Box, type Spot } from "../world.ts";
+import { lightPool, mat, radialTexture, scatter, solid, type Box, type Spot } from "../world.ts";
 
 // Street furniture along the path, from my own photos (kept out of the repo):
 // tall black lamp posts, a low concrete wall with a timber seat along the
@@ -58,17 +58,8 @@ export const LAMP_HEADS: THREE.Vector3[] = [];
 
 let glow: THREE.Texture | null = null;
 function glowTexture(): THREE.Texture {
-  if (glow) return glow;
-  const c = document.createElement("canvas");
-  c.width = c.height = 64;
-  const ctx = c.getContext("2d")!;
-  const grad = ctx.createRadialGradient(32, 32, 0, 32, 32, 32);
-  grad.addColorStop(0, "rgba(255,255,255,1)");
-  grad.addColorStop(0.3, "rgba(255,255,255,0.5)");
-  grad.addColorStop(1, "rgba(255,255,255,0)");
-  ctx.fillStyle = grad;
-  ctx.fillRect(0, 0, 64, 64);
-  glow = new THREE.CanvasTexture(c);
+  // Worked out per pixel, not a canvas gradient (iPhone Safari dithers those with coloured noise: world.ts).
+  glow ??= radialTexture([[0, 1], [0.3, 0.5], [1, 0]], 64);
   return glow;
 }
 
