@@ -9,6 +9,7 @@ import { playTrack } from "./audio.ts";
 import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
 import { HIGH, RICH, mountSettings, settingsOpen } from "./settings.ts";
+import { makePostFx } from "./postfx.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
 import { fart, sfx, step, warmUp } from "./sfx.ts";
@@ -424,6 +425,9 @@ function applySky(): void {
   scene.environment = outdoorLight;
 }
 
+// High only: bloom, a colour grade, a vignette and a soft far edge (postfx.ts).
+const postFx = HIGH ? makePostFx(renderer, scene, camera) : null;
+
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.style.cssText = "position:absolute;inset:0;pointer-events:none";
 stage.appendChild(labelRenderer.domElement);
@@ -432,6 +436,7 @@ function resize(): void {
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h);
+  postFx?.setSize(w, h);
   labelRenderer.setSize(w, h);
   camera.aspect = w / h;
   // Portrait screens would otherwise see a thin slice of the space: widen the vertical FOV.
@@ -2488,7 +2493,8 @@ renderer.setAnimationLoop(() => {
   const now = performance.now();
   update(Math.min((now - lastTime) / 1000, 0.1), now);
   lastTime = now;
-  renderer.render(scene, camera);
+  if (postFx) postFx.render();
+  else renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 });
 

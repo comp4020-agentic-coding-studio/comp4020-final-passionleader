@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { RICH } from "./settings.ts";
+import { HIGH, RICH } from "./settings.ts";
 
 // Building blocks shared by every space (client/src/spaces/): collision
 // boxes, doors, signs, simple furniture, the player figure and sticky notes.
@@ -222,7 +222,10 @@ const WARM = new THREE.Color(0xffd9a0);
 export const glassMat = (tint = 0xb7d0e0): THREE.MeshStandardMaterial => {
   const m = !RICH
     ? new THREE.MeshStandardMaterial({ color: tint, roughness: 0.15, metalness: 0.2 })
-    : new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
+    : HIGH
+      ? // High (plan 105): the sky shows clearly in the glass, more so at a slant (the clearcoat's sheen).
+        new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.03, metalness: 0.3, envMapIntensity: 2.3, clearcoat: 1, clearcoatRoughness: 0.02, specularIntensity: 1 })
+      : new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
   m.emissive.copy(WARM);
   m.emissiveIntensity = 0;
   // Its own already: a fading building keeps this material, so the night glow still reaches it.

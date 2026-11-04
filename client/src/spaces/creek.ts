@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { block, enableShadows, floor, loadModel, mat, scatter, solid, texMat, textPlane, type Box, type Spot } from "../world.ts";
+import { block, enableShadows, floor, loadModel, mat, scatter, solid, texMat, textPlane, wind, type Box, type Spot } from "../world.ts";
 import { HIGH } from "../settings.ts";
 import { markOccluderGroup } from "./occluders.ts";
 import { asphaltMat } from "./backdrop.ts";
@@ -58,6 +58,65 @@ function ribbon(g: THREE.Group, xa: number, xb: number, ya: number, yb: number, 
   const m = new THREE.Mesh(geo, material);
   m.receiveShadow = HIGH;
   g.add(m);
+  return m;
+}
+
+/** A tiling normal map of soft ripples, drawn once from a few sine waves that wrap at its edges. */
+function rippleNormals(): THREE.DataTexture {
+  const N = 128;
+  const h = (x: number, y: number): number => {
+    const t = Math.PI * 2;
+    return Math.sin(t * (x * 3 + y * 1)) * 0.5 + Math.sin(t * (x * -2 + y * 4)) * 0.35 + Math.sin(t * (x * 5 - y * 2)) * 0.25 + Math.sin(t * (x * 1 + y * 7)) * 0.2;
+  };
+  const data = new Uint8Array(N * N * 4);
+  for (let j = 0; j < N; j++)
+    for (let i = 0; i < N; i++) {
+      const dx = (h((i + 1) / N, j / N) - h((i - 1) / N, j / N)) * 2.5;
+      const dy = (h(i / N, (j + 1) / N) - h(i / N, (j - 1) / N)) * 2.5;
+      const n = new THREE.Vector3(-dx, -dy, 1).normalize();
+      const k = (j * N + i) * 4;
+      data[k] = (n.x * 0.5 + 0.5) * 255;
+      data[k + 1] = (n.y * 0.5 + 0.5) * 255;
+      data[k + 2] = (n.z * 0.5 + 0.5) * 255;
+      data[k + 3] = 255;
+    }
+  const tex = new THREE.DataTexture(data, N, N);
+  tex.wrapS = tex.wrapT = THREE.RepeatWrapping;
+  tex.magFilter = THREE.LinearFilter;
+  tex.minFilter = THREE.LinearMipmapLinearFilter;
+  tex.generateMipmaps = true;
+  tex.needsUpdate = true;
+  return tex;
+}
+
+/**
+ * High quality's creek (plan 105): smooth enough to mirror the sky, with two
+ * layers of ripples drifting downstream at different speeds and scales, so
+ * the reflection wobbles the way water does. The clock is the wind's (main.ts
+ * advances it on Medium and High).
+ */
+function rippleWater(): THREE.MeshStandardMaterial {
+  const m = new THREE.MeshStandardMaterial({
+    color: WATER,
+    roughness: 0.06,
+    metalness: 0.35,
+    envMapIntensity: 1.4,
+    normalMap: rippleNormals(),
+    normalScale: new THREE.Vector2(0.35, 0.35),
+    side: THREE.DoubleSide,
+  });
+  m.normalMap!.repeat.set(1 / 3, 1 / 3);
+  m.onBeforeCompile = (shader) => {
+    shader.uniforms.uTime = wind;
+    shader.fragmentShader = shader.fragmentShader
+      .replace("#include <common>", "#include <common>\nuniform float uTime;")
+      .replace(
+        "vec3 mapN = texture2D( normalMap, vNormalMapUv ).xyz * 2.0 - 1.0;",
+        `vec3 mapN = texture2D( normalMap, vNormalMapUv + vec2( 0.013, 0.05 ) * uTime ).xyz * 2.0 - 1.0;
+        vec3 mapN2 = texture2D( normalMap, vNormalMapUv * 2.3 + vec2( -0.03, 0.09 ) * uTime ).xyz * 2.0 - 1.0;
+        mapN = normalize( vec3( mapN.xy + mapN2.xy * 0.6, mapN.z * mapN2.z ) );`,
+      );
+  };
   return m;
 }
 
@@ -124,8 +183,9 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   const mz = (CREEK_Z.from + CREEK_Z.to) / 2;
 
   // ---- The channel: dull green-brown water, and a sloping grassy bank each side ----
-  const waterMat = new THREE.MeshStandardMaterial({ color: WATER, roughness: 0.3, metalness: 0.1, side: THREE.DoubleSide });
-  ribbon(g, cx - water / 2, cx + water / 2, -depth, -depth, CREEK_Z.from, CREEK_Z.to, waterMat);
+  const waterMat = HIGH ? rippleWater() : new THREE.MeshStandardMaterial({ color: WATER, roughness: 0.3, metalness: 0.1, side: THREE.DoubleSide });
+  // High: the ripples' texture tiles about every 3 m, so the water's own coordinates are in metres.
+  ribbon(g, cx - water / 2, cx + water / 2, -depth, -depth, CREEK_Z.from, CREEK_Z.to, waterMat, HIGH ? 1 : 0);
   const grass = texMat("ai/grass.jpg", 1, 1, 0x9fb08a);
   grass.side = THREE.DoubleSide;
   ribbon(g, cx - bankTop, cx - water / 2, 0, -depth, CREEK_Z.from, CREEK_Z.to, grass, 3.9);
