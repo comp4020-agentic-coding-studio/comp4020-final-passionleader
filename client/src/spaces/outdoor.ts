@@ -189,6 +189,8 @@ export function buildOutdoor(): SpaceDef {
     bay: 1.8,
     roofOverhang: 0.4,
     bareRoof: true,
+    // The shops' side: their own fronts fill the ground floor, without the timber posts (the user, 11/4).
+    shopFront: "north",
     entrance: { side: "east", at: 0, color: 0xe9e6df },
   });
   // The upper volume steps in from the lower one on every side (more to the east and south), never
@@ -323,13 +325,14 @@ export function buildOutdoor(): SpaceDef {
 /**
  * 155's ground floor on the lawn side (north), from the user's photo, 11/4: left to right as you
  * face it from the lawn (east to west), an empty unit, Yori, Sushi Smith and Rex Espresso. They
- * are the building's ground floor, not boards on it: each fills the bays between the building's
- * own timber mullions, under its first-floor slab, flush with its glass (a hand in front, so the
- * building's glass never shows behind them), with a fascia in the shop's colour carrying its
- * name in plain type (no logos) and warm-lit glass below, like the shops along the north row.
+ * are the building's ground floor, not boards on it: each fills its width of the face (no timber
+ * posts on this floor: buildings.ts shopFront), under its first-floor slab, flush with its glass
+ * (a hand in front, so the building's glass never shows behind them), with a fascia in the
+ * shop's colour carrying its name in plain type (no logos) and warm-lit glass below, like the
+ * shops along the north row.
  */
 const SHOPS_155 = [
-  // East to west, between the mullions (x -10.9 + 1.8 k) and the glass's ends (x -10.25, -27.75).
+  // East to west, along the glass (x -10.25 to -27.75).
   { name: "", from: -10.25, to: -14.5, fascia: 0x4a4e52, board: "", fg: "" },
   { name: "Yori", from: -14.5, to: -18.1, fascia: 0x1f4f8a, board: "#1f4f8a", fg: "#ffffff" },
   { name: "Sushi Smith", from: -18.1, to: -23.5, fascia: 0x2a2523, board: "#2a2523", fg: "#ff6a4d" },

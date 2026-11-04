@@ -41,6 +41,8 @@ export interface BuildingSpec {
   apex?: { color: number };
   /** No plant room on the roof (a lower volume with another on top). */
   bareRoof?: boolean;
+  /** A face whose ground floor has no mullions (shops fill it: 155's north, outdoor.ts). */
+  shopFront?: "north" | "south" | "east" | "west";
 }
 
 const SLAB = 0.42;
@@ -118,18 +120,22 @@ export function building(g: THREE.Group, colliders: Box[], s: BuildingSpec): THR
   }
 
   // Vertical mullions round all four faces, as one instanced mesh.
-  const along: { x: number; z: number; ry: number }[] = [];
+  // Each from the ground to the top, but on a shop front from the first floor up.
+  const along: { x: number; z: number; ry: number; from: number }[] = [];
+  const from = (side: string): number => (s.shopFront === side ? floorH : 0);
   for (let x = -s.w / 2 + bay / 2; x < s.w / 2; x += bay) {
-    along.push({ x: s.cx + x, z: s.cz + s.d / 2 - 0.22, ry: 0 }, { x: s.cx + x, z: s.cz - s.d / 2 + 0.22, ry: 0 });
+    along.push({ x: s.cx + x, z: s.cz + s.d / 2 - 0.22, ry: 0, from: from("south") }, { x: s.cx + x, z: s.cz - s.d / 2 + 0.22, ry: 0, from: from("north") });
   }
   for (let z = -s.d / 2 + bay / 2; z < s.d / 2; z += bay) {
-    along.push({ x: s.cx + s.w / 2 - 0.22, z: s.cz + z, ry: Math.PI / 2 }, { x: s.cx - s.w / 2 + 0.22, z: s.cz + z, ry: Math.PI / 2 });
+    along.push({ x: s.cx + s.w / 2 - 0.22, z: s.cz + z, ry: Math.PI / 2, from: from("east") }, { x: s.cx - s.w / 2 + 0.22, z: s.cz + z, ry: Math.PI / 2, from: from("west") });
   }
   if (s.solidBody !== undefined) along.length = 0;
-  const mull = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, H, 0.24), frame, along.length);
+  const mull = new THREE.InstancedMesh(new THREE.BoxGeometry(0.14, 1, 0.24), frame, along.length);
   const m4 = new THREE.Matrix4();
+  const stretch = new THREE.Matrix4();
   along.forEach((p, i) => {
-    m4.makeRotationY(p.ry).setPosition(p.x, H / 2, p.z);
+    const h = H - p.from;
+    m4.makeRotationY(p.ry).multiply(stretch.makeScale(1, h, 1)).setPosition(p.x, p.from + h / 2, p.z);
     mull.setMatrixAt(i, m4);
   });
   // Thin enough not to need a shadow, and instanced depth shaders are fussy on some GPUs.
