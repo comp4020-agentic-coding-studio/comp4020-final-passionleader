@@ -147,9 +147,9 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   out.className = "settings-bug";
   out.textContent = "🚪 Sign out";
 
-  // Full screen (plan 88), on touch screens only: a button where the browser
-  // allows it (Android, iPad); an iPhone's Safari doesn't, so it says how to
-  // add the campus to the home screen, which opens without the browser's bars.
+  // Full screen (plan 88): a button where the browser allows it (computers too,
+  // since the user asked, 11/4; Android, iPad); an iPhone's Safari doesn't, so it
+  // says how to add the campus to the home screen, which opens without its bars.
   const screen = document.createElement("fieldset");
   const screenLegend = document.createElement("legend");
   screenLegend.textContent = "Screen";
@@ -162,7 +162,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const canFull = (): boolean => typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
   const standalone = (): boolean => window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
   const syncScreen = (): void => {
-    screen.hidden = !window.matchMedia("(pointer: coarse)").matches || standalone();
+    screen.hidden = standalone() || (!canFull() && !window.matchMedia("(pointer: coarse)").matches);
     fsBtn.hidden = !canFull();
     fsBtn.textContent = document.fullscreenElement ? "↙ Leave full screen" : "⛶ Full screen";
     fsNote.hidden = canFull();
