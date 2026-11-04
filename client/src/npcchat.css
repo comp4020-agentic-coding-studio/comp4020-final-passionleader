@@ -10,7 +10,7 @@
 .npc-head h2 { margin: 0; font-size: 1.1rem; }
 .npc-close { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.1rem; cursor: pointer; }
 .npc-note { margin: 4px 0 8px; font-size: 0.82rem; opacity: 0.75; }
-.npc-log { flex: 1; min-height: 120px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 8px; border-radius: 8px; background: var(--card, #f8f6f2); }
+.npc-log { flex: 1; min-height: 120px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 8px; border-radius: 8px; background: var(--card, #f5efdf); }
 .npc-line { margin: 0 0 8px; line-height: 1.4; }
 .npc-line.is-you { text-align: right; }
 .npc-line > p, .npc-line > ul, .npc-line > ol { margin: 2px 0 6px; }

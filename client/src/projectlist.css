@@ -25,7 +25,7 @@
   height: min(640px, calc(100vh - 32px));
   overflow: hidden;
   border-radius: 14px;
-  background: var(--paper, #ffffff);
+  background: var(--paper, #fcf8ec);
   color: var(--ink, #3b2a12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   font-family: system-ui, sans-serif;
@@ -95,7 +95,7 @@
   padding: 6px 12px;
   border: 2px solid var(--accent, #6b3f1d);
   border-radius: 10px;
-  background: var(--card, #f8f6f2);
+  background: var(--card, #f5efdf);
   color: var(--ink, #3b2a12);
   font: inherit;
 }
@@ -135,13 +135,13 @@
   padding: 8px 14px;
   border: 2px solid var(--accent, #6b3f1d);
   border-radius: 10px;
-  background: var(--card, #f8f6f2);
+  background: var(--card, #f5efdf);
   color: var(--ink, #3b2a12);
   text-align: left;
 }
 
 button.projects-row:hover {
-  background: var(--card-hover, #efebe4);
+  background: var(--card-hover, #ece3cc);
 }
 
 .projects-names {

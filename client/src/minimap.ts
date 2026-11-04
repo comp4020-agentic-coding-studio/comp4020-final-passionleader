@@ -80,7 +80,7 @@ export function mountMinimap(view: {
     draw(x, z, heading) {
       if (!on) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
-      ctx.fillStyle = "rgba(255, 255, 255, 0.9)";
+      ctx.fillStyle = "rgba(252, 248, 236, 0.9)";
       ctx.fillRect(0, 0, canvas.width, canvas.height);
       ctx.fillStyle = "#d9d3c4";
       for (const a of view.areas) ctx.fillRect(px(a.minX), pz(a.minZ), (a.maxX - a.minX) * scale * 2, (a.maxZ - a.minZ) * scale * 2);

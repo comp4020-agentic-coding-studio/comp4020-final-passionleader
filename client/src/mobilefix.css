@@ -25,17 +25,17 @@
 #settings { overflow-y: auto; overscroll-behavior: contain; }
 @media (max-height: 640px) { #settings { place-items: start center; } }
 #settings .settings-card { box-sizing: border-box; max-height: calc(100dvh - 32px); overflow-y: auto; overscroll-behavior: contain; }
-#settings .settings-head { position: sticky; top: -20px; z-index: 1; background: var(--paper, #ffffff); padding: 4px 0; }
+#settings .settings-head { position: sticky; top: -20px; z-index: 1; background: var(--paper, #fcf8ec); padding: 4px 0; }
 
 /* The settings card's head: the title and a Close always at its top (11/4). */
 .settings-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
 .settings-head h2 { margin: 0; }
 .settings-x {
   min-height: 40px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--accent, #6b3f1d);
-  background: var(--card, #f8f6f2); color: var(--ink, #3b2a12); font: 700 0.9rem system-ui, sans-serif; cursor: pointer;
+  background: var(--card, #f5efdf); color: var(--ink, #3b2a12); font: 700 0.9rem system-ui, sans-serif; cursor: pointer;
 }
 @media (max-width: 700px), (pointer: coarse) {
-  #settings .settings-head { position: sticky; top: -20px; z-index: 1; background: var(--paper, #ffffff); padding: 4px 0; }
+  #settings .settings-head { position: sticky; top: -20px; z-index: 1; background: var(--paper, #fcf8ec); padding: 4px 0; }
 }
 
 /* Every window's Close (the 11/4 UI pass, stageshow's craft rules: one control,

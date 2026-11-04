@@ -73,7 +73,7 @@
   font-size: 1.1rem;
   border-radius: 8px;
   border: 2px solid var(--accent);
-  background: var(--card, #f8f6f2);
+  background: var(--card, #f5efdf);
   color: var(--ink);
 }
 
