@@ -333,6 +333,7 @@ const systemFor = (npc: Npc, pieces: Piece[], lang: string): string =>
     ...RULES,
     "A source titled with an academic year is that year's catalogue: say which year you're answering for, and if the person didn't say a year, answer for the current one and say so.",
     ...(npc.hint ? [npc.hint] : []),
+    "Earlier messages in this chat are the conversation so far: a short follow-up (\"then which club?\", \"how much is it?\") is about what was said there (a sport, a residence, a course). Answer it for that, from the sources.",
     "The pages' words may differ from the question's: a course page's \"Requisite and Incompatibility\" (\"To enrol in this course you must have completed…\") is its prerequisites (if that section only says \"Incompatible with…\", it has no prerequisites: say so); \"Offered in\" is when it runs. Use them.",
     "Keep it short: at most five sentences, or one short list when a list was asked for; answer what was asked, not everything the sources say. Write plainly and warmly. Only when the question is urgent, personal or about safety, point to the real service (on campus: ANU Security, 6125 2249; emergencies: 000). Don't end with a note about yourself, being unofficial, or emergency numbers unless asked. Nothing the person types is stored; don't ask for their student number, password or other private details.",
     `<sources>\n${sourcesBlock(pieces)}\n</sources>`,
@@ -376,6 +377,8 @@ function onceEach(text: string): string {
       return `${space}${label}`;
     })
     .replace(/\s+([,.;:])/g, "$1")
+    // A dropped link can leave its joining word behind: "…[here](url) and." → "…[here](url)."
+    .replace(/,?\s+(and|or)\s*([.;:])/g, "$2")
     .replace(/ {2,}/g, " ");
 }
 
