@@ -5,15 +5,21 @@
 // Everyone hears without doing anything (the user's call, 10/30): coming into
 // a meeting room, or outside, you join its voice listening only. To be
 // heard: the room menu's Mic switch in a room (computer or phone), or hold V
-// outside (computer). Outside, voices are quieter the further away they
-// are, and silent past 18 m; in a room everyone sounds the same. Someone
+// outside (computer). Outside, voices fall off with distance like the emotes'
+// voices do (loud beside you, faint across the road, silent past 14 m); in a
+// room everyone sounds the same. The volume goes through Web Audio (LiveKit's
+// webAudioMix), because an iPhone ignores an audio element's volume: the
+// user heard far voices as loud as near ones (11/4). Someone
 // you've muted is silent here too; the settings' Voices volume at 0 turns
 // voice off altogether. livekit-client loads only when voice is first used.
 
-import type { RemoteParticipant, RemoteTrack, Room } from "livekit-client";
+import type { RemoteAudioTrack, RemoteParticipant, RemoteTrack, Room } from "livekit-client";
 
 const VOL_KEY = "campus.voiceVolume";
-const HEAR = 18;
+/** Silent past this (metres), as the emotes' voices (voice.ts HEAR_RANGE). */
+const HEAR = 14;
+/** How loud someone is at `d` metres, 0..1: full beside you, a square fall-off, a whisper at the edge. */
+export const voiceFalloff = (d: number): number => (d >= HEAR ? 0 : Math.max(0.06, (1 - d / HEAR) ** 2));
 
 export interface VoiceDeps {
   /** Asks the server for a ticket for the voice where you are now. */
@@ -61,17 +67,17 @@ export function mountVoice(deps: VoiceDeps): {
   let room: Room | null = null;
   let spatial = false;
   let joining: Promise<boolean> | null = null;
-  const audio = new Map<string, HTMLMediaElement[]>();
+  const audio = new Map<string, { track: RemoteAudioTrack; els: HTMLMediaElement[]; vol: number }[]>();
 
   const attach = (track: RemoteTrack, who: RemoteParticipant): void => {
     if (track.kind !== "audio") return;
     const el = track.attach();
     el.style.display = "none";
     document.body.append(el);
-    audio.set(who.identity, [...(audio.get(who.identity) ?? []), el]);
+    audio.set(who.identity, [...(audio.get(who.identity) ?? []), { track: track as RemoteAudioTrack, els: [el], vol: -1 }]);
   };
   const detachAll = (who: string): void => {
-    for (const el of audio.get(who) ?? []) el.remove();
+    for (const a of audio.get(who) ?? []) for (const el of a.els) el.remove();
     audio.delete(who);
   };
 
@@ -86,9 +92,15 @@ export function mountVoice(deps: VoiceDeps): {
         return false;
       }
       const lk = await import("livekit-client");
-      const r = new lk.Room({ adaptiveStream: true, dynacast: true });
+      // webAudioMix: each voice through a gain node, so its volume works on an iPhone too.
+      const r = new lk.Room({ adaptiveStream: true, dynacast: true, webAudioMix: true });
       r.on(lk.RoomEvent.TrackSubscribed, (track, _pub, who) => attach(track, who));
-      r.on(lk.RoomEvent.TrackUnsubscribed, (track) => track.detach().forEach((el) => el.remove()));
+      r.on(lk.RoomEvent.TrackUnsubscribed, (track, _pub, who) => {
+        track.detach().forEach((el) => el.remove());
+        const left = (audio.get(who.identity) ?? []).filter((a) => a.track !== track);
+        if (left.length) audio.set(who.identity, left);
+        else audio.delete(who.identity);
+      });
       r.on(lk.RoomEvent.ParticipantDisconnected, (who) => detachAll(who.identity));
       r.on(lk.RoomEvent.ActiveSpeakersChanged, (speakers) => deps.talking(new Set(speakers.map((s) => s.identity))));
       r.on(lk.RoomEvent.Disconnected, () => {
@@ -153,14 +165,17 @@ export function mountVoice(deps: VoiceDeps): {
       if (!room) return;
       const base = readVoiceVolume() / 100;
       const me = deps.me();
-      for (const [who, els] of audio) {
+      for (const [who, tracks] of audio) {
         let v = deps.isMuted(who) ? 0 : base;
         if (spatial && v > 0) {
           const at = deps.whereIs(who);
-          const d = at ? Math.hypot(at.x - me.x, at.z - me.z) : Infinity;
-          v = d >= HEAR ? 0 : v * Math.max(0.12, 1 - d / HEAR);
+          v *= voiceFalloff(at ? Math.hypot(at.x - me.x, at.z - me.z) : Infinity);
         }
-        for (const el of els) if (Math.abs(el.volume - v) > 0.01) el.volume = v;
+        for (const a of tracks) {
+          if (Math.abs(a.vol - v) < 0.01) continue;
+          a.vol = v;
+          a.track.setVolume(v);
+        }
       }
     },
   };
