@@ -307,7 +307,9 @@ const scene = new THREE.Scene();
 const sun = addLights(scene, highQuality);
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
-const renderer = new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance" });
+// Full float precision in every shader: at mediump an iPhone's lighting overflowed under the lamps
+// into coloured speckles over the paving (the user, 11/4, twice).
+const renderer = new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance", precision: "highp" });
 // Medium and High: up to one and a half times the screen's pixels (a Retina or phone screen is
 // dense; twice, on High, made a MacBook lag for little you could see: the user, 11/4); Low: one.
 renderer.setPixelRatio(RICH ? Math.min(window.devicePixelRatio, 1.5) : 1);
@@ -364,7 +366,10 @@ new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/sky/campus_sky
 // the four nearest heads; always in the scene (adding lights later would rebuild every shader),
 // at nothing by day, indoors and on Low.
 const lampLights = (() => {
-  const lights = RICH ? Array.from({ length: 4 }, () => new THREE.PointLight(0xffd29a, 0, 9, 1.4)) : [];
+  // Not on a touch screen: even at full precision a phone's GPU speckled the lit paving with
+  // colours (the user, 11/4); a phone keeps the painted pool, which is calm.
+  const touch = window.matchMedia("(pointer: coarse)").matches;
+  const lights = RICH && !touch ? Array.from({ length: 4 }, () => new THREE.PointLight(0xffd29a, 0, 9, 1.4)) : [];
   for (const l of lights) scene.add(l);
   let strength = 0;
   let frame = 0;
@@ -377,9 +382,12 @@ const lampLights = (() => {
       if (!lights.length || (frame = (frame + 1) % 10) !== 0) return;
       const on = outdoors && strength > 0.05;
       const near = on ? [...LAMP_HEADS].sort((a, b) => a.distanceToSquared(at) - b.distanceToSquared(at)).slice(0, lights.length) : [];
+      // Each fades with its distance from you, so the one handed to a nearer lamp as you walk is
+      // already dim: at full strength the swap flashed patches of lawn on and off (the user, 11/4).
       lights.forEach((l, i) => {
         const head = near[i];
-        l.intensity = head ? 5 * strength : 0;
+        const fade = head ? 1 - THREE.MathUtils.smoothstep(Math.hypot(head.x - at.x, head.z - at.z), 9, 18) : 0;
+        l.intensity = 5 * strength * fade;
         if (head) l.position.copy(head);
       });
     },

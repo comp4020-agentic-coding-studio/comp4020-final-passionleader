@@ -45,7 +45,8 @@ function lamp(g: THREE.Group, colliders: Box[], x: number, z: number, face: numb
   pool.userData.lampPool = true;
   // Where the head is: the nearest few lamps lend a real light to whatever stands under them (main.ts).
   LAMP_HEADS.push(new THREE.Vector3(under.x, 4.9, under.z));
-  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffd28a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
+  // Blended normally, like the pool: added on top, a phone's blending speckled it with colours (11/4).
+  const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffe2b0, transparent: true, opacity: 0, depthWrite: false, blending: THREE.NormalBlending }));
   halo.scale.set(1.6, 1.6, 1);
   halo.position.set(under.x, 5.0, under.z);
   halo.userData.lampHalo = true;
