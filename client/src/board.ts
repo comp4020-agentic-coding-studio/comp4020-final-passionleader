@@ -12,6 +12,14 @@ import { hotBadge } from "./notepanel.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 import { canberraTime } from "./when.ts";
 
+/** A small grey line under a field's label: what the field takes. */
+function hint(text: string): HTMLElement {
+  const h = document.createElement("span");
+  h.className = "board-hint";
+  h.textContent = text;
+  return h;
+}
+
 export type BoardTab = string;
 
 export interface BoardConfig {
@@ -204,7 +212,7 @@ export function mountBoard(h: {
   const backBtn = document.createElement("button");
   backBtn.type = "button";
   backBtn.className = "board-secondary";
-  backBtn.textContent = "Back";
+  backBtn.textContent = "← Back";
   const postTitle = document.createElement("h3");
   postTitle.className = "board-view-title";
   const postMeta = document.createElement("p");
@@ -269,13 +277,14 @@ export function mountBoard(h: {
   titleInput.autocomplete = "off";
   const textLabel = document.createElement("label");
   textLabel.htmlFor = "board-post-text";
-  textLabel.textContent = "Post (Markdown works: **bold**, *italic*, # heading, - list, [link](https://…))";
+  // The label is the field's name; what it takes is a small line under it (the 11/4 UI pass).
+  textLabel.append("Post", hint("Markdown works: **bold**, *italic*, # heading, - list, [link](https://…)"));
   const textInput = document.createElement("textarea");
   textInput.id = "board-post-text";
   textInput.maxLength = POST_CHARS;
   const filesLabel = document.createElement("label");
   filesLabel.htmlFor = "board-post-files";
-  filesLabel.textContent = "Files (optional: up to 5, 200 MB each; images, PDF, txt, md, docx, pptx, xlsx, zip)";
+  filesLabel.append("Files (optional)", hint("Up to 5, 200 MB each: images, PDF, txt, md, docx, pptx, xlsx, zip"));
   const filesInput = document.createElement("input");
   filesInput.id = "board-post-files";
   filesInput.type = "file";
@@ -463,9 +472,16 @@ export function mountBoard(h: {
             const meta = document.createElement("span");
             meta.className = "board-post-meta";
             // The pinned notice has no date and no comments, so it shows just its author.
-            meta.textContent = p.pinned ? p.author : `${p.author} · ${canberraTime(p.createdAt)} · ${p.comments} ${p.comments === 1 ? "comment" : "comments"}`;
-            if (p.private) meta.textContent += " · 🔒 Private";
-            if (p.capacity) meta.textContent += ` · ${groupLine(p)}`;
+            const bits = p.pinned ? [p.author] : [p.author, canberraTime(p.createdAt), `${p.comments} ${p.comments === 1 ? "comment" : "comments"}`];
+            if (p.private) bits.push("🔒 Private");
+            if (p.capacity) bits.push(groupLine(p));
+            // Each part kept whole, so a narrow screen breaks the line between them, never inside "1 / 4 joined".
+            bits.forEach((bit, i) => {
+              const s = document.createElement("span");
+              s.className = "board-meta-bit";
+              s.textContent = bit;
+              meta.append(...(i ? [" · ", s] : [s]));
+            });
             b.append(t, meta);
             // On a grid board (the lawn's posters) the first picture, if any,
             // stands for the post; without one the title shows, smaller.

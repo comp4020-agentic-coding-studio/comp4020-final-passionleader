@@ -1,0 +1,42 @@
+/* One look for every window (the 11/4 UI pass, stageshow's craft rules: the same
+   control looks the same everywhere). Loaded after each window's own styles, so
+   these few shared values win: the title in a window's head, the head's spacing,
+   and the plain buttons in a window's footer. Each window keeps its own layout. */
+
+:root {
+  --ui-title: 1.2rem;
+  --ui-gap: 12px;
+  --ui-btn-h: 44px;
+  --ui-btn-radius: 10px;
+}
+
+/* A window's title. */
+.settings-card h2, .board-title, .projects-title, .webview-title, .room-title,
+.room-modal-card h2, .class-card h2, .look-card h2, .composer-title,
+.cafe-head h2, .cal-head h2, .guide-head h2, .npc-head h2, .mail-head h2, .note-head h2 {
+  font-size: var(--ui-title);
+  font-weight: 800;
+  line-height: 1.25;
+  letter-spacing: -0.01em;
+}
+@media (max-width: 700px) {
+  .settings-card h2, .board-title, .projects-title, .webview-title, .room-title,
+  .room-modal-card h2, .class-card h2, .look-card h2, .composer-title,
+  .cafe-head h2, .cal-head h2, .guide-head h2, .npc-head h2, .mail-head h2, .note-head h2 {
+    font-size: 1.1rem;
+  }
+}
+
+/* A window's head: the title, then its Close, the same gap everywhere. */
+.cafe-head, .cal-head, .guide-head, .npc-head, .mail-head, .note-head, .board-head,
+.projects-head, .webview-head, .settings-head {
+  gap: var(--ui-gap);
+}
+
+/* A window's plain buttons (OK, Cancel, Send, Post…): one height, one corner. */
+.settings-actions button, .board-primary, .board-secondary {
+  min-height: var(--ui-btn-h);
+  padding: 8px 16px;
+  border-radius: var(--ui-btn-radius);
+  font-weight: 700;
+}

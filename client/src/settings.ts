@@ -189,7 +189,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   head.className = "settings-head";
   const topClose = document.createElement("button");
   topClose.type = "button";
-  topClose.className = "settings-x";
+  topClose.className = "settings-x ui-close";
   topClose.textContent = "Close";
   topClose.setAttribute("aria-label", "Close the settings");
   head.append(title, topClose);

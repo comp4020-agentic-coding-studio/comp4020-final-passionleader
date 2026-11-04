@@ -114,6 +114,8 @@ import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { LAMP_HEADS } from "./spaces/streetscape.ts";
 import { canberraTime } from "./when.ts";
+// Last, so its shared values come after every window's own stylesheet.
+import "./ui.css";
 
 const SPEED = 4.2; // walking, world units per second
 const RUN_SPEED = 8; // with Shift held
