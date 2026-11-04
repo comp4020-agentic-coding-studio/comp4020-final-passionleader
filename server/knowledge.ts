@@ -100,6 +100,8 @@ export function keywords(question: string): string[] {
 const YEAR = /\b(20\d\d)\b/;
 /** How many prices a piece lists ("$395", "395.00 /wk", "per week", "from 12"). */
 const priceCount = (body: string): number => (body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length;
+/** A question asking for a list of things rather than one fact. */
+const LISTING = /\b(which|what)\b.*\b(are there|do(es)? (anu|you|they) have|exist|options|kinds?|types?)\b|\b(list|all|every|name the)\b/i;
 const MONEY = /\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|afford\w*|budget|how much|rent|per week|weekly|\$)/i;
 /** A word without a plural or -ing/-ed ending, escaped for a RegExp. */
 const stem = (w: string): string => (w.length > 4 ? w.replace(/(ies|es|s|ing|ed)$/, "") : w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -222,6 +224,41 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     perUrl.set(r.url, n + 1);
     picked.push({ title: r.title, body: r.body, url: r.url, source: r.source, year: r.year });
     if (picked.length >= (codes.length === 1 ? Math.max(limit, 12) : limit)) break;
+  }
+  // Asked for a list ("which libraries does ANU have?", "list all…"), a short page whose title is
+  // about it comes whole: one piece of "Library branches" named three of six (the user, 11/4).
+  if (LISTING.test(question)) {
+    const stems = (t: string): string[] => keywords(t).map((w) => w.slice(0, 5));
+    const asked = new Set(words.map((w) => w.slice(0, 5)));
+    // The page that is a list of them ("Library branches", "Our residences", "Clubs"): a picked page whose
+    // title shares a word with the question and names a collection, brought whole if it's short.
+    const COLLECTION = /\b(branches|locations|list|options|types|residences|clubs|services|facilities|campuses|libraries|courses|majors|programs)\b/i;
+    // (The collection word must be the title's own, not one the question already has: "Australian and
+    // overseas libraries" isn't a list of ANU's libraries just because the question says "libraries".)
+    const own = (t: string): string => keywords(t).filter((w) => !asked.has(w.slice(0, 5))).join(" ");
+    let list: Piece | undefined = [...new Map(picked.map((p) => [p.url, p])).values()].find((p) => COLLECTION.test(own(p.title)) && stems(p.title).some((w) => asked.has(w)));
+    // Not among the picked ("describe all" changed the words, and "Library branches" fell out of the
+    // pool): look for it by title directly, in these sources.
+    if (!list) {
+      const subject = words.filter((w) => !/^(anu|which|what|describe|all|list|every|have|has|are|there|tell|me|about)$/.test(w)).map((w) => w.replace(/[^\p{L}\p{N}]/gu, "").slice(0, 5)).filter((w) => w.length >= 3).map((w) => `title:${w}*`);
+      if (subject.length) {
+        const marks = sources.map(() => "?").join(", ");
+        const found = db
+          .prepare(`SELECT title, body, url, source, year FROM pieces WHERE pieces MATCH ? AND source IN (${marks}) LIMIT 40`)
+          .all(subject.join(" OR "), ...sources) as unknown as Piece[];
+        list = found.find((p) => COLLECTION.test(own(p.title)));
+      }
+    }
+    if (list) {
+      const all = db.prepare("SELECT title, body, url, source, year FROM pieces WHERE url = ? ORDER BY rowid").all(list.url) as unknown as Piece[];
+      if (all.length <= 6) {
+        // First, so the answer is built on it.
+        // (Not its footer of related links, which names no branch.)
+        const page = all.filter((p) => !/^##\s*Related links/i.test(p.body.trim()));
+        for (let k = picked.length - 1; k >= 0; k--) if (picked[k]!.url === list.url) picked.splice(k, 1);
+        picked.unshift(...page);
+      }
+    }
   }
   // A price table split over pieces comes whole: half of "Compare residences" left out its cheapest rows.
   if (money) {

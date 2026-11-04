@@ -51,6 +51,21 @@ describe("what the assistants know", () => {
     expect(hit.map((p) => p.url)).toEqual(["https://example.anu/faq", "https://example.anu/gym"]);
   });
 
+  it("asked for a list, brings the page that lists them, whole", () => {
+    k.savePage({ url: "https://example.anu/lib-home", source: "liblist", year: null, title: "The Library", pieces: ["The library has study spaces and many libraries of books. Library news."] });
+    k.savePage({ url: "https://example.anu/branches", source: "liblist", year: null, title: "Library branches", pieces: ["## Alpha Library\nScience and engineering books, open late.", "## Beta Library\nLaw books and legal research help, quiet floors."] });
+    const hit = k.search(["liblist"], "Which libraries does ANU have? describe all");
+    expect(hit.filter((p) => p.url === "https://example.anu/branches")).toHaveLength(2);
+    expect(hit[0]?.url).toBe("https://example.anu/branches");
+  });
+
+  it("asked about money, brings a price table that never says the question's words, whole", () => {
+    k.savePage({ url: "https://example.anu/halls", source: "halls", year: null, title: "Halls", pieces: ["Halls of residence near campus, with study rooms and dining."] });
+    k.savePage({ url: "https://example.anu/rates", source: "halls", year: null, title: "Compare", pieces: ["| A Hall | From 395.00 /wk |\n| B Hall | From 412.00 /wk |\n| C Hall | From 433.00 /wk |\n| D Hall | From 450.00 /wk |", "| E Hall | From 319.00 /wk |\n| F Hall | From 335.00 /wk |\n| G Hall | From 339.00 /wk |\n| H Hall | From 360.00 /wk |"] });
+    const hit = k.search(["halls"], "cheapest hall for students?");
+    expect(hit.filter((p) => p.url === "https://example.anu/rates")).toHaveLength(2);
+  });
+
   it("answers when something closes from an hours page, not from pages that say the place's name more", () => {
     k.savePage({ url: "https://example.anu/lib", source: "library", year: null, title: "Using the Library", pieces: ["The library lends books. Library rooms close for cleaning at times; library printing and library study spaces."] });
     k.savePage({ url: "https://example.anu/hours", source: "library", year: null, title: "Opening Hours", pieces: ["Library opening hours this week.\nChifley | 24 hours | 24 hours |"] });
