@@ -75,6 +75,13 @@ body:has(#hud-talking:not([hidden])) #minimap { top: 104px; }
   #hud-online { order: 2; }
   #status-btn { order: 3; }
   #hud-talking { order: 4; }
+  /* A phone's notice: a band across the screen just under the round buttons, clear of the
+     name's column and of Chat (beside the name it ran under the buttons). */
+  #toast:not(:empty) {
+    position: fixed; top: calc(62px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+    width: max-content; max-width: calc(100vw - 32px) !important; z-index: 21; text-align: center;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }

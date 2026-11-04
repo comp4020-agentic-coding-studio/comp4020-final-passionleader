@@ -11,6 +11,7 @@
 
 import { getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from "./audio.ts";
 import { readVoiceVolume, saveVoiceVolume } from "./voicechat.ts";
+import { ICONS } from "./icons.ts";
 
 export type Quality = "low" | "medium" | "high";
 const KEY = "campus.quality";
@@ -36,7 +37,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
-  button.textContent = "⚙️";
+  button.innerHTML = ICONS.gear;
   button.setAttribute("aria-label", "Settings");
   button.setAttribute("aria-haspopup", "dialog");
   document.body.append(button);

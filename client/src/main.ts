@@ -9,6 +9,7 @@ import { playTrack } from "./audio.ts";
 import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
 import { HIGH, RICH, mountSettings, settingsOpen } from "./settings.ts";
+import { ICONS } from "./icons.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
 import { fart, sfx, step, warmUp } from "./sfx.ts";
@@ -202,10 +203,8 @@ const guestNotice = mountGuestNotice({ signUp: () => signUpFromGuest() });
 const hangerBtn = document.createElement("button");
 hangerBtn.type = "button";
 hangerBtn.id = "look-btn";
-// A coat hanger (there's no emoji for one): hook, shoulders and bar.
-hangerBtn.innerHTML =
-  '<svg viewBox="0 0 24 24" width="24" height="24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">' +
-  '<path d="M10 7a2 2 0 1 1 3 1.7c-.6.4-1 .9-1 1.6V11"/><path d="M12 11 3 17.5c-.6.5-.3 1.5.5 1.5h17c.8 0 1.1-1 .5-1.5L12 11"/></svg>';
+// The round buttons share one set of line icons (icons.ts).
+hangerBtn.innerHTML = ICONS.hanger;
 hangerBtn.title = "Customise look";
 hangerBtn.setAttribute("aria-label", "Customise look");
 hangerBtn.setAttribute("aria-haspopup", "dialog");
@@ -216,7 +215,7 @@ document.body.append(hangerBtn);
 const guideBtn = document.createElement("button");
 guideBtn.type = "button";
 guideBtn.id = "guide-btn";
-guideBtn.textContent = "❓";
+guideBtn.innerHTML = ICONS.guide;
 guideBtn.title = "Campus Guide";
 guideBtn.setAttribute("aria-label", "Campus Guide");
 guideBtn.setAttribute("aria-haspopup", "dialog");
@@ -232,7 +231,7 @@ mailBtn.id = "mail-btn";
 mailBtn.title = "Mail";
 mailBtn.setAttribute("aria-haspopup", "dialog");
 const mailIcon = document.createElement("span");
-mailIcon.textContent = "✉️";
+mailIcon.innerHTML = ICONS.mail;
 mailIcon.setAttribute("aria-hidden", "true");
 const mailBadge = document.createElement("span");
 mailBadge.className = "mail-badge";
@@ -2316,7 +2315,7 @@ let camYaw = 0;
 const turnBtn = document.createElement("button");
 turnBtn.type = "button";
 turnBtn.id = "turn-btn";
-turnBtn.textContent = "⟳";
+turnBtn.innerHTML = ICONS.turn;
 turnBtn.title = "Turn the view (R)";
 turnBtn.setAttribute("aria-label", "Turn the view a quarter (R)");
 turnBtn.hidden = true;

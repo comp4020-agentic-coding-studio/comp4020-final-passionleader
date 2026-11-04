@@ -40,3 +40,11 @@
   border-radius: var(--ui-btn-radius);
   font-weight: 700;
 }
+
+/* The round buttons at the top right: one line-icon set (icons.ts), centred, in ink. */
+#guide-btn, #turn-btn, #mail-btn, #look-btn, #settings-btn {
+  display: grid; place-items: center; padding: 0; color: var(--ink, #3b2a12);
+}
+#guide-btn svg, #turn-btn svg, #mail-btn svg, #look-btn svg, #settings-btn svg { display: block; }
+#mail-btn > span:first-child { display: grid; place-items: center; }
+#turn-btn[hidden] { display: none; }
