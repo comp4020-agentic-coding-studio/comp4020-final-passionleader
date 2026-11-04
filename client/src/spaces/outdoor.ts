@@ -1,12 +1,12 @@
 import * as THREE from "three";
-import { chalkboard, doorway, floor, mat, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
+import { chalkboard, doorway, floor, mat, nightGlow, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
 import { RICH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
-import { SEAT_WALL_SEATS, buildStreetscape, roadLamps } from "./streetscape.ts";
+import { SEAT_WALL_SEATS, buildStreetscape, cafeTable, roadLamps } from "./streetscape.ts";
 import { BADGER, LAWN_WEST_X, PICNIC_SEATS, buildCreek } from "./creek.ts";
 
 // A stretch of the ANU campus, laid out from my own sketch and a satellite
@@ -164,9 +164,11 @@ export function buildOutdoor(): SpaceDef {
   ring(BADGER.minX, BADGER.maxX, BADGER.minZ, BADGER.maxZ, (_x, z) => z > 16, 52);
   scatter(g, "nature/Bush_Hedge.glb", 0.9, hedge);
 
-  // Benches on the lawn's south side; its east side gets a seat wall.
-  bench(g, colliders, -23, -5.2, 0);
-  bench(g, colliders, -16, -5.2, 0);
+  // The lawn's south side, in front of 155's shops: two café tables where the benches were (the user,
+  // 11/4), their chairs the same four seats as before (outdoor:0..3, as people.test.ts sits on).
+  // Its east side gets a seat wall.
+  cafeTable(g, colliders, -23, -5.2);
+  cafeTable(g, colliders, -16, -5.2);
   buildStreetscape(g, colliders);
   buildCreek(g, colliders);
   const dog = addDog(g, colliders);
@@ -206,6 +208,7 @@ export function buildOutdoor(): SpaceDef {
     roofOverhang: 0.4,
     apex: { color: TIMBER },
   });
+  shops155(g);
   sign(g, ["155", "Marie Reay Teaching Centre"], -9.7, 4.2, 7, Math.PI / 2);
   doorway(g, -9.7, 7, Math.PI / 2, "155 · Classrooms");
 
@@ -312,9 +315,56 @@ export function buildOutdoor(): SpaceDef {
     southWall: { from: 16.6, z: 26.6 },
     bgm: ["Noon_On_The_Green.mp3", "Dappled_Sunlight_Trail.mp3", "Windows_Down_in_July.mp3", "Along_the_Griffin_Lake.mp3"],
     outdoor: true,
-    // The two lawn benches, two people each.
-    seats: [...[-23, -16].flatMap((x) => [-0.55, 0.55].map((dx) => ({ x: x + dx, z: -5.2, rot: 0, y: 0.46 }))), ...SEAT_WALL_SEATS, ...PICNIC_SEATS],
+    // The two café tables in front of 155's shops, a chair either side (cafeTable: 0.7 m out, facing in).
+    seats: [...[-23, -16].flatMap((x) => [-1, 1].map((side) => ({ x: x + side * 0.7, z: -5.2, rot: side < 0 ? Math.PI / 2 : -Math.PI / 2, y: 0.47 }))), ...SEAT_WALL_SEATS, ...PICNIC_SEATS],
   };
+}
+
+/**
+ * 155's ground floor on the lawn side (north, z -2), from the user's photo, 11/4: left to right as
+ * you face it from the lawn (east to west), an empty unit, Yori, Sushi Smith and Rex Espresso.
+ * Each a shopfront proud of the glass: a coloured frame, lit glass (warm at night) and its name in
+ * plain type over the door, no logos.
+ */
+const SHOPS_155 = [
+  { name: "", frame: 0x55595e, board: "", fg: "" },
+  { name: "Yori", frame: 0x1f4f8a, board: "#173d6b", fg: "#ffffff" },
+  { name: "Sushi Smith", frame: 0x2a2523, board: "#231e1c", fg: "#ff6a4d" },
+  { name: "Rex Espresso", frame: 0x6f9a95, board: "#e9efe9", fg: "#2f4d49" },
+];
+function shops155(g: THREE.Group): void {
+  const z = -2.12; // just north of the lower volume's glass (z -2 + its 0.25 inset, minus a hand)
+  const x0 = -10.6;
+  const w = (28 - 10.6 - 0.4) / SHOPS_155.length; // x -10.6 → -28, a little short of the corners
+  const glass = new THREE.MeshStandardMaterial({ color: 0x5f7280, emissive: 0xffc878, emissiveIntensity: 0.16, roughness: 0.2, metalness: 0.3 });
+  glass.userData.unique = true;
+  nightGlow.push({ m: glass, full: 1.1, day: 0.16 });
+  const dark = new THREE.MeshStandardMaterial({ color: 0x3a3f44, roughness: 0.4, metalness: 0.2 });
+  SHOPS_155.forEach((s, i) => {
+    // Facing north (the lawn), so the first shop, seen on the left from the lawn, is the east one.
+    const cx = x0 - w * i - w / 2;
+    const f = new THREE.Group();
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(w - 0.5, 2.6), s.name ? glass : dark);
+    pane.position.set(0, 1.4, 0);
+    f.add(pane);
+    const frame = mat(s.frame);
+    for (const dx of [-(w - 0.5) / 2, 0, (w - 0.5) / 2]) {
+      const m = new THREE.Mesh(new THREE.BoxGeometry(0.14, 2.8, 0.1), frame);
+      m.position.set(dx, 1.4, 0.04);
+      f.add(m);
+    }
+    const head = new THREE.Mesh(new THREE.BoxGeometry(w - 0.3, 0.7, 0.14), frame);
+    head.position.set(0, 3.1, 0.06);
+    f.add(head);
+    if (s.name) {
+      const name = textPlane([s.name], Math.min(w - 1, 3.2), 0.5, { bg: s.board, fg: s.fg, font: 0.34 });
+      name.position.set(0, 3.1, 0.14);
+      f.add(name);
+    }
+    f.position.set(cx, 0, z);
+    f.rotation.y = Math.PI;
+    g.add(f);
+  });
 }
 
 /** A building sign on a facade, facing the way `rotY` points. */
@@ -331,47 +381,6 @@ function sign(g: THREE.Group, lines: string[], x: number, y: number, z: number, 
   plate.position.set(x, y, z);
   plate.rotation.y = rotY;
   g.add(plate);
-}
-
-/**
- * A park bench: timber slats on two dark steel frames, with a backrest.
- * `rotY` 0 faces +z (south).
- */
-function bench(g: THREE.Group, colliders: Box[], x: number, z: number, rotY: number): void {
-  const b = new THREE.Group();
-  const wood = mat(0x9a6a3e);
-  const steel = mat(0x2f3336);
-  for (let i = 0; i < 3; i++) {
-    const slat = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.06, 0.13), wood);
-    slat.position.set(0, 0.46, -0.16 + i * 0.16);
-    b.add(slat);
-  }
-  for (let i = 0; i < 2; i++) {
-    const back = new THREE.Mesh(new THREE.BoxGeometry(2.2, 0.12, 0.05), wood);
-    back.position.set(0, 0.66 + i * 0.17, -0.3);
-    back.rotation.x = -0.18;
-    b.add(back);
-  }
-  for (const sx of [-0.95, 0.95]) {
-    const leg = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.44, 0.5), steel);
-    leg.position.set(sx, 0.22, 0);
-    const upright = new THREE.Mesh(new THREE.BoxGeometry(0.06, 0.5, 0.06), steel);
-    upright.position.set(sx, 0.7, -0.32);
-    upright.rotation.x = -0.18;
-    const arm = new THREE.Mesh(new THREE.BoxGeometry(0.07, 0.05, 0.45), steel);
-    arm.position.set(sx * 1.03, 0.66, -0.06);
-    b.add(leg, upright, arm);
-  }
-  b.position.set(x, 0, z);
-  b.rotation.y = rotY;
-  g.add(b);
-  const across = Math.abs(Math.sin(rotY)) > 0.5;
-  colliders.push({
-    minX: x - (across ? 0.4 : 1.15),
-    maxX: x + (across ? 0.4 : 1.15),
-    minZ: z - (across ? 1.15 : 0.4),
-    maxZ: z + (across ? 1.15 : 0.4),
-  });
 }
 
 /** The advertising board, south of the flower bed east of Broger's (server/spaces.ts keeps notes off it too). */
