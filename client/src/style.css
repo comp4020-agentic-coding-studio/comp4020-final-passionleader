@@ -317,3 +317,10 @@ body:has(#toast:not(:empty)) #minimap { top: 128px; }
 }
 #turn-btn:focus-visible { outline: 3px solid #6b3f1d; outline-offset: 2px; }
 body.room-open #turn-btn { display: none !important; }
+
+/* High's finish (plan 105): darker corners, one still layer over the canvas (no filter on the
+   canvas itself, which would cost the compositor a pass every frame). The HUD sits above it. */
+body.fx-high #stage::after {
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(20, 14, 6, 0.32) 100%);
+}

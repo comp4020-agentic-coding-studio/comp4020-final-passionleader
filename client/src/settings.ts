@@ -2,9 +2,9 @@
 // apply at once) and the graphics quality, in three levels (11/4): Low keeps
 // every device smooth (no shadows, one pixel per screen pixel, simpler
 // glass, fewer trees); Medium adds the trees, flowers, wind, drifting sky and
-// reflective glass but no shadows; High adds the shadows and sharper pixels,
-// and (plan 105) bloom, a colour grade and vignette (postfx.ts), rippling
-// water that mirrors the sky (creek.ts) and clearer sky in the glass.
+// reflective glass but no shadows; High adds the shadows, antialiasing and
+// (plan 105) rippling water that mirrors the sky (creek.ts), clearer sky in
+// the glass and a richer, vignetted picture done in CSS (style.css).
 // A phone starts on Medium, a computer on Low. Quality is remembered per
 // browser and applies on reload, since some of it is fixed when the renderer
 // is created.
@@ -27,7 +27,7 @@ function read(): Quality {
 }
 
 export const QUALITY: Quality = read();
-/** Shadows, antialiasing, full pixel density, post-processing, rippling water: High only. */
+/** Shadows, antialiasing, rippling water, clearer glass, the CSS finish: High only. */
 export const HIGH = QUALITY === "high";
 /** Trees, flowers, wind, the drifting sky and reflective glass: Medium and High. */
 export const RICH = QUALITY !== "low";
@@ -95,7 +95,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const options: [Quality, string][] = [
     ["low", `Low: smooth on any device${DEFAULT === "low" ? " (default)" : ""}`],
     ["medium", `Medium: trees, wind, reflections, no shadows${DEFAULT === "medium" ? " (default)" : ""}`],
-    ["high", "High: shadows, sharper edges, glow, rippling water"],
+    ["high", "High: shadows, rippling water, clearer reflections"],
   ];
   for (const [value, text] of options) {
     const label = document.createElement("label");

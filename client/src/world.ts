@@ -304,7 +304,8 @@ export function lightPool(g: THREE.Group, x: number, z: number, w: number, d: nu
   }
   const m = new THREE.Mesh(
     new THREE.PlaneGeometry(w, d),
-    new THREE.MeshBasicMaterial({ map: poolTexture, color: colour, transparent: true, opacity: strength, blending: THREE.AdditiveBlending, depthWrite: false }),
+    // Pulled towards the camera in the depth test: a floor or lawn at the same height made it flicker (11/4).
+    new THREE.MeshBasicMaterial({ map: poolTexture, color: colour, transparent: true, opacity: strength, blending: THREE.AdditiveBlending, depthWrite: false, polygonOffset: true, polygonOffsetFactor: -2, polygonOffsetUnits: -4 }),
   );
   m.rotation.x = -Math.PI / 2;
   m.position.set(x, 0.02, z);

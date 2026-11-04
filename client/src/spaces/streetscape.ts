@@ -39,6 +39,9 @@ function lamp(g: THREE.Group, colliders: Box[], x: number, z: number, face: numb
   // speckle of colours over the paving (the user's "party lights", 11/4). Wider too.
   const pool = lightPool(g, under.x, under.z, 10, 10, 0xffd59a, 0);
   (pool.material as THREE.MeshBasicMaterial).blending = THREE.NormalBlending;
+  // Above the lawns (laid at 0.02, the same height, so the two flickered through each other: the
+  // user, 11/4); lightPool also pulls it forward in the depth test.
+  pool.position.y = 0.045;
   pool.userData.lampPool = true;
   // Where the head is: the nearest few lamps lend a real light to whatever stands under them (main.ts).
   LAMP_HEADS.push(new THREE.Vector3(under.x, 4.9, under.z));

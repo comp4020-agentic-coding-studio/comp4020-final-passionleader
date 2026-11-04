@@ -9,7 +9,6 @@ import { playTrack } from "./audio.ts";
 import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
 import { HIGH, RICH, mountSettings, settingsOpen } from "./settings.ts";
-import { makePostFx } from "./postfx.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
 import { fart, sfx, step, warmUp } from "./sfx.ts";
@@ -309,8 +308,9 @@ const sun = addLights(scene, highQuality);
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
 const renderer = new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance" });
-// High: up to twice the screen's pixels; Medium: up to one and a half (a phone's screen is dense); Low: one.
-renderer.setPixelRatio(highQuality ? Math.min(window.devicePixelRatio, 2) : RICH ? Math.min(window.devicePixelRatio, 1.5) : 1);
+// Medium and High: up to one and a half times the screen's pixels (a Retina or phone screen is
+// dense; twice, on High, made a MacBook lag for little you could see: the user, 11/4); Low: one.
+renderer.setPixelRatio(RICH ? Math.min(window.devicePixelRatio, 1.5) : 1);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.85;
 renderer.shadowMap.enabled = highQuality;
@@ -425,8 +425,10 @@ function applySky(): void {
   scene.environment = outdoorLight;
 }
 
-// High only: bloom, a colour grade, a vignette and a soft far edge (postfx.ts).
-const postFx = HIGH ? makePostFx(renderer, scene, camera) : null;
+// High's finish costs no extra pass over the screen (the user, 11/4: an effect composer's bloom and
+// blur lagged on a MacBook and hardly showed): the darker corners are a still layer the page lays
+// over the canvas (style.css, body.fx-high).
+if (HIGH) document.body.classList.add("fx-high");
 
 const labelRenderer = new CSS2DRenderer();
 labelRenderer.domElement.style.cssText = "position:absolute;inset:0;pointer-events:none";
@@ -436,7 +438,6 @@ function resize(): void {
   const w = window.innerWidth;
   const h = window.innerHeight;
   renderer.setSize(w, h);
-  postFx?.setSize(w, h);
   labelRenderer.setSize(w, h);
   camera.aspect = w / h;
   // Portrait screens would otherwise see a thin slice of the space: widen the vertical FOV.
@@ -2493,8 +2494,7 @@ renderer.setAnimationLoop(() => {
   const now = performance.now();
   update(Math.min((now - lastTime) / 1000, 0.1), now);
   lastTime = now;
-  if (postFx) postFx.render();
-  else renderer.render(scene, camera);
+  renderer.render(scene, camera);
   labelRenderer.render(scene, camera);
 });
 
