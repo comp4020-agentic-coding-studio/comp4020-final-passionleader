@@ -8,9 +8,21 @@ const words = (n: number) => Array.from({ length: n }, (_, i) => `w${i}`).join("
 describe("guests and signing up", () => {
   it("lets a guest in as guestNNN, and the same browser back as the same guest", async () => {
     const g = await guest();
-    expect(g.name).toMatch(/^guest\d{3}$/);
-    const again = (await (await api("/api/guest", "POST", { token: g.token })).json()) as { name: string };
+    expect(g.name).toMatch(/^guest\d{3,4}$/);
+    const again = (await (await api("/api/guest", "POST", { token: g.token })).json()) as { name: string; spawn: { space: string } };
     expect(again.name).toBe(g.name);
+  });
+
+  it("keeps no spot for a guest: back in the same browser, a guest starts at the campus's spawn again", async () => {
+    const g = await guest();
+    const ws = await connect(g.token);
+    await ws.next((m) => m.t === "welcome");
+    ws.send({ t: "enter", space: "hub", x: 0, z: 6 });
+    await ws.next((m) => m.t === "players" || m.t === "moved");
+    ws.ws.close();
+    await new Promise((r) => setTimeout(r, 300));
+    const back = (await (await api("/api/guest", "POST", { token: g.token })).json()) as { spawn: { space: string } };
+    expect(back.spawn.space).toBe("outdoor");
   });
 
   it("has no free names any more: you sign up, or come in as a guest", async () => {

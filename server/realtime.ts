@@ -32,7 +32,10 @@ const EMOTES = new Set(["wave", "yes", "no", "mate", "dance"]);
 const lastPoop = new Map<string, number>();
 /** When someone in a room last invited a person ("space:name"): one invitation every ten seconds. */
 const lastAsked = new Map<string, number>();
-const poopList = poopsNow;
+// Members' poops are kept in SQLite (30 days); a guest's only in memory while the server runs
+// (11/4: guests store as little as possible), dropped with their row's purge or a restart.
+const guestPoops = new Map<string, { name: string; x: number; z: number }>();
+const poopList = (): { name: string; x: number; z: number }[] => [...poopsNow(), ...guestPoops.values()];
 const MAX_JUMP = 3;
 // Positions go out ten times a second, only for spaces where someone moved.
 const TICK_MS = 100;
@@ -437,7 +440,13 @@ function onMessage(ws: WebSocket, raw: string): void {
     const now = Date.now();
     if (now - (lastPoop.get(key) ?? 0) < 5000) return;
     lastPoop.set(key, now);
-    putPoop(player.name, player.x, player.z);
+    if (owners.get(ws)?.role === "guest") {
+      guestPoops.delete(player.name.toLowerCase());
+      guestPoops.set(player.name.toLowerCase(), { name: player.name, x: player.x, z: player.z });
+      // The oldest go first past two thousand, so a crowd can't grow it for ever.
+      if (guestPoops.size > 2000) guestPoops.delete(guestPoops.keys().next().value!);
+    }
+    else putPoop(player.name, player.x, player.z);
     broadcastSpace("poop", { t: "action", kind: "poops", poops: poopList() });
   } else if (msg.t === "status" && (msg.status === null || (typeof msg.status === "string" && STATUSES.has(msg.status)))) {
     // Three fixed values (or none), at most one change every two seconds; it goes with them through doors, not to the database.
@@ -482,8 +491,11 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   ws.on("message", (data) => onMessage(ws, data.toString()));
   ws.on("close", () => {
     players.delete(ws);
+    // A member comes back where they left; a guest's spot isn't kept (11/4: guests store as little as possible).
     const left = roomOf(player.space);
-    if (left) saveLastSpot(player.name, left.parent, left.door.x, left.door.z);
+    if (visitor.role === "guest") {
+      // nothing saved
+    } else if (left) saveLastSpot(player.name, left.parent, left.door.x, left.door.z);
     else saveLastSpot(player.name, player.space, player.x, player.z);
     log("disconnect", visitor, { space: player.space, online: players.size }, { ip });
     broadcastSpace(player.space, { t: "leave", id: player.id });

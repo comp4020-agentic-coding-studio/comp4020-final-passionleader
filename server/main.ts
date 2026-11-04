@@ -1412,7 +1412,8 @@ app.put("/api/look", async (c) => {
   if (!look) return c.json({ error: "That isn't a look." }, 400);
   // The hard hat marks the test accounts, so nobody else can wear it.
   if (look.hat === QA_HAT && !RESERVED.test(v.name)) return c.json({ error: "The hard hat is for the test accounts." }, 403);
-  saveLook(v.name, look);
+  // A guest's look shows at once but isn't saved (11/4: guests store as little as possible).
+  if (isMember(v)) saveLook(v.name, look);
   setLook(v.name, look);
   return c.json({ ok: true });
 });

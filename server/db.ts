@@ -322,15 +322,16 @@ export function findByEmail(email: string): Visitor | undefined {
 }
 
 /**
- * Guests not seen for 30 days go, freeing their guestNNN (there are only a
- * thousand). Guests can't write anything that stays (notes, posts, comments,
- * mail), so nothing of theirs goes with them but their saved spot and look;
- * the few notes from before guests were refused them go too.
+ * Guests not seen for a day go, freeing their guestNNNN (the user's call,
+ * 11/4: a crowd of guests mustn't pile up in the database). Guests can't
+ * write anything that stays (notes, posts, comments, mail), and their spot
+ * and look aren't saved, so only their row goes, and their poop with it.
  */
-export const purgeIdleGuests = (): number =>
-  Number(
-    db.prepare("DELETE FROM visitors WHERE role = 'guest' AND name NOT LIKE 'qa\\_%' ESCAPE '\\' AND coalesce(last_seen, created_at) < datetime('now', '-30 days')").run().changes,
-  );
+export function purgeIdleGuests(): number {
+  const idle = "role = 'guest' AND name NOT LIKE 'qa\\_%' ESCAPE '\\' AND coalesce(last_seen, created_at) < datetime('now', '-1 day')";
+  db.prepare(`DELETE FROM poops WHERE name IN (SELECT name FROM visitors WHERE ${idle})`).run();
+  return Number(db.prepare(`DELETE FROM visitors WHERE ${idle}`).run().changes);
+}
 
 // The test accounts cover each role (plan 93): qa_bot01–04 staff, 05–08
 // students, 09–10 guests (still signing in by password); qa_master the top
@@ -389,11 +390,14 @@ export const setAdminPc = (name: string, on: boolean): boolean =>
 /** Marks someone as seen now (when their socket connects). */
 export const seen = (name: string): void => void db.prepare("UPDATE visitors SET last_seen = datetime('now') WHERE name = ?").run(name);
 
-/** A new guest: the lowest free guestNNN (guest000-guest999); null if they're all taken. */
+/**
+ * A new guest: a free guestNNN, then guestNNNN once the first thousand are taken (ten
+ * thousand in all, freed a day after each was last seen); null if they're all taken.
+ */
 export function createGuest(token: string): string | null {
-  const taken = new Set((db.prepare("SELECT lower(name) AS n FROM visitors WHERE name LIKE 'guest___'").all() as { n: string }[]).map((r) => r.n));
-  for (let i = 0; i < 1000; i++) {
-    const name = `guest${String(i).padStart(3, "0")}`;
+  const taken = new Set((db.prepare("SELECT lower(name) AS n FROM visitors WHERE name LIKE 'guest%'").all() as { n: string }[]).map((r) => r.n));
+  for (let i = 0; i < 10000; i++) {
+    const name = `guest${String(i).padStart(i < 1000 ? 3 : 4, "0")}`;
     if (taken.has(name)) continue;
     db.prepare("INSERT INTO visitors (name, token, role) VALUES (?, ?, 'guest')").run(name, token);
     return name;
