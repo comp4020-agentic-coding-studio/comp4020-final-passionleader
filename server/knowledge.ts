@@ -98,6 +98,9 @@ export function keywords(question: string): string[] {
 }
 
 const YEAR = /\b(20\d\d)\b/;
+/** How many prices a piece lists ("$395", "395.00 /wk", "per week", "from 12"). */
+const priceCount = (body: string): number => (body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length;
+const MONEY = /\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|afford\w*|budget|how much|rent|per week|weekly|\$)/i;
 /** A word without a plural or -ing/-ed ending, escaped for a RegExp. */
 const stem = (w: string): string => (w.length > 4 ? w.replace(/(ies|es|s|ing|ed)$/, "") : w).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 
@@ -151,6 +154,9 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     /\b(semester|sem|s)\s*1\b|\b1st\b/i.test(question) ? "first" : "",
     /\b(semester|sem|s)\s*2\b|\b2nd\b/i.test(question) ? "second" : "",
     /\b(opening hours|hours|(what time|when)\b.*\b(open|opens|close|closes|shut)|(open|close|closes|opens) (on|at|today|tonight|tomorrow|until|till|late)|(is|are) \w+ open\b)/i.test(question) && !words.includes("hours") ? "hours" : "",
+    // Asked about money, the words price tables use ("From 395.00 /wk", "Room rate", "tariff"),
+    // so a table that never says "cheapest" still comes into the pool (Jordan, 11/4).
+    ...(MONEY.test(question) ? ["wk", "rate", "tariff", "costs"] : []),
   ].filter(Boolean);
   const match = [...words, ...extra].map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
   // Each source drawn from on its own (up to 120 pieces each), so the
@@ -170,7 +176,7 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
   // "open" for "opening", "won" not for "wonderful"), then, asked about money,
   // how many prices it lists (a price table beats a page that mentions one),
   // then SQLite's own rank.
-  const money = /\b(price|prices|cost|costs|fee|fees|cheap\w*|expensive|how much|\$)/i.test(question);
+  const money = MONEY.test(question);
   const terms = [...words, ...extra].map((w) => new RegExp(`(^|[^\\p{L}\\p{N}])${stem(w)}[\\p{L}]{0,4}($|[^\\p{L}\\p{N}])`, "u"));
   // Numbers ("2", "2026") are in half the catalogue's titles: only words weigh in a title.
   // (Nor the added synonyms: every course page has "First Semester" and "Second Semester" headings.)
@@ -197,10 +203,11 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
       // The piece's own headings ("## Majors") count like its title: that part of the page is about it.
       const title = `${r.title} ${(r.body.match(/^## .*$/gm) ?? []).join(" ")}`.toLowerCase();
       const weight = hits + wordTerms.filter((t) => t.test(title)).length;
-      const prices = money ? Math.min(6, (r.body.match(/\$\s?\d|\d+(\.\d\d)?\s?\/\s?(wk|week)|per week|\bfrom \d/gi) ?? []).length) : 0;
+      const prices = money ? Math.min(6, priceCount(r.body)) : 0;
       return { r, text, hits, weight, prices, i };
     })
-    .filter((x) => x.hits >= need && (!codes.length || codes.some((c) => x.text.includes(c))))
+    // A price table answers a money question even if it holds few of the question's words.
+    .filter((x) => (x.hits >= need || x.prices >= 4) && (!codes.length || codes.some((c) => x.text.includes(c))))
     // On a tie, a general page before one of the catalogue's thousands of course pages, unless a course code was asked about.
     // Asked about one course by its code, its own page comes before others that only mention it (as a prerequisite, say).
     .sort((a, b) => ownCourse(b.r) - ownCourse(a.r) || hoursFirst(b.r) - hoursFirst(a.r) || requisite(b.r) - requisite(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
@@ -215,6 +222,17 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     perUrl.set(r.url, n + 1);
     picked.push({ title: r.title, body: r.body, url: r.url, source: r.source, year: r.year });
     if (picked.length >= (codes.length === 1 ? Math.max(limit, 12) : limit)) break;
+  }
+  // A price table split over pieces comes whole: half of "Compare residences" left out its cheapest rows.
+  if (money) {
+    const tables = new Set(picked.filter((p) => priceCount(p.body) >= 4).map((p) => p.url));
+    for (const url of tables) {
+      const rest = (db.prepare("SELECT title, body, url, source, year FROM pieces WHERE url = ? ORDER BY rowid").all(url) as unknown as Piece[]).filter(
+        (p) => priceCount(p.body) >= 4 && !picked.some((q) => q.body === p.body),
+      );
+      const at = picked.findIndex((p) => p.url === url);
+      picked.splice(at + 1, 0, ...rest);
+    }
   }
   return picked;
 }

@@ -265,6 +265,19 @@ export async function targets(only?: string[]): Promise<Target[]> {
       "https://study.anu.edu.au/apply/overseas-student-health-cover-oshc",
     ]);
   }
+  // The Career Hub's PCs open Career Central (a sign-in app, nothing a crawler can read) and the
+  // STEM internships pages on systems.anu.edu.au (public, no robots limits): Alex reads the
+  // latter, the careers contact page, and the systems site's internship, careers-event and
+  // employability pages (11/4: the user wanted Alex to know what those PCs open).
+  if (want("careers")) {
+    const systems = await sitemap("https://systems.anu.edu.au/sitemap.xml");
+    add("careers", [
+      "https://www.anu.edu.au/students/contacts/anu-careers-employability",
+      "https://systems.anu.edu.au/stem-internships-work-experience",
+      "https://systems.anu.edu.au/engage/internship-and-placement-opportunities",
+      ...systems.filter((u) => /intern|placement|career|employab|work-experience|techlauncher|capstone/i.test(u)),
+    ]);
+  }
   if (want("library")) {
     add("library", ["https://anu.libcal.com/hours", ...(await sitemap("https://anulib.anu.edu.au/sitemap.xml")).filter((u) => !/\/news\/|\/events?\//.test(u))]);
   }

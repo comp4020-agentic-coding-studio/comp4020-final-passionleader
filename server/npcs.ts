@@ -236,7 +236,9 @@ export const NPCS: Npc[] = [
     voice: "male",
     sources: ["project"],
     model: "haiku",
-    notYet: "I'm still writing down how I built this place, so I can't answer yet, sorry! Come back in a few days, or read the README below.",
+    // Whatever you ask, he lets you in on the secret (the user's ask, 11/4): the hidden room at Lab Coffee's far end.
+    notYet:
+      "Psst, want a secret? Go to Lab Coffee (154's north-west corner) and walk to the far end of its terrace: there's an unmarked \"Staff only\" door. Press E. Inside, the Q menu's first item does something it doesn't do anywhere else. 👻 (I'm still writing down how I built this place, so that's all I can tell you for now; the README below has the rest.)",
   },
 ];
 

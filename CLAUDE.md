@@ -50,11 +50,14 @@ Read before planning or building: `README.md` (what good means for this app),
   its hash kept. Then a name (1–8 letters, digits or underscores, unique
   regardless of case, not `qa_…` or `guest…`) and a password (8+, scrypt
   hash only). A forgotten password is reset by the same kind of code, and
-  every other browser signs in again. Guests are `guestNNN`, their browser's
-  token brings them back; they walk, chat, emote, stick notes and use team
-  rooms, but posting, commenting, hearts, joining study groups, files and
-  reporting someone are refused on the server (bug reports are open to
-  anyone). `qa_` names are reserved for the test accounts, which sign in
+  every other browser signs in again. Guests are `guestNNN` (then
+  `guestNNNN`), their browser's token brings them back; they walk, chat,
+  emote and use team rooms, but sticky notes, posting, commenting, hearts,
+  joining study groups, files and reporting someone are refused on the
+  server (bug reports are open to anyone). A guest leaves as little as
+  possible in the database: their row (name and token) only, gone a day
+  after they were last seen; their spot and look aren't saved. Signing in by
+  student number or email never says whether that address has an account. `qa_` names are reserved for the test accounts, which sign in
   with a password. The free-name accounts from before sign-up are retired:
   their notes and posts stay, nobody can sign in as them.
 - Sticky notes: up to 100 words (and 600 characters), one per person every
@@ -153,9 +156,11 @@ Read before planning or building: `README.md` (what good means for this app),
 - The Poop Room (an easter egg behind the "Staff only" door at the far end
   of Lab Coffee): in there the Q menu's first item poops instead of sticking
   a note. One poop per person, anyone joined (guests too), five seconds
-  apart, a new one replacing their last; kept in SQLite 30 days (so a
-  deploy doesn't sweep them away), sent only to whoever is in the room. No
-  notes in it. Its door is never signposted.
+  apart, a new one replacing their last; a member's kept in SQLite 30 days
+  (so a deploy doesn't sweep them away), a guest's in server memory only;
+  sent only to whoever is in the room. No
+  notes in it. Its door is never signposted; the only clue is Seongsu, the
+  author's ghost by Badger & Co, who tells anyone who talks to him.
 - The admin can stop one person (never the admin) from sticky notes and
   their comments, board posts and their comments, chat, or coming in at
   all, for 1 hour to a year; the server checks before each, tells them
