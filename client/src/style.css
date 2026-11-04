@@ -1,6 +1,9 @@
 :root {
   --ink: #3b2a12;
-  --paper: #f3e7a6;
+  --paper: #ffffff;
+  /* Cards, fields and rows inside a window: one step off the white (11/4 UI pass: the windows were yellow on yellow). */
+  --card: #f8f6f2;
+  --card-hover: #efebe4;
   --accent: #6b3f1d;
   color-scheme: light;
 }
@@ -46,11 +49,11 @@ button, [role="button"], .use-badge, .player-label, .door-label, canvas {
 #hud p { margin: 0 0 4px; }
 #hud-name {
   display: inline-block; padding: 3px 10px; border-radius: 8px;
-  background: rgba(255, 251, 224, 0.88); font-weight: 700;
+  background: rgba(255, 255, 255, 0.88); font-weight: 700;
 }
 #hud-online {
   display: inline-block; padding: 2px 8px; border-radius: 6px;
-  background: rgba(255, 251, 224, 0.7); font-size: 0.8rem;
+  background: rgba(255, 255, 255, 0.7); font-size: 0.8rem;
 }
 #hud-online[hidden] { display: none; }
 #hud-talking {
@@ -102,7 +105,7 @@ body.room-open #hud, body.room-open #mail-btn, body.room-open #look-btn, body.ro
 body.room-open #bgm-player, body.room-open #touch, body.room-open #hint, body.room-open #quests,
 body.room-open #keyguide, body.in-room #hud-name, body.in-room #hud-online { display: none !important; }
 #toast { min-height: 1.2em; font-size: 0.9rem; font-weight: 600; }
-#toast:not(:empty) { display: table; max-width: min(420px, calc(100vw - 32px)); padding: 4px 10px; border-radius: 8px; background: rgba(255, 251, 224, 0.95); }
+#toast:not(:empty) { display: table; max-width: min(420px, calc(100vw - 32px)); padding: 4px 10px; border-radius: 8px; background: rgba(255, 255, 255, 0.95); }
 /* A notice ("Allow the microphone…", "Note stuck.") has its own line under the name, and the
    minimap steps down under it: beside the name it ran under the music box and the round buttons (11/4). */
 body:has(#toast:not(:empty)) #minimap { top: 128px; }
@@ -125,7 +128,7 @@ body:has(#toast:not(:empty)) #minimap { top: 128px; }
 #join-form label { display: block; margin-bottom: 6px; font-size: 0.9rem; }
 #name {
   width: 100%; padding: 10px 12px; font-size: 1.1rem; border-radius: 8px;
-  border: 2px solid var(--accent); background: #fffbe0; color: var(--ink);
+  border: 2px solid var(--accent); background: var(--card, #f8f6f2); color: var(--ink);
 }
 #join-error { min-height: 1.3em; margin: 6px 0; color: #a01818; font-size: 0.9rem; }
 #enter {
@@ -192,14 +195,14 @@ body:has(#toast:not(:empty)) #minimap { top: 128px; }
 }
 .use-badge {
   min-width: 26px; height: 26px; padding: 0 6px; box-sizing: border-box; border-radius: 6px;
-  display: grid; place-items: center; background: #fffbe0; color: var(--ink);
+  display: grid; place-items: center; background: var(--card, #f8f6f2); color: var(--ink);
   border: 2px solid var(--ink); box-shadow: 0 3px 0 var(--ink);
   font: 800 14px system-ui, sans-serif; pointer-events: none; opacity: 0.8;
 }
 /* Colour only: the label renderer places it with transform, so no transform animation. */
 .use-badge.on { background: var(--accent); border-color: var(--accent); color: #fff; opacity: 1; }
 .note-label {
-  padding: 1px 6px; border-radius: 6px; background: #fff7b0; color: var(--ink);
+  padding: 1px 6px; border-radius: 6px; background: #fff7b0; color: var(--ink); /* a sticky note’s own yellow, kept */
   border: 1px solid #c9b23a; font: 600 11px system-ui, sans-serif; white-space: nowrap;
 }
 .bubble {
@@ -215,7 +218,7 @@ body:has(#toast:not(:empty)) #minimap { top: 128px; }
 #password-row[hidden] { display: none; }
 #password {
   width: 100%; padding: 10px 12px; font-size: 1.1rem; border-radius: 8px;
-  border: 2px solid var(--accent); background: #fffbe0; color: var(--ink);
+  border: 2px solid var(--accent); background: var(--card, #f8f6f2); color: var(--ink);
 }
 
 /* Narrow phones: the pad and three action buttons must fit side by side. */
@@ -293,7 +296,7 @@ body:has(#toast:not(:empty)) #minimap { top: 128px; }
 .chooser-list button {
   width: 100%; display: grid; grid-template-columns: auto 1fr; gap: 2px 10px; align-items: center;
   text-align: left; padding: 8px 10px; border-radius: 8px; border: 2px solid transparent;
-  background: #fff7d6; color: var(--ink); cursor: pointer; font: inherit;
+  background: var(--card, #f8f6f2); color: var(--ink); cursor: pointer; font: inherit;
 }
 .chooser-list button:hover, .chooser-list button:focus-visible { border-color: var(--accent); outline: none; }
 .chooser-num {
@@ -337,4 +340,10 @@ body.room-open #turn-btn { display: none !important; }
 body.fx-high #stage::after {
   content: ""; position: absolute; inset: 0; pointer-events: none;
   background: radial-gradient(ellipse at 50% 45%, transparent 55%, rgba(20, 14, 6, 0.32) 100%);
+}
+/* And a soft, milky haze (the user asked for a light, soft-focus look, 11/4): a
+   thin warm-white wash, plain alpha like the corners (no blend mode, no blur), so it costs nothing. */
+body.fx-high #stage::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: radial-gradient(ellipse at 50% 40%, rgba(255, 250, 238, 0.13) 0%, rgba(255, 248, 232, 0.07) 60%, transparent 100%);
 }

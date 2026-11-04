@@ -20,7 +20,7 @@
   width: min(360px, 100%);
   padding: 20px;
   border-radius: 4px 16px 4px 16px;
-  background: var(--paper, #f3e7a6);
+  background: var(--paper, #ffffff);
   color: var(--ink, #3b2a12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
   transform: rotate(0.6deg);
@@ -51,7 +51,7 @@
   padding: 8px;
   border-radius: 8px;
   border: 2px solid var(--accent, #6b3f1d);
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   color: var(--ink, #3b2a12);
   font: inherit;
   font-size: 0.9rem;
@@ -94,7 +94,7 @@
 
 .composer-stick {
   background: var(--accent, #6b3f1d);
-  color: var(--paper, #f3e7a6);
+  color: var(--paper, #ffffff);
 }
 
 .composer-stick:disabled {

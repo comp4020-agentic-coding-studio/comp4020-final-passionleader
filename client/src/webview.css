@@ -23,7 +23,7 @@
   height: min(760px, calc(100vh - 32px));
   overflow: hidden;
   border-radius: 14px;
-  background: var(--paper, #f3e7a6);
+  background: var(--paper, #ffffff);
   color: var(--ink, #3b2a12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }

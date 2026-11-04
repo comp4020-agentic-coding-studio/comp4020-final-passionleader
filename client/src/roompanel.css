@@ -17,7 +17,7 @@
   display: flex;
   flex-direction: column;
   border-radius: 14px;
-  background: var(--paper, #f3e7a6);
+  background: var(--paper, #ffffff);
   color: var(--ink, #3b2a12);
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.3);
   font-family: system-ui, sans-serif;
@@ -54,7 +54,7 @@
   position: sticky;
   top: 0;
   z-index: 1;
-  background: var(--paper, #f3e7a6);
+  background: var(--paper, #ffffff);
 }
 
 .room-head h3 {
@@ -144,14 +144,14 @@
   padding: 8px 12px;
   border: 0;
   border-radius: 10px;
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   color: var(--ink, #3b2a12);
   text-align: left;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
 }
 
 .room-item:hover {
-  background: #fff6c8;
+  background: var(--card-hover, #efebe4);
 }
 
 .room-item-icon {
@@ -243,7 +243,7 @@
 .room-chip {
   padding: 2px 8px;
   border-radius: 999px;
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   border: 1px solid rgba(107, 63, 29, 0.35);
   font-size: 0.8rem;
   overflow-wrap: anywhere;
@@ -279,7 +279,7 @@
   padding: 6px 10px;
   border: 2px solid var(--accent, #6b3f1d);
   border-radius: 8px;
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   color: var(--ink, #3b2a12);
   font: inherit;
   font-size: 16px; /* under 16 px an iPhone zooms the page in on focus */
@@ -302,7 +302,7 @@
   min-height: 44px;
   border: 1px solid #c9b48a;
   border-radius: 8px;
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   font-size: 1.1rem;
 }
 
@@ -377,7 +377,7 @@
   max-width: 88%;
   padding: 4px 10px;
   border-radius: 12px;
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   font-size: 0.85rem;
   line-height: 1.35;
   overflow-wrap: anywhere;
@@ -450,7 +450,7 @@
   width: min(380px, 100%);
   padding: 18px 20px;
   border-radius: 14px;
-  background: var(--paper, #f3e7a6);
+  background: var(--paper, #ffffff);
   color: var(--ink, #3b2a12);
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
 }

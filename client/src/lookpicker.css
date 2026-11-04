@@ -106,7 +106,7 @@
   padding: 10px 14px;
   border: 2px solid rgba(107, 63, 29, 0.45);
   border-radius: 10px;
-  background: #fffbe0;
+  background: var(--card, #f8f6f2);
   color: var(--ink, #3b2a12);
   font-weight: 600;
 }
@@ -114,7 +114,7 @@
 /* The chosen one: a thick ring (and a filled chip), not colour alone. */
 .look-options input:checked + .look-swatch {
   border-color: var(--accent, #6b3f1d);
-  box-shadow: 0 0 0 3px #fffbe0, 0 0 0 6px var(--accent, #6b3f1d);
+  box-shadow: 0 0 0 3px var(--card, #f8f6f2), 0 0 0 6px var(--accent, #6b3f1d);
 }
 
 .look-options input:checked + .look-chip {
@@ -148,7 +148,7 @@
   margin: 8px -20px -20px;
   padding: 10px 20px 20px;
   flex-wrap: wrap;
-  background: linear-gradient(to bottom, rgba(243, 231, 166, 0), var(--paper, #f3e7a6) 28%);
+  background: linear-gradient(to bottom, rgba(255, 255, 255, 0), var(--paper, #ffffff) 28%);
   z-index: 1;
 }
 

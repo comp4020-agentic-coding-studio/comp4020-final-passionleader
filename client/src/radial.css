@@ -51,7 +51,7 @@
   padding: 0 10px;
   border-radius: 50%;
   border: 2px solid var(--accent, #6b3f1d);
-  background: rgba(243, 231, 166, 0.9); /* --paper */
+  background: rgba(255, 255, 255, 0.9); /* --paper */
   color: var(--ink, #3b2a12);
   font: 700 0.85rem/1.2 system-ui, sans-serif;
   text-align: center;
@@ -64,7 +64,7 @@
 
 .radial-item.is-highlighted {
   background: var(--accent, #6b3f1d);
-  color: var(--paper, #f3e7a6);
+  color: var(--paper, #ffffff);
   transform: scale(1.12);
 }
 
