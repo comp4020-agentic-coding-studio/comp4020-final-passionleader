@@ -1,0 +1,33 @@
+/* Phone fixes for the settings dialog (buglist IMG_4684): on a short screen
+   the card was taller than the screen, so its bottom (Apply, Close, Sign out)
+   could not be reached. The dialog scrolls, and the card has its own limit. */
+
+@media (max-width: 700px), (pointer: coarse) {
+  /* Align to the top on a short screen, so the card's top is never cut off. */
+  #settings {
+    place-items: start center;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+
+  /* The card fits the visible screen and scrolls inside itself. */
+  #settings .settings-card {
+    box-sizing: border-box;
+    max-height: calc(100dvh - 32px);
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+    overscroll-behavior: contain;
+  }
+}
+
+/* The settings card's head: the title and a Close always at its top (11/4). */
+.settings-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 4px; }
+.settings-head h2 { margin: 0; }
+.settings-x {
+  min-height: 40px; padding: 0 14px; border-radius: 999px; border: 2px solid var(--accent, #6b3f1d);
+  background: #fffbe0; color: var(--ink, #3b2a12); font: 700 0.9rem system-ui, sans-serif; cursor: pointer;
+}
+@media (max-width: 700px), (pointer: coarse) {
+  #settings .settings-head { position: sticky; top: -20px; z-index: 1; background: var(--paper, #f3e7a6); padding: 4px 0; }
+}

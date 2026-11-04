@@ -193,6 +193,12 @@ export function mountNpcChat(opts: {
     e.stopPropagation();
     if (e.key === "Escape") hide();
   });
+  // On a phone the keyboard covers the bottom of the screen: when the box
+  // is tapped, bring it into view above the keyboard (the window itself
+  // follows the visible screen, main.ts --vvh).
+  input.addEventListener("focus", () => {
+    setTimeout(() => input.scrollIntoView({ block: "nearest" }), 300);
+  });
 
   function show(npc: NpcInfo): void {
     current = npc;

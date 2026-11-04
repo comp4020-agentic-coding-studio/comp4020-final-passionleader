@@ -10,7 +10,7 @@
 .npc-head h2 { margin: 0; font-size: 1.1rem; }
 .npc-close { min-width: 44px; min-height: 44px; border: 0; background: none; font-size: 1.1rem; cursor: pointer; }
 .npc-note { margin: 4px 0 8px; font-size: 0.82rem; opacity: 0.75; }
-.npc-log { flex: 1; min-height: 120px; max-height: 40vh; overflow-y: auto; padding: 8px; border-radius: 8px; background: #fffaf0; }
+.npc-log { flex: 1; min-height: 120px; max-height: 40vh; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; padding: 8px; border-radius: 8px; background: #fffaf0; }
 .npc-line { margin: 0 0 8px; line-height: 1.4; }
 .npc-line.is-you { text-align: right; }
 .npc-line > p, .npc-line > ul, .npc-line > ol { margin: 2px 0 6px; }
@@ -26,9 +26,12 @@
    conversation gets the room, and the page links shrink to one scrolling row. */
 @media (max-width: 700px), (pointer: coarse) {
   #npc-chat { padding: 0; place-items: start stretch; grid-template-columns: minmax(0, 1fr); top: var(--vvtop, 0); bottom: auto; height: var(--vvh, 100dvh); }
-  .npc-card { width: 100%; height: 100%; max-height: none; border-radius: 0; padding: 10px 12px; }
+  /* The card is exactly the visible screen and never grows past it; the log alone scrolls
+     (min-height: 0, or a flex child grows with its content and pushes the box under the keyboard). */
+  .npc-card { width: 100%; height: 100%; max-height: none; border-radius: 0; padding: 10px 12px; overflow: hidden; box-sizing: border-box; }
   .npc-head h2 { font-size: 1rem; }
-  .npc-log { max-height: none; min-height: 60px; }
+  .npc-log { max-height: none; min-height: 0; flex: 1 1 0; }
+  .npc-head, .npc-note, .npc-links, .npc-form { flex: none; }
   .npc-links { flex-wrap: nowrap; overflow-x: auto; margin: 6px 0; padding-bottom: 2px; }
   .npc-link { flex: none; min-height: 30px; padding: 2px 8px; font-size: 0.75rem; white-space: nowrap; }
   .npc-form input { font-size: 16px; } /* under 16 px an iPhone zooms in on focus */

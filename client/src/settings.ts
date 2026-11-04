@@ -1,27 +1,34 @@
-// Settings: a gear button opens a small dialog. It holds the two volumes
-// (music and sound effects, which live here now that the mute button is gone;
-// they apply at once) and the graphics quality. Low (the default) keeps every
-// device smooth: no shadows, one pixel per screen pixel, simpler glass and
-// fewer far trees. High turns all of that on. Quality is remembered per
+// Settings: a gear button opens a small dialog. It holds the volumes (they
+// apply at once) and the graphics quality, in three levels (11/4): Low keeps
+// every device smooth (no shadows, one pixel per screen pixel, simpler
+// glass, fewer trees); Medium adds the trees, flowers, wind, drifting sky and
+// reflective glass but no shadows; High adds the shadows and sharper pixels.
+// A phone starts on Medium, a computer on Low. Quality is remembered per
 // browser and applies on reload, since some of it is fixed when the renderer
 // is created.
 
 import { getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from "./audio.ts";
 import { readVoiceVolume, saveVoiceVolume } from "./voicechat.ts";
 
-export type Quality = "low" | "high";
+export type Quality = "low" | "medium" | "high";
 const KEY = "campus.quality";
+/** Phones and tablets start on Medium (the user's call, 11/4), computers on Low as before. */
+const DEFAULT: Quality = typeof window !== "undefined" && window.matchMedia?.("(pointer: coarse)").matches ? "medium" : "low";
 
 function read(): Quality {
   try {
-    return localStorage.getItem(KEY) === "high" ? "high" : "low";
+    const v = localStorage.getItem(KEY);
+    return v === "high" || v === "medium" || v === "low" ? v : DEFAULT;
   } catch {
-    return "low";
+    return DEFAULT;
   }
 }
 
 export const QUALITY: Quality = read();
+/** Shadows, antialiasing and full pixel density: High only. */
 export const HIGH = QUALITY === "high";
+/** Trees, flowers, wind, the drifting sky and reflective glass: Medium and High. */
+export const RICH = QUALITY !== "low";
 
 export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
   const button = document.createElement("button");
@@ -84,8 +91,9 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   legend.textContent = "Graphics quality";
   fieldset.append(legend);
   const options: [Quality, string][] = [
-    ["low", "Low: smooth on any device (default)"],
-    ["high", "High: shadows, reflections, more trees"],
+    ["low", `Low: smooth on any device${DEFAULT === "low" ? " (default)" : ""}`],
+    ["medium", `Medium: trees, wind, reflections, no shadows${DEFAULT === "medium" ? " (default)" : ""}`],
+    ["high", "High: shadows and sharper edges too"],
   ];
   for (const [value, text] of options) {
     const label = document.createElement("label");
@@ -174,7 +182,16 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     opts.credits();
   });
 
-  card.append(title, sound, fieldset, note, screen, verify, bug, person, mute, credits, out, actions);
+  // A Close at the top as well: on a phone the card scrolls, and the bottom one starts out of sight.
+  const head = document.createElement("div");
+  head.className = "settings-head";
+  const topClose = document.createElement("button");
+  topClose.type = "button";
+  topClose.className = "settings-x";
+  topClose.textContent = "Close";
+  topClose.setAttribute("aria-label", "Close the settings");
+  head.append(title, topClose);
+  card.append(head, sound, fieldset, note, screen, verify, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -190,6 +207,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
   });
   close.addEventListener("click", hide);
+  topClose.addEventListener("click", hide);
   bug.addEventListener("click", () => {
     dialog.hidden = true;
     opts.reportBug();

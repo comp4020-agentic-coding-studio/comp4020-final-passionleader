@@ -1,7 +1,8 @@
 // A small room's window (a counselling room or a team room, plan 83).
-// Coming in opens the room menu: the room's name and who is here, an invite
-// box in a counselling room, and what you can do: Chat, Shared notes, Save
-// chat, Save notes. Chat and Shared notes each fill the window; × (or Esc)
+// Coming in opens the room menu on a computer: the room's name and who is
+// here, an invite box in a counselling room, and what you can do: Chat,
+// Shared notes, Save chat, Save notes. On a phone the room comes first, and
+// the menu opens from "Open Room UI" (11/4). Chat and Shared notes each fill the window; Close (or Esc)
 // goes back to the menu, and closing the menu leaves only the 3D room and a
 // small "Room" button to open it again. Going between them never clears
 // anything: the chat, the notes and anything half typed stay until you leave
@@ -42,6 +43,8 @@ type View = "menu" | "chat" | "notes" | "closed";
 // The same rule as everywhere else for a user name.
 const NAME_RULE = /^[A-Za-z0-9_]{1,8}$/;
 const MAX_LINES = 200;
+// A phone (the app's breakpoint, as in main.ts and style.css).
+const phone = (): boolean => window.matchMedia("(pointer: coarse), (max-width: 700px)").matches;
 
 export function mountRoomPanel(opts: {
   onSend(text: string): void;
@@ -108,8 +111,8 @@ export function mountRoomPanel(opts: {
   count.className = "room-count";
   const hideBtn = document.createElement("button");
   hideBtn.type = "button";
-  hideBtn.className = "room-x";
-  hideBtn.textContent = "✕";
+  hideBtn.className = "room-close";
+  hideBtn.textContent = "Close";
   hideBtn.title = "Close (Esc): see the room; walk to the door to leave";
   hideBtn.setAttribute("aria-label", "Close the room menu");
   menuHead.append(title, count, hideBtn);
@@ -256,8 +259,8 @@ export function mountRoomPanel(opts: {
     h.textContent = text;
     const back = document.createElement("button");
     back.type = "button";
-    back.className = "room-x";
-    back.textContent = "✕";
+    back.className = "room-close room-back";
+    back.textContent = "← Menu";
     back.title = "Back to the room menu (Esc)";
     back.setAttribute("aria-label", "Back to the room menu");
     back.addEventListener("click", () => show("menu"));
@@ -582,8 +585,13 @@ export function mountRoomPanel(opts: {
       syncBadges();
       isOpen = true;
       view = "closed";
-      // Coming in opens the menu.
-      show("menu");
+      // Coming in opens the menu, except on a phone: there the room comes
+      // first (you see the room and who's in it), and the menu opens from
+      // "Open Room UI".
+      if (phone()) {
+        // Closed, so the pad and the HUD stay (no onShown: nothing covers the room).
+        reopen.hidden = false;
+      } else show("menu");
     },
     update(info) {
       // Only the header, the member chips and the invited line change, so

@@ -48,6 +48,15 @@
   padding: 8px 8px 6px 14px;
 }
 
+/* The menu's header stays at the top while the rest of the menu scrolls, so a
+   short phone screen never hides the room's name or its Close button. */
+.room-menu > .room-head {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: var(--paper, #f3e7a6);
+}
+
 .room-head h3 {
   flex: 1;
   margin: 0;
@@ -102,6 +111,21 @@
 
 .room-x:hover {
   background: rgba(107, 63, 29, 0.12);
+}
+
+/* The menu's Close: the same size and look as "Open Room UI" (#room-reopen). */
+.room-close {
+  flex: none;
+  cursor: pointer;
+  min-height: 52px;
+  padding: 8px 18px;
+  border: 0;
+  border-radius: 26px;
+  background: var(--accent, #6b3f1d);
+  color: #fff;
+  font-size: 1.05rem;
+  font-weight: 800;
+  box-shadow: 0 3px 12px rgba(0, 0, 0, 0.35);
 }
 
 .room-items {
@@ -447,3 +471,6 @@
   flex-wrap: wrap;
   gap: 8px;
 }
+
+/* In Chat and Shared notes, the way back to the menu: the same button, a little smaller. */
+.room-close.room-back { min-height: 44px; padding: 6px 14px; font-size: 0.95rem; }
