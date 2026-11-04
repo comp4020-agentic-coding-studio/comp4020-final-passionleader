@@ -346,12 +346,11 @@ function shops155(g: THREE.Group): void {
   const lit = new THREE.MeshStandardMaterial({ color: 0x5f7280, emissive: 0xffc878, emissiveIntensity: 0.16, roughness: 0.2, metalness: 0.3 });
   lit.userData.unique = true;
   nightGlow.push({ m: lit, full: 1.1, day: 0.16 });
-  const empty = new THREE.MeshStandardMaterial({ color: 0x2c3237, roughness: 0.25, metalness: 0.3 });
   const frame = mat(0x2a2a2a);
   for (const s of SHOPS_155) {
     const w = s.from - s.to;
     const cx = (s.from + s.to) / 2;
-    const pane = new THREE.Mesh(new THREE.PlaneGeometry(w, fasciaFoot - floorTop), s.name ? lit : empty);
+    const pane = new THREE.Mesh(new THREE.PlaneGeometry(w, fasciaFoot - floorTop), lit); // the empty unit lit too (the user, 11/4)
     pane.position.set(cx, (floorTop + fasciaFoot) / 2, z);
     pane.rotation.y = Math.PI;
     g.add(pane);
