@@ -230,6 +230,10 @@ function dress(model: THREE.Object3D, variant: Variant, look: Look): void {
     void skinTexture(variant, look).then((tex) => {
       if (!tex) return;
       own.map = tex;
+      // The texture glows too, at nothing until a lamp's light lifts it (main.ts, litByLamps).
+      own.emissiveMap = tex;
+      own.emissive.setHex(0xffd8a8);
+      own.emissiveIntensity = 0;
       own.needsUpdate = true;
     });
   });

@@ -395,6 +395,30 @@ const lampLights = (() => {
   };
 })();
 
+// Someone standing under a lamp at night is lit by it (the user, 11/4: they stayed dark, on a
+// computer and a phone). A light from 5 m up barely reaches a figure's sides, and phones have
+// none, so each figure's own colours are warmed up by how near the closest lamp is: no light
+// added to the scene, the same on every device.
+const LAMP_WARM = new THREE.Color(0xffd8a8);
+let lampFrame = 0;
+function litByLamps(group: THREE.Object3D, night: number): void {
+  let lift = 0;
+  if (night > 0.05) {
+    let near = Infinity;
+    for (const h of LAMP_HEADS) near = Math.min(near, (h.x - group.position.x) ** 2 + (h.z - group.position.z) ** 2);
+    lift = night * (1 - THREE.MathUtils.smoothstep(Math.sqrt(near), 2, 6.5));
+  }
+  if (group.userData.lampLift === lift) return;
+  group.userData.lampLift = lift;
+  group.traverse((o) => {
+    const m = (o as THREE.Mesh).material as THREE.MeshStandardMaterial | undefined;
+    if (!(o as THREE.Mesh).isMesh || !m?.isMeshStandardMaterial || m.transparent) return;
+    // A textured body glows in its own colours (character.ts); a plain hat in its colour.
+    if (!m.emissiveMap) m.emissive.copy(m.color).multiply(LAMP_WARM);
+    m.emissiveIntensity = 0.55 * lift;
+  });
+}
+
 // Canberra's time of day, outside (daylight.ts): checked on going out and once a minute.
 function applyDaylight(): void {
   const { hour, month } = canberraHour();
@@ -2463,6 +2487,11 @@ function update(dt: number, now: number): void {
   }
 
   lampLights.follow(player.position, !!space.outdoor);
+  if ((lampFrame = (lampFrame + 1) % 6) === 0) {
+    const night = space.outdoor ? outside.night : 0;
+    litByLamps(player, night);
+    for (const o of others.values()) litByLamps(o.group, night);
+  }
   // The sun's shadow box follows the player.
   sun.target.position.copy(player.position).setY(0);
   sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 50);
