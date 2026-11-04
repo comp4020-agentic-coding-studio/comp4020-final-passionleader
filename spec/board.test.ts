@@ -243,6 +243,10 @@ describe("campus assistants", () => {
     expect(body.links.length).toBeGreaterThan(0);
     expect((await api("/api/npc/library/ask", "POST", { token: g.token, text: "Again?" })).status).toBe(429);
     expect((await api("/api/npc/nobody/ask", "POST", { token: g.token, text: "Hi" })).status).toBe(404);
+    // A window's earlier turns ride along with a question; junk in them is dropped, not a crash.
+    const g2 = await guest();
+    const withTurns = await api("/api/npc/sport/ask", "POST", { token: g2.token, text: "then which one?", recent: [{ q: "I like tennis", a: "Tennis courts…" }, 5, null, { q: 1 }, { q: "x".repeat(5000), a: "y" }] });
+    expect(withTurns.status).toBe(200);
   });
 });
 

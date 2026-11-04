@@ -134,7 +134,8 @@ export const deleteSavedChat = (token: string, id: number): Promise<unknown> => 
 /** A ticket for the voice where you are now (plan 86). */
 export const voiceTicket = (token: string): Promise<{ url: string; token: string; room: string }> => request("/api/voice", "POST", { token });
 export const getNpcs = (): Promise<NpcDef[]> => request<NpcDef[]>("/api/npcs");
-export const askNpc = (token: string, id: string, text: string): Promise<{ reply: string }> => request(`/api/npc/${id}/ask`, "POST", { token, text });
+export const askNpc = (token: string, id: string, text: string, recent: { q: string; a: string }[] = []): Promise<{ reply: string }> =>
+  request(`/api/npc/${id}/ask`, "POST", { token, text, recent });
 
 /** A message to or from someone signed up (plan 16). */
 export interface MailItem {

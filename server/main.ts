@@ -570,7 +570,15 @@ app.post("/api/npc/:id/ask", async (c) => {
   askedBy.set(key, { day, n: count + 1 });
   lastAsked.set(key, now);
   log("npc-asked", v, { npc: npc.id, chars: text.length });
-  return c.json({ reply: await answer(npc, text), links: npc.links });
+  // The open window's last few turns, sent by the browser each time: used for this answer only,
+  // never kept or logged (a window closed, or ten minutes quiet, starts afresh: npcchat.ts).
+  const recent = Array.isArray(b.recent)
+    ? b.recent
+        .filter((t): t is { q: string; a: string } => !!t && typeof (t as { q?: unknown }).q === "string" && typeof (t as { a?: unknown }).a === "string")
+        .slice(-4)
+        .map((t) => ({ q: t.q.slice(0, 500), a: t.a.slice(0, 1500) }))
+    : [];
+  return c.json({ reply: await answer(npc, text, recent), links: npc.links });
 });
 
 // The spec's view of what was "sent" (MAIL_TEST_OUTBOX=1, the CI container only).

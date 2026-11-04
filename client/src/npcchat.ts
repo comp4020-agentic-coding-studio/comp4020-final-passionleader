@@ -28,7 +28,8 @@ function linkBareUrls(text: string): string {
 
 export function mountNpcChat(opts: {
   /** Asks the server; resolves to the reply, or an error message to show. */
-  ask(npcId: string, text: string): Promise<{ reply: string } | string>;
+  /** `recent`: this window's earlier turns, so a follow-up makes sense (kept only while it's open). */
+  ask(npcId: string, text: string, recent: { q: string; a: string }[]): Promise<{ reply: string } | string>;
   /** Opens a page (the in-app window or a new tab, as main decides). */
   openLink(label: string, url: string): void;
 }): { open(npc: NpcInfo): void; isOpen(): boolean } {
@@ -137,12 +138,19 @@ export function mountNpcChat(opts: {
     log.append(p);
     log.scrollTop = log.scrollHeight;
   };
+  // The conversation in this window (the user, 11/4: "I like tennis", then "recommend a program"
+  // got an answer about something else). Kept in this window only, while it's open: closing it, or
+  // ten minutes without a message, starts afresh. The server keeps none of it.
+  let turns: { q: string; a: string }[] = [];
+  let lastTurnAt = 0;
+  const IDLE_MS = 10 * 60_000;
   const hide = (): void => {
     root.hidden = true;
     notice.hidden = true;
     card.hidden = false;
     pending = null;
     current = null;
+    turns = [];
   };
 
   form.addEventListener("submit", (e) => {
@@ -172,11 +180,17 @@ export function mountNpcChat(opts: {
     thinking.append(who, dots);
     log.append(thinking);
     log.scrollTop = log.scrollHeight;
+    if (Date.now() - lastTurnAt > IDLE_MS) turns = [];
     void opts
-      .ask(npc.id, text)
+      .ask(npc.id, text, turns.slice(-4))
       .then((r) => {
-        if (current?.id === npc.id)
-          say("them", typeof r === "string" ? r : r.reply);
+        if (current?.id !== npc.id) return;
+        say("them", typeof r === "string" ? r : r.reply);
+        // Only real answers carry on the conversation (not "Still thinking…" or an error).
+        if (typeof r !== "string") {
+          turns.push({ q: text, a: r.reply });
+          lastTurnAt = Date.now();
+        }
       })
       .finally(() => {
         thinking.remove();
@@ -202,6 +216,7 @@ export function mountNpcChat(opts: {
 
   function show(npc: NpcInfo): void {
     current = npc;
+    turns = [];
     title.textContent = `${npc.name} · ${npc.role}`;
     log.replaceChildren();
     say("them", npc.greeting);

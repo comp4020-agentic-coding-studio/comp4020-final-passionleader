@@ -406,7 +406,10 @@ export const noSourcesFor = (npc: Npc, lang: string): string =>
   ].join("\n\n");
 
 /** What the assistant says back: the model's answer from the pages, or an honest note and its pages. */
-export async function answer(npc: Npc, question: string): Promise<string> {
+/** The turns so far in one open chat window (the client keeps them; nothing is stored here). */
+export type Turn = { q: string; a: string };
+
+export async function answer(npc: Npc, question: string, recent: Turn[] = []): Promise<string> {
   if (npc.notYet) return npc.notYet;
   const offline = `I'm ${npc.name}, and I'm not connected to my AI brain right now, sorry! The pages below have what you need.`;
   if (!client && !bedrock) return offline;
@@ -420,12 +423,16 @@ export async function answer(npc: Npc, question: string): Promise<string> {
   // A short, vague question ("what's the price?", "where is it?") is about this assistant's own
   // topic, but only if its one word finds nothing alone ("Where is Fenner?" must stay about Fenner).
   const vague = keywords(query).filter((w) => !/^\d+$/.test(w)).length <= 1;
-  let pieces = search(npc.sources, query, 8);
+  // A follow-up ("then recommend a program", after "I like tennis") is searched with the question
+  // before it, so the pages match what the talk is about (the user, 11/4: it forgot at once).
+  const before = recent.at(-1)?.q;
+  const context = before ? (/[^\p{Script=Latin}\P{L}]/u.test(before) ? ((await englishQuery(before)) ?? before) : before) : "";
+  let pieces = search(npc.sources, context && keywords(query).length <= 4 ? `${query} ${context}` : query, 8);
   if (!pieces.length && vague) pieces = search(npc.sources, `${query} ${npc.topic}`, 8);
   // No sources: the model still replies, under a brief that allows no facts (see noSourcesFor).
   const lang = replyIn(question);
   const system = pieces.length ? systemFor(npc, pieces, lang) : noSourcesFor(npc, lang);
-  if (bedrock) return askBedrock(bedrock, npc, question, offline, system);
+  if (bedrock) return askBedrock(bedrock, npc, question, offline, system, recent);
   try {
     const res = await client!.messages.create(
       {
@@ -433,7 +440,7 @@ export async function answer(npc: Npc, question: string): Promise<string> {
         max_tokens: 400,
         output_config: { effort: "low" },
         system,
-        messages: [{ role: "user", content: question }],
+        messages: [...recent.flatMap((t) => [{ role: "user" as const, content: t.q }, { role: "assistant" as const, content: t.a }]), { role: "user", content: question }],
       },
       { timeout: 20_000, maxRetries: 1 },
     );
@@ -479,13 +486,14 @@ async function englishQuery(question: string): Promise<string | null> {
 }
 
 /** The same question through Bedrock's Converse API, on the assistant's own model. A refused call reads as out of credit. */
-async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, offline: string, system: string): Promise<string> {
+async function askBedrock(br: BedrockRuntimeClient, npc: Npc, question: string, offline: string, system: string, recent: Turn[] = []): Promise<string> {
   try {
     const res = await br.send(
       new ConverseCommand({
         modelId: MODELS[npc.model],
         system: [{ text: system }],
-        messages: [{ role: "user", content: [{ text: question }] }],
+        // The window's earlier turns first, so "then which one?" means what was just said.
+        messages: [...recent.flatMap((t) => [{ role: "user" as const, content: [{ text: t.q }] }, { role: "assistant" as const, content: [{ text: t.a }] }]), { role: "user", content: [{ text: question }] }],
         inferenceConfig: { maxTokens: 400, temperature: 0 },
       }),
       { abortSignal: AbortSignal.timeout(25_000) },
