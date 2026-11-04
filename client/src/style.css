@@ -82,6 +82,13 @@ body:has(#hud-talking:not([hidden])) #minimap { top: 104px; }
     width: max-content; max-width: calc(100vw - 32px) !important; z-index: 21; text-align: center;
     box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
   }
+  /* In a room "Open Room UI" sits under the round buttons: the notice goes under it. */
+  body.in-room #toast:not(:empty) { top: calc(122px + env(safe-area-inset-top, 0px)); }
+  /* The talking badge is one line, a band like the notices (the name's column squeezed it to five). */
+  #hud-talking:not([hidden]) {
+    position: fixed; top: calc(62px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+    width: max-content; max-width: calc(100vw - 32px) !important; z-index: 21; white-space: nowrap;
+  }
   /* One line for the name: a long room name shouldn't push the help under the room's window. */
   #hud-name { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }
   #hud-online { max-width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }

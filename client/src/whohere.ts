@@ -30,7 +30,9 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
     const head = document.createElement("div");
     head.className = "who-head";
     const h = document.createElement("strong");
-    const people = deps.here();
+    // Once each: someone with the campus open in two tabs (or a phone and a computer) has two sockets.
+    const me = deps.me().toLowerCase();
+    const people = [...new Map(deps.here().filter((p) => p.name.toLowerCase() !== me).map((p) => [p.name.toLowerCase(), p])).values()];
     h.textContent = `Here now (${people.length + 1})`;
     const x = document.createElement("button");
     x.type = "button";
