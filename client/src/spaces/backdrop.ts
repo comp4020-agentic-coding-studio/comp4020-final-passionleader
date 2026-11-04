@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { doorway, floor, mat, solid, texMat, textPlane, type Box } from "../world.ts";
+import { doorway, floor, mat, nightGlow, solid, texMat, textPlane, type Box } from "../world.ts";
 import { markOccluder, markOccluderGroup } from "./occluders.ts";
 
 // Scenery past the map's edges, laid out from my own sketch and photos (kept
@@ -16,6 +16,33 @@ const FLOOR_H = 3.3;
 const TILE_W = 6;
 
 const facades = new Map<string, THREE.CanvasTexture>();
+/**
+ * The same tile with only its panes, warm on black: the facades' glow map at
+ * night. One window in five stays dark, so a lit building looks lived in.
+ */
+let paneGlow: THREE.CanvasTexture | null = null;
+function facadeGlow(): THREE.CanvasTexture {
+  if (paneGlow) return paneGlow;
+  const c = document.createElement("canvas");
+  c.width = c.height = 256;
+  const ctx = c.getContext("2d")!;
+  ctx.fillStyle = "#000";
+  ctx.fillRect(0, 0, 256, 256);
+  let i = 0;
+  for (const row of [0, 128]) {
+    for (const col of [0, 128]) {
+      if (i++ === 2) continue;
+      ctx.fillStyle = "#ffcf8a";
+      ctx.fillRect(col + 35, row + 35, 58, 60);
+      ctx.fillStyle = "#000";
+      ctx.fillRect(col + 62, row + 35, 4, 60);
+    }
+  }
+  paneGlow = new THREE.CanvasTexture(c);
+  paneGlow.colorSpace = THREE.SRGBColorSpace;
+  paneGlow.wrapS = paneGlow.wrapT = THREE.RepeatWrapping;
+  return paneGlow;
+}
 
 /** Brick wall with a grid of windows, drawn on a canvas (nothing to credit). */
 function facadeTexture(wall: string, joint: string, glass: string, frame: string): THREE.CanvasTexture {
@@ -135,7 +162,15 @@ function facadeMat(tex: THREE.CanvasTexture, len: number, storeys: number): THRE
   const map = tex.clone();
   map.needsUpdate = true;
   map.repeat.set(len / TILE_W, storeys / 2);
-  return new THREE.MeshStandardMaterial({ map, roughness: 0.95, metalness: 0 });
+  // At night its windows light up (nightGlow, main.ts applyDaylight).
+  const emissiveMap = facadeGlow().clone();
+  emissiveMap.needsUpdate = true;
+  emissiveMap.repeat.copy(map.repeat);
+  const m = new THREE.MeshStandardMaterial({ map, roughness: 0.95, metalness: 0, emissive: 0xffffff, emissiveMap, emissiveIntensity: 0 });
+  // Its own already (a fading building keeps this one, not a copy, so the night glow still reaches it).
+  m.userData.unique = true;
+  nightGlow.push({ m, full: 0.9 });
+  return m;
 }
 
 /** A block of `storeys` floors starting `fromStorey` floors up, windows on every face. */
@@ -180,7 +215,10 @@ function shopfronts(parent: THREE.Group, x0: number, x1: number, z: number, shop
   const h = FLOOR_H;
   const wall = mat(0xd9c8a9);
   const frame = mat(0x2a2a2a);
-  const glass = new THREE.MeshStandardMaterial({ color: 0x6f8796, emissive: 0x2a2416, roughness: 0.2, metalness: 0.3 });
+  const glass = new THREE.MeshStandardMaterial({ color: 0x6f8796, emissive: 0xffc878, emissiveIntensity: 0.16, roughness: 0.2, metalness: 0.3 });
+  // The shops are lit inside: a faint warmth by day, bright after dark (nightGlow, main.ts).
+  glass.userData.unique = true; // one for the whole row: they fade together, and the glow reaches it
+  nightGlow.push({ m: glass, full: 1.1, day: 0.16 });
   // The storey behind the fronts, so there's no gap above the awnings.
   const base = new THREE.Mesh(new THREE.BoxGeometry(x1 - x0, h, 14), wall);
   base.position.set((x0 + x1) / 2, h / 2, z - 7);
@@ -248,8 +286,11 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   rowParts.push(shopfronts(backdrop, -51, -40, -40, UNLET));
   rowBlocks.push(block(backdrop, beige, 7, -47, 6, 14, 5, 2));
   road(6, 22, 7, -51);
-  for (const m of rowBlocks) markOccluder(g, m);
-  for (const part of rowParts) markOccluderGroup(g, part);
+  // Only from the north (a turned view looking south over them): from the road's side they can't hide
+  // you, and the user saw them fade there anyway, standing close (11/4).
+  const fromNorth = (cam: THREE.Vector3): boolean => cam.z < -40;
+  for (const m of rowBlocks) markOccluder(g, m, fromNorth);
+  for (const part of rowParts) markOccluderGroup(g, part, undefined, fromNorth);
   block(backdrop, beige, 7, -68, 18, 12, 5); // seen through the passage
   block(backdrop, beige, 20, -57, 20, 14, 7);
 

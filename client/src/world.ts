@@ -1,7 +1,7 @@
 import * as THREE from "three";
 import { CSS2DObject } from "three/examples/jsm/renderers/CSS2DRenderer.js";
 import { GLTFLoader } from "three/examples/jsm/loaders/GLTFLoader.js";
-import { HIGH } from "./settings.ts";
+import { RICH } from "./settings.ts";
 
 // Building blocks shared by every space (client/src/spaces/): collision
 // boxes, doors, signs, simple furniture, the player figure and sticky notes.
@@ -210,11 +210,26 @@ export const mat = (color: number): THREE.MeshStandardMaterial => {
   return m;
 };
 
-/** Window glass: dark, a little blue, and reflective under the environment map. */
-export const glassMat = (tint = 0xb7d0e0): THREE.MeshStandardMaterial =>
-  !HIGH
+/**
+ * Materials that light up at night (the user's ask, 11/4: every window and
+ * shop lit after dark): each with how strong its glow is at full night.
+ * main.ts (applyDaylight) sets their emissiveIntensity from Canberra's hour.
+ */
+export const nightGlow: { m: THREE.MeshStandardMaterial; full: number; day?: number }[] = [];
+const WARM = new THREE.Color(0xffd9a0);
+
+/** Window glass: dark, a little blue, and reflective under the environment map; warm and lit at night. */
+export const glassMat = (tint = 0xb7d0e0): THREE.MeshStandardMaterial => {
+  const m = !RICH
     ? new THREE.MeshStandardMaterial({ color: tint, roughness: 0.15, metalness: 0.2 })
     : new THREE.MeshPhysicalMaterial({ color: tint, roughness: 0.08, metalness: 0.15, envMapIntensity: 1.6, clearcoat: 1, clearcoatRoughness: 0.05 });
+  m.emissive.copy(WARM);
+  m.emissiveIntensity = 0;
+  // Its own already: a fading building keeps this material, so the night glow still reaches it.
+  m.userData.unique = true;
+  nightGlow.push({ m, full: 0.55 });
+  return m;
+};
 
 // Textures from assets/tex (credited in assets/CREDITS.md), tiled by
 // world size so a paver or a floorboard is the same size everywhere.
@@ -569,7 +584,7 @@ export function loadModel(file: string, height: number): Promise<THREE.Group | n
         box = new THREE.Box3().setFromObject(model);
         const c = box.getCenter(new THREE.Vector3());
         model.position.set(-c.x, -box.min.y, -c.z);
-        if (HIGH && file.startsWith("nature/")) addWind(model);
+        if (RICH && file.startsWith("nature/")) addWind(model);
         const g = new THREE.Group();
         g.add(model);
         return g;

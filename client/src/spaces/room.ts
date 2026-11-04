@@ -60,7 +60,6 @@ export function plant(g: THREE.Group, colliders: Box[], x: number, z: number): v
  * so it costs next to nothing on Low. Returns the per-frame tick.
  */
 export function westWindows(g: THREE.Group, wall: number, zs: number[], size = { w: 2.6, h: 2, y: 1.1 }): (dt: number) => void {
-  const day = new THREE.Color(0xfff4dc);
   const { w, h, y } = size;
   const glass = new THREE.MeshBasicMaterial({ color: 0xfff4dc });
   const frame = new THREE.MeshStandardMaterial({ color: 0x2f3438, roughness: 0.6 });
@@ -109,16 +108,12 @@ export function westWindows(g: THREE.Group, wall: number, zs: number[], size = {
   let t = 0;
   return (dt) => {
     t += dt;
-    // At night (daylight.ts) the glass goes dark and no sun comes through.
+    // After sunset (daylight.ts) no sun comes through; the glass stays as it is (the user, 11/4).
     const lit = 1 - outside.night;
     shaft.opacity = (0.26 + Math.sin(t * 0.5) * 0.03) * lit;
     patch.opacity = 0.38 * lit;
-    glass.color.copy(day).lerp(NIGHT_GLASS, outside.night);
   };
 }
-
-/** Window glass at night: a dark blue, the sky outside. */
-export const NIGHT_GLASS = new THREE.Color(0x1a2240);
 
 /** Soft at the edges, fading towards the floor: the look of a shaft of light. */
 export function shaftTexture(): THREE.CanvasTexture {

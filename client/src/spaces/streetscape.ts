@@ -35,14 +35,22 @@ function lamp(g: THREE.Group, colliders: Box[], x: number, z: number, face: numb
   // At night (daylight.ts): a warm pool on the ground under the head and a soft halo round the bulb. A
   // painted glow, not a real light: dozens of real lights would cost every phone its frame rate.
   const under = { x: x + Math.cos(face) * 0.55, z: z - Math.sin(face) * 0.55 };
-  const pool = lightPool(g, under.x, under.z, 7, 7, 0xffc878, 0);
+  // A warm wash, blended normally: added on top, a phone's low-precision blending made it a
+  // speckle of colours over the paving (the user's "party lights", 11/4). Wider too.
+  const pool = lightPool(g, under.x, under.z, 10, 10, 0xffd59a, 0);
+  (pool.material as THREE.MeshBasicMaterial).blending = THREE.NormalBlending;
   pool.userData.lampPool = true;
+  // Where the head is: the nearest few lamps lend a real light to whatever stands under them (main.ts).
+  LAMP_HEADS.push(new THREE.Vector3(under.x, 4.9, under.z));
   const halo = new THREE.Sprite(new THREE.SpriteMaterial({ map: glowTexture(), color: 0xffd28a, transparent: true, opacity: 0, depthWrite: false, blending: THREE.AdditiveBlending }));
   halo.scale.set(1.6, 1.6, 1);
   halo.position.set(under.x, 5.0, under.z);
   halo.userData.lampHalo = true;
   g.add(halo);
 }
+
+/** Every lamp's head, for the few real lights that follow you at night (main.ts). */
+export const LAMP_HEADS: THREE.Vector3[] = [];
 
 let glow: THREE.Texture | null = null;
 function glowTexture(): THREE.Texture {

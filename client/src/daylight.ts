@@ -29,27 +29,40 @@ function keys(month: number): Key[] {
   const rise = 6.5 - summer * 0.9;
   const set = 18.6 + summer * 1.4;
   return [
-    { h: 0, sky: 0x0e1430, sun: 0x7f96d0, si: 0.25, hemi: 0.18, fog: 0x121a30, lamps: 1, exp: 0.55 },
-    { h: rise - 0.8, sky: 0x1a2142, sun: 0x8fa2d4, si: 0.3, hemi: 0.22, fog: 0x1c2440, lamps: 1, exp: 0.58 },
+    // Night: a blue sky, but bright enough that people and trees read (the user, 11/4: "too dark, scary").
+    { h: 0, sky: 0x141d42, sun: 0x8fa6dc, si: 0.38, hemi: 0.36, fog: 0x18213f, lamps: 1, exp: 0.66 },
+    { h: rise - 0.8, sky: 0x1c2550, sun: 0x96aadc, si: 0.4, hemi: 0.38, fog: 0x1e2848, lamps: 1, exp: 0.67 },
     { h: rise, sky: 0xf2b48c, sun: 0xffc59a, si: 1.4, hemi: 0.65, fog: 0xd9b9a2, lamps: 0.3, exp: 0.85 },
     { h: rise + 1.5, sky: 0xffffff, sun: 0xfff3e0, si: 2.6, hemi: 0.9, fog: 0xc9dcea, lamps: 0, exp: 0.85 },
     { h: set - 1.5, sky: 0xffffff, sun: 0xfff3e0, si: 2.6, hemi: 0.9, fog: 0xc9dcea, lamps: 0, exp: 0.85 },
     { h: set - 0.4, sky: 0xffcf9a, sun: 0xffb070, si: 1.9, hemi: 0.75, fog: 0xe6c3a0, lamps: 0.2, exp: 0.85 },
-    { h: set + 0.3, sky: 0xb0687e, sun: 0xff8a60, si: 0.9, hemi: 0.45, fog: 0x8a6f86, lamps: 0.7, exp: 0.72 },
-    { h: set + 1.2, sky: 0x1a2246, sun: 0x8396d0, si: 0.3, hemi: 0.22, fog: 0x1a2240, lamps: 1, exp: 0.58 },
-    { h: 24, sky: 0x0e1430, sun: 0x7f96d0, si: 0.25, hemi: 0.18, fog: 0x121a30, lamps: 1, exp: 0.55 },
+    { h: set + 0.3, sky: 0xb0687e, sun: 0xff8a60, si: 0.95, hemi: 0.6, fog: 0x8a6f86, lamps: 0.7, exp: 0.78 },
+    { h: set + 1.2, sky: 0x1c2550, sun: 0x8fa6dc, si: 0.4, hemi: 0.38, fog: 0x1e2848, lamps: 1, exp: 0.67 },
+    { h: 24, sky: 0x141d42, sun: 0x8fa6dc, si: 0.38, hemi: 0.36, fog: 0x18213f, lamps: 1, exp: 0.66 },
   ];
 }
 
 /**
  * How dark it is outside now, 0 (day) to 1 (night), set by the game loop's
- * daylight check (main.ts) and read by the rooms' windows: at night their
- * glass goes dark and the sunbeams through them go out.
+ * daylight check (main.ts) and read by the rooms' windows: after sunset the
+ * sunbeams through them go out.
  */
 export const outside = { night: 0 };
 
-/** The hour now in Canberra (0–24, with minutes as a fraction), or `?hour=` when given. */
-export function canberraHour(now = new Date()): { hour: number; month: number } {
+/** Hours a test server shifts the clock by (its /api/clock; 0 on the live site). */
+let shift = 0;
+/** Called once the shift is known (main.ts re-lights the scene). */
+export const clockReady: { then?: () => void } = {};
+void fetch("/api/clock")
+  .then((r) => (r.ok ? r.json() : null))
+  .then((c: { shiftHours?: number } | null) => {
+    shift = Number(c?.shiftHours) || 0;
+    if (shift) clockReady.then?.();
+  })
+  .catch(() => {});
+
+/** The hour now in Canberra (0–24, with minutes as a fraction), or `?hour=` when given; a test server's shift added. */
+export function canberraHour(now = new Date(Date.now() + shift * 3_600_000)): { hour: number; month: number } {
   const forced = Number(new URLSearchParams(location.search).get("hour"));
   const parts = new Intl.DateTimeFormat("en-AU", { timeZone: "Australia/Sydney", hour: "numeric", minute: "numeric", month: "numeric", hourCycle: "h23" }).formatToParts(now);
   const get = (t: string): number => Number(parts.find((p) => p.type === t)?.value ?? 0);

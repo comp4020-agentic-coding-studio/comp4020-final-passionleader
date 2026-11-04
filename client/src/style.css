@@ -53,6 +53,13 @@ button, [role="button"], .use-badge, .player-label, .door-label, canvas {
   background: rgba(255, 251, 224, 0.7); font-size: 0.8rem;
 }
 #hud-online[hidden] { display: none; }
+#hud-talking {
+  display: table; margin-top: 2px; padding: 2px 10px; border-radius: 8px;
+  background: #c0392b; color: #fff; font-size: 0.8rem; font-weight: 700;
+}
+#hud-talking[hidden] { display: none; }
+/* While talking, the minimap steps down under the badge. */
+body:has(#hud-talking:not([hidden])) #minimap { top: 104px; }
 /* A computer: the line stops short of the music box and the round buttons (about 500 px from the right). */
 @media (min-width: 701px) {
   #hud-online { max-width: calc(100vw - 612px); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; vertical-align: top; }

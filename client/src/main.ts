@@ -1,4 +1,5 @@
 import "./style.css";
+import "./mobilefix.css";
 import * as THREE from "three";
 import { RoomEnvironment } from "three/examples/jsm/environments/RoomEnvironment.js";
 import { Sky } from "three/examples/jsm/objects/Sky.js";
@@ -7,7 +8,7 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import { playTrack } from "./audio.ts";
 import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
-import { HIGH, mountSettings, settingsOpen } from "./settings.ts";
+import { HIGH, RICH, mountSettings, settingsOpen } from "./settings.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
 import { fart, sfx, step, warmUp } from "./sfx.ts";
@@ -69,7 +70,8 @@ import {
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
 import { mountWhoHere } from "./whohere.ts";
-import { canberraHour, daylightAt, outside } from "./daylight.ts";
+import { keepScreenOn } from "./wakelock.ts";
+import { canberraHour, clockReady, daylightAt, outside } from "./daylight.ts";
 import { mountStatus, statusText } from "./status.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
@@ -108,7 +110,8 @@ import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { roomArrival } from "./spaces/meeting.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { LAMP_HEADS } from "./spaces/streetscape.ts";
 import { canberraTime } from "./when.ts";
 
 const SPEED = 4.2; // walking, world units per second
@@ -301,7 +304,8 @@ const sun = addLights(scene, highQuality);
 
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
 const renderer = new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance" });
-renderer.setPixelRatio(highQuality ? Math.min(window.devicePixelRatio, 2) : 1);
+// High: up to twice the screen's pixels; Medium: up to one and a half (a phone's screen is dense); Low: one.
+renderer.setPixelRatio(highQuality ? Math.min(window.devicePixelRatio, 2) : RICH ? Math.min(window.devicePixelRatio, 1.5) : 1);
 renderer.toneMapping = THREE.ACESFilmicToneMapping;
 renderer.toneMappingExposure = 0.85;
 renderer.shadowMap.enabled = highQuality;
@@ -350,12 +354,42 @@ new THREE.TextureLoader().load(`${import.meta.env.BASE_URL}assets/sky/campus_sky
   domeReady = true;
   if (space?.outdoor) applySky();
 });
+// At night the lamps nearest you give real light (Medium and High): someone, a bush or a tree
+// under a lamp is lit, not just the ground's painted pool (the user, 11/4). Four lights move to
+// the four nearest heads; always in the scene (adding lights later would rebuild every shader),
+// at nothing by day, indoors and on Low.
+const lampLights = (() => {
+  const lights = RICH ? Array.from({ length: 4 }, () => new THREE.PointLight(0xffd29a, 0, 9, 1.4)) : [];
+  for (const l of lights) scene.add(l);
+  let strength = 0;
+  let frame = 0;
+  return {
+    set intensity(v: number) {
+      strength = v;
+    },
+    /** Each frame: the four nearest heads to `at`, lit at the night's strength (outside only). */
+    follow(at: THREE.Vector3, outdoors: boolean): void {
+      if (!lights.length || (frame = (frame + 1) % 10) !== 0) return;
+      const on = outdoors && strength > 0.05;
+      const near = on ? [...LAMP_HEADS].sort((a, b) => a.distanceToSquared(at) - b.distanceToSquared(at)).slice(0, lights.length) : [];
+      lights.forEach((l, i) => {
+        const head = near[i];
+        l.intensity = head ? 5 * strength : 0;
+        if (head) l.position.copy(head);
+      });
+    },
+  };
+})();
+
 // Canberra's time of day, outside (daylight.ts): checked on going out and once a minute.
 function applyDaylight(): void {
   const { hour, month } = canberraHour();
   const d = daylightAt(hour, month);
-  // Rooms' windows read this (dark glass and no sunbeams at night); the rest is outside only.
+  // Rooms' windows read this (no sunbeams after sunset); the rest is outside only.
   outside.night = d.lamps;
+  // Every lit window and shop front (world.ts nightGlow): bright after dark, faint (or off) by day.
+  for (const g of nightGlow) g.m.emissiveIntensity = (g.day ?? 0) + (g.full - (g.day ?? 0)) * d.lamps;
+  lampLights.intensity = d.lamps;
   if (!space?.outdoor) return;
   skyDome.material.color.copy(d.sky);
   sun.color.copy(d.sunColour);
@@ -363,16 +397,17 @@ function applyDaylight(): void {
   sun.hemi.intensity = d.hemiIntensity;
   if (scene.fog) (scene.fog as THREE.Fog).color.copy(d.fog);
   renderer.toneMappingExposure = d.exposure;
-  // The sky's reflected light dims with it; at night a cool, faint fill.
-  scene.environmentIntensity = 0.12 + 0.88 * (1 - d.lamps);
+  // The sky's reflected light dims with it; at night a cool fill, enough to see faces by.
+  scene.environmentIntensity = 0.25 + 0.75 * (1 - d.lamps);
   space.group.traverse((o) => {
     if (o.userData.lamp) ((o as THREE.Mesh).material as THREE.MeshStandardMaterial).emissiveIntensity = 0.8 + d.lamps * 3.2;
     // The pool of light under each lamp and the halo round its bulb, only as it gets dark.
-    else if (o.userData.lampPool) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = d.lamps * 0.6;
+    else if (o.userData.lampPool) ((o as THREE.Mesh).material as THREE.MeshBasicMaterial).opacity = d.lamps * 0.32;
     else if (o.userData.lampHalo) ((o as THREE.Sprite).material as THREE.SpriteMaterial).opacity = d.lamps * 0.9;
   });
 }
 window.setInterval(applyDaylight, 60_000);
+clockReady.then = applyDaylight;
 
 function applySky(): void {
   scene.background = null;
@@ -1166,6 +1201,8 @@ installDialogKeys();
 // --- the current space -----------------------------------------------------
 
 let playing = false;
+// On a phone the screen stays on while you're on campus (wakelock.ts).
+keepScreenOn(() => playing);
 /** When the admin's "coming in" restriction ends (Canberra time), for the join screen. */
 let stoppedUntil = "";
 let vy = 0;
@@ -1865,7 +1902,9 @@ window.addEventListener("keydown", (e) => {
         void voice.join(true).then((ok) => {
           if (ok && vHeld) {
             voice.talk(true);
-            toast("🎙 Talking… (let go of V to stop)");
+            // Under your name and the online line, over the minimap, for as long as V is held
+            // (a toast ran into the music player on a computer's top bar).
+            $("hud-talking").hidden = false;
           }
         });
         vHeld = true;
@@ -1894,6 +1933,7 @@ window.addEventListener("keyup", (e) => {
   if (e.code === "KeyV" && vHeld) {
     vHeld = false;
     voice.talk(false);
+    $("hud-talking").hidden = true;
   }
   if (e.key === "Shift") running = false;
   if (e.code === "KeyQ" && radial.isOpen()) radial.close();
@@ -2398,6 +2438,7 @@ function update(dt: number, now: number): void {
     el.style.marginLeft = over > 0 ? `${-over}px` : "";
   }
 
+  lampLights.follow(player.position, !!space.outdoor);
   // The sun's shadow box follows the player.
   sun.target.position.copy(player.position).setY(0);
   sun.position.copy(sun.target.position).addScaledVector(SUN_DIR, 50);
@@ -2411,8 +2452,8 @@ function update(dt: number, now: number): void {
   // High quality (plan 35a): the clouds drift, the dome turning slowly about
   // its axis (once in about 20 minutes), so the sky wraps round seamlessly.
   // The light stays where it is, so shading doesn't move with it.
-  if (highQuality) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
-  if (highQuality) wind.value += dt;
+  if (RICH) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
+  if (RICH) wind.value += dt;
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);
@@ -2423,7 +2464,7 @@ function update(dt: number, now: number): void {
     // With the camera inside a building, fading would wash the view white:
     // hide the building outright until the camera is out again.
     const inside = o.box.containsPoint(camera.position);
-    const blocking = inside || (p !== null && p.distanceTo(camera.position) < reach);
+    const blocking = (!o.fadeIf || o.fadeIf(camera.position)) && (inside || (p !== null && p.distanceTo(camera.position) < reach));
     for (const mesh of o.meshes) {
       mesh.visible = !inside;
       for (const m of materialsOf(mesh)) {

@@ -1295,6 +1295,10 @@ const s3Error = (c: Context, err: unknown): Response => {
   return c.json({ error: s3Message(code), code }, 503);
 };
 
+// A test server's clock shift (CLOCK_SHIFT_HOURS, never set on Fly): QA by day sees the campus at
+// night, and the other way round (the user's ask, 11/4). The client's time of day adds it.
+app.get("/api/clock", (c) => c.json({ shiftHours: Number(process.env.CLOCK_SHIFT_HOURS) || 0 }));
+
 app.get("/api/files/status", (c) => c.json({ ready: s3Ready(), code: s3Ready() ? null : "S3-CONFIG" }));
 
 app.post("/api/files", async (c) => {

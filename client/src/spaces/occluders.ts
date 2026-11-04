@@ -8,6 +8,8 @@ import * as THREE from "three";
 export interface Occluder {
   meshes: THREE.Mesh[];
   box: THREE.Box3;
+  /** Fades only if this says the camera is where the thing can hide you (the north row: from its north side). */
+  fadeIf?: (camera: THREE.Vector3) => boolean;
 }
 const occluders = new WeakMap<THREE.Group, Occluder[]>();
 
@@ -28,16 +30,16 @@ function own(mesh: THREE.Mesh): void {
 export const materialsOf = (mesh: THREE.Mesh): THREE.MeshStandardMaterial[] =>
   (Array.isArray(mesh.material) ? mesh.material : [mesh.material]) as THREE.MeshStandardMaterial[];
 
-export function markOccluder(group: THREE.Group, mesh: THREE.Mesh): void {
+export function markOccluder(group: THREE.Group, mesh: THREE.Mesh, fadeIf?: Occluder["fadeIf"]): void {
   own(mesh);
   mesh.updateMatrixWorld(true);
   const list = occluders.get(group) ?? [];
-  list.push({ meshes: [mesh], box: new THREE.Box3().setFromObject(mesh) });
+  list.push({ meshes: [mesh], box: new THREE.Box3().setFromObject(mesh), fadeIf });
   occluders.set(group, list);
 }
 
 /** Every mesh under `part` fades together when `part`'s bounding box is in the way. */
-export function markOccluderGroup(group: THREE.Group, part: THREE.Object3D, box?: THREE.Box3): void {
+export function markOccluderGroup(group: THREE.Group, part: THREE.Object3D, box?: THREE.Box3, fadeIf?: Occluder["fadeIf"]): void {
   const meshes: THREE.Mesh[] = [];
   part.updateMatrixWorld(true);
   part.traverse((o) => {
@@ -47,7 +49,7 @@ export function markOccluderGroup(group: THREE.Group, part: THREE.Object3D, box?
     }
   });
   const list = occluders.get(group) ?? [];
-  list.push({ meshes, box: box ?? new THREE.Box3().setFromObject(part) });
+  list.push({ meshes, box: box ?? new THREE.Box3().setFromObject(part), fadeIf });
   occluders.set(group, list);
 }
 
