@@ -43,6 +43,35 @@ export function mountMinimap(view: {
   const pz = (z: number): number => (pad + (z - b.minZ) * scale) * 2;
   let on = false;
 
+  // Each place's label goes where it overlaps nothing labelled before it: above
+  // its dot, else below, right or left, kept inside the map (the 11/4 sweep:
+  // ANU Sport and Housing, Hub and Classrooms were printed over each other).
+  // A building whose door is a labelled place isn't named twice.
+  const named = new Set(view.places.map((p) => p.name));
+  const blocks = view.buildings.filter((bd) => !named.has(bd.name));
+  ctx.font = "600 16px system-ui, sans-serif";
+  const taken: { x: number; y: number; w: number; h: number }[] = blocks.map((bd) => {
+    const w = ctx.measureText(bd.name).width;
+    return { x: px((bd.minX + bd.maxX) / 2) - w / 2, y: pz((bd.minZ + bd.maxZ) / 2) - 12, w, h: 18 };
+  });
+  const hits = (r: { x: number; y: number; w: number; h: number }): boolean =>
+    taken.some((t) => r.x < t.x + t.w + 4 && t.x < r.x + r.w + 4 && r.y < t.y + t.h && t.y < r.y + r.h);
+  const labels = view.places.map((p) => {
+    const w = ctx.measureText(p.name).width;
+    const h = 16;
+    const x0 = px(p.x);
+    const y0 = pz(p.z);
+    const tries = [
+      { x: x0 - w / 2, y: y0 - 8 - h },
+      { x: x0 - w / 2, y: y0 + 8 },
+      { x: x0 + 9, y: y0 - h / 2 },
+      { x: x0 - 9 - w, y: y0 - h / 2 },
+    ].map((r) => ({ x: Math.min(Math.max(r.x, 6), canvas.width - 6 - w), y: Math.min(Math.max(r.y, 4), canvas.height - 4 - h), w, h }));
+    const at = tries.find((r) => !hits(r)) ?? tries[0];
+    taken.push(at);
+    return { name: p.name, x: at.x, y: at.y + h - 3 };
+  });
+
   return {
     show(want) {
       on = want && desktop.matches;
@@ -60,16 +89,17 @@ export function mountMinimap(view: {
       ctx.font = "600 18px system-ui, sans-serif";
       ctx.textAlign = "center";
       ctx.fillStyle = "#ffffff";
-      for (const bd of view.buildings) ctx.fillText(bd.name, px((bd.minX + bd.maxX) / 2), pz((bd.minZ + bd.maxZ) / 2) + 6);
+      for (const bd of blocks) ctx.fillText(bd.name, px((bd.minX + bd.maxX) / 2), pz((bd.minZ + bd.maxZ) / 2) + 6);
       ctx.font = "600 16px system-ui, sans-serif";
+      ctx.fillStyle = "#6b3f1d";
       for (const p of view.places) {
-        ctx.fillStyle = "#6b3f1d";
         ctx.beginPath();
         ctx.arc(px(p.x), pz(p.z), 5, 0, Math.PI * 2);
         ctx.fill();
-        ctx.fillStyle = "#3b2a12";
-        ctx.fillText(p.name, px(p.x), pz(p.z) - 10);
       }
+      ctx.textAlign = "left";
+      ctx.fillStyle = "#3b2a12";
+      for (const l of labels) ctx.fillText(l.name, l.x, l.y);
       // You: a dot with a nose in the direction you face.
       const cx = px(x);
       const cz = pz(z);
