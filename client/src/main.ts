@@ -82,6 +82,7 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { mountSignupPrompt } from "./signupprompt.ts";
+import { mountGuestNotice } from "./guestnotice.ts";
 import { mountRoomPad } from "./roompad.ts";
 import { mountSignIn } from "./signin.ts";
 import { mountNpcChat } from "./npcchat.ts";
@@ -184,12 +185,15 @@ function signOut(): void {
 /** A guest goes for a real account: out of the campus, onto the sign-up form. */
 function signUpFromGuest(): void {
   board.close();
+  composer.close();
   signOut();
   signIn.showSignup();
 }
 // A guest who tries something that needs signing up gets this, before the
 // action where we know (Write a post, a note) and on the server's refusal.
 const signupPrompt = mountSignupPrompt({ signUp: () => signUpFromGuest() });
+// A guest's first time in: what a guest can't do, and what's kept (IP in the admin's log, seven days).
+const guestNotice = mountGuestNotice({ signUp: () => signUpFromGuest() });
 
 // Customise look has its own button, a coat hanger just left of the gear (it
 // used to be a row in the settings dialog). The join screen keeps its button.
@@ -1299,10 +1303,10 @@ const voice = mountVoice({
 });
 
 const npcChat = mountNpcChat({
-  async ask(id, text) {
+  async ask(id, text, recent) {
     if (!session) return "Join first.";
     try {
-      const r = await askNpc(session.token, id, text);
+      const r = await askNpc(session.token, id, text, recent);
       quests.done("npc");
       return r;
     } catch (err) {
@@ -1604,7 +1608,10 @@ async function enterAs(s: Session): Promise<void> {
   storage.set("campus.role", s.role);
   // Mail waiting since last time.
   if (isMember(s)) void getMailbox(s.token).then((box) => showUnread(box.unread)).catch(() => {});
-  else showUnread(0);
+  else {
+    showUnread(0);
+    guestNotice.maybeOpen();
+  }
   // Classrooms first, so a visitor who left one comes back into it.
   await loadClassrooms();
   enterWorld();
