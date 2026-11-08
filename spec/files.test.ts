@@ -77,7 +77,7 @@ describe("who may attach what", () => {
     await s.next((m) => m.t === "welcome");
     // Outside, on the campus: refused.
     expect((await ask(v.token, { kind: "room" }, "notes.pdf", 10)).status).toBe(403);
-    s.send({ t: "enter", space: "team-library-3", x: 0, z: 0 });
+    s.send({ t: "enter", space: "team-comp8020-3", x: 0, z: 0 });
     await s.next((m) => m.t === "action" && m.kind === "room-open");
     expect([201, 503]).toContain((await ask(v.token, { kind: "room" }, "notes.pdf", 10)).status);
   });
