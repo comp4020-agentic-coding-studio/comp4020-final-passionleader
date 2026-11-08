@@ -364,7 +364,14 @@ function finish(): void {
   drawerToken = null;
   system("Game over!");
   pushState();
+  const ranked = [...players.values()].sort((a, b) => b.score - a.score).map((p) => ({ name: p.name, score: p.score }));
+  for (const f of overHooks) f(ranked);
 }
+
+// Whoever started a game from a campus table (server/tables.ts) is told who
+// won there: this is how the table hears of it, without the game knowing tables exist.
+const overHooks: ((ranked: { name: string; score: number }[]) => void)[] = [];
+export const onSketchOver = (f: (ranked: { name: string; score: number }[]) => void): void => void overHooks.push(f);
 
 function toLobby(msg: string): void {
   if (roundTimer) clearTimeout(roundTimer);

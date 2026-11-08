@@ -243,6 +243,13 @@ when a flow changes.
   voice too. The chat restriction stops voice as well. Whoever is speaking
   shows a mic on their name tag. The log notes who joined which voice,
   never what was said.
+- Games table (the Student Hub's table, `server/tables.ts`): anyone within 3 m
+  may open it and pick a quick quiz (five questions drawn from the fixed list
+  in `server/quiz.ts`, about places and dates the app's own pages state; 15
+  seconds each, the right answer never sent before the reveal) or open Sketch
+  & Guess. The server keeps the score and tells the table who won, and only
+  people near it hear of the game or may act on it. In server memory, gone
+  when the game ends; the log notes who started which game, nothing else.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

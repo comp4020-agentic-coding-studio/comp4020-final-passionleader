@@ -104,6 +104,7 @@ import { mountMute } from "./mute.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
+import { mountGameTable } from "./gametable.ts";
 import { mountGuide } from "./guide.ts";
 import { mountVoice } from "./voicechat.ts";
 import { mountInvitePopup } from "./invitepopup.ts";
@@ -1220,6 +1221,13 @@ const dogPrompt = mountDogPrompt({
 // Lab Coffee's menu board, north of 154: the cafés on campus.
 const cafeGuide = mountCafeGuide();
 const calendar = mountCalendar();
+// The Student Hub's games table (server/tables.ts): the quiz and Sketch & Guess for whoever is within 3 m of it.
+const gameTable = mountGameTable({
+  send: (table, op, extra) => !!net && net.table(table, op, extra),
+  openSketch: () => (gameTable.close(), webview.open({ label: "Sketch & Guess", url: "/minigame/sketch/", embeddable: true })),
+  me: () => session?.name ?? "",
+  onNotSent: () => notSent(),
+});
 
 // Boards in classrooms (Q&A, Notices, Board), the Student Hub and on the
 // lawn. The server decides who may post in a staff-only tab; the dialog only
@@ -1362,13 +1370,13 @@ mountJoinNow(document.getElementById("status-btn") ?? hudName, {
 });
 
 // When a dialog closes, hand focus back to the game view.
-for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-calendar", "npc-chat", "board"]) {
+for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-calendar", "game-table", "npc-chat", "board"]) {
   const el = document.getElementById(id);
   if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || gameTable.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 installDialogKeys();
 
@@ -1597,6 +1605,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   noteRequest++;
   // Voice belongs to where you are: going anywhere else ends it.
   if (voice.isOn()) voice.leave();
+  gameTable.close();
   if (roomPanel.isOpen() && !meetingRoom(id)) {
     roomPad.close();
     roomPanel.close();
@@ -2028,6 +2037,13 @@ function goOnline(token: string): void {
           ? "The admin has put you out of the campus. You can come back in."
           : `The admin has stopped you coming in${stoppedUntil ? ` until ${stoppedUntil}` : " for now"}.`,
       );
+    },
+    table(id, view) {
+      const line = gameTable.view(id, view);
+      if (line) toast(line);
+    },
+    tableRefused(id, reason) {
+      gameTable.refused(id, reason);
     },
     seatRefused() {
       mySeat = null;
@@ -2465,6 +2481,7 @@ function interact(): void {
     }
     else if (target.id === "cafes") cafeGuide.open();
     else if (target.id === "calendar") calendar.open();
+    else if (target.id.startsWith("table:")) gameTable.open(target.id.slice(6));
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "enquiries" && space) void openBoard(space.id, "hub-desk");
     else if (target.id === "study-groups" && space) void openBoard(space.id, "study-groups");

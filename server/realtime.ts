@@ -7,6 +7,7 @@ import { dropRoomFiles, keepRoomFiles, findByName, findByToken, isMember, keepCh
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
+import { createTables } from "./tables.ts";
 
 // The real-time layer: one WebSocket per open tab, all to this one server.
 // Everything is per space: you only see, hear and get updates about people in
@@ -207,6 +208,12 @@ function roomTimerAction(space: SpaceId, player: Player, msg: Record<string, unk
   timerChanged(space);
 }
 
+// Game tables (server/tables.ts): the people online, and a way to tell one of them something.
+const tables = createTables({
+  people: () => [...players.values()].map((p) => ({ name: p.name, space: p.space, x: p.x, z: p.z })),
+  tell: (name, msg) => tellPerson(name, msg),
+});
+
 /** What a client may ask of the room it's in, by "kind" (the "action" message is generic; a new room verb is a new entry here). */
 const ROOM_ACTIONS: Record<string, (space: SpaceId, player: Player, msg: Record<string, unknown>) => void> = {
   timer: roomTimerAction,
@@ -397,6 +404,7 @@ function onMessage(ws: WebSocket, raw: string): void {
       log("enter", owners.get(ws) ?? null, { from, space: to });
       roomLeft(from, player.name, owners.get(ws) ?? null);
       roomJoined(to, player.name);
+      tables.left(player.name);
       if (to === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
     }
     // Into a meeting room, the client waits for this before it walks in.
@@ -487,6 +495,8 @@ function onMessage(ws: WebSocket, raw: string): void {
     else keepChatLine(player.space, player.name, text);
   } else if (msg.t === "action" && typeof msg.kind === "string" && Object.hasOwn(ROOM_ACTIONS, msg.kind)) {
     ROOM_ACTIONS[msg.kind]!(player.space, player, msg);
+  } else if (msg.t === "action" && msg.kind === "table") {
+    tables.action(player, msg, owners.get(ws) ?? null);
   } else if (msg.t === "pad" && typeof msg.text === "string") {
     // The room's shared notes: whoever is inside writes, everyone inside
     // sees it; the last write wins. Not logged (like the room's chat).
@@ -635,6 +645,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
     }
     broadcastSpace(player.space, { t: "leave", id: player.id });
     roomLeft(player.space, player.name, visitor);
+    tables.left(player.name);
   });
 }
 

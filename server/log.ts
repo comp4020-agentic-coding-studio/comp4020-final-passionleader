@@ -50,6 +50,8 @@ export type Event =
   | "post-comment-edited"
   | "post-comment-removed"
   | "game-join"
+  | "table-game"
+  | "video-set"
   | "classroom-created"
   | "classroom-removed"
   | "classroom-link"

@@ -1,4 +1,5 @@
 import type { Classroom, Comment, Note } from "./api.ts";
+import type { TableView } from "./gametable.ts";
 import type { Look } from "./lookpicker.ts";
 import type { SpaceId } from "./world.ts";
 
@@ -108,6 +109,10 @@ export interface NetHandlers {
   /** The admin put us out: stopped from coming in ("restricted"), or a one-off kick ("kicked"). */
   removed(why: "restricted" | "kicked"): void;
   status(online: boolean): void;
+  /** What a games table is doing now (sent to people within 3 m of it; server/tables.ts). */
+  table(table: string, view: TableView): void;
+  /** The table said no (too far, a game already on, full…). */
+  tableRefused(table: string, reason: string): void;
 }
 
 // Matches the server's tick: no point sending faster than it broadcasts.
@@ -131,6 +136,8 @@ export interface Net {
   pad(text: string): void;
   /** Starts (or resumes), pauses or resets the room's shared timer. */
   timer(op: "start" | "pause" | "reset"): boolean;
+  /** Asks a games table for something: "look", "pick" (a game), "join", "start", "answer" (a pick) or "leave". */
+  table(table: string, op: string, extra?: Record<string, unknown>): boolean;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): boolean;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -208,6 +215,8 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
           if (m.kind === "seat-refused") return on.seatRefused();
+          if (m.kind === "table" && typeof m.table === "string") return on.table(m.table, m.view as TableView);
+          if (m.kind === "table-refused" && typeof m.table === "string") return on.tableRefused(m.table, String(m.reason));
           if (m.kind === "restricted") return on.restricted(m.what as string, m.until as string);
           if (m.kind === "all-wait") return on.allWait(m.seconds as number);
       }
@@ -265,6 +274,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     timer(op) {
       return sendNow({ t: "action", kind: "timer", op });
+    },
+    table(table, op, extra) {
+      return sendNow({ t: "action", kind: "table", table, op, ...extra });
     },
     invite(name) {
       return sendNow({ t: "invite", name });
