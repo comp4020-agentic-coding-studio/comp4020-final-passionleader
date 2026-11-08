@@ -85,7 +85,7 @@ O-Week to find answers and their first friends.
 
 ## Which claims are checked
 
-Enforced by `spec/` (127 pass, 6 skipped):
+Enforced by `spec/`:
 
 - a team room holds six, so voice and work stay clear; counselling rooms
   admit only the invited (`rooms.test.ts`)
@@ -106,7 +106,7 @@ Instagram what got in their way.
 - AI assistants, camera turning and voice were on this list at first. With
   AWS behind the app, they came off it.
 
-## What I read while deciding
+## What I referenced while deciding
 
 - Tiwari, A. (2026). [A review of the metaverse and its implications for
   urban environments: ethical, social, and economic considerations](https://doi.org/10.1080/12265934.2026.2647852).
