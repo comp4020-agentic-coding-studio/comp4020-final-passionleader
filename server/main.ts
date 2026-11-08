@@ -163,14 +163,23 @@ app.use("*", async (c, next) => {
 app.use("/api/*", bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "That's too big to send." }, 413) }));
 
 // Rendered on the server, so the marker (and the spec) read it without scripts.
+// The README's relative links (the demo, LICENSE) point at files that live in the repo, not in the
+// deployed app, so here they go to the repo on GitHub; and the way into the campus is at the top, since
+// markers start on this page (the user, 11/9: neither the video nor the way in worked from it).
+const REPO_BLOB = "https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/blob/main/";
+const REPO_RAW = "https://raw.githubusercontent.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/main/";
+const repoLinks = (html: string): string =>
+  html
+    .replace(/(<img[^>]*\ssrc=")(?![a-z]+:|\/|#)([^"]+)"/g, (_m, a: string, p: string) => `${a}${REPO_RAW}${p}"`)
+    .replace(/(<a[^>]*\shref=")(?![a-z]+:|\/|#)([^"]+)"/g, (_m, a: string, p: string) => `${a}${REPO_BLOB}${p}"`);
 app.get("/readme/", (c) => {
-  const body = marked.parse(readFileSync("README.md", "utf8"), { async: false });
+  const body = repoLinks(marked.parse(readFileSync("README.md", "utf8"), { async: false }));
   return c.html(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>README · ANU Crossing</title>
-<style>body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:1rem/1.6 system-ui,sans-serif}img{max-width:100%}</style>
-</head><body><main>${body}</main><p><a href="/">Back to the campus</a></p></body></html>`);
+<style>body{max-width:42rem;margin:2rem auto;padding:0 1rem;font:1rem/1.6 system-ui,sans-serif}img{max-width:100%}.enter{display:inline-block;margin:0 0 1rem;padding:.7rem 1.2rem;border-radius:10px;background:#6b3f1d;color:#fff;font-weight:700;text-decoration:none}</style>
+</head><body><p><a class="enter" href="/">Open the campus →</a></p><main>${body}</main><p><a href="/">Back to the campus</a></p></body></html>`);
 });
 
 // Credits and licences (13, 120): who made it and for which course (ABOUT.md),
