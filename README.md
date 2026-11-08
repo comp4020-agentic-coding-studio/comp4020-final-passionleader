@@ -91,13 +91,13 @@ Enforced by `spec/` (127 pass, 6 skipped):
   admit only the invited (`rooms.test.ts`)
 - assistants answer only from crawled pages, with no facts when nothing
   matches (`knowledge.test.ts`)
-- live counts carry no names; chat reaches its own space within a second
-  (`realtime.test.ts`)
+- live counts carry no names; moves arrive within a second, and chat stays
+  in its space (`realtime.test.ts`)
 - private questions and mail reach only their readers (`board.test.ts`)
 
-Judged by people: does it feel like our campus, and can a newcomer find
-everything? I walked the whole map, and asked people I
-invited on Instagram what got in their way.
+Judged by people: does it feel like our campus, is it restful, does talking
+get easier, and can a newcomer find everything? I walked the whole map and asked people from
+Instagram what got in their way.
 
 ## What I chose not to build
 

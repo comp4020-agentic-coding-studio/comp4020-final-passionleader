@@ -239,6 +239,16 @@ Read before planning or building: `README.md` (what good means for this app),
   socket (and in your browser), shown to your space only.
 - Outside follows Canberra's time of day (client only: sky, sun, lamps;
   indoors only the sun's shafts go at night, the windows stay as they are); `?hour=` shows another hour for checking.
+- Familiar places (README): the spaces follow the real campus. Buildings,
+  paths, the creek and the scenery past the edges keep their OpenStreetMap
+  positions (one scale and turn, 0.742 and -35.8°, as in
+  `client/src/spaces/osmscape.ts`), and each space is laid out from the
+  author's own photos and drawings. A new space or move is checked against
+  them, not made up. This is judged by people, not by the spec.
+- A place to rest, not a work screen (README): calm music by default (the
+  sound settings can turn it down or off), soft game-like art in the app's
+  ivory and brown UI, and no productivity-tool look (no dashboards, no
+  notification badges beyond mail and invites). Judged by people, not by the spec.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
