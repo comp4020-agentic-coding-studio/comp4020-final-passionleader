@@ -17,6 +17,7 @@
 
 import "./roompanel.css";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
+import { ding, sfx } from "./sfx.ts";
 
 export interface RoomInfo {
   title: string;
@@ -43,6 +44,13 @@ type View = "menu" | "chat" | "notes" | "closed";
 // The same rule as everywhere else for a user name.
 const NAME_RULE = /^[A-Za-z0-9_]{1,8}$/;
 const MAX_LINES = 200;
+// The personal focus timer on the menu (RICE v3, 15): the classic 25 minutes of focus, then 5 of rest.
+const FOCUS_MS = 25 * 60_000;
+const BREAK_MS = 5 * 60_000;
+const mmss = (ms: number): string => {
+  const s = Math.max(0, Math.ceil(ms / 1000));
+  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
+};
 // A phone (the app's breakpoint, as in main.ts and style.css).
 const phone = (): boolean => window.matchMedia("(pointer: coarse), (max-width: 700px)").matches;
 
@@ -70,6 +78,8 @@ export function mountRoomPanel(opts: {
   onVoice(): void;
   /** Opens your saved chats and notes (the mailbox's Saved tab). */
   onSaved(): void;
+  /** Says something over the window, for when a focus or break phase ends (the timer is only on this screen). */
+  onNotice(msg: string): void;
   maxLength: number;
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
@@ -201,6 +211,37 @@ export function mountRoomPanel(opts: {
   );
   addItem("📂", "My saved chats and notes", "Read what you've saved (yours only, 30 days)", () => opts.onSaved());
   addItem("❓", "Help", "How rooms work, in the Campus Guide", () => opts.onHelp());
+  // --- the focus timer ---------------------------------------------------------
+  // Yours alone: no server, no one else sees it. It counts by the clock (an end time, not a tick
+  // count), so a hidden tab or a closed menu never makes it drift; it lives here, not in the menu's
+  // view, so it keeps going when the menu closes, and it ends with the room (hide) or a different one (open).
+  const focus = document.createElement("section");
+  focus.className = "room-focus";
+  focus.setAttribute("aria-labelledby", "room-focus-title");
+  const focusTitle = document.createElement("h3");
+  focusTitle.id = "room-focus-title";
+  focusTitle.textContent = "⏱️ Focus timer";
+  const focusRow = document.createElement("div");
+  focusRow.className = "room-focus-row";
+  const focusTime = document.createElement("div");
+  focusTime.className = "room-focus-time";
+  // A timer role never announces each second; what a screen reader hears is the phase's end (focusNote).
+  focusTime.setAttribute("role", "timer");
+  focusTime.setAttribute("aria-live", "off");
+  const focusStart = document.createElement("button");
+  focusStart.type = "button";
+  focusStart.className = "room-primary";
+  const focusReset = document.createElement("button");
+  focusReset.type = "button";
+  focusReset.className = "room-secondary";
+  focusReset.textContent = "Reset";
+  focusReset.setAttribute("aria-label", "Reset the focus timer");
+  focusRow.append(focusTime, focusStart, focusReset);
+  const focusNote = document.createElement("p");
+  focusNote.className = "room-note";
+  focusNote.setAttribute("role", "status");
+  focus.append(focusTitle, focusRow, focusNote);
+
   // Last on the menu: leaving (the user's call, 10/30), the same as walking
   // out by the door, so the last one out is warned first.
   const leaveBtn = document.createElement("button");
@@ -208,7 +249,7 @@ export function mountRoomPanel(opts: {
   leaveBtn.className = "room-leave-btn";
   leaveBtn.textContent = "🚪 Leave the room";
   leaveBtn.addEventListener("click", () => askLeave());
-  menu.append(menuHead, members, invite, items, leaveBtn);
+  menu.append(menuHead, members, invite, items, focus, leaveBtn);
 
   // --- the chat view ------------------------------------------------------------
   const chatView = document.createElement("div");
@@ -280,7 +321,11 @@ export function mountRoomPanel(opts: {
   const reopenBadge = document.createElement("span");
   reopenBadge.className = "room-badge";
   reopenBadge.hidden = true;
-  reopen.append(reopenLabel, reopenBadge);
+  // The timer's time, so a phone with the menu closed still sees it.
+  const reopenTimer = document.createElement("span");
+  reopenTimer.className = "room-reopen-timer";
+  reopenTimer.hidden = true;
+  reopen.append(reopenLabel, reopenTimer, reopenBadge);
   reopen.addEventListener("click", () => show("menu"));
 
   // Shown when the last person in the room goes to leave: a popup of its own.
@@ -337,6 +382,74 @@ export function mountRoomPanel(opts: {
       unread ? `Open the room menu, ${unread} unread` : "Open the room menu",
     );
   }
+
+  // The timer: which phase, how long is left (running: until `endsAt`; paused or waiting: `left`).
+  let phase: "focus" | "break" = "focus";
+  let endsAt = 0;
+  let left = FOCUS_MS;
+  let running = false;
+  let tick = 0;
+
+  function renderTimer(): void {
+    const remaining = running ? endsAt - Date.now() : left;
+    const text = mmss(remaining);
+    focusTime.textContent = `${phase === "focus" ? "Focus" : "Break"} ${text}`;
+    focusTime.setAttribute("aria-label", `${phase === "focus" ? "Focus" : "Break"}, ${text} left${running ? "" : ", not running"}`);
+    focusStart.textContent = running ? "Pause" : left < (phase === "focus" ? FOCUS_MS : BREAK_MS) ? "Resume" : "Start";
+    // Untouched, the timer stays off the Room button; started, it follows you around.
+    const touched = running || left < FOCUS_MS || phase === "break";
+    reopenTimer.hidden = !touched;
+    reopenTimer.textContent = touched ? `${phase === "focus" ? "⏱" : "☕"} ${text}` : "";
+  }
+
+  function stopTick(): void {
+    window.clearInterval(tick);
+    tick = 0;
+  }
+
+  function startTimer(): void {
+    running = true;
+    endsAt = Date.now() + left;
+    stopTick();
+    tick = window.setInterval(onTick, 500);
+    renderTimer();
+  }
+
+  function pauseTimer(): void {
+    if (running) left = Math.max(0, endsAt - Date.now());
+    running = false;
+    stopTick();
+    renderTimer();
+  }
+
+  function resetTimer(): void {
+    running = false;
+    stopTick();
+    phase = "focus";
+    left = FOCUS_MS;
+    focusNote.textContent = "";
+    renderTimer();
+  }
+
+  function onTick(): void {
+    if (endsAt - Date.now() > 0) return renderTimer();
+    // The phase is over: a soft sound and a notice, then the other phase waits, ready for Start.
+    running = false;
+    stopTick();
+    const wasFocus = phase === "focus";
+    phase = wasFocus ? "break" : "focus";
+    left = wasFocus ? BREAK_MS : FOCUS_MS;
+    const msg = wasFocus ? "Focus time is over. Take a 5-minute break: press Start." : "Break is over. Ready for another 25 minutes of focus?";
+    focusNote.textContent = msg;
+    if (wasFocus) ding();
+    else sfx("message");
+    opts.onNotice(`⏱️ ${msg}`);
+    renderTimer();
+  }
+
+  focusStart.addEventListener("click", () => (running ? pauseTimer() : startTimer()));
+  focusReset.addEventListener("click", resetTimer);
+  renderTimer();
 
   function show(next: View): void {
     if (!isOpen) return;
@@ -570,6 +683,8 @@ export function mountRoomPanel(opts: {
     inviteError.textContent = "";
     invitedNote.textContent = "";
     say(null);
+    // The timer is for this stay: leaving the room ends it.
+    resetTimer();
     unread = 0;
     syncBadges();
     (document.activeElement as HTMLElement | null)?.blur();
@@ -578,6 +693,8 @@ export function mountRoomPanel(opts: {
 
   return {
     open(info, history) {
+      // Straight into another room (not the same one again after a reconnect): its timer starts fresh.
+      if (isOpen && title.textContent !== info.title) resetTimer();
       renderInfo(info);
       log.replaceChildren();
       for (const line of history) append(line);

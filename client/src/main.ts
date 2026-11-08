@@ -1022,6 +1022,7 @@ const roomPanel = mountRoomPanel({
   onShare: async (file, progress) => (session ? upload(session.token, { kind: "room" }, file, progress) : "Join first."),
   onOpenFile: async (id) => (session ? openFile(session.token, id) : "Join first."),
   onImageLink: async (id) => (session ? imageLink(session.token, id) : null),
+  onNotice: (msg) => popup(msg),
   maxLength: 200,
 });
 /** The tab opened for the room's whiteboard, waiting for its link. */
