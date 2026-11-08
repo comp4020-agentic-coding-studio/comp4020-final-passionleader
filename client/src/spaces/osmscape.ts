@@ -8,6 +8,13 @@ import { CREEK_Z, bend } from "./creek.ts";
 /** In Sullivans Creek's channel and banks (creek.ts draws it, bending west south of the bridge): nothing from OSM goes there. */
 const inCreek = (x: number, z: number): boolean => z >= CREEK_Z.from - 1 && z <= CREEK_Z.to + 1 && x > -75.2 + bend(z) - 1 && x < -57.6 + bend(z) + 1;
 const anyInCreek = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 && inCreek(pts[i]!, pts[i + 1]!));
+/**
+ * The north road's pale paving running on east (backdrop.ts, z -40..-22, out to x 340) and the
+ * red-brick fronts along its north side: nothing from OSM stands on them (the user, 11/9: trees
+ * blocked the road's view east).
+ */
+const onEastRoad = (x: number, z: number): boolean => x >= 38 && x <= 345 && z >= -58 && z <= -19;
+const anyOnEastRoad = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 && onEastRoad(pts[i]!, pts[i + 1]!));
 
 // Scenery past the walkable outdoor map, laid out from OpenStreetMap
 // (qa-tools/osm/gen_osmscape.py makes osmscape-data.ts; only derived x, z
@@ -130,7 +137,7 @@ export function addOsmScape(group: THREE.Group): void {
   const asphalt = new Batch();
   const paving = new Batch();
   for (const [kind, width, pts] of OSM_ROADS) {
-    if (anyInCreek(pts)) continue;
+    if (anyInCreek(pts) || anyOnEastRoad(pts)) continue;
     if (kind === 0) ribbon(asphalt, pts, width, 0.003, 8);
     else ribbon(paving, pts, width, 0.004, 2);
   }
@@ -146,7 +153,7 @@ export function addOsmScape(group: THREE.Group): void {
   const walls = new Batch();
   const roofs = new Batch();
   for (const [levels, p] of OSM_BUILDINGS) {
-    if (anyInCreek(p)) continue;
+    if (anyInCreek(p) || anyOnEastRoad(p)) continue;
     const n = p.length / 2;
     const h = levels * FLOOR_H + 0.6;
     const pts: [number, number][] = [];
@@ -185,7 +192,11 @@ export function addOsmScape(group: THREE.Group): void {
   // Trees: OSM maps only a few of them, so the ring just past the map's edges (where you look most)
   // was bare (the user, 11/8). Filler trees go there too, seeded so everyone sees the same, never on
   // a road or inside a building; all as two instanced meshes, so even Low shows them (fewer on Low).
-  const spots: number[] = [...OSM_TREES];
+  const spots: number[] = [];
+  for (let i = 0; i < OSM_TREES.length; i += 2) {
+    const x = OSM_TREES[i]!, z = OSM_TREES[i + 1]!;
+    if (!onEastRoad(x, z)) spots.push(x, z);
+  }
   const onRoad = (x: number, z: number): boolean => {
     for (const [, width, pts] of OSM_ROADS) {
       for (let i = 0; i + 3 < pts.length; i += 2) {
@@ -217,7 +228,7 @@ export function addOsmScape(group: THREE.Group): void {
     const out = 12 + rand() * 63;
     const x = Math.cos(ang) * (89 + out) * 1.05, z = Math.sin(ang) * (40 + out) * 1.4;
     if (Math.abs(x) < 89 + 10 && Math.abs(z) < 40 + 10) continue;
-    if (onRoad(x, z) || inBuilding(x, z) || inCreek(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
+    if (onRoad(x, z) || inBuilding(x, z) || inCreek(x, z) || onEastRoad(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
     spots.push(x, z);
     made++;
   }
