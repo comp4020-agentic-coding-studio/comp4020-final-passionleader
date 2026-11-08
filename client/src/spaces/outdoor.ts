@@ -6,6 +6,7 @@ import { addOsmScape } from "./osmscape.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
+import { markOccluderGroup } from "./occluders.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
 import { SEAT_WALL_SEATS, buildStreetscape, cafeTable, roadLamps } from "./streetscape.ts";
 import { BADGER, LAWN_WEST_X, PICNIC_SEATS, buildCreek } from "./creek.ts";
@@ -342,7 +343,11 @@ const SHOPS_155 = [
   { name: "Sushi Smith", from: -18.1, to: -23.5, fascia: 0x2a2523, board: "#2a2523", fg: "#ff6a4d" },
   { name: "Rex Espresso", from: -23.5, to: -27.75, fascia: 0x6f9a95, board: "#6f9a95", fg: "#ffffff" },
 ];
-function shops155(g: THREE.Group): void {
+function shops155(scene: THREE.Group): void {
+  // The shops are their own group, faded with 155 when it stands between the camera and you (the
+  // user, 11/9: the building faded but these window frames stayed).
+  const g = new THREE.Group();
+  scene.add(g);
   const z = -1.8; // the building's glass is at -1.75, its mullions' faces at -1.9, its slab edge at -2
   const floorTop = 0.42; // the ground slab
   const slabFoot = 3.8 - 0.21; // the first-floor slab's underside
@@ -378,6 +383,7 @@ function shops155(g: THREE.Group): void {
       g.add(name);
     }
   }
+  markOccluderGroup(scene, g, new THREE.Box3(new THREE.Vector3(-28, 0, -2.05), new THREE.Vector3(-10, 3.8 * 3, 16)));
 }
 
 /** A building sign on a facade, facing the way `rotY` points. */
