@@ -204,9 +204,34 @@ export function mountBoard(h: {
   const noticeHint = document.createElement("p");
   noticeHint.className = "board-muted";
   toolbar.append(writeBtn, noticeHint);
+  // Search and "Unanswered only" narrow the posts already fetched (no server call). They sit
+  // outside the list, so a grid board keeps its two-a-row layout.
+  const filterBar = document.createElement("div");
+  filterBar.className = "board-filter";
+  const searchLabel = document.createElement("label");
+  searchLabel.className = "board-search";
+  searchLabel.htmlFor = "board-search";
+  searchLabel.textContent = "Search posts";
+  const searchInput = document.createElement("input");
+  searchInput.id = "board-search";
+  searchInput.type = "search";
+  searchInput.autocomplete = "off";
+  searchInput.placeholder = "Search title and text";
+  searchInput.maxLength = 80;
+  searchLabel.append(searchInput);
+  const unansweredLabel = document.createElement("label");
+  unansweredLabel.className = "board-unanswered";
+  unansweredLabel.hidden = true;
+  const unansweredBox = document.createElement("input");
+  unansweredBox.type = "checkbox";
+  unansweredLabel.append(unansweredBox, document.createTextNode(" Unanswered only"));
+  const filterStatus = document.createElement("p");
+  filterStatus.className = "board-muted board-filter-status";
+  filterStatus.setAttribute("role", "status");
+  filterBar.append(searchLabel, unansweredLabel, filterStatus);
   const posts = document.createElement("ul");
   posts.className = "board-list";
-  listView.append(toolbar, posts);
+  listView.append(toolbar, filterBar, posts);
 
   const postView = document.createElement("div");
   const backBtn = document.createElement("button");
@@ -457,59 +482,84 @@ export function mountBoard(h: {
   let postsData: BoardPost[] = [];
   let commentsData: BoardComment[] = [];
 
+  /** "Unanswered only" belongs to Q&A, the one tab where a post is a question (tab ids live in server/boards.ts). */
+  const answerable = (id: BoardTab): boolean => id === "qa";
+
+  /** Starts a tab with no search, so its list isn't narrowed by words typed in another. */
+  function resetFilter(): void {
+    searchInput.value = "";
+    unansweredBox.checked = false;
+    unansweredLabel.hidden = !answerable(tab);
+  }
+
+  /** The posts that match the search and "Unanswered only"; the pinned notice always stays. */
+  function visiblePosts(): BoardPost[] {
+    const q = searchInput.value.trim().toLowerCase();
+    const unanswered = unansweredBox.checked && !unansweredLabel.hidden;
+    if (!q && !unanswered) return postsData;
+    return postsData.filter((p) => p.pinned || ((!unanswered || p.comments === 0) && (!q || `${p.title}\n${p.text}`.toLowerCase().includes(q))));
+  }
+
   function renderPosts(): void {
-    posts.replaceChildren(
-      ...(postsData.length === 0
-        ? [Object.assign(document.createElement("li"), { className: "board-empty", textContent: "Nothing here yet." })]
-        : postsData.map((p) => {
-            const li = document.createElement("li");
-            const b = document.createElement("button");
-            b.type = "button";
-            b.className = "board-post" + (p.pinned ? " is-pinned" : "");
-            const t = document.createElement("span");
-            t.className = "board-post-title";
-            t.textContent = (p.pinned ? "📌 " : "") + p.title;
-            const meta = document.createElement("span");
-            meta.className = "board-post-meta";
-            // The pinned notice has no date and no comments, so it shows just its author.
-            const bits = p.pinned ? [p.author] : [p.author, canberraTime(p.createdAt), `${p.comments} ${p.comments === 1 ? "comment" : "comments"}`];
-            if (p.private) bits.push("🔒 Private");
-            if (p.capacity) bits.push(groupLine(p));
-            // Each part kept whole, so a narrow screen breaks the line between them, never inside "1 / 4 joined".
-            bits.forEach((bit, i) => {
-              const s = document.createElement("span");
-              s.className = "board-meta-bit";
-              s.textContent = bit;
-              meta.append(...(i ? [" · ", s] : [s]));
-            });
-            b.append(t, meta);
-            // On a grid board (the lawn's posters) the first picture, if any,
-            // stands for the post; without one the title shows, smaller.
-            const pic = config.layout === "grid" ? p.files?.find((f) => isImage(f.name)) : undefined;
-            if (pic) {
-              const img = document.createElement("img");
-              img.className = "board-thumb";
-              img.alt = p.title;
-              img.loading = "lazy";
-              b.prepend(img);
-              b.classList.add("has-thumb");
-              void h.imageLink(pic.id).then((url) => {
-                if (url) img.src = url;
-                else img.remove();
-              });
-            } else if (config.layout === "grid") {
-              // No picture: a tile the same size with the title in it, small.
-              const tile = document.createElement("span");
-              tile.className = "board-thumb is-text";
-              tile.textContent = t.textContent;
-              t.hidden = true;
-              b.prepend(tile);
-            }
-            b.addEventListener("click", () => void openPost(p));
-            li.append(b);
-            return li;
-          })),
-    );
+    const shown = visiblePosts();
+    const filtering = shown !== postsData;
+    const real = (list: BoardPost[]): number => list.filter((p) => !p.pinned).length;
+    // Said aloud for a screen reader as the list narrows; silent when nothing is filtered.
+    filterStatus.textContent = filtering ? `${real(shown)} of ${real(postsData)} posts` : "";
+    const items = shown.map(postItem);
+    if (postsData.length === 0 || (filtering && real(shown) === 0)) {
+      items.push(Object.assign(document.createElement("li"), { className: "board-empty", textContent: postsData.length === 0 ? "Nothing here yet." : "No posts match." }));
+    }
+    posts.replaceChildren(...items);
+  }
+
+  function postItem(p: BoardPost): HTMLLIElement {
+    const li = document.createElement("li");
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "board-post" + (p.pinned ? " is-pinned" : "");
+    const t = document.createElement("span");
+    t.className = "board-post-title";
+    t.textContent = (p.pinned ? "📌 " : "") + p.title;
+    const meta = document.createElement("span");
+    meta.className = "board-post-meta";
+    // The pinned notice has no date and no comments, so it shows just its author.
+    const bits = p.pinned ? [p.author] : [p.author, canberraTime(p.createdAt), `${p.comments} ${p.comments === 1 ? "comment" : "comments"}`];
+    if (p.private) bits.push("🔒 Private");
+    if (p.capacity) bits.push(groupLine(p));
+    // Each part kept whole, so a narrow screen breaks the line between them, never inside "1 / 4 joined".
+    bits.forEach((bit, i) => {
+      const s = document.createElement("span");
+      s.className = "board-meta-bit";
+      s.textContent = bit;
+      meta.append(...(i ? [" · ", s] : [s]));
+    });
+    b.append(t, meta);
+    // On a grid board (the lawn's posters) the first picture, if any,
+    // stands for the post; without one the title shows, smaller.
+    const pic = config.layout === "grid" ? p.files?.find((f) => isImage(f.name)) : undefined;
+    if (pic) {
+      const img = document.createElement("img");
+      img.className = "board-thumb";
+      img.alt = p.title;
+      img.loading = "lazy";
+      b.prepend(img);
+      b.classList.add("has-thumb");
+      void h.imageLink(pic.id).then((url) => {
+        if (url) img.src = url;
+        else img.remove();
+      });
+    } else if (config.layout === "grid") {
+      // No picture: a tile the same size with the title in it, small.
+      const tile = document.createElement("span");
+      tile.className = "board-thumb is-text";
+      tile.textContent = t.textContent;
+      t.hidden = true;
+      b.prepend(tile);
+    }
+    b.addEventListener("click", () => void openPost(p));
+    li.append(b);
+    return li;
   }
 
   function renderComments(): void {
@@ -827,6 +877,7 @@ export function mountBoard(h: {
     current = null;
     confirming = null;
     postsData = [];
+    resetFilter();
     syncTabs();
     showView("list");
     renderPosts();
@@ -874,6 +925,8 @@ export function mountBoard(h: {
   backBtn.addEventListener("click", () => void goBack());
   titleInput.addEventListener("input", updateCounters);
   textInput.addEventListener("input", updateCounters);
+  searchInput.addEventListener("input", renderPosts);
+  unansweredBox.addEventListener("change", renderPosts);
   commentBox.addEventListener("input", updateCounters);
   editBox.addEventListener("input", updateCounters);
   editCancel.addEventListener("click", cancelCommentEdit);
@@ -980,6 +1033,11 @@ export function mountBoard(h: {
     e.stopPropagation();
     if (e.key !== "Escape") return;
     e.preventDefault();
+    // Esc in the search box clears it first (a second Esc closes as usual).
+    if (e.target === searchInput && searchInput.value) {
+      searchInput.value = "";
+      return renderPosts();
+    }
     // Esc while editing cancels just the edit.
     if (editingCommentId !== null && editWrap.contains(e.target as Node)) return cancelCommentEdit();
     if (editingPost) return backToPost();
@@ -1010,6 +1068,7 @@ export function mountBoard(h: {
       resetEdits();
       draftStash = null;
       setWriteMode(false);
+      resetFilter();
       titleInput.value = "";
       textInput.value = "";
       filesInput.value = "";

@@ -120,6 +120,59 @@
   margin: 0 0 12px;
 }
 
+/* Search and "Unanswered only" above the list: a row that wraps on a phone. */
+.board-filter {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 14px;
+  margin: 0 0 10px;
+}
+
+.board-search {
+  display: flex;
+  flex: 1 1 200px;
+  flex-direction: column;
+  gap: 2px;
+  font-size: 0.85rem;
+  font-weight: 700;
+}
+
+.board-search input {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: 44px;
+  padding: 8px 10px;
+  border: 2px solid var(--accent, #6b3f1d);
+  border-radius: 8px;
+  background: var(--card, #f5efdf);
+  color: var(--ink, #3b2a12);
+  font: inherit;
+  font-weight: 400;
+}
+
+.board-unanswered {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 44px;
+  font-size: 0.9rem;
+}
+
+.board-unanswered input {
+  width: 22px;
+  height: 22px;
+  flex: none;
+}
+
+.board-filter-status {
+  flex-basis: 100%;
+}
+
+.board-filter-status:empty {
+  display: none;
+}
+
 .board-muted {
   margin: 0;
   font-size: 0.85rem;
