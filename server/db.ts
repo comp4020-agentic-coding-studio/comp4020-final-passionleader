@@ -1234,6 +1234,28 @@ export interface Look {
 }
 const LOOK_LIMITS: Record<keyof Look, number> = { body: 2, skin: 6, hair: 10, top: 10, bottom: 10, hat: 8, hatColour: 10 };
 export const QA_HAT = 7;
+
+// Rewards for visit stamps (below): a few of the choices above stay locked until a member has
+// that many stamps. They are existing palette entries, not new ones, so every limit stays as
+// it was; client/src/lookpicker.ts draws the locks from this list (sent with GET /api/stamps).
+// Someone who already had a locked choice saved before the rule keeps it (see lockedChoice).
+export type LockedPart = "hat" | "hatColour";
+export const LOOK_UNLOCKS: readonly { part: LockedPart; index: number; stamps: number }[] = [
+  { part: "hatColour", index: 8, stamps: 3 }, // purple
+  { part: "hatColour", index: 9, stamps: 3 }, // green
+  { part: "hat", index: 6, stamps: 8 }, // the helmet, for having been everywhere
+];
+
+/**
+ * The first part of `look` that `name`'s stamps don't unlock yet, or null. What is already in
+ * their saved look stays allowed, so a rule added later never makes saving anything else fail.
+ */
+export function lockedChoice(name: string, look: Look): { part: LockedPart; index: number; stamps: number; have: number } | null {
+  const have = stampCount(name);
+  const saved = lookOf(name);
+  for (const u of LOOK_UNLOCKS) if (look[u.part] === u.index && have < u.stamps && saved?.[u.part] !== u.index) return { ...u, have };
+  return null;
+}
 // Looks saved before hats had a colour: each hat keeps (about) the colour it had.
 const OLD_HAT_COLOUR = [1, 6, 7, 3, 0, 8, 4];
 

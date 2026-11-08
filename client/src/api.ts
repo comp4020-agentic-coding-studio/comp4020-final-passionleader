@@ -340,6 +340,8 @@ export interface StampCard {
   stamps: { id: string; label: string; got: boolean }[];
   count: number;
   total: number;
+  /** Hat styles and colours that wait for this many stamps (server/db.ts LOOK_UNLOCKS). */
+  unlocks: { part: "hat" | "hatColour"; index: number; stamps: number }[];
 }
 /** Without a token (the join screen) it is an empty card, so the look window still knows what is locked. */
 export const getStamps = (token?: string): Promise<StampCard> => request<StampCard>("/api/stamps", "POST", { token });

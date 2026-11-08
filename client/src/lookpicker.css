@@ -200,7 +200,13 @@
   }
 }
 
-/* The visit stamps card under the hat rows. */
+/* A choice the visit stamps haven't unlocked: dimmed, with a lock (and, on a hat, how many stamps are missing). */
+.look-card .look-options label.look-locked { position: relative; cursor: not-allowed; }
+.look-locked .look-swatch, .look-locked .look-chip { opacity: 0.45; }
+.look-locked .look-lock { font-size: 0.72rem; font-weight: 700; color: var(--ink, #3b2a12); }
+.look-locked .look-swatch + .look-lock { position: absolute; inset: 0; display: grid; place-items: center; font-size: 1rem; pointer-events: none; }
+.look-locked .look-chip + .look-lock { align-self: center; margin-left: 6px; white-space: nowrap; }
+.look-lock-note { margin: 0; font-size: 0.8rem; color: #7a6a52; }
 .look-stamps h3 { margin: 4px 0 4px; font-size: 0.95rem; }
 .look-stamps ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
 .look-stamps li { padding: 3px 8px; border: 2px dashed rgba(107, 63, 29, 0.4); border-radius: 8px; font-size: 0.8rem; color: #7a6a52; }

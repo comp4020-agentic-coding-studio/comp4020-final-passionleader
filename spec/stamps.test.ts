@@ -3,7 +3,7 @@ import { api, closeAll, connect, guest, outside, visitor, type Msg, type Socket 
 
 // Visit stamps: a member earns one the first time they are let into each kind of main space (the
 // server records it when it accepts the "enter"; nothing the client sends grants one), guests get
-// none.
+// none, and some hat styles and colours are locked until enough stamps are collected.
 
 afterEach(closeAll);
 
@@ -63,5 +63,76 @@ describe("visit stamps", () => {
     sa.send({ t: "enter", space: "not-a-place", x: 0, z: 0 });
     await new Promise((r) => setTimeout(r, 300));
     expect((await card(a.token)).stamps.filter((x) => x.got).map((x) => x.id)).not.toContain("library");
+  });
+});
+
+describe("look rewards", () => {
+  it("refuses a locked hat colour before three stamps and accepts it after", async () => {
+    const a = await visitor();
+    const locked = { ...look, hatColour: 8 };
+    const refused = await put(a.token, locked);
+    expect(refused.status).toBe(403);
+    expect(((await refused.json()) as { error: string }).error).toMatch(/3 visit stamps\. 3 more stamps/);
+    // Free choices still work.
+    expect((await put(a.token, { ...look, hatColour: 7 })).status).toBe(200);
+    const s = await connect(a.token);
+    await outside(s); // 1 stamp
+    enter(s, "library"); // 2
+    await s.next(stamp("Chifley Library"));
+    const two = await put(a.token, locked);
+    expect(two.status).toBe(403);
+    expect(((await two.json()) as { error: string }).error).toMatch(/1 more stamp to go/);
+    enter(s, "hub"); // 3
+    await s.next(stamp("Student Hub"));
+    expect((await put(a.token, locked)).status).toBe(200);
+    expect((await put(a.token, { ...look, hatColour: 9 })).status).toBe(200);
+  });
+
+  it("unlocks the helmet only with all eight stamps, and a guest never has any unlocked", async () => {
+    const a = await visitor();
+    const helmet = { ...look, hat: 6 };
+    expect((await put(a.token, helmet)).status).toBe(403);
+    const s = await connect(a.token);
+    await outside(s);
+    for (const space of ["hub", "library", "anusa", "careers", "comp8020", "team-library-2", "poop"]) enter(s, space);
+    await s.next(stamp("The Poop Room"), 3000);
+    expect((await card(a.token)).count).toBe(8);
+    expect((await put(a.token, helmet)).status).toBe(200);
+    // Saved, so it comes back with them.
+    expect(((await (await api("/api/join", "POST", { name: a.name, token: a.token })).json()) as { look: { hat: number } }).look.hat).toBe(6);
+    const g = await guest();
+    expect((await put(g.token, { ...look, hatColour: 8 })).status).toBe(403);
+    expect((await put(g.token, helmet)).status).toBe(403);
+  });
+
+  it("tells the look window what is locked, and never locks the test accounts' hard hat by stamps", async () => {
+    const c = await card((await visitor()).token);
+    expect(c.unlocks).toEqual(expect.arrayContaining([{ part: "hatColour", index: 8, stamps: 3 }, { part: "hatColour", index: 9, stamps: 3 }, { part: "hat", index: 6, stamps: 8 }]));
+    // The hard hat stays the test accounts' own, whatever the stamps.
+    expect(c.unlocks.some((u) => u.part === "hat" && u.index === 7)).toBe(false);
+  });
+});
+
+// A rule added later must never stop someone saving a look that already had a now-locked choice:
+// checked on the database's own code (a throwaway file), since over HTTP it needs a saved look
+// from before the rule.
+describe("a locked choice already saved stays allowed", () => {
+  it("lets them keep it, and still refuses it for anyone who never had it", async () => {
+    const { mkdtempSync } = await import("node:fs");
+    const { tmpdir } = await import("node:os");
+    const { join } = await import("node:path");
+    process.env.DATABASE_PATH = join(mkdtempSync(join(tmpdir(), "campus-stamps-")), "test.db");
+    const db = await import("../server/db.ts");
+    db.createVisitor("oldtimer", "t-old");
+    db.createVisitor("newbie", "t-new");
+    const had = { ...look, hatColour: 9 };
+    db.saveLook("oldtimer", had);
+    expect(db.lockedChoice("oldtimer", had)).toBeNull();
+    expect(db.lockedChoice("oldtimer", { ...had, hatColour: 8 })).toMatchObject({ part: "hatColour", index: 8, stamps: 3, have: 0 });
+    expect(db.lockedChoice("newbie", had)).toMatchObject({ part: "hatColour", index: 9 });
+    db.addStamp("newbie", "outdoor");
+    db.addStamp("newbie", "hub");
+    db.addStamp("newbie", "library");
+    expect(db.lockedChoice("newbie", had)).toBeNull();
   });
 });

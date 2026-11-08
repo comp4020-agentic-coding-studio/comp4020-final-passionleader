@@ -160,6 +160,11 @@ when a flow changes.
   Room's unnamed ("A secret place") until found. Stored per account in SQLite,
   granted only when the server accepts an "enter", never on the client's word;
   guests get none; counselling and interview rooms give none.
+- Look rewards: three existing choices wait for stamps (`LOOK_UNLOCKS` in
+  `server/db.ts`): the hat colours purple and green at 3, the helmet at 8. The
+  server refuses a locked choice (`PUT /api/look`, 403, logged) and the look
+  window shows a lock and "n more stamps"; a choice already saved stays
+  allowed, and `QA_HAT` is still for `qa_` accounts only whatever the stamps.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
   too, one question every two seconds and thirty a day each, 500
   characters; fifty a day per assistant (`NPC_PER_DAY`), which is the only

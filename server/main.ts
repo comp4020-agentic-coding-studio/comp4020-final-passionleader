@@ -107,6 +107,8 @@ import {
   saveLook,
   validLook,
   QA_HAT,
+  LOOK_UNLOCKS,
+  lockedChoice,
   stampsOf,
   stampCount,
   addEvent,
@@ -1557,6 +1559,13 @@ app.put("/api/look", async (c) => {
   if (!look) return c.json({ error: "That isn't a look." }, 400);
   // The hard hat marks the test accounts, so nobody else can wear it.
   if (look.hat === QA_HAT && !RESERVED.test(v.name)) return c.json({ error: "The hard hat is for the test accounts." }, 403);
+  // Some hat styles and colours are earned with visit stamps (db.ts LOOK_UNLOCKS); a guest has none.
+  const locked = lockedChoice(v.name, look);
+  if (locked) {
+    log("refused", v, { action: "look", reason: "locked", part: locked.part, index: locked.index }, { ip: ipOf(c) });
+    const more = locked.stamps - locked.have;
+    return c.json({ error: `That one unlocks with ${locked.stamps} visit stamps. ${more} more ${more === 1 ? "stamp" : "stamps"} to go.`, locked }, 403);
+  }
   // A guest's look shows at once but isn't saved (11/4: guests store as little as possible).
   if (isMember(v)) saveLook(v.name, look);
   setLook(v.name, look);
@@ -1572,7 +1581,7 @@ app.post("/api/stamps", async (c) => {
   const got = new Map(v ? stampsOf(v.name).map((s) => [s.stamp, s.at]) : []);
   // The Poop Room is an easter egg: its stamp stays unnamed until it has been found.
   const stamps = STAMPS.map((s) => ({ id: s.id, label: s.id === "poop" && !got.has("poop") ? SECRET_STAMP_LABEL : s.label, got: got.has(s.id) }));
-  return c.json({ member: !!v && isMember(v), stamps, count: v ? stampCount(v.name) : 0, total: STAMPS.length });
+  return c.json({ member: !!v && isMember(v), stamps, count: v ? stampCount(v.name) : 0, total: STAMPS.length, unlocks: LOOK_UNLOCKS });
 });
 
 // --- the events timetable -------------------------------------------------------------
