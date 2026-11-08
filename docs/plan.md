@@ -76,7 +76,7 @@ numbers in commit messages.
 
 **Rooms and files**
 
-21. ✅ Meeting rooms: invite-only counselling rooms off the Hub, team rooms off
+21. ✅ Meeting rooms: invite-only counselling rooms off the Hub (since 9 November staff open them, [`7965edb`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/7965edb)), team rooms off
     classrooms and the library, six people each ([`ed5d0ef`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)); a toolbar
     with a Chat button ([`0340a68`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/0340a68)); the last one out is warned
     ([`502cfc4`](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/502cfc4))
