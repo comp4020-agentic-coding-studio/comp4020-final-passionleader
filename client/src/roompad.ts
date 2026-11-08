@@ -304,6 +304,7 @@ export function mountRoomPad(opts: {
       // On a narrow screen Esc leaves the editor, back to the rendered notes; the next Esc steps back to the menu.
       e.preventDefault();
       e.stopPropagation();
+      closeEditor(); // shows the rendered notes again (the view is hidden while editing, so it can't take focus before)
       view.focus({ preventScroll: true });
     }
   });
