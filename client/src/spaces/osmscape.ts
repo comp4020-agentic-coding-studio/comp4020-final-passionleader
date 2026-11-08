@@ -3,6 +3,18 @@ import { mat, nightGlow, texMat } from "../world.ts";
 import { RICH } from "../settings.ts";
 import { asphaltMat } from "./backdrop.ts";
 import { OSM_BUILDINGS, OSM_ROADS, OSM_TREES } from "./osmscape-data.ts";
+import { CREEK_Z, bend } from "./creek.ts";
+
+/** In Sullivans Creek's channel and banks (creek.ts draws it, bending west south of the bridge): nothing from OSM goes there. */
+const inCreek = (x: number, z: number): boolean => z >= CREEK_Z.from - 1 && z <= CREEK_Z.to + 1 && x > -75.2 + bend(z) - 1 && x < -57.6 + bend(z) + 1;
+const anyInCreek = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 && inCreek(pts[i]!, pts[i + 1]!));
+/**
+ * The north road's pale paving running on east (backdrop.ts, z -40..-22, out to x 340) and the
+ * red-brick fronts along its north side: nothing from OSM stands on them (the user, 11/9: trees
+ * blocked the road's view east).
+ */
+const onEastRoad = (x: number, z: number): boolean => x >= 38 && x <= 345 && z >= -58 && z <= -19;
+const anyOnEastRoad = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 && onEastRoad(pts[i]!, pts[i + 1]!));
 
 // Scenery past the walkable outdoor map, laid out from OpenStreetMap
 // (qa-tools/osm/gen_osmscape.py makes osmscape-data.ts; only derived x, z
@@ -10,9 +22,7 @@ import { OSM_BUILDINGS, OSM_ROADS, OSM_TREES } from "./osmscape-data.ts";
 // ribbons, buildings as extruded footprints with the backdrop's brick-and-window
 // look (lit at night), trees as little instanced crowns. Scenery only: nothing
 // here is solid and the generator leaves out everything inside the map and
-// next to backdrop.ts's hand-made blocks, the creek and its own roads. Footprints,
-// heights and road widths are real size (the generator eases only the distances
-// from the compressed campus to real ones). One mesh per material.
+// next to backdrop.ts's hand-made blocks. One mesh per material.
 
 const FLOOR_H = 3.3;
 const TILE_W = 6;
@@ -127,6 +137,7 @@ export function addOsmScape(group: THREE.Group): void {
   const asphalt = new Batch();
   const paving = new Batch();
   for (const [kind, width, pts] of OSM_ROADS) {
+    if (anyInCreek(pts) || anyOnEastRoad(pts)) continue;
     if (kind === 0) ribbon(asphalt, pts, width, 0.003, 8);
     else ribbon(paving, pts, width, 0.004, 2);
   }
@@ -141,9 +152,10 @@ export function addOsmScape(group: THREE.Group): void {
   // Buildings: walls with the facade texture (one tile = 6 m wide, two storeys), flat roofs.
   const walls = new Batch();
   const roofs = new Batch();
-  for (const [height, p] of OSM_BUILDINGS) {
+  for (const [levels, p] of OSM_BUILDINGS) {
+    if (anyInCreek(p) || anyOnEastRoad(p)) continue;
     const n = p.length / 2;
-    const h = height;
+    const h = levels * FLOOR_H + 0.6;
     const pts: [number, number][] = [];
     for (let i = 0; i < n; i++) pts.push([p[i * 2]!, p[i * 2 + 1]!]);
     if (!ccw(p)) pts.reverse();
@@ -177,11 +189,49 @@ export function addOsmScape(group: THREE.Group): void {
   const rm = roofs.mesh(mat(0x8f8a80));
   if (rm) scape.add(rm);
 
-  // Trees: OSM's own plus seeded filler on the grass round the map, all placed (and kept off roads,
-  // buildings, the creek and hand-made scenery) by the generator. All as two instanced meshes, so
-  // even Low shows them (every other one there).
+  // Trees: OSM maps only a few of them, so the ring just past the map's edges (where you look most)
+  // was bare (the user, 11/8). Filler trees go there too, seeded so everyone sees the same, never on
+  // a road or inside a building; all as two instanced meshes, so even Low shows them (fewer on Low).
   const spots: number[] = [];
-  for (let i = 0; i < OSM_TREES.length; i += 2) if (RICH || (i / 2) % 2 === 0) spots.push(OSM_TREES[i]!, OSM_TREES[i + 1]!);
+  for (let i = 0; i < OSM_TREES.length; i += 2) {
+    const x = OSM_TREES[i]!, z = OSM_TREES[i + 1]!;
+    if (!onEastRoad(x, z)) spots.push(x, z);
+  }
+  const onRoad = (x: number, z: number): boolean => {
+    for (const [, width, pts] of OSM_ROADS) {
+      for (let i = 0; i + 3 < pts.length; i += 2) {
+        const ax = pts[i]!, az = pts[i + 1]!, bx = pts[i + 2]!, bz = pts[i + 3]!;
+        const dx = bx - ax, dz = bz - az;
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
+        if (Math.hypot(x - (ax + t * dx), z - (az + t * dz)) < width / 2 + 2.5) return true;
+      }
+    }
+    return false;
+  };
+  const inBuilding = (x: number, z: number): boolean =>
+    OSM_BUILDINGS.some(([, p]) => {
+      let inside = false;
+      for (let i = 0, j = p.length / 2 - 1; i < p.length / 2; j = i++) {
+        const xi = p[i * 2]!, zi = p[i * 2 + 1]!, xj = p[j * 2]!, zj = p[j * 2 + 1]!;
+        if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+      }
+      return inside;
+    });
+  // backdrop.ts's hand-made blocks, road and the library's cutting (the generator's keep-out boxes, minX maxX minZ maxZ).
+  const HANDMADE: [number, number, number, number][] = [[-66, 77, -90, -26], [-46, 53, 11, 58], [-53, -16, 11, 75], [16, 56, -141, 19]];
+  let treeSeed = 4020;
+  const rand = (): number => ((treeSeed = (treeSeed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const want = RICH ? 260 : 120;
+  for (let tries = 0, made = 0; made < want && tries < want * 12; tries++) {
+    // A point 12-75 m past the walkable box (halfX 89, halfZ 40), all the way round.
+    const ang = rand() * Math.PI * 2;
+    const out = 12 + rand() * 63;
+    const x = Math.cos(ang) * (89 + out) * 1.05, z = Math.sin(ang) * (40 + out) * 1.4;
+    if (Math.abs(x) < 89 + 10 && Math.abs(z) < 40 + 10) continue;
+    if (onRoad(x, z) || inBuilding(x, z) || inCreek(x, z) || onEastRoad(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
+    spots.push(x, z);
+    made++;
+  }
   const n = spots.length / 2;
   if (n) {
     const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.28, 2.6, 5), mat(0x5a4632), n);
@@ -199,77 +249,3 @@ export function addOsmScape(group: THREE.Group): void {
 
   group.add(scape);
 }
-
-/** Telstra Tower on Black Mountain, a far silhouette to the south-west (the user, 11/8-9). */
-export function addTelstraTower(group: THREE.Group): void {
-  // Where it can be seen (the helper's marker test, 11/9): south-west (225°), above the creek, from
-  // the map's west side with the view turned; Black Mountain is really a little more to the west.
-  // 600 m out, about 85 tall in all, so its top stays inside the outdoor camera's frame.
-  const DIST = 600;
-  // 235°: a little west of south-west, so it sits clear of the screen's top-right buttons in that view.
-  const BEARING = (235 * Math.PI) / 180;
-  const cx = -Math.sin(BEARING - Math.PI) * DIST, cz = -Math.cos(BEARING) * DIST;
-  const own = (color: number, rough = 0.95): THREE.MeshStandardMaterial => {
-    const m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, fog: false });
-    m.userData.unique = true;
-    return m;
-  };
-  const glowMat = (color: number, emissive: number, full: number): THREE.MeshStandardMaterial => {
-    const m = new THREE.MeshStandardMaterial({ color, roughness: 0.6, metalness: 0, fog: false, emissive, emissiveIntensity: 0 });
-    m.userData.unique = true;
-    nightGlow.push({ m, full });
-    return m;
-  };
-  const tower = new THREE.Group();
-  tower.name = "telstra-tower";
-  tower.position.set(cx, 0, cz);
-  // Long axis of the hill across the line of sight from the map.
-  tower.rotation.y = Math.atan2(cx, cz) + Math.PI / 2;
-  // Wide enough to read as a silhouette 600 m off (at true width the shaft was under a pixel: the
-  // helper saw nothing, 11/9), and short enough that its top stays in frame: about 63 tall in all.
-  tower.scale.set(2, 0.68, 2);
-
-  const HILL_H = 40; // about 27 after the squash: the hill at 60 alone filled the frame to its top (helper QA)
-  const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2), own(0x6f7d74));
-  hill.scale.set(75, HILL_H, 55); // about 300 wide once the group is widened
-  tower.add(hill);
-
-  const base = HILL_H - 2;
-  const SHAFT = 46;
-  const grey = 0xc9ccd1;
-  const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, SHAFT, 10), own(grey, 0.7));
-  shaft.position.y = base + SHAFT / 2;
-  tower.add(shaft);
-  // The platform: a cone under a flat drum (the doughnut) near the upper third, with a lit band round the drum.
-  const y0 = base + SHAFT * 0.62;
-  const cone = new THREE.Mesh(new THREE.CylinderGeometry(11, 2, 5.5, 14), own(0xb9bdc2, 0.7));
-  cone.position.y = y0;
-  tower.add(cone);
-  const drum = new THREE.Mesh(new THREE.CylinderGeometry(11.5, 11, 4.6, 14), own(grey, 0.7));
-  drum.position.y = y0 + 5;
-  tower.add(drum);
-  const band = new THREE.Mesh(new THREE.CylinderGeometry(11.6, 11.6, 1.6, 14), glowMat(0x39322a, 0xffd9a0, 1.2));
-  band.position.y = y0 + 5;
-  tower.add(band);
-  const roof = new THREE.Mesh(new THREE.CylinderGeometry(3.4, 11, 3, 14), own(0xaeb2b7, 0.7));
-  roof.position.y = y0 + 8.6;
-  tower.add(roof);
-  // The shaft carries on above the platform, then the thin mast.
-  const topY = base + SHAFT;
-  const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, topY - (y0 + 10.4) + 0.1, 8), own(grey, 0.7));
-  upper.position.y = (topY + y0 + 10.4) / 2;
-  tower.add(upper);
-  const MAST = 8;
-  const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.6, MAST, 6), own(0xdfe1e4, 0.6));
-  mast.position.y = topY + MAST / 2;
-  tower.add(mast);
-  // Aircraft lights: the mast's tip and two on the platform's rim.
-  const red = glowMat(0x3a0a0a, 0xff2a1a, 2.2);
-  for (const [x, y, z, r] of [[0, topY + MAST, 0, 0.9], [11.5, y0 + 7.4, 0, 0.9], [-11.5, y0 + 7.4, 0, 0.9]] as const) {
-    const l = new THREE.Mesh(new THREE.SphereGeometry(r, 8, 6), red);
-    l.position.set(x, y, z);
-    tower.add(l);
-  }
-  group.add(tower);
-}
-

@@ -2,9 +2,8 @@ import * as THREE from "three";
 import { chalkboard, doorway, floor, mat, nightGlow, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
 import { RICH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
-import { addOsmScape, addTelstraTower } from "./osmscape.ts";
+import { addOsmScape } from "./osmscape.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
-import { addBirds } from "./birds.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { markOccluderGroup } from "./occluders.ts";
@@ -103,7 +102,6 @@ export function buildOutdoor(): SpaceDef {
   // Past the hand-made backdrop, the rest of the neighbourhood from OpenStreetMap (11/8): roads,
   // building masses and trees in every direction, scenery only (no colliders, nothing walkable).
   addOsmScape(g);
-  addTelstraTower(g);
   // Bushes and flowers (Quaternius, CC0), laid out evenly: flowers in a grid
   // on the lawn, and bushes round each building's foot, stopping short of the
   // doors. No trees on the paving (the user's call): creek.ts plants them on
@@ -179,7 +177,6 @@ export function buildOutdoor(): SpaceDef {
   buildStreetscape(g, colliders);
   buildCreek(g, colliders);
   const dog = addDog(g, colliders);
-  const birds = addBirds(g);
 
   // Building 155: Marie Reay Teaching Centre. Six storeys of glass with the
   // timber structure showing through (warm mullions and floor edges), as
@@ -304,10 +301,7 @@ export function buildOutdoor(): SpaceDef {
       { minX: -50, maxX: -38, minZ: -2, maxZ: 16 },
     ],
     noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, HOUSING_TENT, STUDY_BOARD],
-    tick: (dt) => {
-      dog(dt);
-      birds(dt);
-    },
+    tick: dog,
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
       { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the advertising board" },
