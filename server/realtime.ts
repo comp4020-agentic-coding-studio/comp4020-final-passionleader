@@ -8,6 +8,8 @@ import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, STAMPS, clampTo, isSpace, roomOf, spaceInfo, stampOf, type SpaceId } from "./spaces.ts";
 import { KNOCK_GAP_MS, PRESENCE_GAP_MS, mayTell, validOfficeRoom } from "./social.ts";
+import { createTables } from "./tables.ts";
+import { VIDEO_GAP_MS, applyVideo, videoView, type VideoState } from "./video.ts";
 
 // The real-time layer: one WebSocket per open tab, all to this one server.
 // Everything is per space: you only see, hear and get updates about people in
@@ -117,6 +119,8 @@ interface RoomState {
   board?: string;
   /** The room's shared pomodoro (RICE v3 #19), if anyone has started one; goes with the room. */
   timer?: RoomTimer;
+  /** The room's shared viewing screen (server/video.ts), if anyone has put a video on; goes with the room. */
+  video?: VideoState;
 }
 /** `endsAt` (server clock, ms) while running; `left` (ms) while paused. Clients are sent the time left, never a clock, so theirs can be wrong. */
 interface RoomTimer {
@@ -218,9 +222,48 @@ function roomTimerAction(space: SpaceId, player: Player, msg: Record<string, unk
   timerChanged(space);
 }
 
+// Game tables (server/tables.ts): the people online, and a way to tell one of them something.
+const tables = createTables({
+  people: () => [...players.values()].map((p) => ({ name: p.name, space: p.space, x: p.x, z: p.z })),
+  tell: (name, msg) => tellPerson(name, msg),
+});
+
+const lastVideo = new Map<string, number>(); // by name, so a second tab doesn't double it
+
+/**
+ * The room's shared video (server/video.ts): anyone inside may put a YouTube or Vimeo link on, play,
+ * pause or seek; the last action wins and everyone inside is told where it now is. One action a
+ * second per person. Never from outside (no room state), never told to anyone outside.
+ */
+function roomVideoAction(space: SpaceId, player: Player, msg: Record<string, unknown>): void {
+  const state = rooms.get(space);
+  if (!state) return;
+  const now = Date.now();
+  const key = player.name.toLowerCase();
+  if (now - (lastVideo.get(key) ?? 0) < VIDEO_GAP_MS) {
+    // Too soon: they're told how it stands, so their player falls back in step.
+    tellPerson(player.name, { t: "action", kind: "video-refused", space, reason: "slow down", video: videoView(state.video, now) });
+    return;
+  }
+  const done = applyVideo(state.video, player.name, msg, now);
+  if (!done.ok) {
+    if (done.reason === "link") log("refused", { name: player.name }, { action: "video", space, reason: "link" });
+    tellPerson(player.name, { t: "action", kind: "video-refused", space, reason: done.reason, video: videoView(state.video, now) });
+    return;
+  }
+  lastVideo.set(key, now);
+  state.video = done.state;
+  if (done.what) {
+    log("video-set", { name: player.name }, { space, op: msg.op, ...(done.state ? { provider: done.state.provider } : {}) });
+    roomSay(space, { name: player.name, text: done.what, system: true });
+  }
+  broadcastSpace(space, { t: "action", kind: "video", video: videoView(state.video, now) });
+}
+
 /** What a client may ask of the room it's in, by "kind" (the "action" message is generic; a new room verb is a new entry here). */
 const ROOM_ACTIONS: Record<string, (space: SpaceId, player: Player, msg: Record<string, unknown>) => void> = {
   timer: roomTimerAction,
+  video: roomVideoAction,
 };
 
 function roomSay(space: SpaceId, line: RoomLine): void {
@@ -473,12 +516,13 @@ function onMessage(ws: WebSocket, raw: string): void {
       log("enter", owners.get(ws) ?? null, { from, space: to });
       roomLeft(from, player.name, owners.get(ws) ?? null);
       roomJoined(to, player.name);
+      tables.left(player.name);
       if (to === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
       if (to === "hub") sendOffice(ws);
     }
     // Into a meeting room, the client waits for this before it walks in.
     const view = roomView(to);
-    if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], pad: { text: rooms.get(to)?.pad ?? "", by: rooms.get(to)?.padBy ?? null }, timer: timerView(rooms.get(to)), players: inSpace(to) });
+    if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], pad: { text: rooms.get(to)?.pad ?? "", by: rooms.get(to)?.padBy ?? null }, timer: timerView(rooms.get(to)), video: videoView(rooms.get(to)?.video), players: inSpace(to) });
     send(ws, { t: "players", players: inSpace(to) });
     dirty.add(to);
   } else if (msg.t === "sit" && (msg.seat === null || typeof msg.seat === "string")) {
@@ -564,6 +608,8 @@ function onMessage(ws: WebSocket, raw: string): void {
     else keepChatLine(player.space, player.name, text);
   } else if (msg.t === "action" && typeof msg.kind === "string" && Object.hasOwn(ROOM_ACTIONS, msg.kind)) {
     ROOM_ACTIONS[msg.kind]!(player.space, player, msg);
+  } else if (msg.t === "action" && msg.kind === "table") {
+    tables.action(player, msg, owners.get(ws) ?? null);
   } else if (msg.t === "pad" && typeof msg.text === "string") {
     // The room's shared notes: whoever is inside writes, everyone inside
     // sees it; the last write wins. Not logged (like the room's chat).
@@ -769,6 +815,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
     roomLeft(player.space, player.name, visitor);
     // Office hours end with the last tab: nobody is left to answer a knock.
     if (office.has(player.name.toLowerCase()) && ![...players.values()].some((p) => p.name.toLowerCase() === player.name.toLowerCase())) setOffice(player.name, false, null);
+    tables.left(player.name);
   });
 }
 

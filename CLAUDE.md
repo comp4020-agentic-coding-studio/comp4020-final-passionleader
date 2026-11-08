@@ -254,6 +254,15 @@ when a flow changes.
   (the drawing goes through Excalidraw's own encrypted relay, never ours).
   While a room's window is open, notices (a saved chat, the mic) show in a
   card over it.
+- A room's shared viewing screen (room menu, "Show a video to the room",
+  `server/video.ts`): a member pastes an https YouTube or Vimeo link; the
+  server accepts only those sites' own addresses, keeps just the provider and
+  video id (never the pasted text), and refuses anything else. Play, pause and
+  seek go through the server, the last one wins, at most one a second per
+  person, and the room is told where the video is now (never a clock). Only
+  people inside get it; it lives in the room's memory and goes when the room
+  empties. The players are the sites' own IFrame APIs, so watching reaches
+  YouTube or Vimeo (the room's other things never do).
 - Voice (through the author's LiveKit server on a t4g.small EC2; never recorded, never
   through this app): the server gives a ticket (a LiveKit token signed with
   the Fly secret, two minutes, so it is only good for joining now) only for the voice of where you are now: a
@@ -266,6 +275,22 @@ when a flow changes.
   voice too. The chat restriction stops voice as well. Whoever is speaking
   shows a mic on their name tag. The log notes who joined which voice,
   never what was said.
+- Games table (the Student Hub's table, `server/tables.ts`): anyone within 3 m
+  may open it and pick a quick quiz (five questions drawn from the fixed list
+  in `server/quiz.ts`, about places and dates the app's own pages state; 15
+  seconds each, the right answer never sent before the reveal) or open Sketch
+  & Guess. The server keeps the score and tells the table who won, and only
+  people near it hear of the game or may act on it. In server memory, gone
+  when the game ends; the log notes who started which game, nothing else.
+- Screen sharing (room menu, "Share screen"): through the same LiveKit
+  voice as the room, so the same room and the same six-person cap hold. Only a
+  meeting room's ticket allows it (`canPublishSources`: microphone, screen
+  share and its sound; never the camera), the open voice outside allows the
+  microphone only. Others see the share in the room window's Shared screen
+  view; it ends when the sharer stops, leaves, or the room's voice does. Never
+  recorded, never through this app. Without voice (no LiveKit, Voices volume
+  at 0, a browser that can't capture) the button says why. Not testable
+  without a LiveKit server: judged by people.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

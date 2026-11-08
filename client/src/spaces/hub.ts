@@ -166,6 +166,21 @@ export function buildHub(): SpaceDef {
   // the in-app window.
   for (const game of GAMES) arcade(g, colliders, game.x, -HALF.halfZ + 0.6, game.screen, game.marquee);
 
+  // The games table, between the lounge and the counselling doors: a round table with four chairs
+  // and a sign. E from its south side picks a game for whoever is within 3 m (server/tables.ts).
+  const table = new THREE.Mesh(new THREE.CylinderGeometry(0.85, 0.85, 0.06, 28), mat(0x8a5a32));
+  table.position.set(GAME_TABLE.x, 0.74, GAME_TABLE.z);
+  const stem = new THREE.Mesh(new THREE.CylinderGeometry(0.12, 0.16, 0.72, 12), mat(0x3d2a18));
+  stem.position.set(GAME_TABLE.x, 0.36, GAME_TABLE.z);
+  g.add(table, stem);
+  solid(colliders, 1.5, 1.5, GAME_TABLE.x, GAME_TABLE.z);
+  for (const [dx, dz, rot] of [[0, -1.35, 0], [0, 1.35, Math.PI], [-1.35, 0, Math.PI / 2], [1.35, 0, -Math.PI / 2]] as const) {
+    place(g, "chairDesk.glb", 1, GAME_TABLE.x + dx, GAME_TABLE.z + dz, rot, true, 0, HUB_FABRIC);
+  }
+  const tableTag = textPlane(["Games table", "quiz · Sketch & Guess"], 1.9, 0.5, { bg: "#2f5d8a", fg: "#ffffff", font: 0.2 });
+  tableTag.position.set(GAME_TABLE.x, 1.85, GAME_TABLE.z);
+  g.add(tableTag);
+
   for (const [x, z] of [
     [-10.5, -12],
     [17, -12],
@@ -237,9 +252,14 @@ export function buildHub(): SpaceDef {
       { x: ASK_PC.x, z: RECEPTION_SPOT_Z, id: "enquiries", label: "Ask the Hub a question" },
       // The wall calendar opens ANU's academic dates for 2026–2027 in our own window (plan 103, calendar.ts).
       { x: CALENDAR.x, z: -HALF.halfZ + 2.3, id: "calendar", label: "See ANU's academic dates (2026–2027)" },
+      // The games table: you press E on its south side (the same spot as server/spaces.ts GAME_TABLES).
+      { x: GAME_TABLE.x, z: GAME_TABLE.z + 1.6, id: "table:hub-1", label: "Play a game here" },
     ],
   };
 }
+
+/** The games table's middle; the server has the same (server/spaces.ts GAME_TABLES). */
+const GAME_TABLE = { x: 14, z: 3 };
 
 /** The wall calendar on the north wall; E from in front. */
 const CALENDAR = { x: 5.6 };

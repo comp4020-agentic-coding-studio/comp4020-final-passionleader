@@ -1,4 +1,6 @@
 import type { Classroom, Comment, Note } from "./api.ts";
+import type { TableView } from "./gametable.ts";
+import type { VideoView } from "./roomscreen.ts";
 import type { Look } from "./lookpicker.ts";
 import type { SpaceId } from "./world.ts";
 
@@ -90,7 +92,11 @@ export interface NetHandlers {
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   /** The server let us into a meeting room: what's in it and what's been said. */
-  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }, timer: RoomTimer | null): void;
+  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }, timer: RoomTimer | null, video: VideoView | null): void;
+  /** The room's shared video changed: another, play, pause, seek, or none (null). */
+  video(video: VideoView | null): void;
+  /** Our video action wasn't taken (not a YouTube or Vimeo link, too quick…); the video as it stands. */
+  videoRefused(reason: string, video: VideoView | null): void;
   /** The room's timer was started, paused, moved on or reset (null: none). */
   timer(timer: RoomTimer | null): void;
   /** Someone else changed the room's shared notes. */
@@ -122,6 +128,10 @@ export interface NetHandlers {
   knockResult(ok: boolean, text: string): void;
   /** Someone you follow came onto the campus: their name and the space's name (never a position). */
   followedOn(name: string, where: string): void;
+  /** What a games table is doing now (sent to people within 3 m of it; server/tables.ts). */
+  table(table: string, view: TableView): void;
+  /** The table said no (too far, a game already on, full…). */
+  tableRefused(table: string, reason: string): void;
 }
 
 // Matches the server's tick: no point sending faster than it broadcasts.
@@ -149,6 +159,10 @@ export interface Net {
   office(on: boolean, room?: number | null): void;
   /** A student knocks on a staff member's open office hours. */
   knock(name: string): void;
+  /** The room's shared video: "set" (with `url`), "play", "pause", "seek" (with `pos`) or "clear". */
+  video(op: string, extra?: Record<string, unknown>): boolean;
+  /** Asks a games table for something: "look", "pick" (a game), "join", "start", "answer" (a pick) or "leave". */
+  table(table: string, op: string, extra?: Record<string, unknown>): boolean;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): boolean;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -218,7 +232,9 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
-            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null }, (m.timer as RoomTimer | null) ?? null);
+            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null }, (m.timer as RoomTimer | null) ?? null, (m.video as VideoView | null) ?? null);
+          if (m.kind === "video") return on.video((m.video as VideoView | null) ?? null);
+          if (m.kind === "video-refused") return on.videoRefused(String(m.reason), (m.video as VideoView | null) ?? null);
           if (m.kind === "timer") return on.timer((m.timer as RoomTimer | null) ?? null);
           if (m.kind === "pad") return on.pad(m.text as string, m.by as string);
           if (m.kind === "room-invited" && typeof m.space === "string" && typeof m.from === "string") return on.invited(m.space, m.from);
@@ -227,6 +243,8 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-line") return on.roomLine(m.line as RoomLine);
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
           if (m.kind === "seat-refused") return on.seatRefused();
+          if (m.kind === "table" && typeof m.table === "string") return on.table(m.table, m.view as TableView);
+          if (m.kind === "table-refused" && typeof m.table === "string") return on.tableRefused(m.table, String(m.reason));
           if (m.kind === "restricted") return on.restricted(m.what as string, m.until as string);
           if (m.kind === "followed-on" && typeof m.name === "string" && typeof m.where === "string") return on.followedOn(m.name, m.where);
           if (m.kind === "office-now" && Array.isArray(m.list)) return on.officeNow(m.list as { name: string; room: number | null }[]);
@@ -295,6 +313,12 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     knock(name) {
       sendNow({ t: "knock", name });
+    },
+    video(op, extra) {
+      return sendNow({ t: "action", kind: "video", op, ...extra });
+    },
+    table(table, op, extra) {
+      return sendNow({ t: "action", kind: "table", table, op, ...extra });
     },
     invite(name) {
       return sendNow({ t: "invite", name });

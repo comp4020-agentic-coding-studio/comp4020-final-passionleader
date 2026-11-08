@@ -139,6 +139,15 @@ export function roomOf(id: unknown): Room | undefined {
   return door && { kind: "team", parent, door };
 }
 
+/**
+ * Tables where people play a game together (server/tables.ts): where each is,
+ * by id. Same spot as the table the client draws (client/src/spaces/hub.ts
+ * GAME_TABLE); change them together.
+ */
+export const GAME_TABLES: Readonly<Record<string, { space: SpaceId; x: number; z: number }>> = {
+  "hub-1": { space: "hub", x: 14, z: 3 },
+};
+
 /** The team rooms off a classroom, so closing it can empty them too. */
 export const teamRoomsOf = (classroom: SpaceId): SpaceId[] => CLASSROOM_TEAM_DOORS.map((_, i) => `team-${classroom}-${i + 1}`);
 
@@ -241,6 +250,7 @@ const HUB_KEEP_CLEAR: { x: number; z: number }[] = [
   ...[-17, -14.75, -12.5, -10.1].map((x) => ({ x, z: -2.7 })),
   { x: -18.4, z: -10.4 },
   ...[11, 12.4, 13.8, 5.6].map((x) => ({ x, z: -11.1 })),
+  { x: 14, z: 4.6 }, // where you press E at the games table (GAME_TABLES)
 ];
 const CLASSROOM_KEEP_CLEAR: { x: number; z: number }[] = [
   { x: 8.9, z: 6 }, // the way out

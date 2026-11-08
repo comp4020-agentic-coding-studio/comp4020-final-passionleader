@@ -600,7 +600,8 @@ app.post("/api/voice", async (c) => {
   const p = livePlayer(v.name);
   if (!p) return c.json({ error: "Come onto the campus first." }, 400);
   let room: string;
-  if (roomOf(p.space)) {
+  const inRoom = !!roomOf(p.space);
+  if (inRoom) {
     const sitting = roomSessionOf(v.name, p.space);
     if (!sitting) return c.json({ error: "You're not in that room." }, 403);
     room = `room-${p.space}-${sitting}`;
@@ -610,7 +611,7 @@ app.post("/api/voice", async (c) => {
     return c.json({ error: "Voice works in meeting rooms and outside." }, 400);
   }
   log("voice-joined", v, { space: p.space }, { ip: ipOf(c) });
-  return c.json({ url: voiceUrl(), token: voiceToken(v.name, room, VOICE_TICKET_S), room, space: p.space });
+  return c.json({ url: voiceUrl(), token: voiceToken(v.name, room, VOICE_TICKET_S, Date.now(), inRoom), room, space: p.space });
 });
 
 // --- the AI campus assistants (plan 56) ---------------------------------------

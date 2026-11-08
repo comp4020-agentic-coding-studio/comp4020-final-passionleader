@@ -17,8 +17,14 @@ export const voiceUrl = (): string => URL;
 
 const b64 = (v: string | Buffer): string => Buffer.from(v).toString("base64url");
 
-/** A LiveKit access token: `identity` may join `room` for `ttl` seconds, to speak and listen. */
-export function voiceToken(identity: string, room: string, ttl = 2 * 3600, now = Date.now()): string {
+/**
+ * A LiveKit access token: `identity` may join `room` for `ttl` seconds, to speak and listen. The
+ * sources it may publish are named, so a ticket never allows more than the app uses: the microphone,
+ * and (only for a meeting room's ticket, `screen`) a screen share and its sound. Never the camera.
+ * The room and the cap are the same as before: the ticket is still for one room, given only to
+ * someone inside it.
+ */
+export function voiceToken(identity: string, room: string, ttl = 2 * 3600, now = Date.now(), screen = false): string {
   const iat = Math.floor(now / 1000);
   const header = b64(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const payload = b64(
@@ -29,7 +35,14 @@ export function voiceToken(identity: string, room: string, ttl = 2 * 3600, now =
       nbf: iat - 10,
       iat,
       exp: iat + ttl,
-      video: { room, roomJoin: true, canPublish: true, canSubscribe: true, canPublishData: false },
+      video: {
+        room,
+        roomJoin: true,
+        canPublish: true,
+        canPublishSources: screen ? ["microphone", "screen_share", "screen_share_audio"] : ["microphone"],
+        canSubscribe: true,
+        canPublishData: false,
+      },
     }),
   );
   const sig = createHmac("sha256", SECRET).update(`${header}.${payload}`).digest("base64url");

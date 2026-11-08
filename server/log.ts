@@ -52,6 +52,8 @@ export type Event =
   | "event-added"
   | "event-removed"
   | "game-join"
+  | "table-game"
+  | "video-set"
   | "classroom-created"
   | "classroom-removed"
   | "classroom-link"

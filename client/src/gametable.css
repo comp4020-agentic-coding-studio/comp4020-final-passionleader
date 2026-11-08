@@ -1,0 +1,22 @@
+/* The games table's window, in the settings dialog's style. */
+#game-table { position: fixed; inset: 0; z-index: 30; display: grid; place-items: center; padding: 16px; background: rgba(20, 20, 20, 0.45); }
+#game-table[hidden] { display: none; }
+.gt-card { width: min(420px, 100%); max-height: calc(100vh - 32px); overflow-y: auto; }
+.gt-body p { margin: 0 0 10px; line-height: 1.4; }
+.gt-note { font-size: 0.85rem; opacity: 0.85; margin: 8px 0 0; min-height: 1.2em; }
+.gt-big { font-size: 1.2rem; font-weight: 800; text-align: center; }
+.gt-clock { font-size: 0.85rem; opacity: 0.8; }
+.gt-q { font-size: 1.1rem; font-weight: 700; }
+.gt-picks { display: grid; gap: 8px; margin: 10px 0; }
+.gt-picks button, .gt-body > button { min-height: 52px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--accent, #6b3f1d); background: var(--card, #f5efdf); color: inherit; font: inherit; font-weight: 700; text-align: left; cursor: pointer; }
+.gt-picks button small { display: block; font-weight: 400; opacity: 0.8; }
+.gt-body .gt-primary { background: var(--accent, #6b3f1d); color: #fff; }
+.gt-options { display: grid; gap: 8px; margin: 8px 0 12px; }
+.gt-options button { min-height: 46px; padding: 8px 12px; border-radius: 10px; border: 1px solid var(--accent, #6b3f1d); background: var(--card, #f5efdf); color: inherit; font: inherit; text-align: left; cursor: pointer; }
+.gt-options button:disabled { cursor: default; opacity: 0.85; }
+.gt-options .is-picked { outline: 3px solid var(--accent, #6b3f1d); }
+.gt-options .is-correct { background: #d9efd2; border-color: #3d7a2f; }
+.gt-options .is-wrong { background: #f4d6d0; border-color: #b3412e; }
+.gt-players { list-style: none; margin: 0 0 10px; padding: 0; display: grid; gap: 4px; }
+.gt-players li { display: flex; justify-content: space-between; padding: 4px 10px; border-radius: 8px; background: var(--card, #f5efdf); }
+.gt-card button:focus-visible { outline: 3px solid var(--accent, #6b3f1d); outline-offset: 2px; }

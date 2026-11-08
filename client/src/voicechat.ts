@@ -33,6 +33,10 @@ export interface VoiceDeps {
   say(msg: string): void;
   /** Called when who is talking changes (names), for the name tags. */
   talking(names: Set<string>): void;
+  /** Someone else's shared screen came (their video element) or went (null), for the room window's panel. */
+  screen(who: string, el: HTMLVideoElement | null): void;
+  /** Whether our own screen share is on now (it can also end from the browser's own "Stop sharing" bar). */
+  sharing(on: boolean): void;
 }
 
 export function readVoiceVolume(): number {
@@ -56,6 +60,9 @@ export function mountVoice(deps: VoiceDeps): {
   join(spatial: boolean): Promise<boolean>;
   /** Your microphone on or off (in a room, the menu's switch). Resolves to whether it's on. */
   mic(on: boolean): Promise<boolean>;
+  /** Shares your screen with the room, or stops. Resolves to whether it's on; says why if not. */
+  share(on: boolean): Promise<boolean>;
+  sharingOn(): boolean;
   micOn(): boolean;
   leave(): void;
   isOn(): boolean;
@@ -69,7 +76,12 @@ export function mountVoice(deps: VoiceDeps): {
   let joining: Promise<boolean> | null = null;
   const audio = new Map<string, { track: RemoteAudioTrack; els: HTMLMediaElement[]; vol: number }[]>();
 
-  const attach = (track: RemoteTrack, who: RemoteParticipant): void => {
+  const attach = (track: RemoteTrack, who: RemoteParticipant, screen: boolean): void => {
+    // Someone's shared screen is a video: it goes to the room window's panel, not to the voices.
+    if (track.kind === "video") {
+      if (screen) deps.screen(who.identity, track.attach() as HTMLVideoElement);
+      return;
+    }
     if (track.kind !== "audio") return;
     const el = track.attach();
     el.style.display = "none";
@@ -94,14 +106,28 @@ export function mountVoice(deps: VoiceDeps): {
       const lk = await import("livekit-client");
       // webAudioMix: each voice through a gain node, so its volume works on an iPhone too.
       const r = new lk.Room({ adaptiveStream: true, dynacast: true, webAudioMix: true });
-      r.on(lk.RoomEvent.TrackSubscribed, (track, _pub, who) => attach(track, who));
-      r.on(lk.RoomEvent.TrackUnsubscribed, (track, _pub, who) => {
+      r.on(lk.RoomEvent.TrackSubscribed, (track, pub, who) => attach(track, who, pub.source === lk.Track.Source.ScreenShare));
+      r.on(lk.RoomEvent.TrackUnsubscribed, (track, pub, who) => {
+        if (track.kind === "video") {
+          track.detach();
+          if (pub.source === lk.Track.Source.ScreenShare) deps.screen(who.identity, null);
+          return;
+        }
         track.detach().forEach((el) => el.remove());
         const left = (audio.get(who.identity) ?? []).filter((a) => a.track !== track);
         if (left.length) audio.set(who.identity, left);
         else audio.delete(who.identity);
       });
-      r.on(lk.RoomEvent.ParticipantDisconnected, (who) => detachAll(who.identity));
+      r.on(lk.RoomEvent.ParticipantDisconnected, (who) => {
+        detachAll(who.identity);
+        deps.screen(who.identity, null);
+      });
+      // Our own share can end from the browser's "Stop sharing" bar: the button must follow.
+      r.on(lk.RoomEvent.LocalTrackUnpublished, (pub) => {
+        if (pub.source !== lk.Track.Source.ScreenShare) return;
+        shareState = false;
+        deps.sharing(false);
+      });
       r.on(lk.RoomEvent.ActiveSpeakersChanged, (speakers) => {
         active = new Set(speakers.map((s) => s.identity));
         report();
@@ -150,8 +176,11 @@ export function mountVoice(deps: VoiceDeps): {
   }
   function cleanup(): void {
     for (const who of [...audio.keys()]) detachAll(who);
+    for (const p of room?.remoteParticipants.values() ?? []) deps.screen(p.identity, null);
     room = null;
     micState = false;
+    if (shareState) deps.sharing(false);
+    shareState = false;
     active = new Set();
     heard.clear();
     shown = "";
@@ -160,6 +189,45 @@ export function mountVoice(deps: VoiceDeps): {
 
   let pushing = false;
   let micState = false;
+  let shareState = false;
+  async function share(on: boolean): Promise<boolean> {
+    if (!on) {
+      try {
+        await room?.localParticipant.setScreenShareEnabled(false);
+      } catch {
+        // Already off.
+      }
+      shareState = false;
+      deps.sharing(false);
+      return false;
+    }
+    // Phones and some browsers can't capture a screen at all: say so rather than do nothing.
+    if (!navigator.mediaDevices?.getDisplayMedia) {
+      deps.say("This browser can't share its screen. Try Chrome, Edge or Firefox on a computer.");
+      return false;
+    }
+    if (readVoiceVolume() === 0) {
+      deps.say("Voices are turned off in Settings, which also turns off screen sharing. Turn the Voices volume up first.");
+      return false;
+    }
+    // The same connection as the room's voice (its ticket allows the share); if there's none, join it now.
+    if (!room && !(await join(false))) {
+      deps.say("Screen sharing needs the room's voice connection, which isn't available right now. You can still show a video.");
+      return false;
+    }
+    if (!room) return false;
+    try {
+      await room.localParticipant.setScreenShareEnabled(true, { audio: true });
+      shareState = true;
+      deps.sharing(true);
+    } catch (e) {
+      // Cancelling the browser's picker is not an error worth shouting about.
+      const denied = (e as Error)?.name === "NotAllowedError" || /permission|denied|cancel/i.test((e as Error)?.message ?? "");
+      deps.say(denied ? "Screen sharing wasn't started (the picker was closed or the browser said no)." : "Couldn't share your screen. Error code: VOICE-SHARE");
+      shareState = false;
+    }
+    return shareState;
+  }
   async function mic(on: boolean): Promise<boolean> {
     if (on && !room && !(await join(spatial))) return false;
     if (!room) return false;
@@ -175,6 +243,8 @@ export function mountVoice(deps: VoiceDeps): {
   return {
     join,
     mic,
+    share,
+    sharingOn: () => shareState,
     micOn: () => micState,
     leave() {
       const r = room;

@@ -1,0 +1,18 @@
+/* A meeting room's shared screen view (roomscreen.ts): shared screens on top, the shared video below. */
+#room-screen { flex: 1; min-height: 0; display: flex; flex-direction: column; gap: 10px; padding: 0 12px 12px; overflow-y: auto; }
+.rs-shares { display: grid; gap: 8px; }
+.rs-mine { display: flex; align-items: center; gap: 8px; justify-content: space-between; padding: 8px 10px; border-radius: 8px; background: var(--card, #f5efdf); border: 1px solid var(--accent, #6b3f1d); font-size: 0.9rem; }
+.rs-mine button { min-height: 36px; padding: 0 12px; border-radius: 8px; border: 1px solid var(--accent, #6b3f1d); background: #fff4f0; color: #9a2a1a; font: inherit; font-weight: 700; cursor: pointer; }
+.rs-remote { display: grid; gap: 8px; }
+.rs-share { margin: 0; }
+.rs-share-video { display: block; width: 100%; max-height: 52vh; background: #000; border-radius: 8px; object-fit: contain; }
+.rs-share figcaption { font-size: 0.8rem; opacity: 0.8; margin-top: 2px; }
+.rs-video { display: flex; flex-direction: column; gap: 8px; }
+.rs-form { display: flex; gap: 6px; }
+.rs-form input { flex: 1; min-width: 0; min-height: 44px; padding: 0 10px; border-radius: 8px; border: 1px solid var(--accent, #6b3f1d); background: var(--card, #f5efdf); color: inherit; font: 16px system-ui, sans-serif; }
+.rs-stage { position: relative; width: 100%; aspect-ratio: 16 / 9; background: #000; border-radius: 8px; overflow: hidden; }
+.rs-stage:empty { display: none; }
+.rs-player, .rs-player iframe { width: 100%; height: 100%; border: 0; }
+.rs-status { margin: 0; font-size: 0.85rem; opacity: 0.85; min-height: 1.2em; }
+.rs-clear { align-self: flex-start; }
+@media (min-width: 900px) { #room-ui:has(.room-screen:not([hidden])) { width: min(900px, calc(100vw - 24px)); } }

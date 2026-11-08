@@ -113,10 +113,12 @@ import { mountFollows } from "./follows.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
+import { mountGameTable } from "./gametable.ts";
 import { mountGuide } from "./guide.ts";
 import { mountVoice } from "./voicechat.ts";
 import { mountInvitePopup } from "./invitepopup.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
+import { mountRoomScreen } from "./roomscreen.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
 import { mountBugReport } from "./bugreport.ts";
@@ -1075,6 +1077,19 @@ const roomPad = mountRoomPad({
   },
   imageLink: async (id) => (session ? imageLink(session.token, id) : null),
 });
+const roomScreen = mountRoomScreen({
+  send: (op, extra) => !!net && net.video(op, extra),
+  onShare: (on) => void toggleShare(on),
+  onNotSent: () => notSent(),
+});
+/** Starts or stops sharing our screen with the room (LiveKit, through the room's voice); says why if it can't. */
+async function toggleShare(on: boolean): Promise<void> {
+  const now = await voice.share(on);
+  if (on && now) {
+    toast("🖥 Sharing your screen: everyone in the room sees it in the Shared screen view.");
+    roomPanel.show("screen");
+  } else if (!on) toast("Stopped sharing your screen.");
+}
 const roomPanel = mountRoomPanel({
   onSend: (text) => sayChat(text),
   onInvite: (name) => {
@@ -1085,11 +1100,14 @@ const roomPanel = mountRoomPanel({
     if (net && !net.saveChat(what)) notSent();
   },
   notes: roomPad.el,
+  screen: roomScreen.el,
+  onScreenShown: (on) => roomScreen.shown(on),
   onShown: (open) => {
     document.body.classList.toggle("room-open", open);
     if (open) stopMoving();
   },
   onHelp: () => guide.open("rooms"),
+  onShareScreen: () => void toggleShare(!voice.sharingOn()),
   onVoice: () => {
     // Everyone in the room already hears; this is whether they hear you.
     void voice.mic(!voice.micOn()).then((on) => {
@@ -1316,6 +1334,13 @@ const dogPrompt = mountDogPrompt({
 // Lab Coffee's menu board, north of 154: the cafés on campus.
 const cafeGuide = mountCafeGuide();
 const calendar = mountCalendar();
+// The Student Hub's games table (server/tables.ts): the quiz and Sketch & Guess for whoever is within 3 m of it.
+const gameTable = mountGameTable({
+  send: (table, op, extra) => !!net && net.table(table, op, extra),
+  openSketch: () => (gameTable.close(), webview.open({ label: "Sketch & Guess", url: "/minigame/sketch/", embeddable: true })),
+  me: () => session?.name ?? "",
+  onNotSent: () => notSent(),
+});
 
 // Boards in classrooms (Q&A, Notices, Board), the Student Hub and on the
 // lawn. The server decides who may post in a staff-only tab; the dialog only
@@ -1458,13 +1483,13 @@ mountJoinNow(document.getElementById("status-btn") ?? hudName, {
 });
 
 // When a dialog closes, hand focus back to the game view.
-for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-calendar", "npc-chat", "board"]) {
+for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-calendar", "game-table", "npc-chat", "board"]) {
   const el = document.getElementById(id);
   if (el) new MutationObserver(() => el.hidden && playing && stage.focus()).observe(el, { attributes: true, attributeFilter: ["hidden"] });
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || interestsDialog.isOpen() || followsDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || interestsDialog.isOpen() || followsDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || gameTable.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 installDialogKeys();
 
@@ -1576,6 +1601,11 @@ const voice = mountVoice({
     }
     // In a room the window covers the scene (the whole screen on a phone): its member list shows it too (the user, 11/9).
     roomPanel.talking(names);
+  },
+  screen: (who, el) => roomScreen.remoteShare(who, el),
+  sharing(on) {
+    roomScreen.sharing(on);
+    roomPanel.setSharing(on);
   },
 });
 
@@ -1721,9 +1751,11 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   noteRequest++;
   // Voice belongs to where you are: going anywhere else ends it.
   if (voice.isOn()) voice.leave();
+  gameTable.close();
   if (roomPanel.isOpen() && !meetingRoom(id)) {
     roomPad.close();
     roomPanel.close();
+    roomScreen.reset();
     document.body.classList.remove("in-room");
     if (playing) chat.show();
   }
@@ -1949,6 +1981,7 @@ function showJoin(message = ""): void {
   chat.reset();
   lastWhisperFrom = "";
   roomPanel.close();
+  roomScreen.reset();
   document.body.classList.remove("in-room");
   net?.close();
   net = null;
@@ -2148,8 +2181,9 @@ function goOnline(token: string): void {
     pad(text, by) {
       roomPad.set(text, by);
     },
-    roomOpen(id, x, z, room, lines, players, pad, timer) {
+    roomOpen(id, x, z, room, lines, players, pad, timer, video) {
       roomPad.set(pad.text, pad.by);
+      roomScreen.video(video);
       if (space?.id !== id) setSpace(id, { x, z }, false);
       players.forEach(upsertOther);
       chat.hide();
@@ -2165,6 +2199,14 @@ function goOnline(token: string): void {
     },
     timer(t) {
       roomPanel.timer(t);
+    },
+    video(v) {
+      roomScreen.video(v);
+    },
+    videoRefused(reason, v) {
+      roomScreen.video(v);
+      if (reason === "link") roomScreen.note("Only YouTube and Vimeo links (https) can be shown.");
+      else if (reason === "slow down") roomScreen.note("One change a second, please.");
     },
     room(room) {
       if (space && roomPanel.isOpen()) roomPanel.update(roomInfo(space.id, room));
@@ -2187,6 +2229,13 @@ function goOnline(token: string): void {
           ? "The admin has put you out of the campus. You can come back in."
           : `The admin has stopped you coming in${stoppedUntil ? ` until ${stoppedUntil}` : " for now"}.`,
       );
+    },
+    table(id, view) {
+      const line = gameTable.view(id, view);
+      if (line) toast(line);
+    },
+    tableRefused(id, reason) {
+      gameTable.refused(id, reason);
     },
     seatRefused() {
       mySeat = null;
@@ -2626,6 +2675,7 @@ function interact(): void {
     }
     else if (target.id === "cafes") cafeGuide.open();
     else if (target.id === "calendar") calendar.open();
+    else if (target.id.startsWith("table:")) gameTable.open(target.id.slice(6));
     else if (target.id === "board" && space) void openBoard(space.id);
     else if (target.id === "enquiries" && space) void openBoard(space.id, "hub-desk");
     else if (target.id === "study-groups" && space) void openBoard(space.id, "study-groups");
