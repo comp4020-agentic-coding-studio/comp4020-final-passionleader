@@ -9,5 +9,8 @@ Each answers the two standing prompts:
 1. What was the breakthrough that moved the work forward?
 2. What did this work change about who I want to be as a software developer?
 
+`final.md` is an extra one for the final project as a whole. No crit reads
+it; it sits beside the three for anyone who wants the last word.
+
 150--300 words is plenty. They stay in the repo; they aren't part of the
 deployed app.
