@@ -1818,7 +1818,7 @@ function goOnline(token: string): void {
       const thing = what === "notes" ? "Notes" : "Chat";
       if (ok) {
         sfx("note");
-        toast(`${thing} saved: ✉️ → Saved (30 days, only you).`);
+        popup(`✓ ${thing} saved for you. Find it in ✉️ Mail → Saved (30 days, only you).`);
         roomPanel.add({ name: "", text: `${thing} saved for you (30 days): room menu → 📂 Saved, or ✉️ → Saved.`, system: true });
       } else {
         sfx("error");
@@ -1957,7 +1957,28 @@ function goOnline(token: string): void {
 }
 
 let toastTimer = 0;
+/**
+ * A short notice in a card at the top centre, over everything, the room window included (the corner
+ * notice lives in the HUD, hidden while a room window is open, so saving in a room seemed to do
+ * nothing: the user, 11/8).
+ */
+const popupEl = document.createElement("div");
+popupEl.id = "popup-notice";
+popupEl.setAttribute("role", "status");
+popupEl.setAttribute("aria-live", "polite");
+popupEl.hidden = true;
+document.body.append(popupEl);
+let popupTimer = 0;
+function popup(msg: string): void {
+  popupEl.textContent = msg;
+  popupEl.hidden = false;
+  window.clearTimeout(popupTimer);
+  popupTimer = window.setTimeout(() => (popupEl.hidden = true), 3200);
+}
+
 function toast(msg: string): void {
+  // With a room window open the HUD (and this notice in it) is hidden: say it over the window instead.
+  if (document.body.classList.contains("room-open")) return popup(msg);
   toastEl.textContent = msg;
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => (toastEl.textContent = ""), 3000);

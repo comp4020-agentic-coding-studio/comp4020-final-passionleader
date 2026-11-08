@@ -48,3 +48,15 @@
 #guide-btn svg, #turn-btn svg, #mail-btn svg, #look-btn svg, #settings-btn svg { display: block; }
 #mail-btn > span:first-child { display: grid; place-items: center; }
 #turn-btn[hidden] { display: none; }
+
+/* A short notice over everything, the room window included (main.ts popup()). */
+#popup-notice {
+  position: fixed; top: calc(70px + env(safe-area-inset-top, 0px)); left: 50%; transform: translateX(-50%);
+  z-index: 40; max-width: min(460px, calc(100vw - 32px)); padding: 10px 16px; border-radius: 12px;
+  background: var(--card, #f5efdf); color: #3b2a12; border: 2px solid #3fb27f;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22); font: 600 0.95rem/1.4 system-ui, sans-serif; text-align: center;
+  animation: popup-in 0.18s ease-out;
+}
+#popup-notice[hidden] { display: none; }
+@keyframes popup-in { from { opacity: 0; transform: translate(-50%, -6px); } }
+@media (prefers-reduced-motion: reduce) { #popup-notice { animation: none; } }
