@@ -159,6 +159,11 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     // Asked about money, the words price tables use ("From 395.00 /wk", "Room rate", "tariff"),
     // so a table that never says "cheapest" still comes into the pool (Jordan, 11/4).
     ...(MONEY.test(question) ? ["wk", "rate", "tariff", "costs"] : []),
+    // Old or everyday names the pages don't use (Taylor and Riley, 11/8): ISIS is now ANUHub,
+    // "the tram" is the light rail, a fake email is phishing.
+    ...(/\bisis\b/i.test(question) ? ["anuhub"] : []),
+    ...(/\btram\b/i.test(question) ? ["light", "rail"] : []),
+    ...(/\b(suspicious|scam|fake|dodgy)\b.*\b(email|e-mail|message|link)\b|\bphish/i.test(question) ? ["phishing", "scam"] : []),
   ].filter(Boolean);
   const match = [...words, ...extra].map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");
   // Each source drawn from on its own (up to 120 pieces each), so the
