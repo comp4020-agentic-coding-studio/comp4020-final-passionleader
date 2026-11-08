@@ -25,7 +25,7 @@ const OUTDOOR = { halfX: 32, halfZ: 24 };
 // bridge to the library's door; nothing west of the white building's west end (the
 // creek in creek.ts is scenery). Same as OUTDOOR_AREAS in server/spaces.ts.
 const OUTDOOR_AREAS: Box[] = [
-  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the white building's west end (the creek is scenery past it)
+  { minX: LAWN_WEST_X, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to just short of the bridge (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 26.6 },
 ];

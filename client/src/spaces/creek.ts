@@ -127,8 +127,8 @@ function rippleWater(): THREE.MeshStandardMaterial {
 const EAST_TOP = CREEK.x + CREEK.bankTop; // -57.6
 const WEST_TOP = CREEK.x - CREEK.bankTop; // -75.2
 
-/** Where walking stops in the west: the white building's west end, north of the avenue (the user's call). The white path, boardwalk and creek past it are scenery. */
-export const LAWN_WEST_X = -51;
+/** Where walking stops in the west: 2 m past the white building's west end, a step short of the bridge and the creek's fence (the user, 11/9: up to the riverside). The white path, boardwalk and creek past it are scenery. */
+export const LAWN_WEST_X = -53;
 /** Picnic tables in a row on the grass north of Badger & Co; you sit on their benches (outdoor.ts seats). */
 export const PICNIC: [number, number][] = [
   [-47, -12],
@@ -327,7 +327,7 @@ export function buildCreek(g: THREE.Group, colliders: Box[]): void {
   warm.side = THREE.DoubleSide;
   ribbon(g, SOUTH_WALK.maxX, -34.9, 0.011, 0.011, -6, 17, warm, 2, false);
   // Grass between the bending walk and the straight lawn edge, north of the paving.
-  const lawnGrass = texMat("ai/grass.jpg", 1, 1);
+  const lawnGrass = texMat("ai/grass.jpg", 1, 1, 0xb4c49c); // the lawn's tint (the user, 11/9: it showed pale beside the deeper lawn)
   lawnGrass.side = THREE.DoubleSide;
   ribbon(g, SOUTH_WALK.maxX, -51, 0.006, 0.006, BEND_FROM, -6, lawnGrass, 3, false);
 
@@ -376,7 +376,7 @@ function fence(g: THREE.Group, colliders: Box[], { minX, minZ, maxZ }: Box, y0: 
   colliders.push({ minX: fx - 0.1, maxX: fx + 0.1, minZ, maxZ });
 }
 
-/** The same steel fence along the creek's bend (south of the bridge): rails as short straight runs, posts every 2 m. Scenery: the walk limit (x -51) keeps people off it. */
+/** The same steel fence along the creek's bend (south of the bridge): rails as short straight runs, posts every 2 m. Scenery: the walk limit (x -53) keeps people off it. */
 function bentFence(g: THREE.Group, x: number, z0: number, z1: number): void {
   const steel = mat(RAIL);
   const posts: Inst[] = [];

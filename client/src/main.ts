@@ -1708,7 +1708,7 @@ function placeNpcs(s: SpaceDef): void {
 const minimap = mountMinimap({
   bounds: { minX: -55, maxX: 27, minZ: -41, maxZ: 28 },
   areas: [
-    { minX: -51, maxX: 5, minZ: -39.4, maxZ: -2 },
+    { minX: -53, maxX: 5, minZ: -39.4, maxZ: -2 },
     { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
     { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 26.6 },
   ],
