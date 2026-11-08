@@ -194,5 +194,8 @@ backdrop plane and turntable are hidden in code, not edited out of the file.
 Where Badger & Co., Sullivans Creek, its footbridge and the lawn sit relative
 to 154 and 155 was checked against OpenStreetMap data (an export of the
 area around Kambri), read for positions only: no map tiles or OSM files ship
-with the app. Map data © OpenStreetMap contributors, available under the Open
+with the app. The scenery beyond the walkable map (roads, building masses and
+trees, `client/src/spaces/osmscape-data.ts`) is derived from a larger
+OpenStreetMap export of the surrounding campus: only simplified coordinates
+and building heights are kept. Map data © OpenStreetMap contributors, available under the Open
 Database Licence (ODbL), https://www.openstreetmap.org/copyright.

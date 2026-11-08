@@ -2,6 +2,7 @@ import * as THREE from "three";
 import { chalkboard, doorway, floor, mat, nightGlow, scatter, solid, texMat, textPlane, type Box, type SpaceDef, type Spot } from "../world.ts";
 import { RICH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
+import { addOsmScape } from "./osmscape.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
@@ -97,6 +98,9 @@ export function buildOutdoor(): SpaceDef {
   wedge(-35, 0.006, paveTex, 0); // the picnic lawn gives up the curve's west side to paving
   wedge(-29, 0.021, lawnTex, 0); // the lawn grows into the path's old east side
   buildBackdrop(g, colliders);
+  // Past the hand-made backdrop, the rest of the neighbourhood from OpenStreetMap (11/8): roads,
+  // building masses and trees in every direction, scenery only (no colliders, nothing walkable).
+  addOsmScape(g);
   // Bushes and flowers (Quaternius, CC0), laid out evenly: flowers in a grid
   // on the lawn, and bushes round each building's foot, stopping short of the
   // doors. No trees on the paving (the user's call): creek.ts plants them on
