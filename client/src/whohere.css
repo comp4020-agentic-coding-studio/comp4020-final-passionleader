@@ -22,3 +22,10 @@
 #who-here .who-empty, #who-here .who-hint, #who-here .who-elsewhere { color: #7a6a52; font-size: 0.8rem; margin: 4px 0 0; }
 #who-here .who-staff { padding: 0 6px; border-radius: 6px; background: #23404f; color: #fff; font-size: 0.72rem; }
 @media (max-width: 700px) { #who-here { top: 84px; } }
+/* A notice under the HUD pushes the panel down rather than lying over it (helper QA, 11/8). */
+body:has(#toast:not(:empty)) #who-here { top: 100px; }
+/* Phones: the HUD is three lines (name, online, status): the panel goes under all three,
+   so the status button stays reachable while it's open. */
+@media (max-width: 700px) {
+  #who-here, body:has(#toast:not(:empty)) #who-here { top: calc(124px + env(safe-area-inset-top, 0px)); }
+}

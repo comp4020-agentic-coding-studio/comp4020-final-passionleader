@@ -235,6 +235,9 @@ function archShape(w: number, h: number): THREE.Shape {
 function windows(g: THREE.Group): (dt: number) => void {
   const wall = -HALF.halfZ + 0.02;
   const glass = new THREE.MeshBasicMaterial({ color: 0xfff1cf });
+  // After dark the panes go a night blue (they stayed daylight-white: helper QA, 11/8).
+  const dayGlass = new THREE.Color(0xfff1cf);
+  const nightGlass = new THREE.Color(0x1d2a44);
   const frame = new THREE.MeshStandardMaterial({ color: 0x4a3322, roughness: 0.8 });
   const shaftTex = shaftTexture();
   const shaft = new THREE.MeshBasicMaterial({
@@ -332,8 +335,9 @@ function windows(g: THREE.Group): (dt: number) => void {
   return (dt) => {
     t += dt;
     // The light breathes a little, and the dust drifts slowly; after sunset (daylight.ts) the
-    // sun's shafts, patches and dust go out (the windows stay as they are).
+    // sun's shafts, patches and dust go out, and the panes go dark.
     const lit = 1 - outside.night;
+    glass.color.lerpColors(nightGlass, dayGlass, lit);
     shaft.opacity = (0.3 + Math.sin(t * 0.5) * 0.03) * lit;
     patch.opacity = 0.42 * lit;
     for (const dust of motes) {
