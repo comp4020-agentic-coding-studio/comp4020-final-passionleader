@@ -358,9 +358,8 @@ export function mountRoomPanel(opts: {
         preventScroll: true,
       });
     else if (next === "notes")
-      (opts.notes.querySelector("textarea") as HTMLElement | null)?.focus({
-        preventScroll: true,
-      });
+      // The pad picks what to focus (its editor on a wide screen, the rendered notes on a narrow one).
+      opts.notes.dispatchEvent(new Event("pad-focus"));
     if (wasShowing !== (next !== "closed")) opts.onShown(next !== "closed");
   }
 
