@@ -311,6 +311,15 @@ when a flow changes.
   off until ticked. The Credits page opens with who made it and the README's
   argument, read from README.md each time.
 - The server never trusts the client's coordinates: they're clamped to the room.
+- Describe what's around me (Settings, Accessibility; off until ticked, kept
+  in this browser) is for screen-reader users and works by keyboard alone: an
+  aria-live region says the nearest doors, assistants, boards and seats with
+  direction and distance in plain words ("Library door, 4 metres ahead-left"),
+  every few seconds while you move; L lists the people in your own space by
+  name and rough direction (never anyone elsewhere); G walks you to the
+  nearest usable thing a step at a time through the normal movement (same
+  speed, walls and server clamping), never a teleport, and any movement key,
+  jump or E stops it. The secret door is never described.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
 - Live positions stay in server memory and are never written per move; a

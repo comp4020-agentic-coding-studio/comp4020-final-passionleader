@@ -68,6 +68,21 @@ let textSize = ((): number => {
 })();
 applyTextSize(textSize);
 
+// Describe what's around me (screen-reader mode, a feature of its own: describe.ts): off until
+// ticked here, remembered in this browser. Keyboard only: the keys it adds are L and G.
+const DESCRIBE_KEY = "campus.describe";
+let describing = ((): boolean => {
+  try {
+    return localStorage.getItem(DESCRIBE_KEY) === "1";
+  } catch {
+    return false;
+  }
+})();
+export const describeOn = (): boolean => describing;
+const describeListeners: (() => void)[] = [];
+/** Called when the box is ticked or cleared. */
+export const onDescribeChange = (f: () => void): void => void describeListeners.push(f);
+
 /** The labels under a slider that stops at each step, spread to sit under its stops. */
 function stepTicks(labels: string[]): HTMLElement {
   const row = document.createElement("div");
@@ -238,6 +253,26 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     }
   });
   motionLabel.append(motionBox, " Reduce motion (the camera doesn't glide; the sky and grass hold still)");
+  // Accessibility (RICE v3): for people who use a screen reader. Off by default.
+  const describeLabel = document.createElement("label");
+  describeLabel.className = "settings-check";
+  const describeBox = document.createElement("input");
+  describeBox.type = "checkbox";
+  describeBox.checked = describing;
+  describeBox.addEventListener("change", () => {
+    describing = describeBox.checked;
+    try {
+      localStorage.setItem(DESCRIBE_KEY, describing ? "1" : "0");
+    } catch {
+      // private mode: just for this visit
+    }
+    for (const f of describeListeners) f();
+  });
+  describeLabel.append(describeBox, " Describe what's around me (for screen readers: doors, assistants, boards and seats near you, in words; L lists who is here, G walks you to the nearest)");
+  const describeBox2 = document.createElement("fieldset");
+  const describeLegend = document.createElement("legend");
+  describeLegend.textContent = "Accessibility";
+  describeBox2.append(describeLegend, describeLabel);
   const textBox = document.createElement("fieldset");
   const textLegend = document.createElement("legend");
   textLegend.textContent = "Text size";
@@ -309,7 +344,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const weather = document.createElement("p");
   weather.className = "settings-note settings-weather";
   weather.id = "settings-weather";
-  card.append(head, sound, textBox, fieldset, motionBox2, screen, weather, place, verify, bug, person, mute, credits, out, actions);
+  card.append(head, sound, textBox, fieldset, motionBox2, describeBox2, screen, weather, place, verify, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 

@@ -77,6 +77,7 @@ import { keepScreenOn } from "./wakelock.ts";
 import { canberraHour, clockReady, daylightAt, outside, withWeather } from "./daylight.ts";
 import { makeRain } from "./rain.ts";
 import { onWeather, weatherNow } from "./weather.ts";
+import { mountDescribe } from "./describeui.ts";
 import { mountStatus, statusText } from "./status.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
@@ -1673,6 +1674,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   sun.hemi.intensity = 0.9;
   renderer.toneMappingExposure = 0.85;
   applyDaylight();
+  describe.enteredSpace();
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(cameraOffset(space, at.z));
@@ -2602,6 +2604,42 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyR" && !e.repeat && playing && !busy() && !e.ctrlKey && !e.metaKey) turnView();
 });
 
+// --- describe what's around me (Settings; describeui.ts) ------------------------------
+
+/** What E would do now, in words, or null. */
+function useLabel(): string | null {
+  if (mySeat) return "Stand up";
+  const t = nearestTarget();
+  if (!t) return null;
+  if (t.kind === "seat") return "Sit down";
+  if (t.kind === "door") return t.door.secret ? null : t.door.label;
+  if (t.kind === "link" || t.kind === "spot") return t.label;
+  return t.here.length > 1 ? `Pick one of ${t.here.length} notes here` : `Read ${t.author}'s note`;
+}
+const describe = mountDescribe({
+  space() {
+    if (!space) return null;
+    const s = space;
+    return {
+      id: s.id,
+      title: s.title,
+      offer: { doors: s.doors, links: s.links, spots: s.spots, seats: s.seats },
+      colliders: s.colliders,
+      areas: s.areas ?? [{ minX: -s.halfX, maxX: s.halfX, minZ: -s.halfZ, maxZ: s.halfZ }],
+    };
+  },
+  me: () => ({ x: player.position.x, z: player.position.z, rot: player.rotation.y }),
+  seatFree: (index) => {
+    const seat = space?.seats?.[index];
+    return !!seat && ![...others.values()].some((o) => o.seat === seat);
+  },
+  inReach: useLabel,
+  // Only the people in your own space, whose name tags you could already read (everyone else is just a head count).
+  others: () => [...others.values()].filter((o) => !muteDialog.isMuted(o.name)).map((o) => ({ name: o.name, x: o.group.position.x, z: o.group.position.z })),
+  busy: () => busy(),
+  playing: () => playing,
+});
+
 // --- game loop -------------------------------------------------------------
 
 let lastTime = performance.now();
@@ -2613,6 +2651,7 @@ const hit = new THREE.Vector3();
 function update(dt: number, now: number): void {
   if (!space) return;
   space.tick?.(dt);
+  describe.frame(dt);
   // Only once you've joined (the Enter click is the gesture browsers need for sound).
   updateAmbience(playing && !!space.outdoor, player.position.x, player.position.z);
   if (playing) {
@@ -2622,6 +2661,13 @@ function update(dt: number, now: number): void {
       // Turned outside (plan 34), up stays "away from the camera".
       // Indoors the view is always from the south, so the turn mustn't steer there (it did: 6, 10/30).
       if (camYaw && space.outdoor) move.applyAxisAngle(Y_AXIS, camYaw);
+      // "Describe what's around me", G: walked to the nearest usable thing through this same
+      // movement (the same speed, walls and clamping as a key held down), never a jump in place.
+      // A key held takes over at once (describeui.ts stops the walk on the key press).
+      if (move.lengthSq() === 0) {
+        const auto = describe.walkDirection();
+        if (auto) move.set(auto.x, 0, auto.z);
+      }
       // Walking gets you up.
       if (mySeat && move.lengthSq() > 0) standUp();
       if (move.lengthSq() > 0) {
