@@ -2,6 +2,7 @@
 // counter, and Stick/Cancel. Self-mounts to <body>, hidden until open().
 
 import "./notecompose.css";
+import { clearDraft, loadDraft, saveDraft } from "./drafts.ts";
 
 const MAX_CHARS = 600;
 const MAX_WORDS = 100;
@@ -12,7 +13,8 @@ function wordCount(text: string): number {
 }
 
 export function mountNoteComposer(onSubmit: (text: string) => Promise<void>): {
-  open(warning?: string): void;
+  /** `context` (the space's id) keeps one draft per place, so a note written in one room isn't offered in another. Without it (main.ts hasn't been taught to pass it) one shared draft is kept. */
+  open(warning?: string, context?: string): void;
   close(): void;
   isOpen(): boolean;
 } {
@@ -63,6 +65,7 @@ export function mountNoteComposer(onSubmit: (text: string) => Promise<void>): {
   document.body.append(root);
 
   let open = false;
+  let draftKey = "note.any";
 
   function updateCounter(): void {
     const words = wordCount(textarea.value);
@@ -71,7 +74,10 @@ export function mountNoteComposer(onSubmit: (text: string) => Promise<void>): {
     counter.classList.toggle("is-over", over);
     stickBtn.disabled = over || textarea.value.trim() === "";
   }
-  textarea.addEventListener("input", updateCounter);
+  textarea.addEventListener("input", () => {
+    updateCounter();
+    saveDraft(draftKey, { text: textarea.value });
+  });
 
   function hide(): void {
     if (!open) return;
@@ -95,10 +101,14 @@ export function mountNoteComposer(onSubmit: (text: string) => Promise<void>): {
   stickBtn.addEventListener("click", () => {
     const text = textarea.value.trim();
     if (!text) return;
+    const sentKey = draftKey;
     stickBtn.disabled = true;
     error.textContent = "";
     onSubmit(text)
-      .then(() => hide())
+      .then(() => {
+        clearDraft(sentKey);
+        hide();
+      })
       .catch((err: unknown) => {
         error.textContent = err instanceof Error ? err.message : String(err);
       })
@@ -106,9 +116,11 @@ export function mountNoteComposer(onSubmit: (text: string) => Promise<void>): {
   });
 
   return {
-    open(warningText?: string): void {
+    open(warningText?: string, context?: string): void {
       open = true;
-      textarea.value = "";
+      draftKey = `note.${context ?? "any"}`;
+      // The saved draft comes back, cut to the limit in case it was written under an older one.
+      textarea.value = (loadDraft(draftKey)?.text ?? "").slice(0, MAX_CHARS);
       error.textContent = "";
       warning.textContent = warningText ?? "";
       updateCounter();

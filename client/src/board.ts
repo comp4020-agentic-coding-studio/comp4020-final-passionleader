@@ -7,6 +7,7 @@
 // carry up to five files (200 MB each), which upload once the post is up.
 
 import "./board.css";
+import { clearDraft, loadDraft, saveDraft } from "./drafts.ts";
 import { renderMarkdown } from "./markdown.ts";
 import { hotBadge } from "./notepanel.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
@@ -369,6 +370,24 @@ export function mountBoard(h: {
   let editingCommentId: number | null = null;
   let draftStash: { title: string; text: string } | null = null;
   let focusEditFor: number | null = null;
+
+  /**
+   * The draft of a new post is kept per board and tab, so it never lands in another one. The
+   * board's title names it (a classroom's carries its code; the other boards' are fixed).
+   */
+  const postDraftKey = (): string => `post.${config.title}.${tab}`;
+
+  /** Puts the saved draft for this board and tab in the form (blank if none), cut to the limits. */
+  function loadPostDraft(): void {
+    const d = loadDraft(postDraftKey());
+    titleInput.value = (d?.title ?? "").slice(0, TITLE_CHARS);
+    textInput.value = (d?.text ?? "").slice(0, POST_CHARS);
+  }
+
+  function savePostDraft(): void {
+    // The edit form shares these fields; an edit is not a draft.
+    if (!editingPost) saveDraft(postDraftKey(), { title: titleInput.value, text: textInput.value });
+  }
 
   function setError(msg: string): void {
     error.textContent = msg;
@@ -878,6 +897,8 @@ export function mountBoard(h: {
     confirming = null;
     postsData = [];
     resetFilter();
+    loadPostDraft();
+    updateCounters();
     syncTabs();
     showView("list");
     renderPosts();
@@ -923,8 +944,12 @@ export function mountBoard(h: {
     else void goBack();
   });
   backBtn.addEventListener("click", () => void goBack());
-  titleInput.addEventListener("input", updateCounters);
-  textInput.addEventListener("input", updateCounters);
+  for (const field of [titleInput, textInput]) {
+    field.addEventListener("input", () => {
+      updateCounters();
+      savePostDraft();
+    });
+  }
   searchInput.addEventListener("input", renderPosts);
   unansweredBox.addEventListener("change", renderPosts);
   commentBox.addEventListener("input", updateCounters);
@@ -976,6 +1001,7 @@ export function mountBoard(h: {
       );
       return;
     }
+    const sentDraft = postDraftKey();
     const files = [...(filesInput.files ?? [])];
     if (files.length > 5) return setError("Up to five files on a post.");
     if (files.some((f) => f.size > MAX_FILE_BYTES)) return setError("Files can be up to 200 MB.");
@@ -987,6 +1013,7 @@ export function mountBoard(h: {
           uploadStatus.textContent = `Uploading ${name}… ${Math.round(done * 100)}%`;
         }, !!config.allowPrivate && privateBox.checked, config.groups ? size : undefined),
       () => {
+        clearDraft(sentDraft);
         titleInput.value = "";
         textInput.value = "";
         filesInput.value = "";
@@ -1069,8 +1096,7 @@ export function mountBoard(h: {
       draftStash = null;
       setWriteMode(false);
       resetFilter();
-      titleInput.value = "";
-      textInput.value = "";
+      loadPostDraft();
       filesInput.value = "";
       privateBox.checked = false;
       uploadStatus.textContent = "";

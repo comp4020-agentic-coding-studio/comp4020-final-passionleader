@@ -1,4 +1,5 @@
 import "./mailbox.css";
+import { clearDraft, loadDraft, saveDraft } from "./drafts.ts";
 import { canberraTime } from "./when.ts";
 import { renderMarkdown } from "./markdown.ts";
 
@@ -78,6 +79,7 @@ export function mountMailbox(opts: {
   let sent: MailView[] = [];
   let view: "inbox" | "sent" | "write" | "message" | "chats" = "inbox";
   let draftTo = "";
+  const DRAFT = "mail";
 
   function select(v: typeof view): void {
     view = v;
@@ -204,6 +206,16 @@ export function mountMailbox(opts: {
     send.type = "submit";
     send.className = "mail-send";
     send.textContent = "Send";
+    // A saved draft comes back on the plain Write tab, or when replying to the person it was for
+    // (a draft to someone else isn't put into this one). Values are cut to the fields' limits.
+    const saved = loadDraft(DRAFT);
+    if (saved && (!to || (saved.to ?? "").toLowerCase() === to.toLowerCase())) {
+      toIn.value = (saved.to ?? "").slice(0, toIn.maxLength);
+      subjIn.value = (saved.subject ?? "").slice(0, subjIn.maxLength) || subjIn.value;
+      textIn.value = (saved.text ?? "").slice(0, textIn.maxLength);
+    }
+    const keepDraft = (): void => saveDraft(DRAFT, { to: toIn.value, subject: subjIn.value, text: textIn.value });
+    for (const el of [toIn, subjIn, textIn]) el.addEventListener("input", keepDraft);
     form.append(mk("To (their name)", toIn), mk("Subject", subjIn), mk("Message", textIn), send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -220,6 +232,7 @@ export function mountMailbox(opts: {
           return;
         }
         draftTo = "";
+        clearDraft(DRAFT);
         status.textContent = "Sent.";
         void refresh("sent");
       });
