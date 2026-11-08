@@ -163,6 +163,7 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     // "the tram" is the light rail, a fake email is phishing.
     ...(/\bisis\b/i.test(question) ? ["anuhub"] : []),
     ...(/\btram\b/i.test(question) ? ["light", "rail"] : []),
+    ...(/\b(grocer\w*|shopping|supermarket\w*|food shop\w*)\b/i.test(question) ? ["groceries", "grocery", "supermarket", "food", "pantry"] : []),
     ...(/\b(suspicious|scam|fake|dodgy)\b.*\b(email|e-mail|message|link)\b|\bphish/i.test(question) ? ["phishing", "scam"] : []),
   ].filter(Boolean);
   const match = [...words, ...extra].map((w) => `"${w.replace(/"/g, "")}"`).join(" OR ");

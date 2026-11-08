@@ -29,6 +29,8 @@ export interface Npc {
   voice: "male" | "female";
   /** The crawled sources it answers from (crawl.ts); none, and it only points to its pages. */
   sources: string[];
+  /** More sources for questions that match `when` (its own pages first, these beside them). */
+  alsoFor?: { when: RegExp; sources: string[] };
   /** Sits (on a bench) rather than stands. */
   seated?: boolean;
   /** A model of its own instead of a person (assets/npc/<model>.glb). */
@@ -142,11 +144,14 @@ export const NPCS: Npc[] = [
       { label: "Cost of living in Canberra", url: "https://www.anu.edu.au/students/program-administration/fees-payments/estimated-cost-of-living-in-canberra" },
     ],
     topic: "Canberra transport buses light rail MyWay campus safety cost of living",
-    hint: "People ask in their own words: \"the bus\" means Transport Canberra's buses (once called ACTION), \"the tram\" means the light rail, \"the city\" or \"town\" means Civic (Canberra's city centre, next to campus). For getting home at night, name what the pages offer (ANU Security, the ANUOK app) and never promise a service the pages don't describe.",
+    hint: "People ask in their own words: \"the bus\" means Transport Canberra's buses (once called ACTION), \"the tram\" means the light rail, \"the city\" or \"town\" means Civic (Canberra's city centre, next to campus). For getting home at night, name what the pages offer (ANU Security, the ANUOK app) and never promise a service the pages don't describe. Asked where to buy groceries: say what the pages offer (the ANUSA Union Pantry, grocery vouchers, Student Bites, budgeting tips) and that they don't name particular supermarkets.",
     examples: ["How do I get from campus to Civic?", "How much is a bus fare with MyWay+?"],
     greeting: "Hi! I can help with getting around Canberra: buses, the light rail, MyWay+ fares, getting to Civic, staying safe at night, and the cost of living.",
     voice: "male",
     sources: ["canberra"],
+    // Food questions also search ANUSA's pages (the pantry, grocery vouchers, Student Bites): the user
+    // asked Riley where to buy groceries (11/8). Only then, so ANUSA's many pages don't crowd transport out.
+    alsoFor: { when: /\b(grocer\w*|shopping|supermarket\w*|food|pantry|eat\w*|meals?|cheap food)\b/i, sources: ["anusa"] },
     model: "nova",
   },
   {
@@ -488,8 +493,9 @@ export async function answer(npc: Npc, question: string, recent: Turn[] = []): P
   // before it, so the pages match what the talk is about (the user, 11/4: it forgot at once).
   const before = recent.at(-1)?.q;
   const context = before ? (/[^\p{Script=Latin}\P{L}]/u.test(before) ? ((await englishQuery(before)) ?? before) : before) : "";
-  let pieces = search(npc.sources, context && keywords(query).length <= 4 ? `${query} ${context}` : query, 8);
-  if (!pieces.length && vague) pieces = search(npc.sources, `${query} ${npc.topic}`, 8);
+  const sources = npc.alsoFor?.when.test(query) ? [...npc.sources, ...npc.alsoFor.sources] : npc.sources;
+  let pieces = search(sources, context && keywords(query).length <= 4 ? `${query} ${context}` : query, 8);
+  if (!pieces.length && vague) pieces = search(sources, `${query} ${npc.topic}`, 8);
   // No sources: the model still replies, under a brief that allows no facts (see noSourcesFor).
   const lang = replyIn(question);
   const system = pieces.length ? systemFor(npc, pieces, lang) : noSourcesFor(npc, lang);
