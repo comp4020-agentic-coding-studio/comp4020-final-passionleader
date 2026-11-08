@@ -242,7 +242,10 @@ export function createTables(host: Host): {
       if (op === "pick" && (msg.game === "quiz" || msg.game === "sketch")) {
         // A quiz under way holds the table; a finished game, or Sketch & Guess merely opened (it has
         // its own lobby, which the table can't see into), doesn't, so a forgotten one never blocks it.
-        if (g?.kind === "quiz" && g.phase !== "over") return refuse(player, id, "a game is already on");
+        // A quiz still in its lobby holds the table only while someone other than the picker waits in it:
+        // picking the quiz and then Sketch & Guess blocked your own table (the user, 11/9).
+        if (g?.kind === "quiz" && g.phase !== "over" && g.phase !== "lobby") return refuse(player, id, "a game is already on");
+        if (g?.kind === "quiz" && g.phase === "lobby" && [...g.players.keys()].some((k) => k !== key)) return refuse(player, id, "people are waiting for the quiz");
         if (g) drop(id);
         log("table-game", who ?? null, { table: id, game: msg.game });
         if (msg.game === "sketch") games.set(id, { kind: "sketch", by: player.name, until: now + SKETCH_OPEN_MS });

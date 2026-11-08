@@ -108,7 +108,15 @@ describe("the games table", () => {
     await b.s.next(tableMsg((v) => v.game === "quiz" && v.phase === "lobby"));
     await new Promise((r) => setTimeout(r, 300));
     b.s.send({ t: "action", kind: "table", table: "hub-1", op: "pick", game: "sketch" });
-    await b.s.next(refusal("a game is already on"));
+    await b.s.next(refusal("people are waiting for the quiz"));
+    // The one who opened the quiz may change their mind while nobody else has joined (the user, 11/9).
+    await new Promise((r) => setTimeout(r, 300));
+    a.s.send({ t: "action", kind: "table", table: "hub-1", op: "pick", game: "sketch" });
+    await b.s.next(tableMsg((v) => v.game === "sketch" && v.by === a.name));
+    await new Promise((r) => setTimeout(r, 300));
+    a.s.send({ t: "action", kind: "table", table: "hub-1", op: "pick", game: "quiz" });
+    await b.s.next(tableMsg((v) => v.game === "quiz" && v.phase === "lobby"));
+    await new Promise((r) => setTimeout(r, 300));
     a.s.send({ t: "action", kind: "table", table: "hub-1", op: "leave" });
     // The only player left: the table is free again, and Sketch & Guess can be opened on it.
     await b.s.next(tableMsg((v) => v.game === null));

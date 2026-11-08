@@ -25,6 +25,7 @@ export interface TableView {
 const REFUSALS: Record<string, string> = {
   "too far": "Stand next to the table (within 3 m) to play.",
   "a game is already on": "A game is already on at this table.",
+  "people are waiting for the quiz": "People are waiting to play the quiz here: join it, or wait for them to finish.",
   "already started": "That quiz has already started. Wait for the next one.",
   "table full": "The table is full.",
   "need two people": "A quiz needs at least two people at the table.",
