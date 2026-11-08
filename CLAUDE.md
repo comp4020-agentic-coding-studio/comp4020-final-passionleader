@@ -211,8 +211,9 @@ when a flow changes.
   chat, host, invites and files go, and the last one out is warned of
   that before leaving (by the room menu's Leave, last on it, or the door;
   the menu opens on coming in and closes to an "Open Room UI" button under the
-  round buttons at the top right). One exception: a member may save the chat so far (its lines, not
-  the files), or the shared notes alone, for themselves only, kept 30 days
+  round buttons at the top right). One exception: a member may save the chat so far (its lines; of
+  the files, only the pictures the shared notes show), or the shared notes
+  alone, for themselves only, kept 30 days
   in SQLite and then purged, at most 50 each; everyone inside is told in the
   room that they saved it. Only its owner lists,
   reads or deletes a saved chat, checked on the server. No notes in
@@ -250,7 +251,10 @@ when a flow changes.
   and come back the same way, only to whoever may see them: anyone for a
   post's, the people in the room for a room's, the admin for a screenshot's.
   Kept 30 days at most (the bucket's rule, and the server stops listing them),
-  a room's only until it empties. Without S3 an upload refuses with "Uploads
+  a room's only until it empties, except a picture someone's saved notes
+  show: that stays for the saver alone (only they may fetch it, checked on
+  the server) until the bucket's 30 days or until they delete the copy.
+  Without S3 an upload refuses with "Uploads
   aren't available right now. Please tell the admin. Error code: S3-…". The
   AWS keys are Fly secrets only, never in the repo.
 - The admin's log keeps, for seven days only, what people wrote and removed

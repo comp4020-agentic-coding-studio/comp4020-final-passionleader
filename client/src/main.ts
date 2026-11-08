@@ -303,6 +303,7 @@ const mailbox = mountMailbox({
     }
   },
   member: () => isMember(session),
+  imageLink: async (id) => (session ? imageLink(session.token, id) : null),
 });
 mailBtn.addEventListener("click", () => mailbox.open());
 mountBgmPlayer();

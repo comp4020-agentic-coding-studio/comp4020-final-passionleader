@@ -30,6 +30,8 @@ export function mountMailbox(opts: {
   /** One saved chat's lines. */
   chat(id: number): Promise<{ title: string; savedAt: string; lines: { name: string; text: string; system?: boolean }[] } | string>;
   removeChat(id: number): Promise<string | null>;
+  /** A link that shows a picture the saved notes kept, or null if it's gone. */
+  imageLink(id: string): Promise<string | null>;
 }): { open(to?: string, chats?: boolean): void; isOpen(): boolean } {
   const root = document.createElement("div");
   root.id = "mailbox";
@@ -306,20 +308,27 @@ export function mountMailbox(opts: {
         notes.className = "saved-notes";
         const h = document.createElement("strong");
         h.textContent = "📝 Shared notes";
-        // Rendered like the room's notes. A picture in them was a room file, which goes when the room
-        // empties (saved notes keep text, not files: CLAUDE.md), so it says that instead of showing
-        // the raw line (the user, 11/9).
+        // Rendered like the room's notes, pictures included: saving keeps the notes' pictures for
+        // you, under the bucket's 30 days from upload (the user, 11/9). One past that says so.
         notes.append(
           h,
           renderMarkdown(l.text, {
             headings: 5,
             topLevel: 1,
             rich: true,
-            picture: (alt) => {
-              const gone = document.createElement("p");
-              gone.className = "saved-picture-gone";
-              gone.textContent = `🖼 ${alt || "A picture"} (pictures stay with the room and go when it empties; saved notes keep the text)`;
-              return gone;
+            picture: (alt, id) => {
+              const img = document.createElement("img");
+              img.className = "saved-picture";
+              img.alt = alt || "picture";
+              const gone = (): void => {
+                const p = document.createElement("p");
+                p.className = "saved-picture-gone";
+                p.textContent = `🖼 ${img.alt} (no longer kept: files go 30 days after they were shared)`;
+                img.replaceWith(p);
+              };
+              img.addEventListener("error", gone);
+              void opts.imageLink(id).then((url) => (url ? (img.src = url) : gone()));
+              return img;
             },
           }),
         );

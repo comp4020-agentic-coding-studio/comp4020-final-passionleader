@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
+import { dropRoomFiles, keepRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -415,6 +415,9 @@ function onMessage(ws: WebSocket, raw: string): void {
     // A saved chat takes the shared notes with it, as a last line.
     if (!notes && state.pad.trim()) lines.push({ name: "Notes", text: state.pad });
     const id = saveChat(player.name, player.space, lines, notes ? "notes" : "chat");
+    // The pictures the notes show are kept with this copy (the user, 11/9).
+    const pictures = [...state.pad.matchAll(/\(room-file:([A-Za-z0-9-]+)\)/g)].map((m) => m[1]!);
+    if (pictures.length) keepRoomFiles(state.session, pictures, id, player.name);
     log("chat-saved", owners.get(ws) ?? null, { space: player.space, lines: lines.length, what: notes ? "notes" : "chat" });
     send(ws, { t: "action", kind: "chat-saved", ok: true, id, what: notes ? "notes" : "chat" });
     roomSay(player.space, { name: player.name, text: `${player.name} saved ${notes ? "the shared notes" : "this chat"} (kept 30 days, for them only)`, system: true });

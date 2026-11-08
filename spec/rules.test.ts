@@ -299,3 +299,25 @@ describe("the Poop Room keeps its poops (plan 104)", () => {
     expect(db.purgeOldPoops()).toBe(1);
   });
 });
+
+describe("pictures in saved notes", () => {
+  it("are kept for the saver when the room empties, fetchable by them alone, and go with the saved copy", () => {
+    db.createVisitor("saver", "t-saver");
+    const room = "session-keep-1";
+    const file = (id: string) => db.addFile({ id, kind: "room", owner: "saver", name: `${id}.png`, size: 10, key: `room-files/${id}`, postId: null, bugId: null, room });
+    file("pic-kept");
+    file("pic-other");
+    const saved = db.saveChat("saver", "team-library-1", [{ name: "Notes", text: "![a](room-file:pic-kept)" }], "notes");
+    db.keepRoomFiles(room, ["pic-kept", "not-in-room"], saved, "saver");
+    // The room empties: the other file goes, the kept one stays, out of the room.
+    expect(db.dropRoomFiles(room)).toEqual(["room-files/pic-other"]);
+    expect(db.findFile("pic-kept")?.room).toBeNull();
+    expect(db.keepsFile("saver", "pic-kept")).toBe(true);
+    expect(db.keepsFile("someone", "pic-kept")).toBe(false);
+    // Deleting the saved copy lets the picture go.
+    expect(db.deleteSavedChat("saver", saved)).toBe(true);
+    expect(db.keepsFile("saver", "pic-kept")).toBe(false);
+    expect(db.releaseKeptFiles()).toEqual(["room-files/pic-kept"]);
+    expect(db.findFile("pic-kept")).toBeUndefined();
+  });
+});

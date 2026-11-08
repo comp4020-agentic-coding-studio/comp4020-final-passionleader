@@ -57,6 +57,8 @@ import {
   unreadCount,
   purgeOldMail,
   purgeOldChats,
+  keepsFile,
+  releaseKeptFiles,
   purgeOldPoops,
   savedChatsOf,
   savedChat,
@@ -1476,7 +1478,7 @@ app.post("/api/files/:id/link", async (c) => {
     (f.kind === "bug" && mayUseAdminPc(v)) ||
     (f.kind === "room" && (() => {
       const at = livePlayer(v.name)?.space;
-      return !!at && roomSessionOf(v.name, at) === f.room;
+      return (!!at && f.room !== null && roomSessionOf(v.name, at) === f.room) || keepsFile(v.name, f.id);
     })());
   if (!allowed) {
     log("refused", v, { action: "download", kind: f.kind, reason: f.kind === "room" ? "not in the room" : "not admin" }, { ip: ipOf(c), content: f.name });
@@ -1571,6 +1573,7 @@ const purge = (): void => {
   const guestsGone = purgeIdleGuests();
   if (guestsGone) log("guests-purged", null, { count: guestsGone });
   removeObjects(purgeFiles());
+  removeObjects(releaseKeptFiles());
 };
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();

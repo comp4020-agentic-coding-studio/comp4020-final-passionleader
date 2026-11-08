@@ -648,8 +648,44 @@ export function savedChat(owner: string, id: number): SavedChat | undefined {
     | undefined;
   return row && { ...row, lines: JSON.parse(row.lines) as SavedChat["lines"] };
 }
-export const deleteSavedChat = (owner: string, id: number): boolean => db.prepare("DELETE FROM saved_chats WHERE id = ? AND owner = ?").run(id, owner).changes > 0;
+export const deleteSavedChat = (owner: string, id: number): boolean => {
+  const gone = db.prepare("DELETE FROM saved_chats WHERE id = ? AND owner = ?").run(id, owner).changes > 0;
+  if (gone) db.prepare("DELETE FROM kept_files WHERE saved_id = ?").run(id);
+  return gone;
+};
 export const purgeOldChats = (): number => Number(db.prepare(`DELETE FROM saved_chats WHERE NOT (${freshChat})`).run().changes);
+
+// Pictures in saved notes (the user, 11/9): a room's file that the saved notes show is kept for
+// that copy's owner when the room empties, under the bucket's own rule (gone 30 days after it was
+// uploaded, like every file). Only the owner of a saved copy that keeps it may fetch it.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS kept_files (
+    file_id  TEXT NOT NULL,
+    saved_id INTEGER NOT NULL,
+    owner    TEXT NOT NULL COLLATE NOCASE,
+    PRIMARY KEY (file_id, saved_id)
+  );
+`);
+/** Marks the room's own files among `ids` as kept by saved copy `savedId` of `owner`. */
+export function keepRoomFiles(room: string, ids: string[], savedId: number, owner: string): void {
+  const own = db.prepare("SELECT id FROM files WHERE id = ? AND room = ? AND kind = 'room'");
+  const add = db.prepare("INSERT OR IGNORE INTO kept_files (file_id, saved_id, owner) VALUES (?, ?, ?)");
+  for (const id of ids) if (own.get(id, room)) add.run(id, savedId, owner);
+}
+/** Whether `owner` keeps file `id` through a saved copy that is still there. */
+export const keepsFile = (owner: string, id: string): boolean =>
+  !!db.prepare(`SELECT 1 FROM kept_files k JOIN saved_chats s ON s.id = k.saved_id WHERE k.file_id = ? AND k.owner = ? AND s.${freshChat}`).get(id, owner);
+/**
+ * Forgets keepers whose saved copy is gone, and returns the S3 keys of room files nothing keeps any
+ * more and whose room has closed (room is NULL), so they can be removed now.
+ */
+export function releaseKeptFiles(): string[] {
+  db.prepare("DELETE FROM kept_files WHERE saved_id NOT IN (SELECT id FROM saved_chats)").run();
+  const loose = db.prepare("SELECT id, key FROM files WHERE kind = 'room' AND room IS NULL AND id NOT IN (SELECT file_id FROM kept_files)").all() as { id: string; key: string }[];
+  const del = db.prepare("DELETE FROM files WHERE id = ?");
+  for (const f of loose) del.run(f.id);
+  return loose.map((f) => f.key);
+}
 
 export const purgeOldMail = (): number => Number(db.prepare(`DELETE FROM mail WHERE NOT (${freshMail})`).run().changes);
 
@@ -1213,8 +1249,11 @@ export function uploadsToday(owner: string): number {
 
 /** Forgets a meeting room's files once it empties; returns their S3 keys to delete. */
 export function dropRoomFiles(room: string): string[] {
-  const rows = db.prepare("SELECT key FROM files WHERE room = ?").all(room) as { key: string }[];
-  db.prepare("DELETE FROM files WHERE room = ?").run(room);
+  const kept = "id IN (SELECT file_id FROM kept_files)";
+  const rows = db.prepare(`SELECT key FROM files WHERE room = ? AND NOT ${kept}`).all(room) as { key: string }[];
+  db.prepare(`DELETE FROM files WHERE room = ? AND NOT ${kept}`).run(room);
+  // A picture kept by someone's saved notes stays, no longer in any room (the bucket's 30 days still apply).
+  db.prepare(`UPDATE files SET room = NULL WHERE room = ? AND ${kept}`).run(room);
   return rows.map((r) => r.key);
 }
 
