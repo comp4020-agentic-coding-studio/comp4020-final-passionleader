@@ -38,3 +38,12 @@ export function clearDraft(key: string): void {
     // Nothing to clear without storage.
   }
 }
+
+/** Every draft in this browser (signing out on a shared computer). */
+export function clearAllDrafts(): void {
+  try {
+    for (const k of Object.keys(localStorage)) if (k.startsWith(PREFIX)) localStorage.removeItem(k);
+  } catch {
+    // Nothing to clear without storage.
+  }
+}

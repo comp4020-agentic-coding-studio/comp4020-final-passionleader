@@ -115,6 +115,7 @@ import { materialsOf, occludersOf } from "./spaces/occluders.ts";
 import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { LAMP_HEADS } from "./spaces/streetscape.ts";
 import { canberraTime } from "./when.ts";
+import { clearAllDrafts } from "./drafts.ts";
 // Last, so its shared values come after every window's own stylesheet.
 import "./ui.css";
 
@@ -182,6 +183,8 @@ function signOut(): void {
   // (A guest going to sign up, or a member's Sign out in the settings.)
   storage.set("campus.token", "");
   storage.set("campus.role", "");
+  // Half-written notes, posts and mail go too: on a shared computer the next person shouldn't see them.
+  clearAllDrafts();
   session = null;
   showJoin();
 }
@@ -1625,7 +1628,7 @@ async function writeNote(): Promise<void> {
   if (where) return toast(where);
   try {
     const { count, limit } = await myNoteCount(session.token, space.id);
-    composer.open(count >= limit ? `You already have ${limit} notes here. Sticking this one removes your oldest.` : undefined);
+    composer.open(count >= limit ? `You already have ${limit} notes here. Sticking this one removes your oldest.` : undefined, space.id);
   } catch (err) {
     toast(err instanceof ApiError ? err.message : "Could not start a note.");
   }
