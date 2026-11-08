@@ -1,6 +1,10 @@
 # 002: Who may see and change what, checked on the server
 
-Status: accepted (crit 10)
+Status: accepted (crit 10). Updated for the final project by
+[005](005-sign-up-with-an-anu-email.md): email sign-up now gives four roles
+(guest, student, staff, admin), and staff post notices, open classrooms and
+open counselling rooms. The rest of this record is as written for crit 10;
+see "Since crit 10" at the end.
 
 ![The whole architecture as of crit 10: browsers, one Fly machine with the server and SQLite, and the private S3 bucket](../../diagrams/6-crit10-architecture.png)
 
@@ -123,3 +127,15 @@ The questions:
   a meeting room; nothing that isn't there is handed out.
 - The rehearsal (see `PROCESS.md`): two people in two browsers, told apart in
   the admin's log, and a report about one of them read with its chat.
+
+## Since crit 10
+
+The two biggest trade-offs above are closed. Sign-up now needs an ANU email
+code, so everyone is verified, and the roles are guest, student, staff and
+admin ([005](005-sign-up-with-an-anu-email.md)). Notices, new classrooms and
+counselling rooms are for staff: a counselling or interview room is opened
+by staff, who invite students in.
+
+When students report a chat line, a strange post or a sticky note, the admin
+can look at the IP and at what was said or posted, then restrict that person
+or put them out at once. All of this is for one thing: a safe virtual campus.

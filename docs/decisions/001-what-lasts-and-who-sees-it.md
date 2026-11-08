@@ -57,6 +57,11 @@ warning) and can post one every 30 seconds. Everything is scoped to the space
 you're in: walking into the Student Hub means you stop hearing the campus
 outside and start hearing the Hub.
 
+Why keep so little: data that doesn't matter has no reason to sit in a
+database or on lasting storage, where it only wastes the server's resources.
+So only what's needed is stored. For chat, the last few minutes are enough
+to back a report, and that's all that is kept.
+
 I considered Redis + Postgres, but on one low-spec node it's a problem: it
 costs money, and with a single server, Redis caching has nothing to share. So
 I chose SQLite, which is light. Real-time over WebSocket was easy to decide,
