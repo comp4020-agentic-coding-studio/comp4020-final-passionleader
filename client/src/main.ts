@@ -1986,6 +1986,45 @@ function goOnline(token: string): void {
 
 let toastTimer = 0;
 /**
+ * A new version (RICE v3 item 17): every five minutes and when the tab comes back, ask the server
+ * which client bundle it serves; if it isn't the one this tab loaded (a deploy since), a card offers
+ * a reload. Never reloads by itself, so nothing half-typed is lost.
+ */
+const myBuild = (document.querySelector('script[type="module"][src*="/assets/index-"]') as HTMLScriptElement | null)?.src.replace(location.origin, "") ?? "";
+let newBuildShown = false;
+async function checkBuild(): Promise<void> {
+  if (!myBuild || newBuildShown) return;
+  try {
+    const r = await fetch("/api/version", { cache: "no-store" });
+    const { build } = (await r.json()) as { build?: string };
+    if (!build || build === myBuild) return;
+    newBuildShown = true;
+    const card = document.createElement("div");
+    card.id = "new-version";
+    card.setAttribute("role", "status");
+    const text = document.createElement("span");
+    text.textContent = "ANU Crossing has been updated.";
+    const go = document.createElement("button");
+    go.type = "button";
+    go.textContent = "Reload";
+    go.addEventListener("click", () => location.reload());
+    const later = document.createElement("button");
+    later.type = "button";
+    later.className = "ui-close";
+    later.textContent = "Later";
+    later.addEventListener("click", () => card.remove());
+    card.append(text, go, later);
+    document.body.append(card);
+  } catch {
+    // Offline or restarting: ask again next time.
+  }
+}
+window.setInterval(() => void checkBuild(), 5 * 60_000);
+document.addEventListener("visibilitychange", () => {
+  if (!document.hidden) void checkBuild();
+});
+
+/**
  * A short notice in a card at the top centre, over everything, the room window included (the corner
  * notice lives in the HUD, hidden while a room window is open, so saving in a room seemed to do
  * nothing: the user, 11/8).

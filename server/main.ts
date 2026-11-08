@@ -598,6 +598,20 @@ app.post("/api/voice", async (c) => {
 // Where they stand and what they cover (npcs.ts). Anyone joined may ask, guests
 // too, one question every two seconds, thirty a day, 500 characters;
 // nothing is stored or logged but that someone asked whom.
+// The client bundle this server serves (its hashed name in index.html), so an open tab from before
+// a deploy can tell it's out of date and offer a reload (RICE v3 item 17).
+const BUILD = (() => {
+  try {
+    return /\/assets\/index-[\w-]+\.js/.exec(readFileSync("client/dist/index.html", "utf8"))?.[0] ?? "";
+  } catch {
+    return "";
+  }
+})();
+app.get("/api/version", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json({ build: BUILD });
+});
+
 app.get("/api/npcs", (c) =>
   c.json(
     NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d, examples }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d, examples })),

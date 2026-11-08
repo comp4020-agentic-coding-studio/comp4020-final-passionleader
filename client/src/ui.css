@@ -60,3 +60,13 @@
 #popup-notice[hidden] { display: none; }
 @keyframes popup-in { from { opacity: 0; transform: translate(-50%, -6px); } }
 @media (prefers-reduced-motion: reduce) { #popup-notice { animation: none; } }
+
+/* A deploy happened since this tab loaded (main.ts checkBuild): offer a reload. */
+#new-version {
+  position: fixed; left: 50%; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); transform: translateX(-50%); z-index: 41;
+  display: flex; align-items: center; gap: 10px; max-width: calc(100vw - 32px); padding: 8px 10px 8px 14px; border-radius: 12px;
+  background: var(--card, #f5efdf); color: #3b2a12; border: 2px solid #6b3f1d; box-shadow: 0 8px 24px rgba(0, 0, 0, 0.22);
+  font: 600 0.92rem system-ui, sans-serif;
+}
+#new-version button { min-height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid #6b3f1d; background: #6b3f1d; color: #fff; font: inherit; cursor: pointer; }
+#new-version button.ui-close { background: transparent; color: inherit; }
