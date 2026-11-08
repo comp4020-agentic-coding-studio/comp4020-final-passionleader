@@ -28,6 +28,11 @@ you only need one ANU address.
   both windows still show it. The guest sees it too, and comes back as the
   same guest name after a reload. A team room keeps its chat and notes
   while anyone is still inside, so one of you can reload and find them.
+- Also worth a minute: in the library, press E at Robin and ask 'How do I
+  enrol?'; the answer links ANU's own pages, and an off-topic question gets
+  'I couldn't find that'. As staff, walk into a counselling room off the
+  Student Hub and invite the guest from the room menu: the guest's window
+  asks at once, and Accept brings them in.
 
 **Optional, no setup:** the AI assistants (press E near an "AI" tag), and
 voice (allow the microphone; outside, hold V on a computer).
@@ -60,7 +65,7 @@ where people want to stay. Five conditions help.
 - **Present together.** Movement, chat, voice and shared notes reach everyone
   at once. Co-presence goes with satisfaction in virtual worlds (Bulu, 2012),
   and students rated teamwork higher on Gather.Town than on Zoom (Lee et al.,
-  2023). A counselling room lets in only the invited ([ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)).
+  2023). Staff open counselling and interview rooms to the invited ([ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)).
 - **Familiar, so less effort.** What we know is easier to process, and that
   ease feels safe (Reber et al., 2004); a familiar layout also leaves more
   attention for real work (Sweller, 1988). So I photographed and drew the
@@ -68,10 +73,10 @@ where people want to stay. Five conditions help.
 - **Rest, not another work screen.** It should feel more like a game than a work
   tool. I regenerated the music with Gemini until it
   sounded like a lively campus, and liked it so much I gave it a player; I
-  often leave ANU Crossing open just to listen.
+  often leave ANU Crossing open to listen.
 - **Easy for shy people.** In one field study, metaverse platforms improved
   young people's social skills and sense of community (Youssef et al., 2024).
-  Here a shy student can wave or leave a note before saying a word, and 'Ask
+  Here a shy student can wave or leave a note before speaking, and 'Ask
   the Hub' lets newcomers ask what I once couldn't.
 
 ## Against the alternatives
@@ -86,7 +91,8 @@ answers and first friends.
 
 Enforced by `spec/`:
 
-- a team room holds six, and counselling rooms admit only the invited (`rooms.test.ts`)
+- a team room holds six; only staff open a counselling room, then invite
+  (`rooms.test.ts`)
 - assistants answer only from crawled pages, with no facts when nothing
   matches (`knowledge.test.ts`)
 - live counts carry no names, moves arrive within a second, and chat stays
