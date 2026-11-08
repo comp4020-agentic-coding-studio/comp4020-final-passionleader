@@ -43,6 +43,9 @@ function context(): AudioContext | null {
   return ctx;
 }
 
+/** The shared audio context (made on first use), for sounds that run on their own, like ambience.ts. */
+export const sfxContext = context;
+
 function load(name: string): Promise<AudioBuffer | null> {
   let b = buffers.get(name);
   if (b) return b;

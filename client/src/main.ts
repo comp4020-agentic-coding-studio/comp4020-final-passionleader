@@ -83,6 +83,7 @@ import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
 import { emoteBurst } from "./emotefx.ts";
+import { updateAmbience } from "./ambience.ts";
 import { mountSignupPrompt } from "./signupprompt.ts";
 import { mountGuestNotice } from "./guestnotice.ts";
 import { mountRoomPad } from "./roompad.ts";
@@ -2469,6 +2470,8 @@ const hit = new THREE.Vector3();
 function update(dt: number, now: number): void {
   if (!space) return;
   space.tick?.(dt);
+  // Only once you've joined (the Enter click is the gesture browsers need for sound).
+  updateAmbience(playing && !!space.outdoor, player.position.x, player.position.z);
   if (playing) {
     let moving = false;
     if (!busy()) {
