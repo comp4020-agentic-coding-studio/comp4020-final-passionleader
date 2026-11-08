@@ -260,3 +260,7 @@
   font-weight: 700;
   white-space: nowrap;
 }
+
+/* Said to the author (and the admin) of something hidden after reports. */
+.note-hidden { margin: 8px 0 0; padding: 6px 10px; border-radius: 8px; background: rgba(160, 90, 40, 0.14); font-size: 0.85rem; }
+.note-comment-hidden { font-size: 0.75rem; opacity: 0.8; font-style: italic; }

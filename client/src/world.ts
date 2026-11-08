@@ -561,6 +561,8 @@ const cache = new Map<string, Promise<THREE.Group | null>>();
 // toward their tops, each plant out of step with the next (by where it
 // stands). One shared clock; main ticks it.
 export const wind = { value: 0 };
+/** How hard the plants sway: 1 in a light breeze, up to 3 in a gale (main.ts sets it from the weather). */
+export const gust = { value: 1 };
 const WINDY = /leaves|grass|flowers/i;
 const swayed = new WeakSet<THREE.Material>();
 function addWind(root: THREE.Object3D): void {
@@ -572,8 +574,9 @@ function addWind(root: THREE.Object3D): void {
       swayed.add(m);
       m.onBeforeCompile = (shader) => {
         shader.uniforms.uWind = wind;
+        shader.uniforms.uGust = gust;
         shader.vertexShader = shader.vertexShader
-          .replace("#include <common>", "#include <common>\nuniform float uWind;")
+          .replace("#include <common>", "#include <common>\nuniform float uWind;\nuniform float uGust;")
           .replace(
             "#include <begin_vertex>",
             `#include <begin_vertex>
@@ -582,7 +585,7 @@ function addWind(root: THREE.Object3D): void {
               rootAt = modelMatrix * instanceMatrix * vec4(0.0, 0.0, 0.0, 1.0);
             #endif
             float phase = rootAt.x * 0.37 + rootAt.z * 0.21;
-            float reach = max(position.y, 0.0) * 0.025;
+            float reach = max(position.y, 0.0) * 0.025 * uGust;
             transformed.x += sin(uWind * 1.3 + phase) * reach;
             transformed.z += cos(uWind * 0.9 + phase * 1.7) * reach * 0.6;`,
           );

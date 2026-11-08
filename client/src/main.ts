@@ -81,7 +81,10 @@ import { mountJoinNow } from "./joinnow.ts";
 import { mountEventBanner, mountEvents, onEventsChanged, onNowSpaces, refreshEvents } from "./events.ts";
 import { mountWhoHere } from "./whohere.ts";
 import { keepScreenOn } from "./wakelock.ts";
-import { canberraHour, clockReady, daylightAt, outside } from "./daylight.ts";
+import { canberraHour, clockReady, daylightAt, outside, withWeather } from "./daylight.ts";
+import { makeRain } from "./rain.ts";
+import { onWeather, weatherNow } from "./weather.ts";
+import { mountDescribe } from "./describeui.ts";
 import { mountStatus, statusText } from "./status.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
@@ -127,7 +130,7 @@ import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { roomArrival } from "./spaces/meeting.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, gust, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { LAMP_HEADS } from "./spaces/streetscape.ts";
 import { canberraTime } from "./when.ts";
 import { clearAllDrafts } from "./drafts.ts";
@@ -560,12 +563,17 @@ function litByLamps(group: THREE.Object3D, night: number): void {
 // Canberra's time of day, outside (daylight.ts): checked on going out and once a minute.
 function applyDaylight(): void {
   const { hour, month } = canberraHour();
-  const d = daylightAt(hour, month);
+  // Indoors only the time of day counts (the sun's shafts through the windows); outside the weather
+  // lies over it (daylight.ts withWeather). Clear weather changes nothing.
+  const base = daylightAt(hour, month);
+  const d = space?.outdoor ? withWeather(base, weatherNow()) : base;
   // Rooms' windows read this (no sunbeams after sunset); the rest is outside only.
   outside.night = d.lamps;
   // Every lit window and shop front (world.ts nightGlow): bright after dark, faint (or off) by day.
   for (const g of nightGlow) g.m.emissiveIntensity = (g.day ?? 0) + (g.full - (g.day ?? 0)) * d.lamps;
   lampLights.intensity = d.lamps;
+  // The rain is there only outside (see applyWeather below).
+  rain.setVisible(RICH && !reduceMotion() && weatherNow().kind === "rain" && !!space?.outdoor);
   if (!space?.outdoor) return;
   skyDome.material.color.copy(d.sky);
   sun.color.copy(d.sunColour);
@@ -584,6 +592,18 @@ function applyDaylight(): void {
 }
 window.setInterval(applyDaylight, 60_000);
 clockReady.then = applyDaylight;
+
+// Rain and wind (weather.ts), outdoors on Medium and High (RICH); Reduce motion keeps the rain still,
+// so there is none. The sky's grey and the sun's dimming (above) apply on every setting.
+const rain = makeRain();
+scene.add(rain.group);
+function applyWeather(): void {
+  const w = weatherNow();
+  // The plants sway harder in wind: 1 in a breeze, up to 3 in a gale (a moving-grass effect, so Medium and High only).
+  gust.value = 1 + Math.min(2, Math.max(0, w.wind - 8) / 14);
+  applyDaylight();
+}
+onWeather(applyWeather);
 
 function applySky(): void {
   scene.background = null;
@@ -935,7 +955,7 @@ function removeNote(id: number): void {
 async function loadNotes(id: SpaceId): Promise<void> {
   const ticket = noteRequest;
   try {
-    const list = await getNotes(id);
+    const list = await getNotes(id, session?.token);
     if (ticket === noteRequest) list.forEach(upsertNote);
   } catch (err) {
     toast(err instanceof ApiError ? err.message : "Could not load notes.");
@@ -956,7 +976,7 @@ const heartsOf = (c: { author: string; heartedBy?: string[] }): { hearts: number
 const commentViews = (list: Comment[]): CommentView[] => list.map((c) => ({ ...c, canDelete: mine(c.author), ...heartsOf(c) }));
 
 async function refreshComments(noteId: number): Promise<void> {
-  const list = await getComments(noteId);
+  const list = await getComments(noteId, session?.token);
   panel.setComments(noteId, commentViews(list));
   const view = notes.get(noteId);
   if (view) upsertNote({ ...view.note, comments: list.length });
@@ -1811,6 +1831,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   sun.hemi.intensity = 0.9;
   renderer.toneMappingExposure = 0.85;
   applyDaylight();
+  describe.enteredSpace();
   player.position.set(at.x, 0, at.z);
   vy = 0;
   camera.position.copy(player.position).add(cameraOffset(space, at.z));
@@ -1826,7 +1847,7 @@ async function openNote(id: number): Promise<void> {
   if (!view) return;
   stopMoving();
   try {
-    const list = await getComments(id);
+    const list = await getComments(id, session?.token);
     panel.open({ ...view.note, canDelete: mine(view.note.author) }, commentViews(list));
   } catch (err) {
     toast(err instanceof ApiError ? err.message : "Could not open that note.");
@@ -2132,6 +2153,13 @@ function goOnline(token: string): void {
     emote: showEmote,
     note: upsertNote,
     noteRemoved: removeNote,
+    // Hidden after reports: it goes from every screen but its author's and the admin's, which keep it (marked).
+    noteHidden(id, author) {
+      if (mine(author)) {
+        const view = notes.get(id);
+        if (view) upsertNote({ ...view.note, hidden: true });
+      } else removeNote(id);
+    },
     comment(c) {
       if (panel.openNoteId() === c.noteId) void refreshComments(c.noteId);
       else {
@@ -2787,6 +2815,42 @@ window.addEventListener("keydown", (e) => {
   if (e.code === "KeyR" && !e.repeat && playing && !busy() && !e.ctrlKey && !e.metaKey) turnView();
 });
 
+// --- describe what's around me (Settings; describeui.ts) ------------------------------
+
+/** What E would do now, in words, or null. */
+function useLabel(): string | null {
+  if (mySeat) return "Stand up";
+  const t = nearestTarget();
+  if (!t) return null;
+  if (t.kind === "seat") return "Sit down";
+  if (t.kind === "door") return t.door.secret ? null : t.door.label;
+  if (t.kind === "link" || t.kind === "spot") return t.label;
+  return t.here.length > 1 ? `Pick one of ${t.here.length} notes here` : `Read ${t.author}'s note`;
+}
+const describe = mountDescribe({
+  space() {
+    if (!space) return null;
+    const s = space;
+    return {
+      id: s.id,
+      title: s.title,
+      offer: { doors: s.doors, links: s.links, spots: s.spots, seats: s.seats },
+      colliders: s.colliders,
+      areas: s.areas ?? [{ minX: -s.halfX, maxX: s.halfX, minZ: -s.halfZ, maxZ: s.halfZ }],
+    };
+  },
+  me: () => ({ x: player.position.x, z: player.position.z, rot: player.rotation.y }),
+  seatFree: (index) => {
+    const seat = space?.seats?.[index];
+    return !!seat && ![...others.values()].some((o) => o.seat === seat);
+  },
+  inReach: useLabel,
+  // Only the people in your own space, whose name tags you could already read (everyone else is just a head count).
+  others: () => [...others.values()].filter((o) => !muteDialog.isMuted(o.name)).map((o) => ({ name: o.name, x: o.group.position.x, z: o.group.position.z })),
+  busy: () => busy(),
+  playing: () => playing,
+});
+
 // --- game loop -------------------------------------------------------------
 
 let lastTime = performance.now();
@@ -2798,6 +2862,7 @@ const hit = new THREE.Vector3();
 function update(dt: number, now: number): void {
   if (!space) return;
   space.tick?.(dt);
+  describe.frame(dt);
   // Only once you've joined (the Enter click is the gesture browsers need for sound).
   updateAmbience(playing && !!space.outdoor, player.position.x, player.position.z);
   if (playing) {
@@ -2807,6 +2872,13 @@ function update(dt: number, now: number): void {
       // Turned outside (plan 34), up stays "away from the camera".
       // Indoors the view is always from the south, so the turn mustn't steer there (it did: 6, 10/30).
       if (camYaw && space.outdoor) move.applyAxisAngle(Y_AXIS, camYaw);
+      // "Describe what's around me", G: walked to the nearest usable thing through this same
+      // movement (the same speed, walls and clamping as a key held down), never a jump in place.
+      // A key held takes over at once (describeui.ts stops the walk on the key press).
+      if (move.lengthSq() === 0) {
+        const auto = describe.walkDirection();
+        if (auto) move.set(auto.x, 0, auto.z);
+      }
       // Walking gets you up.
       if (mySeat && move.lengthSq() > 0) standUp();
       if (move.lengthSq() > 0) {
@@ -2944,6 +3016,7 @@ function update(dt: number, now: number): void {
   // The light stays where it is, so shading doesn't move with it.
   if (RICH && !reduceMotion()) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
   if (RICH && !reduceMotion()) wind.value += dt;
+  rain.update(dt, player.position, weatherNow().wind);
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);

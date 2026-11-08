@@ -2,6 +2,7 @@
 // A modal dialog over the scene — self-mounts to <body>, hidden until open().
 
 import "./notepanel.css";
+import type { ItemRef } from "./api.ts";
 import { canberraDay, canberraTime, parseUtc, sameCanberraDay } from "./when.ts";
 
 export interface NoteView {
@@ -12,6 +13,8 @@ export interface NoteView {
   /** When the note disappears (UTC, "YYYY-MM-DD HH:MM:SS"). */
   expiresAt: string;
   canDelete: boolean;
+  /** Hidden after reports, awaiting the admin: you see it only because it's yours (or you're the admin). */
+  hidden?: boolean;
 }
 
 /** "Disappears on 16 Nov" (or "today"), in Canberra time. */
@@ -33,16 +36,22 @@ export interface CommentView {
   canHeart: boolean;
   /** The most-hearted comment, pinned on top. */
   hot?: boolean;
+  /** Hidden after reports, awaiting the admin: shown to you only because it's yours (or you're the admin). */
+  hidden?: boolean;
 }
 
-/** What a report is about: who wrote it, and a short description of the item. */
+/** What a report is about: who wrote it, a short description of the item, and which one it is (so three reports hide it). */
 export interface ReportAbout {
   name: string;
   item: string;
+  ref?: ItemRef;
 }
 
 /** The first 80 characters, for a report's description. */
 const snippet = (text: string): string => (text.length > 80 ? `${text.slice(0, 80)}…` : text);
+
+/** What the author (and the admin) are told about something hidden after reports. */
+const HIDDEN_TEXT = "Hidden from everyone else after several reports. It waits for the admin to review it.";
 
 const MAX_CHARS = 600;
 const MAX_WORDS = 100;
@@ -94,6 +103,13 @@ export function mountNotePanel(h: {
   const text = document.createElement("p");
   text.className = "note-text";
 
+  // Said only to the author (and the admin) of a note that was hidden after reports.
+  const hiddenNote = document.createElement("p");
+  hiddenNote.className = "note-hidden";
+  hiddenNote.setAttribute("role", "status");
+  hiddenNote.textContent = HIDDEN_TEXT;
+  hiddenNote.hidden = true;
+
   const deleteNoteBtn = document.createElement("button");
   deleteNoteBtn.type = "button";
   deleteNoteBtn.className = "note-delete";
@@ -127,7 +143,7 @@ export function mountNotePanel(h: {
   const error = document.createElement("p");
   error.className = "note-error";
 
-  card.append(head, text, deleteNoteBtn, reportNoteBtn, comments, compose, error);
+  card.append(head, text, hiddenNote, deleteNoteBtn, reportNoteBtn, comments, compose, error);
   root.append(card);
   document.body.append(root);
 
@@ -193,13 +209,20 @@ export function mountNotePanel(h: {
           });
       });
       rowHead.append(heart);
+      if (c.hidden) {
+        const tagEl = document.createElement("span");
+        tagEl.className = "note-comment-hidden";
+        tagEl.textContent = "Hidden, awaiting review";
+        tagEl.title = HIDDEN_TEXT;
+        rowHead.append(tagEl);
+      }
       if (!c.canDelete) {
         const report = document.createElement("button");
         report.type = "button";
         report.className = "comment-report";
         report.textContent = "Report";
         report.setAttribute("aria-label", `Report ${c.author}'s comment`);
-        report.addEventListener("click", () => h.onReport({ name: c.author, item: `${c.author}'s comment on a sticky note: "${snippet(c.text)}"` }));
+        report.addEventListener("click", () => h.onReport({ name: c.author, item: `${c.author}'s comment on a sticky note: "${snippet(c.text)}"`, ref: { kind: "comment", id: c.id } }));
         rowHead.append(report);
       }
       if (c.canDelete) {
@@ -283,7 +306,7 @@ export function mountNotePanel(h: {
   });
 
   reportNoteBtn.addEventListener("click", () => {
-    if (current) h.onReport({ name: current.author, item: `${current.author}'s sticky note: "${snippet(current.text)}"` });
+    if (current) h.onReport({ name: current.author, item: `${current.author}'s sticky note: "${snippet(current.text)}"`, ref: { kind: "note", id: current.id } });
   });
 
   confirmDelete(deleteNoteBtn, () => {
@@ -321,6 +344,7 @@ export function mountNotePanel(h: {
       date.textContent = `${canberraTime(note.createdAt)} · ${goneOn(note.expiresAt)}`;
       date.title = "Sticky notes disappear a month after they're stuck.";
       text.textContent = note.text;
+      hiddenNote.hidden = !note.hidden;
       // A "Delete?" left over from the last note goes back to its button.
       card.querySelector(":scope > .note-confirm")?.replaceWith(deleteNoteBtn);
       deleteNoteBtn.hidden = !note.canDelete;

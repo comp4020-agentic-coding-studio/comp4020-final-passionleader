@@ -73,6 +73,8 @@ export interface NetHandlers {
   emote(id: string, kind: Emote): void;
   note(note: Note): void;
   noteRemoved(id: number): void;
+  /** A note was hidden after reports: gone from your screen unless it's yours (or you're the admin). */
+  noteHidden(id: number, author: string): void;
   comment(comment: Comment): void;
   commentRemoved(id: number, noteId: number): void;
   /** Someone hearted (or un-hearted) a comment on this note. */
@@ -224,6 +226,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "online") return on.online(m.counts as Record<string, number>);
           if (m.kind === "note") return on.note(m.note as Note);
           if (m.kind === "note-removed") return on.noteRemoved(m.id as number);
+          if (m.kind === "note-hidden") return on.noteHidden(m.id as number, m.author as string);
           if (m.kind === "comment") return on.comment(m.comment as Comment);
           if (m.kind === "comment-removed") return on.commentRemoved(m.id as number, m.noteId as number);
           if (m.kind === "hearts") return on.hearts(m.noteId as number);

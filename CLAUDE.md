@@ -85,6 +85,12 @@ when a flow changes.
   the rest stay oldest first. A
   comment's hearts go with it. Anyone may report someone's note, post or
   comment (the person report, with who and a quote filled in).
+  Three different members reporting the same note, post or comment within 24
+  hours hide it at once for everyone except its author (who is told) and the
+  admin; two don't, and one person reporting twice counts once. The admin
+  page's "Hidden, awaiting review" lists them with Restore (back for everyone,
+  and it stays) and Remove (deleted); both are checked on the server and
+  logged (`item-hidden`, `item-restored`, and the usual removal event).
 - Classroom boards (Q&A, Notices, Board): posts up to 500 words (and 3000
   characters) with a title of up to 80, one every 30 seconds; comments as
   for notes. Authors edit their own posts and comments (same limits; they
@@ -344,6 +350,13 @@ when a flow changes.
   have none.
 - Outside follows Canberra's time of day (client only: sky, sun, lamps;
   indoors only the sun's shafts go at night, the windows stay as they are); `?hour=` shows another hour for checking.
+- Outside also follows Canberra's weather: the server asks Open-Meteo (public
+  data, nothing about any visitor goes out) at most every 15 minutes, keeps it
+  in memory and the cache table and serves it at `/api/weather`; start-up never
+  waits for it and a failed fetch means clear. Cloud greys and dims the sky,
+  rain adds light rain on Medium and High (none with Reduce motion) and a
+  darker tone, wind sways the grass harder. Settings shows a "Weather" line;
+  `?weather=rain|cloud|clear` shows one for checking.
 - Familiar places (README): the spaces follow the real campus. Buildings,
   paths, the creek and the scenery past the edges keep their OpenStreetMap
   positions (one scale and turn, 0.742 and -35.8°, as in
@@ -366,6 +379,15 @@ when a flow changes.
   off until ticked. The Credits page opens with who made it and the README's
   argument, read from README.md each time.
 - The server never trusts the client's coordinates: they're clamped to the room.
+- Describe what's around me (Settings, Accessibility; off until ticked, kept
+  in this browser) is for screen-reader users and works by keyboard alone: an
+  aria-live region says the nearest doors, assistants, boards and seats with
+  direction and distance in plain words ("Library door, 4 metres ahead-left"),
+  every few seconds while you move; L lists the people in your own space by
+  name and rough direction (never anyone elsewhere); G walks you to the
+  nearest usable thing a step at a time through the normal movement (same
+  speed, walls and server clamping), never a teleport, and any movement key,
+  jump or E stops it. The secret door is never described.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
 - Live positions stay in server memory and are never written per move; a

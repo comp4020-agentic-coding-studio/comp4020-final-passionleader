@@ -9,6 +9,7 @@
 import "./board.css";
 import { clearDraft, loadDraft, saveDraft } from "./drafts.ts";
 import { renderMarkdown } from "./markdown.ts";
+import type { ItemRef } from "./api.ts";
 import { hotBadge } from "./notepanel.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 import { canberraTime } from "./when.ts";
@@ -58,6 +59,8 @@ export interface BoardPost {
   /** A study group's size, and who has joined (its writer first). */
   capacity?: number | null;
   members?: string[];
+  /** Hidden after reports, awaiting the admin: shown to you only because it's yours (or you're the admin). */
+  hidden?: boolean;
 }
 
 /** "👥 3 / 5 joined" (and "· full") for a study group, else "". */
@@ -78,18 +81,24 @@ export interface BoardComment {
   canHeart: boolean;
   /** The most-hearted comment, pinned on top. */
   hot?: boolean;
+  /** Hidden after reports, awaiting the admin: shown to you only because it's yours (or you're the admin). */
+  hidden?: boolean;
 }
 
-/** What a report is about: who wrote it, and a short description of the item. */
+/** What a report is about: who wrote it, a short description of the item, and which one it is (so three reports hide it). */
 export interface ReportAbout {
   name: string;
   item: string;
+  ref?: ItemRef;
 }
 
 /** The first 80 characters, for a report's description. */
 const snippet = (text: string): string => (text.length > 80 ? `${text.slice(0, 80)}…` : text);
 
 // The same limits as sticky notes.
+/** What the author (and the admin) are told about something hidden after reports. */
+const HIDDEN_TEXT = "Hidden from everyone else after several reports. It waits for the admin to review it.";
+
 const POST_WORDS = 500;
 const POST_CHARS = 3000;
 const COMMENT_WORDS = 100;
@@ -546,6 +555,7 @@ export function mountBoard(h: {
     // The pinned notice has no date and no comments, so it shows just its author.
     const bits = p.pinned ? [p.author] : [p.author, canberraTime(p.createdAt), `${p.comments} ${p.comments === 1 ? "comment" : "comments"}`];
     if (p.private) bits.push("🔒 Private");
+    if (p.hidden) bits.push("Hidden, awaiting review");
     if (p.capacity) bits.push(groupLine(p));
     // Each part kept whole, so a narrow screen breaks the line between them, never inside "1 / 4 joined".
     bits.forEach((bit, i) => {
@@ -599,6 +609,13 @@ export function mountBoard(h: {
             const when = document.createElement("span");
             when.textContent = c.editedAt ? `${canberraTime(c.createdAt)} · edited` : canberraTime(c.createdAt);
             ch.append(who, when);
+            if (c.hidden) {
+              const flag = document.createElement("span");
+              flag.className = "board-muted board-hidden";
+              flag.textContent = "Hidden, awaiting review";
+              flag.title = HIDDEN_TEXT;
+              ch.append(flag);
+            }
             if (editingCommentId === c.id) {
               row.append(ch, editWrap);
               return row;
@@ -638,7 +655,7 @@ export function mountBoard(h: {
               report.textContent = "Report";
               report.setAttribute("aria-label", `Report comment by ${c.author}`);
               const postTitleText = current?.title ?? "";
-              report.addEventListener("click", () => h.report({ name: c.author, item: `${c.author}'s comment on "${postTitleText}": "${snippet(c.text)}"` }));
+              report.addEventListener("click", () => h.report({ name: c.author, item: `${c.author}'s comment on "${postTitleText}": "${snippet(c.text)}"`, ref: { kind: "post-comment", id: c.id } }));
               ch.append(report);
             }
             if (c.canDelete) {
@@ -668,7 +685,7 @@ export function mountBoard(h: {
   function renderPostHead(): void {
     if (!current) return;
     postTitle.textContent = (current.pinned ? "📌 " : "") + current.title;
-    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "") + (current.private ? " · 🔒 Private" : "") + (current.capacity ? ` · ${groupLine(current)}` : "");
+    postMeta.textContent = (current.createdAt ? `${current.author} · ${canberraTime(current.createdAt)}` : current.author) + (current.editedAt ? " · edited" : "") + (current.private ? " · 🔒 Private" : "") + (current.hidden ? " · Hidden, awaiting review" : "") + (current.capacity ? ` · ${groupLine(current)}` : "");
     // Posts are Markdown (safe DOM only, markdown.ts); comments stay plain text.
     postText.replaceChildren(renderMarkdown(current.text));
     postFiles.replaceChildren(
@@ -755,7 +772,7 @@ export function mountBoard(h: {
       report.className = "board-link-report";
       report.textContent = "Report";
       report.setAttribute("aria-label", "Report this post");
-      report.addEventListener("click", () => h.report({ name: post.author, item: `${post.author}'s post "${post.title}" on ${config.title}` }));
+      report.addEventListener("click", () => h.report({ name: post.author, item: `${post.author}'s post "${post.title}" on ${config.title}`, ref: { kind: "post", id: post.id } }));
       postActions.append(report);
     }
     if (current.canDelete) {
