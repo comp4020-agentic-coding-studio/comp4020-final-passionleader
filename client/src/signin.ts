@@ -5,6 +5,7 @@
 
 import "./signin.css";
 import type { AnuWho, Session } from "./api.ts";
+import { comingUpBlock, refreshEvents } from "./events.ts";
 
 type View = "signin" | "signup" | "reset";
 
@@ -96,7 +97,8 @@ export function mountSignIn(opts: {
   for (const line of tips) {
     flavour.append(el("li", undefined, line));
   }
-  card.append(title, pitch, sub, views, flavour);
+  // What's on soon, read from the server (public, so a guest sees it too).
+  card.append(title, pitch, sub, views, flavour, comingUpBlock());
   root.append(card);
 
   /** Runs a request with its buttons off and its error line cleared; a string result is an error. */
@@ -524,6 +526,7 @@ export function mountSignIn(opts: {
 
   return {
     show(message?: string): void {
+      void refreshEvents();
       open = true;
       root.hidden = false;
       go("signin", message);

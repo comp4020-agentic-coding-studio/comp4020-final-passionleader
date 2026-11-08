@@ -3,10 +3,10 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { isStaff, dropRoomFiles, keepRoomFiles, findByName, findByToken, followersOf, isFollowing, isMember, presenceMutualOnly, keepChatLine, lastSpot, lookOf, tagsOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
+import { addStamp, isStaff, dropRoomFiles, keepRoomFiles, findByName, findByToken, followersOf, isFollowing, isMember, presenceMutualOnly, keepChatLine, lastSpot, lookOf, tagsOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, stampCount, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
-import { ROOM_CAP, clampTo, isSpace, roomOf, spaceInfo, type SpaceId } from "./spaces.ts";
+import { ROOM_CAP, STAMPS, clampTo, isSpace, roomOf, spaceInfo, stampOf, type SpaceId } from "./spaces.ts";
 import { KNOCK_GAP_MS, PRESENCE_GAP_MS, mayTell, validOfficeRoom } from "./social.ts";
 
 // The real-time layer: one WebSocket per open tab, all to this one server.
@@ -465,6 +465,9 @@ function onMessage(ws: WebSocket, raw: string): void {
     player.space = to;
     player.seat = undefined;
     Object.assign(player, clampTo(to, msg.x, msg.z), { y: 0 });
+    // Also when the client re-sends the space it is already in (it does on every welcome), so the
+    // space someone arrives in counts.
+    stampVisit(ws, to);
     if (from !== to) {
       broadcastSpace(from, { t: "leave", id: player.id });
       log("enter", owners.get(ws) ?? null, { from, space: to });
@@ -695,6 +698,19 @@ function onMessage(ws: WebSocket, raw: string): void {
   }
 }
 
+/**
+ * Visit stamps: the first time a member is let into a kind of main space (spaces.ts STAMPS) they
+ * earn its stamp and are told. Called only where the server has accepted the move, so nothing the
+ * client says can grant one; guests keep nothing, so they get none.
+ */
+function stampVisit(ws: WebSocket, space: SpaceId): void {
+  const who = owners.get(ws);
+  const id = stampOf(space);
+  if (!who || !isMember(who) || !id) return;
+  if (!addStamp(who.name, id)) return;
+  send(ws, { t: "action", kind: "stamp", stamp: id, label: STAMPS.find((x) => x.id === id)?.label ?? id, count: stampCount(who.name), total: STAMPS.length });
+}
+
 function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: string }, ip: string | null): void {
   const name = visitor.name;
   owners.set(ws, visitor);
@@ -718,6 +734,7 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   alive.add(ws);
   if (!wasOnline) announceOn(visitor, player.space);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
+  stampVisit(ws, player.space);
   if (player.space === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
   if (player.space === "hub") sendOffice(ws);
   send(ws, { t: "action", kind: "online", counts: onlineCounts() });

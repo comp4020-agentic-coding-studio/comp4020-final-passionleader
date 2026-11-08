@@ -142,6 +142,32 @@ export function roomOf(id: unknown): Room | undefined {
 /** The team rooms off a classroom, so closing it can empty them too. */
 export const teamRoomsOf = (classroom: SpaceId): SpaceId[] => CLASSROOM_TEAM_DOORS.map((_, i) => `team-${classroom}-${i + 1}`);
 
+// --- visit stamps ---------------------------------------------------------------
+// A member earns a stamp the first time they come into each kind of main space.
+// Every classroom is "a classroom" and every team room "a team room" (counselling
+// and interview rooms give none, they are private). The Poop Room is an easter egg,
+// so its stamp stays "A secret place" on the card until it has been found.
+
+export const STAMPS: readonly { id: string; label: string }[] = [
+  { id: "outdoor", label: SPACES.outdoor!.label },
+  { id: "hub", label: SPACES.hub!.label },
+  { id: "library", label: SPACES.library!.label },
+  { id: "anusa", label: SPACES.anusa!.label },
+  { id: "careers", label: SPACES.careers!.label },
+  { id: "classroom", label: "A classroom" },
+  { id: "team", label: "A team room" },
+  { id: "poop", label: "The Poop Room" },
+];
+/** What the card says for the Poop Room's stamp until it is earned. */
+export const SECRET_STAMP_LABEL = "A secret place";
+
+/** The stamp that coming into `space` earns, or null (a counselling or interview room earns none). */
+export function stampOf(space: SpaceId): string | null {
+  if (Object.hasOwn(SPACES, space)) return space;
+  if (isClassroom(space)) return "classroom";
+  return roomOf(space)?.kind === "team" ? "team" : null;
+}
+
 export const isSpace = (s: unknown): s is SpaceId => typeof s === "string" && spaceInfo(s) !== undefined;
 export const isClassroom = (s: unknown): s is SpaceId => typeof s === "string" && classrooms.has(s);
 

@@ -6,6 +6,7 @@
 // the saving and the wiring happen outside.
 
 import "./lookpicker.css";
+import type { StampCard } from "./api.ts";
 
 export interface Look {
   body: 0 | 1;
@@ -63,6 +64,8 @@ export function mountLookPicker(opts: {
   preview(look: Look): void;
   /** Save pressed: resolve to an error message or null. */
   save(look: Look): Promise<string | null>;
+  /** The visit stamps collected so far and what they unlock (null if the server can't be reached). */
+  stamps(): Promise<StampCard | null>;
 }): {
   open(current: Look): void;
   close(): void;
@@ -129,6 +132,18 @@ export function mountLookPicker(opts: {
   let original: Look = copy(DEFAULT_LOOK);
   let isOpen = false;
   let saving = false;
+  // What the visit stamps unlock; until the server has answered nothing is locked on screen
+  // (the server refuses a locked choice either way).
+  let stampCard: StampCard | null = null;
+
+  /** How many more stamps this choice needs, or 0 when it is free. */
+  function stampsNeeded(part: "hat" | "hatColour", index: number): number {
+    const u = stampCard?.unlocks.find((x) => x.part === part && x.index === index);
+    // What they already wear keeps working: the server lets a saved choice stay.
+    if (!u || original[part] === index) return 0;
+    return Math.max(0, u.stamps - stampCard!.count);
+  }
+  const moreStamps = (n: number): string => `${n} more ${n === 1 ? "stamp" : "stamps"}`;
 
   function changed(): void {
     opts.preview(copy(look));
@@ -202,6 +217,57 @@ export function mountLookPicker(opts: {
   rows.append(hatColourRow);
   inputs.get("hat")?.[QA_HAT]?.closest("label")?.classList.add("look-qa-only");
 
+  // Under the hat rows: which choices wait for stamps, and the stamps themselves.
+  const lockNote = document.createElement("p");
+  lockNote.className = "look-lock-note";
+  const stampBox = document.createElement("section");
+  stampBox.className = "look-stamps";
+  stampBox.setAttribute("aria-label", "Visit stamps");
+  rows.append(lockNote, stampBox);
+
+  /** Puts a lock and "n more stamps" on every choice the stamps haven't unlocked yet, and draws the stamps card. */
+  function refreshLocks(): void {
+    const names = (part: "hat" | "hatColour", i: number): string => (part === "hat" ? HATS[i]! : `Hat colour ${i + 1} of ${HAIR.length}`);
+    const waiting: string[] = [];
+    for (const part of ["hat", "hatColour"] as const) {
+      for (const [i, input] of (inputs.get(part) ?? []).entries()) {
+        const need = stampsNeeded(part, i);
+        const label = input.closest("label")!;
+        label.classList.toggle("look-locked", need > 0);
+        input.disabled = need > 0;
+        label.querySelector(".look-lock")?.remove();
+        label.title = need > 0 ? `Locked: ${moreStamps(need)}` : "";
+        input.setAttribute("aria-label", need > 0 ? `${names(part, i)}, locked: ${moreStamps(need)}` : names(part, i));
+        if (need > 0) {
+          const tag = document.createElement("span");
+          tag.className = "look-lock";
+          tag.textContent = part === "hat" ? `🔒 ${moreStamps(need)}` : "🔒";
+          label.append(tag);
+          if (part === "hatColour") waiting.push(moreStamps(need));
+        }
+      }
+    }
+    const colourNeed = [...new Set(waiting)];
+    lockNote.hidden = colourNeed.length === 0;
+    lockNote.textContent = colourNeed.length ? `🔒 Locked hat colours: ${colourNeed.join(" / ")} to unlock.` : "";
+    if (stampCard && !stampCard.member) lockNote.textContent += `${lockNote.textContent ? " " : ""}Stamps are for signed-up members.`;
+    lockNote.hidden = !lockNote.textContent;
+    // The stamps card.
+    const head = document.createElement("h3");
+    head.textContent = stampCard ? `Stamps ${stampCard.count}/${stampCard.total}` : "Stamps";
+    const grid = document.createElement("ul");
+    for (const st of stampCard?.stamps ?? []) {
+      const li = document.createElement("li");
+      li.className = st.got ? "is-got" : "";
+      li.textContent = `${st.got ? "✓" : "○"} ${st.label}`;
+      grid.append(li);
+    }
+    const hint = document.createElement("p");
+    hint.textContent = "Walk into each place for the first time to earn its stamp. Some hat styles and colours unlock with stamps.";
+    stampBox.replaceChildren(head, grid, hint);
+    stampBox.hidden = !stampCard;
+  }
+
   /** Greys out the hat colour row with no hat, or the hard hat (always yellow). */
   function syncHatColourRow(): void {
     hatColourRow.disabled = look.hat === 0 || look.hat === QA_HAT;
@@ -261,6 +327,9 @@ export function mountLookPicker(opts: {
       hat: pick(opts.qaHats() ? HATS.length : QA_HAT),
       hatColour: pick(HAIR.length),
     };
+    // Never a locked choice: take the next one that is free.
+    while (stampsNeeded("hat", look.hat) > 0) look.hat = (look.hat + 1) % HATS.length;
+    while (stampsNeeded("hatColour", look.hatColour) > 0) look.hatColour = (look.hatColour + 1) % HAIR.length;
     show(look);
     error.textContent = "";
     changed();
@@ -311,7 +380,15 @@ export function mountLookPicker(opts: {
       for (const el of root.querySelectorAll<HTMLElement>(".look-qa-only")) el.hidden = !opts.qaHats();
       look = clean(current);
       original = copy(look);
+      refreshLocks();
       show(look);
+      // The stamps may have grown since last time: ask, then redraw the locks (nothing is locked on screen until it answers).
+      void opts.stamps().then((c) => {
+        if (!isOpen || !c) return;
+        stampCard = c;
+        refreshLocks();
+        show(look);
+      }, () => {});
       error.textContent = "";
       saving = false;
       save.disabled = false;

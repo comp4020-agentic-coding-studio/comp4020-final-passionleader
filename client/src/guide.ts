@@ -1,4 +1,5 @@
 import "./guide.css";
+import { comingUpBlock } from "./events.ts";
 
 // The Campus Guide and the first-visit tour (plan 112). Everything they say
 // lives in GUIDE below, one list: the tour shows the entries marked `intro`
@@ -32,7 +33,7 @@ export const GUIDE: GuideEntry[] = [
   { id: "notes", clip: true, section: "Talking", title: "Sticky notes", text: "Stick a note (up to 100 words) where you stand, outside or in a classroom; others read it (E), heart it and reply. Notes go after a month.", keys: "hold Q, then 1", touch: "Emotes, then Sticky note" },
   { id: "npcs", clip: true, section: "Talking", intro: 5, title: "AI campus assistants", text: "People with a green \"AI\" tag answer questions from ANU's public pages and link them: Robin (library), Kai (sport), Jordan (accommodation), Sam (ANUSA), Priya (courses), Mei (international students), Alex (careers), Taylor (computing & IT, in the Hub), Riley (getting around Canberra, in the ANUSA lounge). They can be wrong: check the pages they link." },
   { id: "mail", clip: true, section: "Talking", title: "Mail", text: "Signed up, the ✉️ button writes to another member by name; mail is kept 30 days, and the button lights up when something arrives. Saved room chats and notes are there too." },
-  { id: "tricks", section: "Talking", title: "Easy to miss", text: "\"/w name message\" whispers to one member wherever they are; \"/all message\" reaches every space (once every 30 seconds). In a counselling or interview room, invite someone from the room menu: they're asked at once and Accept brings them straight in. Your name tag shows \"staff\" for ANU staff. The Join now button, beside your status, lists study groups with places, unanswered Ask the Hub questions and the newest ads, and takes you to the post. The Hub's wall calendar has the academic dates; each classroom's board links to Canvas.", keys: "Enter, then /w or /all" },
+  { id: "tricks", section: "Talking", title: "Easy to miss", text: "\"/w name message\" whispers to one member wherever they are; \"/all message\" reaches every space (once every 30 seconds). In a counselling or interview room, invite someone from the room menu: they're asked at once and Accept brings them straight in. Your name tag shows \"staff\" for ANU staff. The Join now button, beside your status, lists study groups with places, unanswered Ask the Hub questions and the newest ads, and takes you to the post; the Events button next to it lists what's coming up and lets a signed-up member put on an event (a title, a place, a start in Canberra time within 30 days, and a length). While one is on, its place shows \"Now: …\" at the top and the minimap shows a star. The Hub's wall calendar has the academic dates; each classroom's board links to Canvas.", keys: "Enter, then /w or /all" },
   { id: "hub", clip: true, section: "Places", title: "Student Hub (154)", text: "Sofas to sit together, the lab matching board, \"Ask the Hub\" (public or private questions), the academic calendar on the wall, arcade games, and counselling rooms (invite only)." },
   { id: "library", clip: true, section: "Places", title: "Chifley Library", text: "Over the bridge to the south: book a room, search the catalogue, Academic Skills (writing and study help), quiet desks and four team rooms anyone can use." },
   { id: "classrooms", clip: true, section: "Places", title: "Classrooms (155)", text: "Pick a course at 155's door. Each has a board (Q&A, Notices, Board) with a link to Canvas, and three team rooms." },
@@ -138,7 +139,11 @@ export function mountGuide(opts: { onTourDone(): void; onTourStart(): void }): {
     tour = false;
     title.textContent = "❓ Campus Guide";
     const sections = [...new Set(GUIDE.map((e) => e.section))];
+    // The one part that changes by the hour: the timetable's next five, fetched when the guide opens.
+    const coming = comingUpBlock();
+    coming.classList.add("guide-entry");
     body.replaceChildren(
+      coming,
       ...sections.map((s) => {
         const sec = document.createElement("section");
         const h = document.createElement("h2");

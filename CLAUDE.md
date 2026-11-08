@@ -142,6 +142,29 @@ when a flow changes.
   for another person alone) and cleared when it's sent or on signing out.
   A board's search box and "Unanswered only" (Q&A) only narrow the posts
   already fetched; nothing new is asked of the server.
+- Events timetable: a signed-up member puts an event on with a title (up to
+  80 characters, the board posts' text rules), a place (any space but a
+  meeting room or the Poop Room), a start in Canberra time within the next 30
+  days (never in the past) and a length of 15 to 180 minutes; one every 30
+  seconds, five that haven't ended per person; guests only read. The author or
+  the admin removes it; one that has ended is deleted by the hourly purge.
+  "Coming up" (the next five) is on the join screen and in the Campus Guide, a
+  banner in the place says "Now: <title> (until hh:mm)" while it's on, and the
+  minimap shows a star; the list is fetched again every minute, nothing is
+  pushed to other screens. All checked on the server (`server/events.ts`).
+- Visit stamps: a signed-up member earns a stamp the first time the server
+  lets them into each kind of main space (outside, the Student Hub, the
+  library, the ANUSA lounge, the Career Hub, any classroom as "a classroom",
+  any team room as "a team room", the Poop Room: eight) and sees "New stamp:
+  <place> (n/8)"; a "Stamps" card in the look window shows them, with the Poop
+  Room's unnamed ("A secret place") until found. Stored per account in SQLite,
+  granted only when the server accepts an "enter", never on the client's word;
+  guests get none; counselling and interview rooms give none.
+- Look rewards: three existing choices wait for stamps (`LOOK_UNLOCKS` in
+  `server/db.ts`): the hat colours purple and green at 3, the helmet at 8. The
+  server refuses a locked choice (`PUT /api/look`, 403, logged) and the look
+  window shows a lock and "n more stamps"; a choice already saved stays
+  allowed, and `QA_HAT` is still for `qa_` accounts only whatever the stamps.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
   too, one question every two seconds and thirty a day each, 500
   characters; fifty a day per assistant (`NPC_PER_DAY`), which is the only

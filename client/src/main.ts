@@ -66,6 +66,7 @@ import {
   getFollows,
   setFollow,
   setMutualOnly,
+  getStamps,
   removePost,
   removePostComment,
   heartPostComment,
@@ -77,6 +78,7 @@ import {
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
 import { mountJoinNow } from "./joinnow.ts";
+import { mountEventBanner, mountEvents, onEventsChanged, onNowSpaces, refreshEvents } from "./events.ts";
 import { mountWhoHere } from "./whohere.ts";
 import { keepScreenOn } from "./wakelock.ts";
 import { canberraHour, clockReady, daylightAt, outside } from "./daylight.ts";
@@ -643,6 +645,7 @@ function becomeAvatar(_name: string): void {
 const lookPicker = mountLookPicker({
   // Before joining, go by the name typed; after, by the name signed in with.
   qaHats: () => RESERVED_RE.test(session?.name ?? storage.get("campus.name")),
+  stamps: () => getStamps(session?.token).catch(() => null),
   preview(look) {
     previewAvatar?.setLook(look);
   },
@@ -1679,6 +1682,33 @@ const minimap = mountMinimap({
   ],
 });
 
+// The events timetable (the Events button beside Join now, a banner in the space it is on in, a star
+// on the minimap): the server owns every rule; the lists are fetched again every minute.
+const eventBanner = mountEventBanner();
+const eventsPanel = mountEvents(document.getElementById("join-now-btn") ?? hudName, {
+  token: () => session?.token,
+  member: () => isMember(session),
+  isAdmin: () => session?.role === "admin",
+  name: () => session?.name,
+  onOpen: () => void refreshEvents(),
+  say: (msg) => toast(msg),
+});
+void eventsPanel;
+// Where each event place stands outside, for the minimap's star: the doors on the campus map.
+const EVENT_MAP_SPOT: Record<string, { x: number; z: number }> = {
+  outdoor: { x: -19, z: -14 },
+  hub: { x: 5.7, z: 3 },
+  anusa: { x: 5.7, z: -5 },
+  library: { x: -2, z: 27 },
+  careers: { x: 18, z: -39.4 },
+};
+const syncEventMarks = (): void => {
+  minimap.mark(onNowSpaces().flatMap((id) => (EVENT_MAP_SPOT[id] ? [EVENT_MAP_SPOT[id]] : classroomList.some((r) => r.space === id) ? [{ x: -9.7, z: 7 }] : [])));
+  eventBanner.show(space?.id ?? null);
+};
+onEventsChanged(syncEventMarks);
+window.setInterval(syncEventMarks, 15_000);
+
 function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): void {
   if (space) {
     scene.remove(space.group);
@@ -1721,6 +1751,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   showPoops([]);
   poopsShown = null;
   minimap.show(!!space.outdoor);
+  syncEventMarks();
   turnBtn.hidden = !space.outdoor;
   // Outside, everyone hears the voices near them (hold V to talk, on a computer).
   if (space.outdoor && playing) window.setTimeout(() => space?.outdoor && void voice.join(true), 1500);
@@ -2096,6 +2127,10 @@ function goOnline(token: string): void {
     },
     classrooms(list) {
       useClassrooms(list);
+    },
+    stamp(label, count, total) {
+      sfx("message");
+      toast(`New stamp: ${label} (${count}/${total})`);
     },
     board() {
       if (board.isOpen()) board.refresh();
