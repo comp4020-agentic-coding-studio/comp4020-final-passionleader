@@ -56,7 +56,8 @@ Read before planning or building: `README.md` (what good means for this app),
   joining study groups, files and reporting someone are refused on the
   server (bug reports are open to anyone). A guest leaves as little as
   possible in the database: their row (name and token) only, gone a day
-  after they were last seen; their spot and look aren't saved. Signing in by
+  after they were last seen; their spot and look aren't saved. A newcomer, and a guest every
+  time, comes in at the south end of Chifley Library's middle aisle, facing Robin. Signing in by
   student number or email never says whether that address has an account. `qa_` names are reserved for the test accounts, which sign in
   with a password. The free-name accounts from before sign-up are retired:
   their notes and posts stay, nobody can sign in as them.

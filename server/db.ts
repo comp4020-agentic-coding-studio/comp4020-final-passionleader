@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
+import { ARRIVAL, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
 
 // Four tables. Visitors: a name, the secret that reclaims it, a role, and
 // where they last stood. Notes: sticky notes on a space's floor, kept until
@@ -448,7 +448,7 @@ export function lastSpot(name: string): { space: SpaceId; x: number; z: number }
     | { space: string | null; x: number | null; z: number | null }
     | undefined;
   if (row && isSpace(row.space) && row.x !== null && row.z !== null) return { space: row.space, x: row.x, z: row.z };
-  return { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn };
+  return { ...ARRIVAL };
 }
 
 export function saveLastSpot(name: string, space: SpaceId, x: number, z: number): void {

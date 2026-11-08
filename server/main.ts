@@ -112,7 +112,7 @@ import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePla
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
-import { CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
+import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
 keepIn(addAudit);
@@ -309,7 +309,7 @@ app.post("/api/guest", async (c) => {
   const name = createGuest(fresh);
   if (!name) return c.json({ error: "The campus is full of guests right now. Sign up, or try later." }, 503);
   log("join", { name, token: fresh }, { how: "guest" }, { ip: ipOf(c) });
-  return c.json({ name, token: fresh, role: "guest", spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn }, look: null });
+  return c.json({ name, token: fresh, role: "guest", spawn: ARRIVAL, look: null });
 });
 
 // --- signing up with an ANU email ---------------------------------------------
@@ -414,7 +414,7 @@ app.post("/api/signup/finish", async (c) => {
   createMember(name, token, role, who2.email, hashPassword(b.password));
   forgetCode(who2.email);
   log("signed-up", { name, token }, { role }, { ip: ipOf(c) });
-  return c.json({ name, token, role, spawn: { space: FIRST_SPACE, ...SPACES[FIRST_SPACE]!.spawn }, look: null }, 201);
+  return c.json({ name, token, role, spawn: ARRIVAL, look: null }, 201);
 });
 
 app.post("/api/password/start", async (c) => {
