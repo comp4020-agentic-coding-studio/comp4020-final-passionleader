@@ -243,7 +243,7 @@ export function mountRoomPanel(opts: {
   focus.setAttribute("aria-labelledby", "room-focus-title");
   const focusTitle = document.createElement("h3");
   focusTitle.id = "room-focus-title";
-  focusTitle.textContent = "⏱️ Focus timer";
+  focusTitle.textContent = "⏱️ My timer (only you)";
   const focusRow = document.createElement("div");
   focusRow.className = "room-focus-row";
   const focusTime = document.createElement("div");
@@ -404,7 +404,8 @@ export function mountRoomPanel(opts: {
 
   function renderTimer(): void {
     const running = !!timer?.running;
-    timerPhase.textContent = !timer ? "Pomodoro" : timer.phase === "work" ? "Focus" : "Break";
+    // Named apart from the personal timer below (helper QA, 11/9: both read "Focus 24:5x").
+    timerPhase.textContent = !timer ? "Room timer (everyone)" : timer.phase === "work" ? "Room focus" : "Room break";
     timerClock.textContent = timer ? mmss(timeLeft()) : "25:00";
     timerStart.textContent = running ? "Pause" : timer ? "Resume" : "Start 25/5";
     timerReset.hidden = !timer;

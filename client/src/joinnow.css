@@ -28,7 +28,10 @@ body.in-room #join-now-btn { display: none; }
 #join-now .jn-empty, #join-now .jn-note { color: #7a6a52; font-size: 0.8rem; margin: 2px 0 0; }
 #join-now .jn-note { margin-top: 8px; }
 @media (max-width: 700px) {
-  #join-now-btn { order: 3; font-size: 0.72rem; padding: 2px 6px; min-height: 26px; margin-left: 0; }
+  /* Beside the status button on its row, not on a fourth row: there the Chat button and the minimap
+     covered it (helper QA, 11/9). The status button is icon-only on a phone (32 px wide). */
+  #join-now-btn { position: fixed; top: calc(91px + env(safe-area-inset-top, 0px)); left: 54px; z-index: 6;
+    font-size: 0.72rem; padding: 2px 6px; min-height: 26px; margin-left: 0; }
   #join-now, body:has(#toast:not(:empty)) #join-now { top: calc(124px + env(safe-area-inset-top, 0px)); }
 }
 body:has(#toast:not(:empty)) #join-now { top: 100px; }
