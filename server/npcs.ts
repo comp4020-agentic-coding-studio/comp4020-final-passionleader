@@ -154,12 +154,12 @@ export const NPCS: Npc[] = [
     name: "Taylor",
     role: "Computing & IT help",
     space: "hub",
-    // Standing at the middle office pod's north side (the user, 11/8: standing, not seated), facing
-    // south over the desks; you talk from the pod's south side.
-    x: -2,
-    z: -9.6,
+    // Standing between the two office pods (desks x -4.3..0.3 and 6.2..10.8), in line with them,
+    // facing the room (the user, 11/8); you talk from just south of the gap.
+    x: 3.25,
+    z: -7.55,
     rot: 0,
-    reach: 3.6,
+    reach: 1.8,
     look: { body: 1, skin: 0, hair: 4, top: 3, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "ANU ID and password", url: "https://services.anu.edu.au/information-technology/id-and-password" },
