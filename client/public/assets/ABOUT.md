@@ -6,6 +6,10 @@ unofficial student project, not an ANU service. The course provided the hosting,
 repository and the Claude Code credits it was built with;
 [the code is on GitHub](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader).
 
+I planned it, photographed and drew the campus, chose the music, set up AWS and
+tested it live on my own phone; the code was written with several Claude Code
+sessions working together.
+
 {{README}}
 
 ---

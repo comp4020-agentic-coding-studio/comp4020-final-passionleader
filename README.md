@@ -2,7 +2,7 @@
 
 ![Two members meet outside on campus at sunset: Mina walks up and waves, asks in the chat whether Sam is getting coffee before the lecture, Sam answers, and Mina dances.](docs/demo/meet.gif)
 
-<sub>Recorded from the app at a steady 30 frames a second (two test members on a local server); the same clip as video: [docs/demo/meet.webm](docs/demo/meet.webm).</sub>
+<sub>[Click to play the video](docs/demo/meet.webm).</sub>
 
 ## For markers
 
