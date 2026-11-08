@@ -600,7 +600,7 @@ app.post("/api/voice", async (c) => {
 // nothing is stored or logged but that someone asked whom.
 app.get("/api/npcs", (c) =>
   c.json(
-    NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d })),
+    NPCS.map(({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d, examples }) => ({ id, name, role, space, x, z, rot, reach, look, links, greeting, voice, seated, model3d, examples })),
   ),
 );
 

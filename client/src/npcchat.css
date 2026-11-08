@@ -49,3 +49,7 @@
 .npc-thinking .npc-dots i:nth-child(3) { animation-delay: 0.4s; }
 @keyframes npc-dot { 0%, 60%, 100% { opacity: 0.15; } 30% { opacity: 1; } }
 @media (prefers-reduced-motion: reduce) { .npc-thinking .npc-dots i { animation: none; opacity: 0.8; } }
+/* Example questions under the greeting (RICE v3): tap one to ask it. */
+.npc-examples { display: flex; flex-wrap: wrap; gap: 6px; margin: 4px 0 8px; }
+.npc-example { min-height: 36px; padding: 4px 12px; border-radius: 999px; border: 1px solid var(--accent, #6b3f1d); background: #fff; color: inherit; font: inherit; font-size: 0.88rem; text-align: left; cursor: pointer; }
+.npc-example:hover { background: var(--card-hover, #ece3cc); }

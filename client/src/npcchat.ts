@@ -15,6 +15,8 @@ export interface NpcInfo {
   role: string;
   greeting: string;
   links: { label: string; url: string }[];
+  /** Questions it can answer, offered as buttons under its greeting. */
+  examples?: string[];
 }
 
 /** Wraps bare http(s) addresses as Markdown links, leaving ones already in [text](url) alone and trailing punctuation outside. */
@@ -159,6 +161,7 @@ export function mountNpcChat(opts: {
     const text = input.value.trim();
     if (!text || !current || send.disabled) return;
     const npc = current;
+    log.querySelector(".npc-examples")?.remove();
     say("you", text);
     input.value = "";
     send.disabled = true;
@@ -221,6 +224,24 @@ export function mountNpcChat(opts: {
     title.textContent = `${npc.name} · ${npc.role}`;
     log.replaceChildren();
     say("them", npc.greeting);
+    // Two questions it can answer, as buttons: a newcomer sees what to ask (RICE v3, 11/9).
+    // Pressing one asks it; they go once anything has been asked.
+    if (npc.examples?.length) {
+      const tries = document.createElement("div");
+      tries.className = "npc-examples";
+      for (const q of npc.examples.slice(0, 3)) {
+        const b = document.createElement("button");
+        b.type = "button";
+        b.className = "npc-example";
+        b.textContent = q;
+        b.addEventListener("click", () => {
+          input.value = q;
+          form.requestSubmit();
+        });
+        tries.append(b);
+      }
+      log.append(tries);
+    }
     links.replaceChildren(
       ...npc.links.map((l) => {
         const li = document.createElement("li");
