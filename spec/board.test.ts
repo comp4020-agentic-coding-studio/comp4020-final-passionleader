@@ -274,3 +274,49 @@ describe("mail", () => {
     expect(sentBox.sent.map((m) => m.id)).toContain(id);
   });
 });
+
+// "Join now" (RICE v3 #18): open study groups, unanswered questions for the Hub
+// and the newest ads in one read-only list. It is built from the boards' own
+// queries and permission check, so it can never show more than the boards do.
+describe("join now", () => {
+  type Activity = {
+    groups: { id: number; left: number; board: string }[];
+    questions: { id: number; board: string; tab: string }[];
+    ads: { id: number }[];
+  };
+  const activity = async (token?: string): Promise<Activity> => (await (await api(`/api/activity${token ? `?token=${token}` : ""}`)).json()) as Activity;
+
+  it("never lists a private question to anyone but its writer and staff", async () => {
+    const [a, b, s] = await Promise.all([visitor(), visitor(), staffMember()]);
+    const res = await api("/api/board", "POST", { token: a.token, space: "hub-desk", tab: "ask", title: "My visa", text: "Can I enrol part-time?", private: true });
+    expect(res.status).toBe(201);
+    const { id } = (await res.json()) as { id: number };
+    expect((await activity(a.token)).questions.map((q) => q.id)).toContain(id);
+    expect((await activity(s.token)).questions.map((q) => q.id)).toContain(id);
+    expect((await activity(b.token)).questions.map((q) => q.id)).not.toContain(id);
+    expect((await activity()).questions.map((q) => q.id)).not.toContain(id);
+    const asGuest = await guest();
+    expect((await activity(asGuest.token)).questions.map((q) => q.id)).not.toContain(id);
+  });
+
+  it("lists a public question until it has a comment, and a study group only while it has places", async () => {
+    const [w, a, b] = await Promise.all([visitor(), visitor(), visitor()]);
+    const asked = (await (await api("/api/board", "POST", { token: w.token, space: "hub-desk", tab: "ask", title: "Open late?", text: "Until when?" })).json()) as { id: number };
+    expect((await activity(b.token)).questions.map((q) => q.id)).toContain(asked.id);
+    expect((await api(`/api/board/${asked.id}/comments`, "POST", { token: a.token, text: "Until 5." })).status).toBe(201);
+    expect((await activity(b.token)).questions.map((q) => q.id)).not.toContain(asked.id);
+
+    const group = (await (await api("/api/board", "POST", { token: a.token, space: "study-groups", tab: "groups", title: "COMP1100", text: "Mondays", capacity: 2 })).json()) as { id: number };
+    expect((await activity(b.token)).groups.find((g) => g.id === group.id)).toMatchObject({ left: 1, board: "study-groups" });
+    expect((await api(`/api/board/${group.id}/join`, "POST", { token: b.token })).status).toBe(200);
+    expect((await activity(w.token)).groups.map((g) => g.id)).not.toContain(group.id);
+  });
+
+  it("lists ads, about five of each kind at most", async () => {
+    const v = await visitor();
+    const ad = (await (await api("/api/board", "POST", { token: v.token, space: "outdoor", tab: "board", title: "Quiz night", text: "Friday" })).json()) as { id: number };
+    const got = await activity();
+    expect(got.ads.map((p) => p.id)).toContain(ad.id);
+    for (const list of [got.groups, got.questions, got.ads]) expect(list.length).toBeLessThanOrEqual(5);
+  });
+});

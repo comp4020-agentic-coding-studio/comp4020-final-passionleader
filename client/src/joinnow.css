@@ -1,0 +1,34 @@
+/* "Join now": a button after the status button, and a panel under the HUD like Who's here. */
+#join-now-btn {
+  pointer-events: auto; margin-left: 6px; vertical-align: top;
+  padding: 3px 8px; min-height: 28px; border-radius: 8px; border: 1px solid #c9b88e;
+  background: rgba(252, 248, 236, 0.88); color: #3b2a12; font: 600 0.8rem system-ui, sans-serif; cursor: pointer;
+}
+#join-now-btn:hover { background: var(--card, #f5efdf); }
+body.in-room #join-now-btn { display: none; }
+#join-now {
+  position: fixed; top: 64px; left: 16px; z-index: 30;
+  width: min(320px, calc(100vw - 32px)); max-height: 70vh; overflow-y: auto;
+  background: var(--card, #f5efdf); color: #3b2a12; border: 2px solid #6b3f1d; border-radius: 12px;
+  padding: 8px 10px; box-shadow: 0 6px 18px rgba(0, 0, 0, 0.18); font: 14px/1.4 system-ui, sans-serif;
+}
+#join-now[hidden] { display: none; }
+#join-now .jn-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; }
+#join-now h3 { margin: 8px 0 2px; font-size: 0.85rem; color: #6b3f1d; }
+#join-now ul { list-style: none; margin: 0; padding: 0; }
+#join-now li { margin: 2px 0; }
+#join-now li button {
+  width: 100%; text-align: left; min-height: 36px; padding: 3px 8px; border-radius: 8px;
+  border: 1px solid #e2d4b4; background: #fff; color: inherit; font: inherit; cursor: pointer;
+  display: flex; flex-direction: column; gap: 0;
+}
+#join-now li button:hover { background: #fcf8ec; }
+#join-now .jn-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#join-now small { color: #7a6a52; font-size: 0.75rem; }
+#join-now .jn-empty, #join-now .jn-note { color: #7a6a52; font-size: 0.8rem; margin: 2px 0 0; }
+#join-now .jn-note { margin-top: 8px; }
+@media (max-width: 700px) {
+  #join-now-btn { order: 3; font-size: 0.72rem; padding: 2px 6px; min-height: 26px; margin-left: 0; }
+  #join-now, body:has(#toast:not(:empty)) #join-now { top: calc(124px + env(safe-area-inset-top, 0px)); }
+}
+body:has(#toast:not(:empty)) #join-now { top: 100px; }

@@ -288,3 +288,22 @@ export const askUpload = (token: string, target: FileTarget, name: string, size:
 export const uploadDone = (token: string, id: string): Promise<unknown> => request(`/api/files/${id}/done`, "POST", { token });
 export const fileLink = (token: string, id: string, inline = false): Promise<{ url: string; name: string }> =>
   request(`/api/files/${id}/link`, "POST", { token, inline });
+
+/** One line of the "Join now" panel: a post on `board` (a space's id, "hub-desk" or "study-groups"). */
+export interface ActivityItem {
+  board: string;
+  tab: BoardTab;
+  id: number;
+  title: string;
+  author: string;
+  createdAt: string;
+}
+export interface Activity {
+  /** Places left, people in, and the size, besides the post. */
+  groups: (ActivityItem & { left: number; joined: number; capacity: number })[];
+  /** Whether it's private (so only you or staff see it), besides the post. */
+  questions: (ActivityItem & { private: boolean })[];
+  ads: ActivityItem[];
+}
+/** What is open to join or answer now; with a token, your own private questions too. */
+export const getActivity = (token?: string): Promise<Activity> => request<Activity>(`/api/activity${token ? `?token=${encodeURIComponent(token)}` : ""}`);

@@ -71,6 +71,7 @@ import {
   type Session,
 } from "./api.ts";
 import { mountChat } from "./chatui.ts";
+import { mountJoinNow } from "./joinnow.ts";
 import { mountWhoHere } from "./whohere.ts";
 import { keepScreenOn } from "./wakelock.ts";
 import { canberraHour, clockReady, daylightAt, outside } from "./daylight.ts";
@@ -1011,6 +1012,9 @@ const roomPanel = mountRoomPanel({
       toast(on ? "🎙 Mic on: everyone in the room hears you." : "Mic off: you're still listening.");
     });
   },
+  onTimer: (op) => {
+    if (net && !net.timer(op)) notSent();
+  },
   onWhiteboard: () => {
     // The tab opens now, on the tap (a tab opened later, when the link arrives, is blocked as a pop-up); the link fills it.
     boardTab = window.open("about:blank", "_blank");
@@ -1338,6 +1342,24 @@ async function openBoard(id: SpaceId, key: string = id): Promise<void> {
     toast(failed(err, "Could not open the board. Try again."));
   }
 }
+
+// "Join now" (RICE v3 #18): open groups, unanswered questions and new ads, from a
+// button beside your status. An item opens its board at that post, from wherever
+// you stand (the board reads and posts by its own key, not your space's).
+mountJoinNow(document.getElementById("status-btn") ?? hudName, {
+  token: () => session?.token,
+  openPost: (key, postId) => {
+    void (async () => {
+      try {
+        const config = await getBoardConfig(key);
+        boardKey = key;
+        board.open(config, isStaff(session), postId);
+      } catch (err) {
+        toast(failed(err, "Could not open the board. Try again."));
+      }
+    })();
+  },
+});
 
 // When a dialog closes, hand focus back to the game view.
 for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-calendar", "npc-chat", "board"]) {
@@ -1967,7 +1989,7 @@ function goOnline(token: string): void {
     pad(text, by) {
       roomPad.set(text, by);
     },
-    roomOpen(id, x, z, room, lines, players, pad) {
+    roomOpen(id, x, z, room, lines, players, pad, timer) {
       roomPad.set(pad.text, pad.by);
       if (space?.id !== id) setSpace(id, { x, z }, false);
       players.forEach(upsertOther);
@@ -1979,7 +2001,11 @@ function goOnline(token: string): void {
       roomPanel.open(
         roomInfo(id, room),
         lines.map((l) => ({ ...l, self: !l.system && l.name === session?.name })),
+        timer,
       );
+    },
+    timer(t) {
+      roomPanel.timer(t);
     },
     room(room) {
       if (space && roomPanel.isOpen()) roomPanel.update(roomInfo(space.id, room));

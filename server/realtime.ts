@@ -104,7 +104,25 @@ interface RoomState {
   padBy: string | null;
   /** The room's whiteboard (plan 85): an Excalidraw collaboration link, made when first asked for, gone with the room. */
   board?: string;
+  /** The room's shared pomodoro (RICE v3 #19), if anyone has started one; goes with the room. */
+  timer?: RoomTimer;
 }
+/** `endsAt` (server clock, ms) while running; `left` (ms) while paused. Clients are sent the time left, never a clock, so theirs can be wrong. */
+interface RoomTimer {
+  phase: "work" | "break";
+  running: boolean;
+  endsAt: number;
+  left: number;
+  by: string;
+  /** Fires when the running phase ends; cleared with the timer. */
+  ends?: NodeJS.Timeout;
+}
+// A pomodoro: 25 minutes of work, then 5 of break, then it is spent (the next round starts by hand).
+const WORK_MS = 25 * 60_000;
+const BREAK_MS = 5 * 60_000;
+// Anyone inside may change it, but one change a second each, so it can't be hammered.
+const TIMER_GAP_MS = 1000;
+const lastTimer = new Map<string, number>(); // by name, so a second tab doesn't double it
 const PAD_MAX = 5000;
 const rooms = new Map<SpaceId, RoomState>();
 
@@ -116,6 +134,83 @@ function roomView(space: SpaceId): Record<string, unknown> | null {
   const invited = room.kind === "counselling" ? [...state.invited].filter((n) => !members.some((m) => m.toLowerCase() === n)) : undefined;
   return { kind: room.kind, cap: ROOM_CAP, members, host: room.kind === "counselling" ? state.host : undefined, invited };
 }
+
+/** What the room's clients are told about its timer: the time left now (not a clock), or null if none is set. */
+function timerView(state: RoomState | undefined): Record<string, unknown> | null {
+  const t = state?.timer;
+  if (!t) return null;
+  return { phase: t.phase, running: t.running, left: t.running ? Math.max(0, t.endsAt - Date.now()) : t.left, by: t.by };
+}
+
+const timerChanged = (space: SpaceId): void => broadcastSpace(space, { t: "action", kind: "timer", timer: timerView(rooms.get(space)) });
+
+function stopTimer(state: RoomState): void {
+  clearTimeout(state.timer?.ends);
+  delete state.timer;
+}
+
+/** (Re)starts the running phase of a room's timer so it ends when `endsAt` comes. */
+function armTimer(space: SpaceId, state: RoomState): void {
+  const t = state.timer!;
+  clearTimeout(t.ends);
+  t.ends = setTimeout(() => timerEnded(space), Math.max(0, t.endsAt - Date.now()));
+  t.ends.unref();
+}
+
+/** Work ends into the break, which starts by itself; the break ends the timer. */
+function timerEnded(space: SpaceId): void {
+  const state = rooms.get(space);
+  const t = state?.timer;
+  if (!state || !t || !t.running) return;
+  if (t.phase === "work") {
+    Object.assign(t, { phase: "break", endsAt: Date.now() + BREAK_MS, left: BREAK_MS });
+    armTimer(space, state);
+    roomSay(space, { name: "Timer", text: "Time for a 5-minute break.", system: true });
+  } else {
+    stopTimer(state);
+    roomSay(space, { name: "Timer", text: "Break over. Start the timer for another round.", system: true });
+  }
+  timerChanged(space);
+}
+
+/**
+ * The shared timer (RICE v3 #19): "start" starts a 25-minute round, or resumes
+ * a paused one; "pause" and "reset" stop it. Anyone inside may, never someone
+ * outside (they have no room state), at most once a second each.
+ */
+function roomTimerAction(space: SpaceId, player: Player, msg: Record<string, unknown>): void {
+  const state = rooms.get(space);
+  if (!state) return;
+  const op = msg.op;
+  if (op !== "start" && op !== "pause" && op !== "reset") return;
+  const now = Date.now();
+  const key = player.name.toLowerCase();
+  if (now - (lastTimer.get(key) ?? 0) < TIMER_GAP_MS) return;
+  lastTimer.set(key, now);
+  const t = state.timer;
+  if (op === "start") {
+    if (t?.running) return;
+    if (t) Object.assign(t, { running: true, endsAt: now + t.left, by: player.name });
+    else state.timer = { phase: "work", running: true, endsAt: now + WORK_MS, left: WORK_MS, by: player.name };
+    armTimer(space, state);
+    roomSay(space, { name: player.name, text: `${player.name} ${t ? "resumed" : "started"} the timer`, system: true });
+  } else if (op === "pause") {
+    if (!t?.running) return;
+    clearTimeout(t.ends);
+    Object.assign(t, { running: false, left: Math.max(0, t.endsAt - now), by: player.name });
+    roomSay(space, { name: player.name, text: `${player.name} paused the timer`, system: true });
+  } else {
+    if (!t) return;
+    stopTimer(state);
+    roomSay(space, { name: player.name, text: `${player.name} reset the timer`, system: true });
+  }
+  timerChanged(space);
+}
+
+/** What a client may ask of the room it's in, by "kind" (the "action" message is generic; a new room verb is a new entry here). */
+const ROOM_ACTIONS: Record<string, (space: SpaceId, player: Player, msg: Record<string, unknown>) => void> = {
+  timer: roomTimerAction,
+};
 
 function roomSay(space: SpaceId, line: RoomLine): void {
   const state = rooms.get(space);
@@ -134,6 +229,7 @@ const roomChanged = (space: SpaceId): void => {
 function closeRoom(space: SpaceId): void {
   const state = rooms.get(space);
   if (!state) return;
+  stopTimer(state);
   rooms.delete(space);
   removeObjects(dropRoomFiles(state.session));
 }
@@ -305,7 +401,7 @@ function onMessage(ws: WebSocket, raw: string): void {
     }
     // Into a meeting room, the client waits for this before it walks in.
     const view = roomView(to);
-    if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], pad: { text: rooms.get(to)?.pad ?? "", by: rooms.get(to)?.padBy ?? null }, players: inSpace(to) });
+    if (view) send(ws, { t: "action", kind: "room-open", space: to, x: player.x, z: player.z, room: view, lines: rooms.get(to)?.lines ?? [], pad: { text: rooms.get(to)?.pad ?? "", by: rooms.get(to)?.padBy ?? null }, timer: timerView(rooms.get(to)), players: inSpace(to) });
     send(ws, { t: "players", players: inSpace(to) });
     dirty.add(to);
   } else if (msg.t === "sit" && (msg.seat === null || typeof msg.seat === "string")) {
@@ -389,6 +485,8 @@ function onMessage(ws: WebSocket, raw: string): void {
       if (st.lines.length > ROOM_LINES) st.lines.shift();
     }
     else keepChatLine(player.space, player.name, text);
+  } else if (msg.t === "action" && typeof msg.kind === "string" && Object.hasOwn(ROOM_ACTIONS, msg.kind)) {
+    ROOM_ACTIONS[msg.kind]!(player.space, player, msg);
   } else if (msg.t === "pad" && typeof msg.text === "string") {
     // The room's shared notes: whoever is inside writes, everyone inside
     // sees it; the last write wins. Not logged (like the room's chat).
