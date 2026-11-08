@@ -70,3 +70,7 @@
 }
 #new-version button { min-height: 34px; padding: 0 12px; border-radius: 8px; border: 1px solid #6b3f1d; background: #6b3f1d; color: #fff; font: inherit; cursor: pointer; }
 #new-version button.ui-close { background: transparent; color: inherit; }
+/* On a phone the bottom is the pad and the Use button: the banner goes under the round buttons instead (helper QA, 11/9). */
+@media (max-width: 700px) {
+  #new-version { bottom: auto; top: calc(62px + env(safe-area-inset-top, 0px)); }
+}
