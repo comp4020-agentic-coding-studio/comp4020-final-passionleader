@@ -34,8 +34,9 @@ export const HIGH = QUALITY === "high";
 export const RICH = QUALITY !== "low";
 
 // Reduce motion (RICE v3, accessibility): the camera keeps up with you at once instead of
-// gliding after you, and the sky and the grass stop drifting. It starts from the device's own
-// "reduce motion" setting, and a choice made here is remembered in this browser.
+// gliding after you, and the sky and the grass stop drifting. Off until ticked here (remembered in
+// this browser): following the device's "reduce motion" setting made the view snap, the quarter
+// turn included, for people who never chose it (the user, 11/8).
 const MOTION_KEY = "campus.reduceMotion";
 let calm = ((): boolean => {
   try {
@@ -44,7 +45,7 @@ let calm = ((): boolean => {
   } catch {
     // private mode: the device's setting
   }
-  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  return false;
 })();
 export const reduceMotion = (): boolean => calm;
 
