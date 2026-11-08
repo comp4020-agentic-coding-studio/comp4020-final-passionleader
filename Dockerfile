@@ -12,6 +12,9 @@ WORKDIR /app
 RUN npm install -g pnpm@11.9.0
 COPY . .
 RUN pnpm install --frozen-lockfile && pnpm -r --if-present build
+# Gzipped copies beside the built files, which the server sends to browsers that accept them
+# (the 1 MB game bundle goes down at about a third of the size). Music is compressed already.
+RUN find client/dist -type f \( -name '*.js' -o -name '*.css' -o -name '*.html' -o -name '*.glb' -o -name '*.svg' -o -name '*.json' -o -name '*.webmanifest' -o -name '*.md' \) -exec gzip -9 -k {} +
 
 FROM docker.io/library/node:24.21.0-slim
 WORKDIR /app

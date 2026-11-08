@@ -10,6 +10,7 @@ import { serve } from "@hono/node-server";
 import { getConnInfo } from "@hono/node-server/conninfo";
 import { serveStatic } from "@hono/node-server/serve-static";
 import { Hono, type Context } from "hono";
+import { bodyLimit } from "hono/body-limit";
 import { marked } from "marked";
 import { NAME_RULE, RESERVED, RESERVED_RULE, checkPassword, hashPassword, mayRemove, postError, textError } from "./accounts.ts";
 import {
@@ -119,6 +120,17 @@ keepIn(addAudit);
 
 const app = new Hono();
 
+// Every response: no framing by other sites (the in-app window frames only our own pages), no MIME
+// sniffing, and no full addresses sent to the pages people open from here.
+app.use("*", async (c, next) => {
+  await next();
+  c.res.headers.set("X-Content-Type-Options", "nosniff");
+  c.res.headers.set("Content-Security-Policy", "frame-ancestors 'self'");
+  c.res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
+});
+// Every API body is small JSON (files go straight to S3): a huge one is refused, not read into memory.
+app.use("/api/*", bodyLimit({ maxSize: 256 * 1024, onError: (c) => c.json({ error: "That's too big to send." }, 413) }));
+
 // Rendered on the server, so the marker (and the spec) read it without scripts.
 app.get("/readme/", (c) => {
   const body = marked.parse(readFileSync("README.md", "utf8"), { async: false });
@@ -208,12 +220,36 @@ const SIGN_IN_FAILED = "That student number (or email) and password don't match.
 /** A real scrypt hash of nothing anyone types, so a missing account takes as long as a wrong password. */
 const DUMMY_HASH = hashPassword("not-a-real-password-" + Math.random());
 
+/**
+ * Wrong passwords per address and typed name: ten in fifteen minutes, then "wait" until the window
+ * passes, so a known name or student number can't be guessed at without end. Keyed by the address
+ * too, so someone elsewhere can't lock the real owner out (service check, 11/8).
+ */
+const signInFails = new Map<string, { n: number; since: number }>();
+const FAIL_WINDOW_MS = 15 * 60_000;
+const FAIL_MAX = 10;
+function signInBlocked(key: string): boolean {
+  const now = Date.now();
+  for (const [k, f] of signInFails) if (now - f.since > FAIL_WINDOW_MS) signInFails.delete(k);
+  return (signInFails.get(key)?.n ?? 0) >= FAIL_MAX;
+}
+function signInFailed(key: string): void {
+  const f = signInFails.get(key);
+  if (f) f.n++;
+  else signInFails.set(key, { n: 1, since: Date.now() });
+}
+
 app.post("/api/join", async (c) => {
   const b = await body(c);
   const { token, password } = b;
   if (typeof b.name !== "string") return c.json({ error: "Pick a name." }, 400);
   // Phone keyboards add spaces and lookalike characters (a full-width "＿").
   const name = b.name.normalize("NFKC").trim();
+  const failKey = `${ipOf(c) ?? "?"}|${name.toLowerCase()}`;
+  if (typeof password === "string" && password.trim() && signInBlocked(failKey)) {
+    log("join-refused", null, { reason: "too many wrong passwords" }, { ip: ipOf(c) });
+    return c.json({ error: "Too many wrong passwords. Wait fifteen minutes, or reset your password." }, 429);
+  }
 
   // A student number or an ANU address signs in to the account signed up
   // with it, whatever its name (and wins over an old retired name like it).
@@ -227,6 +263,7 @@ app.post("/api/join", async (c) => {
     // (A wrong password still runs the hash, and a missing account checks against nothing, so both take about as long.)
     if (!byEmail?.passwordHash) checkPassword(typed, DUMMY_HASH);
     log("join-refused", byEmail ? { name: byEmail.name } : null, { reason: byEmail ? "wrong password" : "no such account" }, { ip: ipOf(c) });
+    signInFailed(failKey);
     return c.json({ error: SIGN_IN_FAILED }, 401);
   }
   if (byEmail?.passwordHash) {
@@ -246,6 +283,7 @@ app.post("/api/join", async (c) => {
     // Trimmed: a phone keyboard's trailing space shouldn't lock a test account out (none has a space).
     if (typeof password !== "string" || !checkPassword(password.trim(), account.passwordHash)) {
       log("join-refused", { name: account.name }, { reason: "wrong password" }, { ip: ipOf(c) });
+      signInFailed(failKey);
       return c.json({ error: "Wrong password." }, 401);
     }
     const barred = stopped(c, account, "join", { action: "join" });
@@ -262,6 +300,7 @@ app.post("/api/join", async (c) => {
   if (existing?.passwordHash && typeof password === "string" && password.trim()) {
     if (!checkPassword(password.trim(), existing.passwordHash)) {
       log("join-refused", { name: existing.name }, { reason: "wrong password" }, { ip: ipOf(c) });
+      signInFailed(failKey);
       return c.json({ error: "Wrong password." }, 401);
     }
     const barred = stopped(c, existing, "join", { action: "join" });
@@ -1558,9 +1597,12 @@ if (existsSync(dist)) {
   // Vite's /assets/ files carry a hash in their names and may be kept.
   app.use("/*", async (c, next) => {
     await next();
-    if (!c.req.path.startsWith("/assets/")) c.header("Cache-Control", "no-cache");
+    const p = c.req.path;
+    if (!p.startsWith("/assets/")) c.header("Cache-Control", "no-cache");
+    // Vite's hashed bundles never change under their name: a year. Models, music and pictures: a day.
+    else if (c.res.status === 200 || c.res.status === 206) c.header("Cache-Control", /\.(js|css)$/.test(p) ? "public, max-age=31536000, immutable" : "public, max-age=86400");
   });
-  app.use("/*", serveStatic({ root: dist }));
+  app.use("/*", serveStatic({ root: dist, precompressed: true }));
 } else {
   app.get("/", (c) => c.html('<!doctype html><title>ANU Crossing (Unofficial)</title><p>Client not built yet. <a href="/readme/">README</a></p>'));
 }
@@ -1570,3 +1612,8 @@ const server = serve({ fetch: app.fetch, hostname: "0.0.0.0", port }, () => {
   console.log(JSON.stringify({ at: new Date().toISOString(), event: "start", port }));
 });
 attachRealtime(server as Server);
+// A last resort: an error nothing caught is logged (name and message only), and the one server
+// everyone shares keeps running.
+for (const ev of ["uncaughtException", "unhandledRejection"] as const) {
+  process.on(ev, (e: unknown) => console.error(JSON.stringify({ at: new Date().toISOString(), event: ev, name: (e as Error)?.name, msg: (e as Error)?.message })));
+}
