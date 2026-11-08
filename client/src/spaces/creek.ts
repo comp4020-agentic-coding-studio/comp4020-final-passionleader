@@ -127,8 +127,8 @@ function rippleWater(): THREE.MeshStandardMaterial {
 const EAST_TOP = CREEK.x + CREEK.bankTop; // -57.6
 const WEST_TOP = CREEK.x - CREEK.bankTop; // -75.2
 
-/** Where walking stops in the west: 2 m past the white building's west end, a step short of the bridge and the creek's fence (the user, 11/9: up to the riverside). The white path, boardwalk and creek past it are scenery. */
-export const LAWN_WEST_X = -53;
+/** Where walking stops in the west: at the creek's railing (its collider at x -57.2; the user, 11/9: right up to the rail by the river), onto the bridge's east end but not across. The creek past it is scenery. */
+export const LAWN_WEST_X = -56.8;
 /** Picnic tables in a row on the grass north of Badger & Co; you sit on their benches (outdoor.ts seats). */
 export const PICNIC: [number, number][] = [
   [-47, -12],
@@ -376,7 +376,7 @@ function fence(g: THREE.Group, colliders: Box[], { minX, minZ, maxZ }: Box, y0: 
   colliders.push({ minX: fx - 0.1, maxX: fx + 0.1, minZ, maxZ });
 }
 
-/** The same steel fence along the creek's bend (south of the bridge): rails as short straight runs, posts every 2 m. Scenery: the walk limit (x -53) keeps people off it. */
+/** The same steel fence along the creek's bend (south of the bridge): rails as short straight runs, posts every 2 m. Scenery: the walk limit (x -56.8) stops people at it. */
 function bentFence(g: THREE.Group, x: number, z0: number, z1: number): void {
   const steel = mat(RAIL);
   const posts: Inst[] = [];

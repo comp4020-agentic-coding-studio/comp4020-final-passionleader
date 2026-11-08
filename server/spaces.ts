@@ -29,10 +29,10 @@ export interface Space {
 
 // Outside: the lawn and the road north of it, the road in front of the
 // O'Donoghue centre, and the path south between 155 and 154, over the bridge
-// to the library's door. Nothing west of x -53, a step short of the bridge (the user, 11/9): the
+// to the library's door. Nothing west of x -56.8, the creek's railing (the user, 11/9): the
 // creek, its bridge and boardwalks are scenery. Same as OUTDOOR_AREAS in client/src/spaces/outdoor.ts (creek.ts).
 const OUTDOOR_AREAS: Area[] = [
-  { minX: -53, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to just short of the bridge (the creek is scenery past it)
+  { minX: -56.8, maxX: 5, minZ: -39.4, maxZ: -2 }, // the lawn, west to the creek's railing (the creek is scenery past it)
   { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
   { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 26.6 },
 ];
