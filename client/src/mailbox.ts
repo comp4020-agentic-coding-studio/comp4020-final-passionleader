@@ -306,7 +306,23 @@ export function mountMailbox(opts: {
         notes.className = "saved-notes";
         const h = document.createElement("strong");
         h.textContent = "📝 Shared notes";
-        notes.append(h, renderMarkdown(l.text));
+        // Rendered like the room's notes. A picture in them was a room file, which goes when the room
+        // empties (saved notes keep text, not files: CLAUDE.md), so it says that instead of showing
+        // the raw line (the user, 11/9).
+        notes.append(
+          h,
+          renderMarkdown(l.text, {
+            headings: 5,
+            topLevel: 1,
+            rich: true,
+            picture: (alt) => {
+              const gone = document.createElement("p");
+              gone.className = "saved-picture-gone";
+              gone.textContent = `🖼 ${alt || "A picture"} (pictures stay with the room and go when it empties; saved notes keep the text)`;
+              return gone;
+            },
+          }),
+        );
         lines.append(notes);
         continue;
       }
