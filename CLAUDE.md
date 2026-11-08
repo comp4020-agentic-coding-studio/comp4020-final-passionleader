@@ -238,7 +238,7 @@ Read before planning or building: `README.md` (what good means for this app),
   two seconds, checked on the server; kept in server memory with the
   socket (and in your browser), shown to your space only.
 - Outside follows Canberra's time of day (client only: sky, sun, lamps;
-  rooms' windows dark at night); `?hour=` shows another hour for checking.
+  indoors only the sun's shafts go at night, the windows stay as they are); `?hour=` shows another hour for checking.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
