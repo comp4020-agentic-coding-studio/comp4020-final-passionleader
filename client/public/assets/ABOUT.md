@@ -1,6 +1,6 @@
 ## About ANU Crossing
 
-Made by passion leader ([GitHub](https://github.com/passionleader)), for COMP4020
+Made by passion leader ([GitHub](https://github.com/passionleader)), for COMP8020
 Agentic Coding Studio at the Australian National University (Semester 2, 2026). An
 unofficial student project, not an ANU service. The course provided the hosting, the
 repository and the Claude Code credits it was built with, and
