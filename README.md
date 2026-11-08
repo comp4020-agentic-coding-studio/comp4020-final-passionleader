@@ -34,77 +34,76 @@ voice (allow the microphone; outside, hold V on a computer).
 
 ## What it is
 
-ANU Crossing is a small 3D, real-time piece of the ANU campus. Clubs
-promote events on its boards and teams meet in its rooms. Coursework students find labs, and academics find students. A
-newcomer can ask the AI assistants, who answer from ANU's own pages.
+ANU Crossing is a small 3D, real-time piece of the ANU campus. Clubs promote
+events on its boards, teams meet in its rooms, and students and academics find
+each other through the Student Hub. Newcomers can ask AI assistants that answer
+only from ANU's own pages.
 
-The name comes from 'crossing paths'. When I arrived, I didn't know where to
-ask anything. My interviews for HCI and Responsible Practice (assessed work,
-so not shared) pointed the same way: students and staff rarely meet outside
-class, and opening up at the Student Hub feels hard.
+The name comes from 'crossing paths'. When I arrived, I had no idea where to
+ask simple questions, and my interviews for HCI and Responsible Practice
+(assessed, so not shared) pointed the same way: students and staff rarely meet
+outside class, and opening up at the Student Hub feels hard.
 
 ## How to start
 
-Sign up with your ANU email for everything; guests can walk, chat and ask
-the assistants. The 'Campus Guide' button (top right) shows each feature.
+Sign up with your ANU email for everything; guests can still walk, chat and
+ask the assistants. The 'Campus Guide' button (top right) shows each feature.
 
 ## What good means here
 
-Good means 'a place where students, staff and academics meet by chance'. People
-should simply want to stay. Five conditions help.
+Good means 'a place where students, staff and academics meet by chance',
+where people want to stay. Five conditions help.
 
-- **Reachable from anywhere.** ANU is big. Virtual spaces can lower that
-  barrier and draw more people in (Tiwari, 2026). So labs and students find
-  each other on the Hub's board
-  ([f13eaef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)),
-  and each space shows how many are inside, so nobody walks into an empty
+- **Reachable from anywhere.** ANU is big, and virtual spaces can lower that
+  barrier and draw more people in (Tiwari, 2026). Labs and students find each other on the Hub's board ([f13eaef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)), and
+  every space shows how many are inside, so nobody walks into an empty
   room ([2e53582](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2e53582)).
 - **Present together.** Movement, chat, voice and shared notes reach everyone
   at once. Co-presence goes with satisfaction in virtual worlds (Bulu, 2012),
-  and students rated teamwork higher on Gather.Town than on Zoom, thanks to
-  avatars and space (Lee et al., 2023). A counselling room lets in only the
-  invited
-  ([ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)).
+  and students rated teamwork higher on Gather.Town than on Zoom (Lee et al.,
+  2023). A counselling room lets in only the invited ([ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)).
 - **Familiar, so less effort.** What we know is easier to process, and that
-  ease feels safe (Reber et al., 2004). A familiar layout leaves more room for
-  real work (Sweller, 1988). I photographed and drew the campus myself.
-- **Rest, not another work screen.** It should feel closer to a game. I regenerated the music with Gemini until it
-  felt like a lively campus, and I now keep the site open just to listen.
-- **Easy for shy people.** Metaverse platforms improved young people's social
-  skills and sense of community in one field study (Youssef et al., 2024).
-  Here a shy student can wave or leave a note before saying a word.
-
-'Ask the Hub' lets newcomers ask without pressure, which I badly missed.
+  ease feels safe (Reber et al., 2004); a familiar layout also leaves more
+  attention for real work (Sweller, 1988). So I photographed and drew the
+  campus myself.
+- **Rest, not another work screen.** It should feel closer to a game than to
+  the tools we use all day. I regenerated the music with Gemini until it
+  sounded like a lively campus, and I leave the site open to listen.
+- **Easy for shy people.** In one field study, metaverse platforms improved
+  young people's social skills and sense of community (Youssef et al., 2024).
+  Here a shy student can wave or leave a note before saying a word, and 'Ask
+  the Hub' lets newcomers ask what I badly wanted to ask.
 
 ## Against the alternatives
 
-Zoom and Ed serve meetings and courses, not chance meetings. hop.earth and FrameVR are live spaces, but not our
-campus. ANU Crossing is free, needs no install, and answers a gap the Student
-Hub itself names. I built it as a real service, hoping new students use it at
-O-Week to find answers and their first friends.
+Zoom and Ed are built for meetings and courses, not chance meetings, and
+hop.earth and FrameVR are live spaces but not our campus. ANU Crossing is
+free, needs no install, and answers a gap the Student Hub itself names. I
+built it as a real service, hoping new students use it at O-Week to find
+answers and first friends.
 
 ## Which claims are checked
 
 Enforced by `spec/`:
 
-- a team room holds six, so voice and work stay clear; counselling rooms
-  admit only the invited (`rooms.test.ts`)
+- a team room holds six, and counselling rooms admit only the invited (`rooms.test.ts`)
 - assistants answer only from crawled pages, with no facts when nothing
   matches (`knowledge.test.ts`)
-- live counts carry no names; moves arrive within a second, and chat stays
+- live counts carry no names, moves arrive within a second, and chat stays
   in its space (`realtime.test.ts`)
 - private questions and mail reach only their readers (`board.test.ts`)
 
 Judged by people: does it feel like our campus, is it restful, does talking
-get easier, and can a newcomer find everything? I walked the whole map and asked people from
-Instagram what got in their way.
+get easier, and can a newcomer find everything? I walked the whole map
+and asked people I invited through Instagram what got in their way.
 
 ## What I chose not to build
 
-- **RDS.** The logic is simple and the community small. SQLite is enough.
-- **A UI language choice.** ANU works in English; one shared language.
-- AI assistants, camera turning and voice were on this list at first. With
-  AWS behind the app, they came off it.
+- **RDS.** The logic is simple and the community small; SQLite is enough.
+- **A UI language choice.** ANU works in English, and I want one shared
+  language here.
+- AI assistants, camera turning and voice were here at first, until AWS made
+  them possible.
 
 ## What I referenced while deciding
 
