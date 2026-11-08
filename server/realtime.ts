@@ -54,8 +54,9 @@ const ALL_GAP_MS = 30_000;
 
 const players = new Map<WebSocket, Player>();
 const alive = new WeakSet<WebSocket>();
-const lastChat = new WeakMap<WebSocket, number>();
-const lastEmote = new WeakMap<WebSocket, number>();
+// By name, not by socket: more tabs don't multiply the rate (service check, 11/8).
+const lastChat = new Map<string, number>();
+const lastEmote = new Map<string, number>();
 const lastAll = new Map<string, number>(); // by name, so a second tab doesn't double it
 const dirty = new Set<SpaceId>();
 // How many are where goes to everyone, at most every few seconds and only
@@ -319,8 +320,9 @@ function onMessage(ws: WebSocket, raw: string): void {
     const toAll = ALL_PREFIX.test(raw);
     const text = (toAll ? raw.replace(ALL_PREFIX, "") : raw).trim().slice(0, MAX_CHAT);
     const now = Date.now();
-    if (!text || now - (lastChat.get(ws) ?? 0) < CHAT_GAP_MS) return;
-    lastChat.set(ws, now);
+    const chatKey = player.name.toLowerCase();
+    if (!text || now - (lastChat.get(chatKey) ?? 0) < CHAT_GAP_MS) return;
+    lastChat.set(chatKey, now);
     const stopped = restrictionOn(player.name, "chat");
     if (stopped) {
       log("refused", owners.get(ws) ?? null, { action: "chat", space: player.space, reason: "restricted" });
@@ -470,8 +472,9 @@ function onMessage(ws: WebSocket, raw: string): void {
   } else if (msg.t === "emote" && typeof msg.kind === "string" && EMOTES.has(msg.kind)) {
     if (msg.kind !== "dance") {
       const now = Date.now();
-      if (now - (lastEmote.get(ws) ?? 0) < EMOTE_GAP_MS) return;
-      lastEmote.set(ws, now);
+      const emoteKey = player.name.toLowerCase();
+      if (now - (lastEmote.get(emoteKey) ?? 0) < EMOTE_GAP_MS) return;
+      lastEmote.set(emoteKey, now);
     }
     broadcastSpace(player.space, { t: "emote", id: player.id, kind: msg.kind });
     log("emote", owners.get(ws) ?? null, { space: player.space, kind: msg.kind });
@@ -499,16 +502,29 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   log("connect", visitor, { space: player.space, online: players.size }, { ip });
 
   ws.on("pong", () => alive.add(ws));
-  ws.on("message", (data) => onMessage(ws, data.toString()));
+  // One bad message or a database error never reaches the process (one machine serves everyone);
+  // only its name and message are logged, never what was sent.
+  ws.on("message", (data) => {
+    try {
+      onMessage(ws, data.toString());
+    } catch (e) {
+      console.error(JSON.stringify({ at: new Date().toISOString(), event: "ws-message-error", name: (e as Error)?.name, msg: (e as Error)?.message }));
+    }
+  });
   ws.on("close", () => {
     players.delete(ws);
     // A member comes back where they left; a guest's spot isn't kept (11/4: guests store as little as possible).
     const left = roomOf(player.space);
-    if (visitor.role === "guest") {
-      // nothing saved
-    } else if (left) saveLastSpot(player.name, left.parent, left.door.x, left.door.z);
-    else saveLastSpot(player.name, player.space, player.x, player.z);
-    log("disconnect", visitor, { space: player.space, online: players.size }, { ip });
+    try {
+      if (visitor.role === "guest") {
+        // nothing saved
+      } else if (left) saveLastSpot(player.name, left.parent, left.door.x, left.door.z);
+      else saveLastSpot(player.name, player.space, player.x, player.z);
+      log("disconnect", visitor, { space: player.space, online: players.size }, { ip });
+    } catch (e) {
+      // Even if saving fails, the others are told they left (no ghost left standing).
+      console.error(JSON.stringify({ at: new Date().toISOString(), event: "ws-close-error", name: (e as Error)?.name, msg: (e as Error)?.message }));
+    }
     broadcastSpace(player.space, { t: "leave", id: player.id });
     roomLeft(player.space, player.name, visitor);
   });
@@ -529,7 +545,8 @@ export function onlineCounts(): Record<string, number> {
 }
 
 export function attachRealtime(server: Server): void {
-  const wss = new WebSocketServer({ noServer: true });
+  // The biggest real message is a room's notes (5000 characters); ws would take 100 MB by default.
+  const wss = new WebSocketServer({ noServer: true, maxPayload: 64 * 1024 });
 
   server.on("upgrade", (req: IncomingMessage, socket: Duplex, head: Buffer) => {
     const url = new URL(req.url ?? "/", "http://localhost");

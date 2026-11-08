@@ -42,6 +42,12 @@ describe("guests and signing up", () => {
     expect((await api("/api/signup/start", "POST", { studentNo: v.studentNo })).status).toBe(409);
   });
 
+  it("after ten wrong passwords from one place for one name, asks to wait instead of checking more", async () => {
+    const v = await visitor();
+    for (let i = 0; i < 10; i++) expect((await api("/api/join", "POST", { name: v.name, password: `wrong ${i}!!` })).status).toBe(401);
+    expect((await api("/api/join", "POST", { name: v.name, password: "correct horse 1" })).status).toBe(429);
+  });
+
   it("refuses a wrong code, a short password, a guest's or a qa_ name, and non-ANU addresses", async () => {
     expect((await api("/api/signup/start", "POST", { studentNo: "1234567" })).status).toBe(400);
     expect((await api("/api/signup/start", "POST", { staff: true, email: "someone@gmail.com" })).status).toBe(400);
