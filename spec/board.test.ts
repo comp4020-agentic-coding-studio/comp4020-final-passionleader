@@ -230,7 +230,7 @@ describe("study groups: resizing", () => {
 describe("campus assistants", () => {
   it("lists them all, answers a guest with its pages, and slows down a rush", async () => {
     const list = (await (await api("/api/npcs")).json()) as { id: string; space: string; reach?: number; links: unknown[] }[];
-    expect(list.map((n) => n.id).sort()).toEqual(["anusa", "careers", "course", "housing", "intl", "library", "seongsu", "sport"]);
+    expect(list.map((n) => n.id).sort()).toEqual(["anusa", "canberra", "careers", "course", "housing", "intl", "it", "library", "seongsu", "sport"]);
     // The careers adviser works in the Career Hub now (plan 111).
     expect(list.find((n) => n.id === "careers")?.space).toBe("careers");
     // Those behind a desk say how far out you stand to talk, so their E spot isn't inside the desk.

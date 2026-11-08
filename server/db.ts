@@ -1,7 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
-import { ARRIVAL, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
+import { ARRIVAL, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
 
 // Four tables. Visitors: a name, the secret that reclaims it, a role, and
 // where they last stood. Notes: sticky notes on a space's floor, kept until
@@ -769,7 +769,9 @@ export function removeClassroom(code: string): boolean {
     const { changes } = db.prepare("DELETE FROM classrooms WHERE code = ?").run(code);
     db.prepare("DELETE FROM notes WHERE space = ?").run(space);
     db.prepare("DELETE FROM posts WHERE space = ?").run(space);
-    db.prepare("UPDATE visitors SET last_space = NULL, last_x = NULL, last_z = NULL WHERE last_space = ?").run(space);
+    // Out of a closed classroom is outside, by 155's door (as evictSpace does for those online),
+    // not where newcomers arrive.
+    db.prepare("UPDATE visitors SET last_space = ?, last_x = ?, last_z = ? WHERE last_space = ?").run(FIRST_SPACE, -8.4, 7, space);
     db.exec("COMMIT");
     syncClassrooms();
     return changes > 0;

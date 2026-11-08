@@ -117,3 +117,16 @@ export function connect(token: string): Promise<Socket> {
       });
   });
 }
+
+/**
+ * Newcomers arrive in Chifley Library (spaces.ts ARRIVAL); a test about the campus outside
+ * walks out first. Resolves once the server has them outside (their "players" for it).
+ */
+export async function outside(s: Socket, x = 0, z = 0): Promise<void> {
+  await s.next((m) => m.t === "welcome");
+  s.send({ t: "enter", space: "outdoor", x, z });
+  // The server answers with the new space's "players" (realtime.ts); an earlier list for the
+  // library could match too, so give the move a moment as well.
+  await s.next((m) => m.t === "players", 2000);
+  await new Promise((r) => setTimeout(r, 150));
+}

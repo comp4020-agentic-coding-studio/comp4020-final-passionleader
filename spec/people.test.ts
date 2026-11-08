@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { api, closeAll, connect, visitor, type Msg } from "./helpers.ts";
+import { api, closeAll, connect, outside, visitor, type Msg } from "./helpers.ts";
 
 // Sitting and looks: one person per seat, in the space they're in, and the
 // others see it; a look is your own, picked from fixed palettes, and the
@@ -15,7 +15,7 @@ describe("sitting", () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
     const sa = await connect(a.token);
     const sb = await connect(b.token);
-    await sa.next((m) => m.t === "welcome");
+    await Promise.all([outside(sa, -15.45, -5.2), outside(sb)]);
     sa.send({ t: "sit", seat: "outdoor:3", x: -15.45, z: -5.2 });
     await expect(sb.next(seen(a.name, (p) => p.seat === "outdoor:3"))).resolves.toBeTruthy();
     // Staying put on the seat (the client keeps sending its spot) keeps you seated.
@@ -29,7 +29,7 @@ describe("sitting", () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
     const sa = await connect(a.token);
     const sb = await connect(b.token);
-    await Promise.all([sa.next((m) => m.t === "welcome"), sb.next((m) => m.t === "welcome")]);
+    await Promise.all([outside(sa), outside(sb)]);
     sa.send({ t: "sit", seat: "outdoor:4" });
     await sa.next(seen(a.name, (p) => p.seat === "outdoor:4"));
     sb.send({ t: "sit", seat: "outdoor:4" });

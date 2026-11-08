@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { api, closeAll, connect, guest, visitor, wsUrl } from "./helpers.ts";
+import { api, closeAll, connect, guest, outside, visitor, wsUrl } from "./helpers.ts";
 
 // Crit 9's contract, checked over real WebSockets against the running app:
 // what one visitor does reaches everyone else in the same space within a
@@ -52,7 +52,7 @@ describe("real time", () => {
     const sa = await connect(a.token);
     const sb = await connect(b.token);
     const sc = await connect(c.token);
-    await Promise.all([sa.next((m) => m.t === "welcome"), sb.next((m) => m.t === "welcome"), sc.next((m) => m.t === "welcome")]);
+    await Promise.all([outside(sa), outside(sb), outside(sc)]);
     // c goes into the Hub; a and b stay outside.
     sc.send({ t: "enter", space: "hub", x: 0, z: 6 });
     await sc.next((m) => m.t === "players" && !(m.players as P[]).some((p) => p.name === a.name));
@@ -152,8 +152,9 @@ describe("real time", () => {
 
   it("shows a new sticky note to everyone in the space the moment it's stuck", async () => {
     const [a, b] = await Promise.all([visitor(), visitor()]);
-    await connect(a.token);
+    await outside(await connect(a.token));
     const sb = await connect(b.token);
+    await outside(sb);
     await api("/api/notes", "POST", { token: a.token, space: "outdoor", x: -4, z: 2, text: "Lunch on the lawn?" });
     const seen = await sb.next((m) => m.t === "action" && m.kind === "note");
     expect(seen.note).toMatchObject({ author: a.name, text: "Lunch on the lawn?", x: -4, z: 2 });
