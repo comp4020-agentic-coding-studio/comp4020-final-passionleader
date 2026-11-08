@@ -40,3 +40,7 @@ working; only voice stops.
 `spec/knowledge.test.ts` checks that a voice ticket is for one room, signed
 with the secret and short-lived. Which voice someone may join is decided in
 `server/main.ts` with the same room rules as everywhere else.
+
+---
+
+<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>

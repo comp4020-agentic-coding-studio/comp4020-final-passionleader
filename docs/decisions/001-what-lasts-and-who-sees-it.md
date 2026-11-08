@@ -110,3 +110,7 @@ limits, and only their author or an admin removes them. Map chat kept a
 day, per space, is checked in `spec/rules.test.ts`; meeting rooms' chat not
 being stored is visible in `server/realtime.ts`. The
 rule that positions are never written per move is in `CLAUDE.md`.
+
+---
+
+<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>

@@ -48,3 +48,7 @@ also why there is a report button for harassment and abuse.
 `spec/campus.test.ts`: sign-up by code, guests and what they may not do,
 password reset, the sign-in limit. `spec/rooms.test.ts`: only staff open an
 empty counselling or interview room, and a student comes in by invitation.
+
+---
+
+<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>

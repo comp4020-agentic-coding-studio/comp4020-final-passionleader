@@ -18,7 +18,7 @@ expensive.
 **B.** The main session (Opus) builds and commits. A helper (Sonnet) runs
 browser QA, and Haiku checks the crawled data and puts test questions to the
 assistants. What each may touch is written in `docs/roles.md`
-([238efdf](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/238efdf)). For review workflows, Sonnet agents search and Opus verifies.
+([238efdf](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/238efdf)). For review workflows the rule is 'search on Sonnet, verify on Opus'.
 
 Why: running in parallel cut the time most of all. QA could happen while the
 build went on, which was efficient. Splitting by model also saves budget:
@@ -39,3 +39,7 @@ got a model that fits it.
 
 By people, not by the spec: `docs/roles.md` sets the limits, and the commit
 history shows one committer.
+
+---
+
+<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>

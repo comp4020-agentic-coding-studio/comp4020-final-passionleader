@@ -139,3 +139,7 @@ by staff, who invite students in.
 When students report a chat line, a strange post or a sticky note, the admin
 can look at the IP and at what was said or posted, then restrict that person
 or put them out at once. All of this is for one thing: a safe virtual campus.
+
+---
+
+<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>

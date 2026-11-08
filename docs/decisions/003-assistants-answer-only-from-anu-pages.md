@@ -51,3 +51,7 @@ into misbehaving. I'm glad it was built this way.
 and with nothing on its pages its brief allows no facts; an enrolment
 question leads with ANU's how-to page; it names itself as an unofficial AI
 and never as a known bot.
+
+---
+
+<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>

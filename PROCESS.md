@@ -15,9 +15,11 @@ Fly and GitHub Actions came with the course; AWS is what I added and set up
 myself. Media was the reason. A big club poster or a team's files won't fit on
 a 1 GB volume, so files go to a private S3 bucket
 ([606b59d](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/606b59d)). The browser uploads straight to S3 with a five-minute signed
-link, and the bucket deletes everything after 30 days. It costs a little; I had credit. SES sends the sign-up codes ([d6ffb2d](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d6ffb2d)),
-Bedrock runs the assistants, and voice runs on my own t4g.small EC2 with
-LiveKit, since audio is too heavy for the app's machine.
+link, and the bucket deletes everything after 30 days. It costs a little; I had credit. SES sends the sign-up codes ([d6ffb2d](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/d6ffb2d);
+[decision 005](docs/decisions/005-sign-up-with-an-anu-email.md)), Bedrock
+runs the assistants ([decision 003](docs/decisions/003-assistants-answer-only-from-anu-pages.md)),
+and voice runs on my own t4g.small EC2 with LiveKit, since audio is too heavy
+for the app's machine ([decision 004](docs/decisions/004-voice-on-its-own-server.md)).
 
 ![How the browser, the server and AWS talk: files and voice go straight to AWS with a pass the server signs](diagrams/8-client-server-aws.png)
 
