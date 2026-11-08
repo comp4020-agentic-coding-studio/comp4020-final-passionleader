@@ -173,14 +173,52 @@ export function addOsmScape(group: THREE.Group): void {
   const rm = roofs.mesh(mat(0x8f8a80));
   if (rm) scape.add(rm);
 
-  // Trees: Medium and High only (Low skips them to stay light on phones).
-  if (RICH && OSM_TREES.length) {
-    const n = OSM_TREES.length / 2;
+  // Trees: OSM maps only a few of them, so the ring just past the map's edges (where you look most)
+  // was bare (the user, 11/8). Filler trees go there too, seeded so everyone sees the same, never on
+  // a road or inside a building; all as two instanced meshes, so even Low shows them (fewer on Low).
+  const spots: number[] = [...OSM_TREES];
+  const onRoad = (x: number, z: number): boolean => {
+    for (const [, width, pts] of OSM_ROADS) {
+      for (let i = 0; i + 3 < pts.length; i += 2) {
+        const ax = pts[i]!, az = pts[i + 1]!, bx = pts[i + 2]!, bz = pts[i + 3]!;
+        const dx = bx - ax, dz = bz - az;
+        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
+        if (Math.hypot(x - (ax + t * dx), z - (az + t * dz)) < width / 2 + 2.5) return true;
+      }
+    }
+    return false;
+  };
+  const inBuilding = (x: number, z: number): boolean =>
+    OSM_BUILDINGS.some(([, p]) => {
+      let inside = false;
+      for (let i = 0, j = p.length / 2 - 1; i < p.length / 2; j = i++) {
+        const xi = p[i * 2]!, zi = p[i * 2 + 1]!, xj = p[j * 2]!, zj = p[j * 2 + 1]!;
+        if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
+      }
+      return inside;
+    });
+  // backdrop.ts's hand-made blocks, road and the library's cutting (the generator's keep-out boxes, minX maxX minZ maxZ).
+  const HANDMADE: [number, number, number, number][] = [[-66, 77, -90, -26], [-46, 53, 11, 58], [-53, -16, 11, 75], [16, 56, -141, 19], [-80, -52, -170, 70]]; // the last: Sullivans Creek and its banks (creek.ts)
+  let treeSeed = 4020;
+  const rand = (): number => ((treeSeed = (treeSeed * 1103515245 + 12345) % 2147483648) / 2147483648);
+  const want = RICH ? 260 : 120;
+  for (let tries = 0, made = 0; made < want && tries < want * 12; tries++) {
+    // A point 12-75 m past the walkable box (halfX 89, halfZ 40), all the way round.
+    const ang = rand() * Math.PI * 2;
+    const out = 12 + rand() * 63;
+    const x = Math.cos(ang) * (89 + out) * 1.05, z = Math.sin(ang) * (40 + out) * 1.4;
+    if (Math.abs(x) < 89 + 10 && Math.abs(z) < 40 + 10) continue;
+    if (onRoad(x, z) || inBuilding(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
+    spots.push(x, z);
+    made++;
+  }
+  const n = spots.length / 2;
+  if (n) {
     const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.28, 2.6, 5), mat(0x5a4632), n);
     const crown = new THREE.InstancedMesh(new THREE.IcosahedronGeometry(2.2, 0), mat(0x5d7f48), n);
     const m4 = new THREE.Matrix4();
     for (let i = 0; i < n; i++) {
-      const x = OSM_TREES[i * 2]!, z = OSM_TREES[i * 2 + 1]!;
+      const x = spots[i * 2]!, z = spots[i * 2 + 1]!;
       const s = 0.8 + ((i * 37) % 10) / 20;
       trunk.setMatrixAt(i, m4.makeTranslation(x, 1.3, z));
       crown.setMatrixAt(i, m4.makeScale(s, s * 1.15, s).setPosition(x, 3.6 * s + 0.6, z));
