@@ -150,7 +150,13 @@ app.get("/credits/", (c) => {
   const file = ["client/dist/assets/CREDITS.md", "client/public/assets/CREDITS.md"].find((f) => existsSync(f));
   if (!file) return c.text("No credits file.", 404);
   const about = ["client/dist/assets/ABOUT.md", "client/public/assets/ABOUT.md"].find((f) => existsSync(f));
-  const top = about ? marked.parse(readFileSync(about, "utf8"), { async: false }) : "";
+  // The README's argument, from "What it is" up to "Using this code" (the markers' sign-up notes
+  // and the licence stay on /readme/), read each time so the two never drift apart (the user, 11/9).
+  const readme = readFileSync("README.md", "utf8");
+  const from = readme.indexOf("## What it is");
+  const to = readme.indexOf("## Using this code");
+  const argument = from >= 0 ? readme.slice(from, to > from ? to : undefined).replace(/^## /gm, "### ") : "";
+  const top = about ? marked.parse(readFileSync(about, "utf8").replace("{{README}}", argument), { async: false }) : "";
   // It opens in the in-app window, where outside sites would load blank (most
   // refuse to be framed): every outside link opens a new tab instead.
   const body = (top + marked.parse(readFileSync(file, "utf8"), { async: false })).replaceAll('<a href="http', '<a target="_blank" rel="noopener" href="http');
