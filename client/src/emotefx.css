@@ -1,0 +1,13 @@
+/* The label renderer moves .emote-fx with transform, so the motion is on the span inside. */
+.emote-fx { pointer-events: none; }
+.emote-fx > span {
+  display: block; font: 800 20px/1 system-ui, sans-serif; opacity: 0;
+  text-shadow: 0 1px 0 #fff, 0 0 3px rgba(255, 255, 255, 0.9);
+  animation: emote-rise 1.1s ease-out both;
+}
+@keyframes emote-rise {
+  0% { opacity: 0; transform: translate(0, 10px) scale(0.5); }
+  15% { opacity: 1; }
+  100% { opacity: 0; transform: translate(var(--dx, 0), -64px) scale(1.15); }
+}
+@media (prefers-reduced-motion: reduce) { .emote-fx { display: none; } }
