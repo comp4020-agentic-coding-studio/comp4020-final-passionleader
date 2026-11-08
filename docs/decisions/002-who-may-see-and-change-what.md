@@ -3,8 +3,8 @@
 Status: accepted (crit 10). Updated for the final project by
 [005](005-sign-up-with-an-anu-email.md): email sign-up now gives four roles
 (guest, student, staff, admin), and staff post notices, open classrooms and
-open counselling rooms. The rest of this record is as written for crit 10;
-see "Since crit 10" at the end.
+open counselling rooms. The rest of this record is as written for crit 10.
+See "Since crit 10" at the end.
 
 ![The whole architecture as of crit 10: browsers, one Fly machine with the server and SQLite, and the private S3 bucket](../../diagrams/6-crit10-architecture.png)
 
@@ -65,20 +65,20 @@ The questions:
 - **Only the admin opens and closes classrooms** and sets what their boards
   open. Staff will do this too, once there is a staff role.
   [fb17501](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/fb17501)
-- **Notices are staff-only; the other tabs are open to anyone.** Which tabs
+- **Notices are staff-only, and the other tabs are open to anyone.** Which tabs
   are staff-only lives in one server file, and the client only draws what it's
   sent.
   [ea18534](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ea18534),
   [f13eaef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)
-- **Only the author edits; the author or the admin removes.** The admin can
+- **Only the author edits, and the author or the admin removes.** The admin can
   take a post down, but never put words in someone's mouth.
   [a1eabc5](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/a1eabc5)
-- **A meeting room holds six; a counselling room lets in only those someone
-  inside has invited.**
+- **A meeting room holds six, and a counselling room lets in only those
+  someone inside has invited.**
   [ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)
 - **Files go only to those who may see them.** Attachments live in a private
   S3 bucket. Depending on where they were shared, they're public (a board
-  post's) or for the people inside the room only (a meeting room's); a bug
+  post's) or for the people inside the room only (a meeting room's), and a bug
   report's screenshot is for the admin. The server signs a five-minute link
   for each upload and download, and nothing reaches the bucket directly.
   [606b59d](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/606b59d)
@@ -99,7 +99,7 @@ The questions:
 - **The admin sees IP addresses**, for seven days. That's privacy given up to
   trace abuse, which is why the log deletes itself after a week.
 - **Map chat is kept a day** so a report can carry it. This changed decision
-  001's "chat is never kept";
+  001's "chat is never kept", and
   [919fbc5](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/919fbc5)
   narrowed it to map chat, read only for a report.
 - **One machine holds everything.** The server and the database run as one
@@ -115,16 +115,16 @@ The questions:
 ## How it's checked
 
 - `spec/admin.test.ts`: the log is refused to someone who hasn't joined and to
-  an ordinary visitor; restrictions are refused to anyone but the admin; the
-  chat a report carries can't come from the browser.
+  an ordinary visitor. Restrictions are refused to anyone but the admin, and
+  the chat a report carries can't come from the browser.
 - `spec/classrooms.test.ts`: an ordinary visitor can't open or close a
   classroom, or set what its boards open.
-- `spec/board.test.ts`: anyone asks in Q&A but can't post a notice; only the
+- `spec/board.test.ts`: anyone asks in Q&A but can't post a notice, and only the
   author edits or removes.
-- `spec/rooms.test.ts`: the seventh person is turned away; a counselling room
+- `spec/rooms.test.ts`: the seventh person is turned away, and a counselling room
   keeps to the people invited.
 - `spec/files.test.ts`: files only on your own report or post, or from inside
-  a meeting room; nothing that isn't there is handed out.
+  a meeting room. Nothing that isn't there is handed out.
 - The rehearsal (see `PROCESS.md`): two people in two browsers, told apart in
   the admin's log, and a report about one of them read with its chat.
 
@@ -142,4 +142,4 @@ or put them out at once. All of this is for one thing: a safe virtual campus.
 
 ---
 
-<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>
+<sub>I drafted this record myself, in Korean, and AI translated it into English and corrected the grammar.</sub>

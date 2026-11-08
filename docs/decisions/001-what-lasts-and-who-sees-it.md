@@ -2,8 +2,8 @@
 
 Status: accepted (crit 9). Revised in crit 10: notes now disappear a month
 after they're stuck, can't go up in the Student Hub, and keep 2 m clear of
-doors; see "Notes that never expire" below. Map chat is now kept a day for
-reports about abuse; see "Losing chat" below.
+doors. See "Notes that never expire" below. Map chat is now kept a day for
+reports about abuse. See "Losing chat" below.
 
 ![How the real-time layer talks: browsers, and the server and SQLite in one Fly machine](../../diagrams/5-crit9-realtime.png)
 
@@ -30,19 +30,19 @@ doesn't follow you around forever.
 
 - A. Everything is kept: chat history and notes both persist.
 - B. Nothing is kept: chat and notes both vanish when you leave.
-- C. Chat is ephemeral (never stored, gone from screens after a minute);
-  sticky notes stay until their author or an admin removes them.
+- C. Chat is ephemeral (never stored, gone from screens after a minute),
+  while sticky notes stay until their author or an admin removes them.
 
 **Who sees it**
 
 - D. Everyone online sees everything, wherever they are.
 - E. Only people in the same space see and hear each other, chat, emotes and
-  notes; moving through a door changes who you're with.
+  notes. Moving through a door changes who you're with.
 
 **Where it lives**
 
 - F. Managed Postgres for what lasts, Redis for live state and fan-out.
-- G. One SQLite file on the machine's volume for what lasts; live positions
+- G. One SQLite file on the machine's volume for what lasts, with live positions
   only in the server's memory.
 
 ## Decision
@@ -80,7 +80,7 @@ written, so someone coming back starts where they left.
   admin what someone said. Map chat is now kept one day, read only when
   someone reports a person, and the server attaches that space's last five
   minutes itself. Meeting rooms' chat is still never stored.
-- **Notes that never expire.** Old notes pile up and can go stale; removal
+- **Notes that never expire.** Old notes pile up and can go stale, and removal
   depends on authors and on me as admin.
   *Crit 10:* that came true sooner than expected, so notes now go a month
   after they're stuck, and the note says the day.
@@ -97,7 +97,7 @@ written, so someone coming back starts where they left.
   another region from the latest database snapshot.
 - **What the machine size cost me.** I wanted file sharing and real-time voice
   chat, and to set `min_machines_running = 1` so the machine never idles and a
-  connection is always ready. With this spec I had to give those up; the
+  connection is always ready. With this spec I had to give those up. The
   machine still stops when nobody is connected, so the first visitor waits for
   it to start.
 
@@ -107,10 +107,10 @@ written, so someone coming back starts where they left.
 space within a second and not another one. `spec/campus.test.ts` and
 `spec/rules.test.ts`: notes persist, belong to their space, keep to the
 limits, and only their author or an admin removes them. Map chat kept a
-day, per space, is checked in `spec/rules.test.ts`; meeting rooms' chat not
+day, per space, is checked in `spec/rules.test.ts`, and meeting rooms' chat not
 being stored is visible in `server/realtime.ts`. The
 rule that positions are never written per move is in `CLAUDE.md`.
 
 ---
 
-<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>
+<sub>I drafted this record myself, in Korean, and AI translated it into English and corrected the grammar.</sub>

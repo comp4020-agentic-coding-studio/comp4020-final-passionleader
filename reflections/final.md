@@ -21,12 +21,12 @@ come from 'human experience', a sense that AI won't find for you. If a
 service doesn't answer them, it is just one more piece of the throwaway
 content that AI turns out by the thousand.
 
-That's why a polished, real service that earns people's attention matters
-far more than a rough prototype. I want to be a developer who 'survives':
+So a polished, real service that earns people's attention is worth far
+more than a rough prototype. I want to be a developer who 'survives':
 one with the drive to push things through and the care to get the details
 right.
 
 ---
 
-<sub>I drafted this reflection myself, in Korean; AI translated it into
+<sub>I drafted this reflection myself, in Korean, and AI translated it into
 English and corrected the grammar.</sub>

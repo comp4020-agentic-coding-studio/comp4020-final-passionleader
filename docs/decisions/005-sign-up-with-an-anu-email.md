@@ -51,4 +51,4 @@ empty counselling or interview room, and a student comes in by invitation.
 
 ---
 
-<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>
+<sub>I drafted this record myself, in Korean, and AI translated it into English and corrected the grammar.</sub>

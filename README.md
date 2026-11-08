@@ -7,7 +7,7 @@
 ## For markers
 
 This is a space for ANU students and staff, so a guest can only walk, chat,
-emote and use team rooms; signing up with an ANU email unlocks everything
+emote and use team rooms. Signing up with an ANU email unlocks everything
 else (sticky notes, posts, comments, mail, files).
 
 **Signing up (about two minutes, free):** press "Sign up with your ANU
@@ -20,22 +20,22 @@ account and the other a guest ("Continue as a guest", no email needed), so
 you only need one ANU address.
 
 **What to try:**
-- Real time: each sees the other walk; chat with Enter; hold Q for emotes;
-  go into the same team room (off the library or a classroom) and chat or
+- Real time: each sees the other walk. Chat with Enter, hold Q for emotes,
+  or go into the same team room (off the library or a classroom) and chat or
   write in its shared notes.
 - Persistence (as the signed-up account): stick a note (hold Q, then 1)
-  outside, or post on the advertising board by the north road; reload, and
+  outside, or post on the advertising board by the north road. Reload, and
   both windows still show it. The guest sees it too, and comes back as the
   same guest name after a reload. A team room keeps its chat and notes
   while anyone is still inside, so one of you can reload and find them.
 - Also worth a minute: in the library, press E at Robin and ask 'How do I
-  enrol?'; the answer links ANU's own pages, and an off-topic question gets
+  enrol?'. The answer links ANU's own pages, and an off-topic question gets
   'I couldn't find that'. As staff, walk into a counselling room off the
   Student Hub and invite the guest from the room menu: the guest's window
   asks at once, and Accept brings them in.
 
 **Optional, no setup:** the AI assistants (press E near an "AI" tag), and
-voice (allow the microphone; outside, hold V on a computer).
+voice (allow the microphone, and outside, hold V on a computer).
 
 ## What it is
 
@@ -51,7 +51,7 @@ outside class, and opening up at the Student Hub feels hard.
 
 ## How to start
 
-Sign up with your ANU email for everything; guests can walk, chat and ask
+Sign up with your ANU email for everything. Guests can walk, chat and ask
 the assistants. The 'Campus Guide' button (top right) shows each feature.
 
 ## What good means here
@@ -67,12 +67,12 @@ where people want to stay. Five conditions help.
   and students rated teamwork higher on Gather.Town than on Zoom (Lee et al.,
   2023). Staff open counselling and interview rooms to the invited ([ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)).
 - **Familiar, so less effort.** What we know is easier to process, and that
-  ease feels safe (Reber et al., 2004); a familiar layout also leaves more
+  ease feels safe (Reber et al., 2004). A familiar layout also leaves more
   attention for real work (Sweller, 1988). So I photographed and drew the
   campus myself.
 - **Rest, not another work screen.** It should feel more like a game than a work
   tool. I regenerated the music with Gemini until it
-  sounded like a lively campus, and liked it so much I gave it a player; I
+  sounded like a lively campus, and liked it so much I gave it a player. I
   often leave ANU Crossing open to listen.
 - **Easy for shy people.** In one field study, metaverse platforms improved
   young people's social skills and sense of community (Youssef et al., 2024).
@@ -91,7 +91,7 @@ answers and first friends.
 
 Enforced by `spec/`:
 
-- a team room holds six; only staff open a counselling room, then invite
+- a team room holds six. Only staff open a counselling room, then invite
   (`rooms.test.ts`)
 - assistants answer only from crawled pages, with no facts when nothing
   matches (`knowledge.test.ts`)
@@ -105,7 +105,7 @@ and asked people I invited through Instagram what got in their way.
 
 ## What I chose not to build
 
-- **RDS.** The logic is simple and the community small; SQLite is enough.
+- **RDS.** The logic is simple and the community small. SQLite is enough.
 - **A UI language choice.** ANU works in English, and I want one shared
   language here.
 - AI assistants, camera turning and voice were here at first, until AWS made

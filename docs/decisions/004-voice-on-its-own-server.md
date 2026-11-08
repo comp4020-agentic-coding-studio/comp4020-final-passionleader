@@ -19,7 +19,7 @@ and the app's own server is one 256 MB Fly machine.
 ## Decision
 
 **C.** The app gives out a two-minute ticket, only for the voice of the place
-you're in now; the audio never passes through the app's server, and nothing
+you're in now. The audio never passes through the app's server, and nothing
 is recorded ([7d000b9](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/7d000b9), [f9bca64](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f9bca64)).
 
 Why: P2P puts a heavy load on each client, and a phone in a room of six
@@ -27,7 +27,7 @@ would carry five streams. Sending audio through the app's server would load
 a very small Fly machine and could slow the whole service. So I chose to
 spend some AWS credit and keep the main service and voice apart. If credit
 runs out or AWS has an outage and the EC2 goes down, ANU Crossing keeps
-working; only voice stops.
+working, and only voice stops.
 
 ## Trade-offs
 
@@ -43,4 +43,4 @@ with the secret and short-lived. Which voice someone may join is decided in
 
 ---
 
-<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>
+<sub>I drafted this record myself, in Korean, and AI translated it into English and corrected the grammar.</sub>

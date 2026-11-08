@@ -2,7 +2,7 @@
 
 Status: accepted (final project)
 
-![How the browser, the server and AWS talk; the bottom row is an assistant's answer](../../diagrams/8-client-server-aws.png)
+![How the browser, the server and AWS talk, where the bottom row is an assistant's answer](../../diagrams/8-client-server-aws.png)
 
 ## Context
 
@@ -31,7 +31,7 @@ the rest on Amazon Nova 2 Lite, both on Bedrock
 Why: to keep out people who would use it for something else, like
 assignments, and to save the AI budget. RAG then makes up for the
 restriction by making answers more accurate. For a service that offers AI,
-every use is money, so steering it towards efficient use matters most. I
+every use is money, so steering people towards efficient use is the most important part. I
 also watched classmates try to dig out the API key and talk the assistants
 into misbehaving. I'm glad it was built this way.
 
@@ -48,10 +48,10 @@ into misbehaving. I'm glad it was built this way.
 ## How it's checked
 
 `spec/knowledge.test.ts`: an assistant answers only from its own sources,
-and with nothing on its pages its brief allows no facts; an enrolment
-question leads with ANU's how-to page; it names itself as an unofficial AI
+and with nothing on its pages its brief allows no facts. An enrolment
+question leads with ANU's how-to page, and it names itself as an unofficial AI
 and never as a known bot.
 
 ---
 
-<sub>I drafted this record myself, in Korean; AI translated it into English and corrected the grammar.</sub>
+<sub>I drafted this record myself, in Korean, and AI translated it into English and corrected the grammar.</sub>
