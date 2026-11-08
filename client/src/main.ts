@@ -1404,6 +1404,8 @@ const voice = mountVoice({
       v.group.userData.talking = on;
       v.label.classList.toggle("talking", on);
     }
+    // In a room the window covers the scene (the whole screen on a phone): its member list shows it too (the user, 11/9).
+    roomPanel.talking(names);
   },
 });
 
@@ -1773,8 +1775,6 @@ function enterWorld(): void {
   chat.show();
   const spawn = session.spawn;
   setSpace(isSpaceId(spawn.space) ? spawn.space : "outdoor", spawn, false);
-  // Arriving in the library, you face north, to reception and Robin (CLAUDE.md), not the camera.
-  if (spawn.space === "library") player.rotation.y = Math.PI;
   goOnline(session.token);
   // Move focus out of the form so keystrokes go to the game, not a hidden input.
   (document.activeElement as HTMLElement | null)?.blur();

@@ -11,13 +11,13 @@ import { fanfare, ding } from "./sfx.ts";
 
 export type QuestId = "walk" | "wave" | "chat" | "npc" | "library" | "room" | "look";
 
-// Newcomers arrive inside the library (11/8), so its two quests come first: the arrow follows the
-// first one not done, and with walk, wave and chat ahead of them a newcomer saw no arrow at all
-// though the list said "follow the arrow" (helper QA). Being in the library ticks "library".
+// Newcomers arrive on the lawn (11/9). Walking comes first, then the library and Robin: the
+// arrow follows the first step not done, and the walk takes a few seconds, so a newcomer soon
+// has the arrow to the library (on 11/8, arriving inside, wave and chat first had hidden it).
 const QUESTS: { id: QuestId; text: string }[] = [
+  { id: "walk", text: "Walk around (WASD, or the pad)" },
   { id: "library", text: "Go into Chifley Library (follow the arrow)" },
   { id: "npc", text: "Ask Robin, the AI at the library desk, something (follow the arrow)" },
-  { id: "walk", text: "Walk around (WASD, or the pad)" },
   { id: "room", text: "Step into a team room (follow the arrow)" },
   { id: "wave", text: "Wave to someone (hold Q, then Wave)" },
   { id: "chat", text: "Say hello in the chat (Enter)" },

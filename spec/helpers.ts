@@ -119,8 +119,8 @@ export function connect(token: string): Promise<Socket> {
 }
 
 /**
- * Newcomers arrive in Chifley Library (spaces.ts ARRIVAL); a test about the campus outside
- * walks out first. Resolves once the server has them outside (their "players" for it).
+ * Newcomers arrive on the lawn now (spaces.ts ARRIVAL), but a test about the campus outside
+ * still steps out explicitly. Resolves once the server has them outside (their "players" for it).
  */
 export async function outside(s: Socket, x = 0, z = 0): Promise<void> {
   await s.next((m) => m.t === "welcome");

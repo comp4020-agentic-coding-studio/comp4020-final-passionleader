@@ -72,12 +72,11 @@ export const classroomSpace = (code: string): SpaceId => code.toLowerCase();
 // First-timers start outside, on the path between the two buildings.
 export const FIRST_SPACE: SpaceId = "outdoor";
 /**
- * Where a new arrival (and a guest, every time) comes in: inside Chifley Library, at the south
- * end of its middle aisle between the study desks, facing reception and Robin, whom the
- * tutorial sends them to first (the user, 11/8; before, the north road outside). Someone put
- * out of a closed classroom still goes outside (FIRST_SPACE).
+ * Where a new arrival (and a guest, every time) comes in: the middle of the lawn, between its
+ * flower bushes, south of the dog (the user, 11/9; on 11/8 it was inside the library, before
+ * that the north road). Someone put out of a closed classroom goes by 155's door.
  */
-export const ARRIVAL: { space: SpaceId; x: number; z: number } = { space: "library", x: 0, z: 9.3 };
+export const ARRIVAL: { space: SpaceId; x: number; z: number } = { space: "outdoor", x: -19, z: -14 };
 
 export function spaceInfo(id: SpaceId): Space | undefined {
   if (Object.hasOwn(SPACES, id)) return SPACES[id];

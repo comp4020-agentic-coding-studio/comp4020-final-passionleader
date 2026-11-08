@@ -13,7 +13,7 @@ describe("guests and signing up", () => {
     expect(again.name).toBe(g.name);
   });
 
-  it("keeps no spot for a guest: back in the same browser, a guest starts where newcomers arrive (the library) again", async () => {
+  it("keeps no spot for a guest: back in the same browser, a guest starts where newcomers arrive (the lawn) again", async () => {
     const g = await guest();
     const ws = await connect(g.token);
     await ws.next((m) => m.t === "welcome");
@@ -22,7 +22,7 @@ describe("guests and signing up", () => {
     ws.ws.close();
     await new Promise((r) => setTimeout(r, 300));
     const back = (await (await api("/api/guest", "POST", { token: g.token })).json()) as { spawn: { space: string } };
-    expect(back.spawn.space).toBe("library");
+    expect(back.spawn.space).toBe("outdoor");
   });
 
   it("has no free names any more: you sign up, or come in as a guest", async () => {

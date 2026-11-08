@@ -63,9 +63,9 @@ when a flow changes.
   server (bug reports are open to anyone). A guest leaves as little as
   possible in the database: their row (name and token) only, gone a day
   after they were last seen; their spot and look aren't saved. A newcomer, and a guest every
-  time, comes in at the south end of Chifley Library's middle aisle, facing
-  Robin, and the tutorial's first two steps are the library and Robin;
-  someone in a classroom that closes comes back outside. Signing in by
+  time, comes in at the middle of the lawn, and after a first walk the
+  tutorial sends them to the library and Robin; someone in a classroom that
+  closes comes back outside, by 155's door. Signing in by
   student number or email never says whether that address has an account,
   and ten wrong passwords from one address for one name mean a fifteen-minute
   wait. `qa_` names are reserved for the test accounts, which sign in
