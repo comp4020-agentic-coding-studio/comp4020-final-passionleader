@@ -32,228 +32,101 @@ you only need one ANU address.
 **Optional, no setup:** the AI assistants (press E near an "AI" tag), and
 voice (allow the microphone; outside, hold V on a computer).
 
-A place where people at ANU cross paths: ask what you don't know, meet
-people you wouldn't otherwise, in a campus you already know.
+## What it is
 
-A small 3D, real-time space for the ANU community: a stretch of campus between
-building 155 (Marie Reay Teaching Centre) and building 154 (Di Riddell Student
-Centre), the Student Hub and the ANUSA Student Lounge inside 154,
-classrooms inside 155 (COMP8020, and any course the admin opens), and Chifley
-Library across the bridge to the south.
-Everyone in a space sees everyone else walk, chat, wave, dance and leave sticky
-notes, live. It is not an official ANU service.
+ANU Crossing is a small 3D, real-time piece of the ANU campus. Clubs
+promote events on its boards and teams meet in its rooms. Coursework students find labs, and academics find students. A
+newcomer can ask the AI assistants, who answer from ANU's own pages.
 
-## Who it's for
+The name comes from 'crossing paths'. When I arrived, I didn't know where to
+ask anything. My interviews for HCI and Responsible Practice (assessed work,
+so not shared) pointed the same way: students and staff rarely meet outside
+class, and opening up at the Student Hub feels hard.
 
-Anyone connected to ANU. For now it is built mostly around students talking to
-students, but the aim is a place where staff and academics can talk with
-students informally and at ease. You can hang out with live chat and emotes, or
-leave a trace with a sticky note. Students, staff and academics
-should feel at home in a virtual space shaped like the real campus they know.
+## How to start
 
-## How to use it
+Sign up with your ANU email for everything; guests can walk, chat and ask
+the assistants. The 'Campus Guide' button (top right) shows each feature.
 
-1. Sign up with your ANU email: your student number (e.g. `u1234567`), or
-   "I'm ANU staff" and your @anu.edu.au address. A code comes by email; then
-   pick a name of up to 8 letters, digits and underscores, and a password.
-   Or **continue as a guest** (`guest042`): walk, chat, emote and use team
-   rooms; sign up to stick notes, post or comment. Your browser remembers you, and you come back
-   where you left.
-2. **WASD** to walk, **Space** to jump, **E** at a door to go in or out
-   (building 155's door asks which classroom). On a phone: the pad and the
-   Menu, Jump and Use buttons.
-3. **Enter** to chat (gone after a minute). Hold **Q** to wave, say yes or no,
-   "How ya doing, mate?", dance, or stick a note.
-4. A note stays where you stood for a month (it says the day it goes), unless
-   you or the admin remove it first. Notes go up outside and in classrooms,
-   not in the Student Hub and not on top of a door. Walk onto one and press
-   **E** to read and comment.
-5. In a classroom, **E** at the board left of the whiteboard opens its Q&A,
-   Notices and Board. Anyone asks, posts and comments (posts up to 500
-   words); only lecturers and staff post notices. In COMP8020 the whiteboard
-   opens the course page in a window over the campus, and the board to its
-   right lists classmates' final-project apps that are up (each opens in a
-   new tab). In other classrooms both open whatever page the staff set (for
-   now the admin), in the window or a new tab as they choose.
-   The Student Hub's reception has the lab matching board (Labs looking for
-   students, Students looking for labs), the researcher search, ANU's AI
-   essentials guide, and "Ask the Hub", where a question can be private: only
-   you and the staff see it. The ANUSA Student Lounge, next door in 154, is a
-   place to rest and meet, with two meeting rooms. Beside 155's door, the
-   study-group board: start a group, say how many people, and others join
-   until it's full. The advertising board stands by the lawn on the north road; its
-   posts go after 30 days. All the boards say they're unofficial.
-   Comments take hearts (the most-hearted is pinned on top, 🔥 HOT), and anything someone wrote
-   can be reported. Type "/all" before a chat line to reach every space, or "/w name" to
-   whisper to one signed-up person wherever they are (only the two of you
-   see it, and it isn't kept).
-   Under your name, how many people are on campus, in the Hub, the
-   library, the Career Hub, the classrooms and the meeting rooms (a phone
-   shows the total); press it to see who is in the same place as you, by
-   name (elsewhere, numbers only), and press a name to whisper. Beside your
-   name, say whether you're happy to chat, studying or away; everyone
-   there sees it on your name tag. The classroom picker shows how many are
-   in each. Outside follows Canberra's clock: a golden hour, dusk, and a
-   night with the lamps lit down the north road.
-   Lab Coffee wraps round 154's north-west corner, with a terrace; its menu
-   board (**E**) lists the cafés on campus, where each is and roughly what
-   it sells, gathered from public pages (not an official list).
-   The Student Hub's wall calendar shows this month and opens ANU's
-   academic dates for 2026 and 2027 in a window of its own. Campus
-   assistants (the library, ANU Sport, accommodation, ANUSA, the course
-   desk, international students, careers, computing & IT, getting around
-   Canberra, and a ghost of the author)
-   stand in their places, tagged "AI": **E** to ask one. An AI model (Claude
-   Haiku for courses, careers and accommodation, Amazon Nova for the rest) answers in their
-   name only from public ANU pages the app crawls each month, linking the
-   pages it used; if those pages don't cover it, it says so instead of
-   guessing. Ask in any language; it answers in yours. It can still be wrong. What you ask isn't kept.
-   Signed up, the ✉️ button writes to someone by name and keeps your mail
-   for 30 days; it lights up when something arrives. Across the north road,
-   the Career Hub (the O'Donoghue centre) has the careers adviser and six
-   interview rooms. The ❓ button is the Campus Guide, and a first visit
-   starts with a short tour, then a few things to try. Outside, ⟳ (or R)
-   turns the view; you hear the people near you (quieter the further they
-   are), and on a computer holding V lets them hear you. Voice is never
-   recorded; the settings' Voices volume turns it down or off.
-6. Say hello to the dog on the lawn. In the Hub, three arcade machines:
-   Sketch & Guess, a drawing game for everyone there, and two of my earlier
-   course games, Two-Tone (made with my pod) and Retro Run & Gun. In Chifley Library the
-   catalogue desk opens room booking, the catalogue and research ethics,
-   and a PC beside it sums up Academic Skills (writing and study help).
-   A classroom's board links to Canvas.
-7. Meeting rooms: six counselling rooms off the Student Hub, six interview
-   rooms off the Career Hub, three team rooms off every classroom, four off
-   the library and two off the ANUSA lounge. Up to six people each. Team
-   rooms are open to anyone; counselling and interview rooms let in only
-   whoever someone inside has invited by name. Coming in opens the room's
-   menu: Mic (everyone inside hears each other; the mic makes you heard), a group chat of what's been said since the room last emptied (📎
-   shares a file), Shared notes (one Markdown page, pictures too), a shared
-   whiteboard (Excalidraw, in a new tab), and Save chat or Save notes, which
-   keep a copy for you alone for 30 days (the menu's 📂, or ✉️ → Saved); the
-   room is told. Close the menu
-   to see the room (the "Open Room UI" button at the top right brings it back);
-   leave from the menu or by the door; when the last person
-   leaves, the chat, the notes, the files and the invites are gone.
-8. Something broken? The gear's dialog has **Report a bug**: a short note,
-   with a screenshot if you like, that only the admin reads. Someone being
-   abusive? **Report someone** sends their name and, if you like, the last
-   five minutes of chat where you are; the admin can stop a person chatting,
-   posting, sticking notes or coming in, for a while.
-9. Files: a classroom board post can carry up to five, a meeting room's chat
-   shares them, and a bug report takes a screenshot. Images, PDF, txt, md,
-   docx, pptx, xlsx and zip, up to 200 MB each; nothing that runs, no web
-   pages. They're kept 30 days at most, in a private store only the app's
-   server can reach, and handed out by five-minute links to whoever may see
-   them (anyone for a board post, the people inside for a room, the admin for
-   a screenshot). If that store can't be reached, uploading says so, with an
-   error code (`S3-…`) to tell the admin.
-10. The gear (top right) sets the music and sound-effect volumes and switches
-   graphics between Low, Medium and High. On a computer, the box beside it shows the
-   track playing, with pause and next; outside, a minimap shows where you
-   are, and "Things to try" ticks off seven first steps (skip it if you like).
-11. Somewhere on campus is a door the project started behind. Find it.
+## What good means here
 
-## What good means for this app
+Good means 'a place where students, staff and academics meet by chance'. People
+should simply want to stay. Five conditions help.
 
-I wanted more than a game: a space where people can talk. A field study of
-363 young people in the UAE found that using metaverse platforms improves
-social skills and communication, and builds relationships and a sense of
-community (Youssef et al., 2024).
+- **Reachable from anywhere.** ANU is big. Virtual spaces can lower that
+  barrier and draw more people in (Tiwari, 2026). So labs and students find
+  each other on the Hub's board
+  ([f13eaef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)),
+  and each space shows how many are inside, so nobody walks into an empty
+  room ([2e53582](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2e53582)).
+- **Present together.** Movement, chat, voice and shared notes reach everyone
+  at once. Co-presence goes with satisfaction in virtual worlds (Bulu, 2012),
+  and students rated teamwork higher on Gather.Town than on Zoom, thanks to
+  avatars and space (Lee et al., 2023). A counselling room lets in only the
+  invited
+  ([ed5d0ef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/ed5d0ef)).
+- **Familiar, so less effort.** What we know is easier to process, and that
+  ease feels safe (Reber et al., 2004). A familiar layout leaves more room for
+  real work (Sweller, 1988). I photographed and drew the campus myself.
+- **Rest, not another work screen.** It should feel closer to a game. I regenerated the music with Gemini until it
+  felt like a lively campus, and I now keep the site open just to listen.
+- **Easy for shy people.** Metaverse platforms improved young people's social
+  skills and sense of community in one field study (Youssef et al., 2024).
+  Here a shy student can wave or leave a note before saying a word.
 
-- **Familiar places, so less effort.** By processing fluency theory (Reber,
-  Schwarz & Winkielman, 2004), the brain spends less effort on visual and
-  spatial information it already knows (a mental map), and that fluency feels
-  safe and pleasant. By cognitive load theory (Sweller, 1988), a predictable,
-  familiar campus cuts the extraneous load of learning a virtual world, leaving
-  more for real tasks, deep thinking and creative work together. So the spaces
-  follow the real campus's map and buildings: a virtual world that feels real,
-  where ANU students can drop in, rest and talk at ease.
-- **Across the campus, from anywhere.** ANU's campus is big: walking from
-  Yukeembruk to Kambri takes about 15 minutes, and that distance is a barrier
-  to meeting. A review of 52 studies on the urban metaverse (Tiwari, 2026)
-  argues that it can lower such barriers and draw more people into taking
-  part. Here, from home, a few keystrokes reach the ANU community: no
-  building to reach, no weather, on a laptop or a phone.
-- **The Student Hub and EdStem in one place.** Students can find a
-  supervisor they're interested in, and supervisors can find students they'd
-  like to work with.
-- **A place to rest, not another work screen.** Not the 2D tools we stare at
-  all day, but a game-like space where anyone can drop in, relax and socialise
-  without pressure.
-- **Easy for shy people.** Talking face to face can be a burden. Here, from
-  a keyboard, a shy student can look around, meet people they don't know and
-  start a network. Calm music and game-like art make it easier to be
-  social. Stick a note to leave your mark, let classmates comment on it, or
-  just dance together.
+'Ask the Hub' lets newcomers ask without pressure, which I badly missed.
 
-### Which of these are checked
+## Against the alternatives
 
-Enforced by `spec/`: signing up with an ANU email, guests and what they
-may not do, password resets (`campus.test.ts`); notes and comments
-persist, stay in their space, keep their limits, and only their author or an
-admin removes them (`campus.test.ts`, `rules.test.ts`); movement, chat, emotes
-and new notes reach the same space within a second, and no other
-(`realtime.test.ts`, with whispers reaching only their reader, a status
-being one of three values at most every two seconds, and the
-hidden room's one-poop-each rule); study
-groups never fill past their size, private questions reach only their
-writer and staff, mail only its reader, guests can't send it, and the
-assistants answer one question every two seconds (`board.test.ts`) and
-only from their own crawled pages, stating no facts when none match, in
-the asker's language, linking each page once (`knowledge.test.ts`); only
-the admin reads the seven-day log and the bug reports, finds people in it
-by part of a name, a student number or an email, and the log leaves chat
-out (`admin.test.ts`, `rules.test.ts`); a
-meeting room holds six and a counselling room only
-the invited, and a saved chat is its saver's alone (`rooms.test.ts`); files are checked by type, size and who may
-attach or fetch them (`files.test.ts`). Keyboard and phone controls are a rule in `CLAUDE.md`.
-Judged by people: whether it feels familiar and restful, and whether talking
-gets easier.
+Zoom and Ed serve meetings and courses, not chance meetings. hop.earth and FrameVR are live spaces, but not our
+campus. ANU Crossing is free, needs no install, and answers a gap the Student
+Hub itself names. I built it as a real service, hoping new students use it at
+O-Week to find answers and their first friends.
 
-### What the app keeps about you
+## Which claims are checked
 
-If you sign up: your ANU email address (to send codes and reset your
-password; never shown to anyone, not in the admin's log), your name and a
-hash of your password. A guest leaves only the name it was given.
+Enforced by `spec/` (127 pass, 6 skipped):
 
-The server writes every action to its log (`flyctl logs`): your name, a
-short tag of your browser (never its secret token), the space and what you
-did, but never what you said in chat. The admin can also read, for seven
-days, what people wrote and removed (notes, comments, posts), sign-ins,
-refusals, bug reports and the names of files attached, with the **IP
-address** each came from, so abuse and bugs can be traced; after seven days
-they are deleted (bug reports after 28, or when dealt with). Files are kept
-30 days at most, a meeting room's only until it empties, and go when their
-post is removed. Chat outside the meeting rooms is kept one day, read
-only if someone reports a person (then the last five minutes go to the
-admin with the report); meeting rooms' chat, moves and emotes are not kept,
-unless someone inside saves the chat: then a copy is kept for them alone for
-30 days, and everyone in the room is told.
+- a team room holds six, so voice and work stay clear; counselling rooms
+  admit only the invited (`rooms.test.ts`)
+- assistants answer only from crawled pages, with no facts when nothing
+  matches (`knowledge.test.ts`)
+- live counts carry no names; chat reaches its own space within a second
+  (`realtime.test.ts`)
+- private questions and mail reach only their readers (`board.test.ts`)
 
-## What I chose not to build (yet)
+Judged by people: does it feel like our campus, and can a newcomer find
+everything? I walked the whole map, and asked people I
+invited on Instagram what got in their way.
 
-Keeping a meeting room's files beyond the room (a saved chat keeps its
-lines only). Staff are whoever signs up with a staff @anu.edu.au
-address; nothing yet tells a lecturer from other staff. The buildings are
-simplified, not surveyed.
+## What I chose not to build
+
+- **RDS.** The logic is simple and the community small. SQLite is enough.
+- **A UI language choice.** ANU works in English; one shared language.
+- AI assistants, camera turning and voice were on this list at first. With
+  AWS behind the app, they came off it.
 
 ## What I read while deciding
 
+- Tiwari, A. (2026). [A review of the metaverse and its implications for
+  urban environments: ethical, social, and economic considerations](https://doi.org/10.1080/12265934.2026.2647852).
+  *International Journal of Urban Sciences*.
+- Bulu, S. T. (2012). [Place presence, social presence, co-presence, and
+  satisfaction in virtual worlds](https://doi.org/10.1016/j.compedu.2011.08.024).
+  *Computers & Education*, 58(1), 154–161.
+- Lee, Y., Jung, J.-H., Kim, H., Jung, M. & Lee, S.-S. (2023). [Comparative
+  case study of teamwork on Zoom and Gather.Town](https://doi.org/10.3390/su15021629).
+  *Sustainability*, 15(2), 1629.
+- Reber, R., Schwarz, N. & Winkielman, P. (2004). [Processing fluency and
+  aesthetic pleasure: is beauty in the perceiver's processing experience?](https://doi.org/10.1207/s15327957pspr0804_3)
+  *Personality and Social Psychology Review*, 8(4), 364–382.
+- Sweller, J. (1988). [Cognitive load during problem solving: effects on
+  learning](https://doi.org/10.1207/s15516709cog1202_4). *Cognitive Science*,
+  12(2), 257–285.
 - Youssef, E., Medhat, M., Abdellatif, S. & Yousif, N. B. (2024). [Analyzing
   the impact of metaverse technology on social development: a field study on
   Generation Z in the United Arab Emirates](https://doi.org/10.3390/socsci13090446).
   *Social Sciences*, 13(9), 446.
-- Tiwari, A. (2026). [A review of the metaverse and its implications for
-  urban environments: ethical, social, and economic considerations](https://doi.org/10.1080/12265934.2026.2647852).
-  *International Journal of Urban Sciences*.
-- Reber, R., Schwarz, N. & Winkielman, P. (2004). Processing fluency and
-  aesthetic pleasure. *Personality and Social Psychology Review*, 8(4), 364–382.
-- Sweller, J. (1988). Cognitive load during problem solving: effects on
-  learning. *Cognitive Science*, 12(2), 257–285.
-- Andrew Dowell, [A practical guide to Game Design](https://www.artstation.com/blogs/andrewdowell/PQaWj/a-practical-guide-to-game-design):
-  why I want a place to talk, not a game.
-- Comcare, [Effective communication](https://www.comcare.gov.au/safe-healthy-work/healthy-workplace/work-design/better-practice-guides/effective-communication).
 - [hop.earth](https://hop.earth/) and [FrameVR](https://learn.framevr.io/):
   real-time spaces in the browser.
 
