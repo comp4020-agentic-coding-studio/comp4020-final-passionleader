@@ -14,12 +14,12 @@ const DEFAULT_VOLUME = 80;
 /** Full volume (100) is a little louder than the old fixed level (0.3), which 80 keeps. */
 const BGM_MAX = 0.375;
 
-function readVolume(key: string): number {
+function readVolume(key: string, fallback = DEFAULT_VOLUME): number {
   try {
     const n = Number(localStorage.getItem(key));
-    return localStorage.getItem(key) !== null && Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : DEFAULT_VOLUME;
+    return localStorage.getItem(key) !== null && Number.isFinite(n) ? Math.max(0, Math.min(100, Math.round(n))) : fallback;
   } catch {
-    return DEFAULT_VOLUME;
+    return fallback;
   }
 }
 function saveVolume(key: string, v: number): void {
@@ -30,7 +30,8 @@ function saveVolume(key: string, v: number): void {
   }
 }
 
-let bgmVolume = readVolume(BGM_KEY);
+// Music starts at 50, quieter than the sound effects (the user, 11/9); a level someone set stays.
+let bgmVolume = readVolume(BGM_KEY, 50);
 let sfxVolume = readVolume(SFX_KEY);
 let playlist: string[] = [];
 let index = 0;

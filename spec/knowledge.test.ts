@@ -113,6 +113,15 @@ describe("the reply's language", () => {
   });
 });
 
+describe("Seongsu's pages", () => {
+  it("are the project's own documents, so a question about AWS or the assistants finds them", async () => {
+    const { loadProjectDocs } = await import("../server/projectdocs.ts");
+    expect(loadProjectDocs()).toBeGreaterThan(5);
+    expect(k.search(["project"], "How do the AI assistants work?").some((p) => p.url.endsWith("/003-assistants-answer-only-from-anu-pages.md"))).toBe(true);
+    expect(k.search(["project"], "How did you set up AWS?").length).toBeGreaterThan(0);
+  });
+});
+
 describe("the crawler's reading", () => {
   it("keeps a page's text when it has two menus but only one closes", () => {
     const menu = `<html><body><nav>Home Fares Timetables</nav><div><h1>Fares</h1><p>Adult single: $5.29</p></div></body></html>`;
