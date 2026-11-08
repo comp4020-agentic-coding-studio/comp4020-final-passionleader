@@ -3,11 +3,6 @@ import { mat, nightGlow, texMat } from "../world.ts";
 import { RICH } from "../settings.ts";
 import { asphaltMat } from "./backdrop.ts";
 import { OSM_BUILDINGS, OSM_ROADS, OSM_TREES } from "./osmscape-data.ts";
-import { CREEK_Z, bend } from "./creek.ts";
-
-/** In Sullivans Creek's channel and banks (creek.ts draws it, bending west south of the bridge): nothing from OSM goes there. */
-const inCreek = (x: number, z: number): boolean => z >= CREEK_Z.from - 1 && z <= CREEK_Z.to + 1 && x > -75.2 + bend(z) - 1 && x < -57.6 + bend(z) + 1;
-const anyInCreek = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 && inCreek(pts[i]!, pts[i + 1]!));
 
 // Scenery past the walkable outdoor map, laid out from OpenStreetMap
 // (qa-tools/osm/gen_osmscape.py makes osmscape-data.ts; only derived x, z
@@ -15,7 +10,9 @@ const anyInCreek = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 &&
 // ribbons, buildings as extruded footprints with the backdrop's brick-and-window
 // look (lit at night), trees as little instanced crowns. Scenery only: nothing
 // here is solid and the generator leaves out everything inside the map and
-// next to backdrop.ts's hand-made blocks. One mesh per material.
+// next to backdrop.ts's hand-made blocks, the creek and its own roads. Footprints,
+// heights and road widths are real size (the generator eases only the distances
+// from the compressed campus to real ones). One mesh per material.
 
 const FLOOR_H = 3.3;
 const TILE_W = 6;
@@ -130,7 +127,6 @@ export function addOsmScape(group: THREE.Group): void {
   const asphalt = new Batch();
   const paving = new Batch();
   for (const [kind, width, pts] of OSM_ROADS) {
-    if (anyInCreek(pts)) continue;
     if (kind === 0) ribbon(asphalt, pts, width, 0.003, 8);
     else ribbon(paving, pts, width, 0.004, 2);
   }
@@ -145,10 +141,9 @@ export function addOsmScape(group: THREE.Group): void {
   // Buildings: walls with the facade texture (one tile = 6 m wide, two storeys), flat roofs.
   const walls = new Batch();
   const roofs = new Batch();
-  for (const [levels, p] of OSM_BUILDINGS) {
-    if (anyInCreek(p)) continue;
+  for (const [height, p] of OSM_BUILDINGS) {
     const n = p.length / 2;
-    const h = levels * FLOOR_H + 0.6;
+    const h = height;
     const pts: [number, number][] = [];
     for (let i = 0; i < n; i++) pts.push([p[i * 2]!, p[i * 2 + 1]!]);
     if (!ccw(p)) pts.reverse();
@@ -182,45 +177,11 @@ export function addOsmScape(group: THREE.Group): void {
   const rm = roofs.mesh(mat(0x8f8a80));
   if (rm) scape.add(rm);
 
-  // Trees: OSM maps only a few of them, so the ring just past the map's edges (where you look most)
-  // was bare (the user, 11/8). Filler trees go there too, seeded so everyone sees the same, never on
-  // a road or inside a building; all as two instanced meshes, so even Low shows them (fewer on Low).
-  const spots: number[] = [...OSM_TREES];
-  const onRoad = (x: number, z: number): boolean => {
-    for (const [, width, pts] of OSM_ROADS) {
-      for (let i = 0; i + 3 < pts.length; i += 2) {
-        const ax = pts[i]!, az = pts[i + 1]!, bx = pts[i + 2]!, bz = pts[i + 3]!;
-        const dx = bx - ax, dz = bz - az;
-        const t = Math.max(0, Math.min(1, ((x - ax) * dx + (z - az) * dz) / (dx * dx + dz * dz || 1)));
-        if (Math.hypot(x - (ax + t * dx), z - (az + t * dz)) < width / 2 + 2.5) return true;
-      }
-    }
-    return false;
-  };
-  const inBuilding = (x: number, z: number): boolean =>
-    OSM_BUILDINGS.some(([, p]) => {
-      let inside = false;
-      for (let i = 0, j = p.length / 2 - 1; i < p.length / 2; j = i++) {
-        const xi = p[i * 2]!, zi = p[i * 2 + 1]!, xj = p[j * 2]!, zj = p[j * 2 + 1]!;
-        if (zi > z !== zj > z && x < ((xj - xi) * (z - zi)) / (zj - zi) + xi) inside = !inside;
-      }
-      return inside;
-    });
-  // backdrop.ts's hand-made blocks, road and the library's cutting (the generator's keep-out boxes, minX maxX minZ maxZ).
-  const HANDMADE: [number, number, number, number][] = [[-66, 77, -90, -26], [-46, 53, 11, 58], [-53, -16, 11, 75], [16, 56, -141, 19]];
-  let treeSeed = 4020;
-  const rand = (): number => ((treeSeed = (treeSeed * 1103515245 + 12345) % 2147483648) / 2147483648);
-  const want = RICH ? 260 : 120;
-  for (let tries = 0, made = 0; made < want && tries < want * 12; tries++) {
-    // A point 12-75 m past the walkable box (halfX 89, halfZ 40), all the way round.
-    const ang = rand() * Math.PI * 2;
-    const out = 12 + rand() * 63;
-    const x = Math.cos(ang) * (89 + out) * 1.05, z = Math.sin(ang) * (40 + out) * 1.4;
-    if (Math.abs(x) < 89 + 10 && Math.abs(z) < 40 + 10) continue;
-    if (onRoad(x, z) || inBuilding(x, z) || inCreek(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
-    spots.push(x, z);
-    made++;
-  }
+  // Trees: OSM's own plus seeded filler on the grass round the map, all placed (and kept off roads,
+  // buildings, the creek and hand-made scenery) by the generator. All as two instanced meshes, so
+  // even Low shows them (every other one there).
+  const spots: number[] = [];
+  for (let i = 0; i < OSM_TREES.length; i += 2) if (RICH || (i / 2) % 2 === 0) spots.push(OSM_TREES[i]!, OSM_TREES[i + 1]!);
   const n = spots.length / 2;
   if (n) {
     const trunk = new THREE.InstancedMesh(new THREE.CylinderGeometry(0.2, 0.28, 2.6, 5), mat(0x5a4632), n);
