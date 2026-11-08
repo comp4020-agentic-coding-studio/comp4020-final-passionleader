@@ -1068,7 +1068,8 @@ const statusPicker = mountStatus(hudName, (s) => net?.status(s));
 
 // Press the online line: who's in this space by name, elsewhere as counts (whohere.ts).
 mountWhoHere(hudOnline, {
-  here: () => [...others.values()].map((o) => ({ name: o.status ? `${statusText(o.status).icon} ${o.name}` : o.name, staff: o.staff })),
+  // The status icon is shown beside the name, never part of it: in the name it went into "/w 👋 name" (RICE v3).
+  here: () => [...others.values()].map((o) => ({ name: o.name, icon: o.status ? statusText(o.status).icon : "", staff: o.staff })),
   counts: () => {
     const n = (id: string): number => onlineCounts[id] ?? 0;
     return [

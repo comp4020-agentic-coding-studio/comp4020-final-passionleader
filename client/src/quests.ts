@@ -2,7 +2,7 @@ import "./quests.css";
 import { fanfare, ding } from "./sfx.ts";
 
 // A short tutorial of small quests (plan 72): seven things to try, ticked off
-// as you do them (a ding and a puff of confetti; all six, a fanfare),
+// as you do them (a ding and a puff of confetti; all seven, a fanfare),
 // skippable at any point. Kept in this browser only; once
 // done or skipped it stays out of the way. main calls `done(id)` when one
 // happens. On a phone (plan 87) it's one line: the next thing to try and
@@ -142,7 +142,7 @@ export function mountQuests(): { show(on: boolean): void; done(id: QuestId): voi
         if (li) confetti(li.getBoundingClientRect(), 18);
         return;
       }
-      // All six: a fanfare, confetti over the screen and a cheer; then it goes.
+      // All seven: a fanfare, confetti over the screen and a cheer; then it goes.
       fanfare();
       confetti(new DOMRect(0, 0, window.innerWidth, window.innerHeight * 0.3), 120);
       const cheer = document.createElement("div");

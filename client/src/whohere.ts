@@ -8,7 +8,7 @@ import "./whohere.css";
 
 export interface WhoHereDeps {
   /** The people in this space now: name and whether they're staff. */
-  here(): { name: string; staff: boolean }[];
+  here(): { name: string; icon?: string; staff: boolean }[];
   /** Head counts per place, labelled ("Hub", 3). */
   counts(): [string, number][];
   me(): string;
@@ -50,7 +50,7 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
       const li = document.createElement("li");
       const b = document.createElement("button");
       b.type = "button";
-      b.textContent = p.name;
+      b.textContent = p.icon ? `${p.icon} ${p.name}` : p.name;
       if (p.staff) {
         const tag = document.createElement("span");
         tag.className = "who-staff";

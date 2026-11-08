@@ -56,8 +56,8 @@ should feel at home in a virtual space shaped like the real campus they know.
 1. Sign up with your ANU email: your student number (e.g. `u1234567`), or
    "I'm ANU staff" and your @anu.edu.au address. A code comes by email; then
    pick a name of up to 8 letters, digits and underscores, and a password.
-   Or **continue as a guest** (`guest042`): walk, chat and stick notes, but
-   sign up to post or comment. Your browser remembers you, and you come back
+   Or **continue as a guest** (`guest042`): walk, chat, emote and use team
+   rooms; sign up to stick notes, post or comment. Your browser remembers you, and you come back
    where you left.
 2. **WASD** to walk, **Space** to jump, **E** at a door to go in or out
    (building 155's door asks which classroom). On a phone: the pad and the
@@ -149,9 +149,9 @@ should feel at home in a virtual space shaped like the real campus they know.
    a screenshot). If that store can't be reached, uploading says so, with an
    error code (`S3-…`) to tell the admin.
 10. The gear (top right) sets the music and sound-effect volumes and switches
-   graphics between Low and High. On a computer, the box beside it shows the
+   graphics between Low, Medium and High. On a computer, the box beside it shows the
    track playing, with pause and next; outside, a minimap shows where you
-   are, and "Things to try" ticks off six first steps (skip it if you like).
+   are, and "Things to try" ticks off seven first steps (skip it if you like).
 11. Somewhere on campus is a door the project started behind. Find it.
 
 ## What good means for this app
