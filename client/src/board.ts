@@ -137,7 +137,8 @@ export function mountBoard(h: {
   /** Tells a guest how to sign up. */
   askSignup(what: string): void;
 }): {
-  open(config: BoardConfig, canPostStaffOnly: boolean): void;
+  /** Opens the board; with `postId`, straight into that post once the list has loaded ("Join now", RICE v3 #18). */
+  open(config: BoardConfig, canPostStaffOnly: boolean, postId?: number): void;
   /** A post or comment arrived or went, live: re-fetch whatever is on screen. */
   refresh(): void;
   close(): void;
@@ -1074,7 +1075,7 @@ export function mountBoard(h: {
   });
 
   return {
-    open(next, canPostStaffOnly) {
+    open(next, canPostStaffOnly, postId) {
       config = next;
       canStaff = canPostStaffOnly;
       title.textContent = config.title;
@@ -1111,7 +1112,11 @@ export function mountBoard(h: {
       // instead; otherwise focus stays outside and Esc never reaches the board.
       if (config.tabs.length < 2) closeBtn.focus();
       else tabButtons.get(tab)?.focus();
-      void loadPosts();
+      // A post that's gone since (or that you may no longer see) leaves the list showing.
+      void loadPosts().then(() => {
+        const wanted = postId === undefined ? undefined : postsData.find((p) => p.id === postId);
+        if (wanted && isOpen && view === "list") void openPost(wanted);
+      });
     },
     refresh() {
       if (!isOpen) return;

@@ -108,6 +108,7 @@ import {
   QA_HAT,
   removeClassroom,
   setClassroomLink,
+  type Post,
   type Visitor,
 } from "./db.ts";
 import { browserTag, KEPT, keepIn, log } from "./log.ts";
@@ -980,6 +981,34 @@ app.get("/api/board", (c) => {
     .filter((p) => maySeePost(viewer, p))
     .map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
   return c.json(tab.staffOnly ? [{ ...pinnedNotice(tab.label), tab: tab.id }, ...posts] : posts);
+});
+
+// "Join now" (RICE v3 #18): what is open to join or answer right now, at a
+// glance, so nobody has to open three boards to find out. Read-only and built
+// from the same queries and the same maySeePost as /api/board, so a private
+// question reaches only its writer and staff, as everywhere else. Anyone may
+// ask, guests too (they can read every board); about five of each kind.
+const ACTIVITY_LIMIT = 5;
+app.get("/api/activity", (c) => {
+  const viewer = who({ token: c.req.query("token") });
+  // The same newest-first lists the boards show (an ad's 30 days included), as the viewer may see them.
+  const visible = (key: string): Post[] => {
+    const board = boardOf(key)!;
+    return postsIn(key, board.tabs[0]!.id, board.keepDays).filter((p) => maySeePost(viewer, p));
+  };
+  const item = (key: string, p: Post) => ({ board: key, tab: p.tab, id: p.id, title: p.title, author: p.author, createdAt: p.createdAt });
+  const groups = visible("study-groups")
+    .filter((p) => p.capacity !== null && p.members.length < p.capacity)
+    .slice(0, ACTIVITY_LIMIT)
+    .map((p) => ({ ...item("study-groups", p), capacity: p.capacity!, joined: p.members.length, left: p.capacity! - p.members.length }));
+  const questions = visible("hub-desk")
+    .filter((p) => p.comments === 0)
+    .slice(0, ACTIVITY_LIMIT)
+    .map((p) => ({ ...item("hub-desk", p), private: p.private }));
+  const ads = visible("outdoor")
+    .slice(0, ACTIVITY_LIMIT)
+    .map((p) => item("outdoor", p));
+  return c.json({ groups, questions, ads });
 });
 
 app.post("/api/board", async (c) => {
