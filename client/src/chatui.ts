@@ -23,6 +23,8 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
   isTyping(): boolean;
   add(msg: { name: string; text: string; self?: boolean; whisper?: boolean }): void;
   system(text: string): void;
+  /** Forgets the last line sent (back to the join screen: the next person mustn't recall it). */
+  reset(): void;
 } {
   const root = document.createElement("div");
   root.id = "chat";
@@ -143,6 +145,9 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
       name.textContent = `${msg.name}: `;
       el.append(name, document.createTextNode(msg.text));
       pushLine(el);
+    },
+    reset(): void {
+      lastSent = "";
     },
     system(text: string): void {
       const el = document.createElement("div");

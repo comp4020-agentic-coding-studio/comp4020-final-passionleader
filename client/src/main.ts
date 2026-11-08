@@ -1716,6 +1716,9 @@ function showJoin(message = ""): void {
   playing = false;
   keyGuide.hide();
   chat.hide();
+  // Whoever signs in next shouldn't reply to, or recall, the last person's whispers (audit, 11/8).
+  chat.reset();
+  lastWhisperFrom = "";
   roomPanel.close();
   document.body.classList.remove("in-room");
   net?.close();
@@ -1745,6 +1748,8 @@ function enterWorld(): void {
   chat.show();
   const spawn = session.spawn;
   setSpace(isSpaceId(spawn.space) ? spawn.space : "outdoor", spawn, false);
+  // Arriving in the library, you face north, to reception and Robin (CLAUDE.md), not the camera.
+  if (spawn.space === "library") player.rotation.y = Math.PI;
   goOnline(session.token);
   // Move focus out of the form so keystrokes go to the game, not a hidden input.
   (document.activeElement as HTMLElement | null)?.blur();

@@ -3,6 +3,11 @@ import { mat, nightGlow, texMat } from "../world.ts";
 import { RICH } from "../settings.ts";
 import { asphaltMat } from "./backdrop.ts";
 import { OSM_BUILDINGS, OSM_ROADS, OSM_TREES } from "./osmscape-data.ts";
+import { CREEK_Z, bend } from "./creek.ts";
+
+/** In Sullivans Creek's channel and banks (creek.ts draws it, bending west south of the bridge): nothing from OSM goes there. */
+const inCreek = (x: number, z: number): boolean => z >= CREEK_Z.from - 1 && z <= CREEK_Z.to + 1 && x > -75.2 + bend(z) - 1 && x < -57.6 + bend(z) + 1;
+const anyInCreek = (pts: number[]): boolean => pts.some((_, i) => i % 2 === 0 && inCreek(pts[i]!, pts[i + 1]!));
 
 // Scenery past the walkable outdoor map, laid out from OpenStreetMap
 // (qa-tools/osm/gen_osmscape.py makes osmscape-data.ts; only derived x, z
@@ -62,7 +67,9 @@ function ribbon(b: Batch, pts: number[], width: number, y: number, tile: number)
     if (i > 0) run += Math.hypot(x - pts[i * 2 - 2]!, z - pts[i * 2 - 1]!);
     const a = b.vert(x + nx * h, y, z + nz * h, (x + nx * h) / tile, (z + nz * h) / tile);
     const c = b.vert(x - nx * h, y, z - nz * h, (x - nx * h) / tile, (z - nz * h) / tile);
-    if (prev >= 0) b.quad(prev, prev + 1, c, a);
+    // Wound so the faces point up: the other way round they faced the ground and were culled,
+    // which hid every OSM road (audit, 11/8).
+    if (prev >= 0) b.quad(prev, a, c, prev + 1);
     prev = a;
     void run;
   }
@@ -123,6 +130,7 @@ export function addOsmScape(group: THREE.Group): void {
   const asphalt = new Batch();
   const paving = new Batch();
   for (const [kind, width, pts] of OSM_ROADS) {
+    if (anyInCreek(pts)) continue;
     if (kind === 0) ribbon(asphalt, pts, width, 0.003, 8);
     else ribbon(paving, pts, width, 0.004, 2);
   }
@@ -138,6 +146,7 @@ export function addOsmScape(group: THREE.Group): void {
   const walls = new Batch();
   const roofs = new Batch();
   for (const [levels, p] of OSM_BUILDINGS) {
+    if (anyInCreek(p)) continue;
     const n = p.length / 2;
     const h = levels * FLOOR_H + 0.6;
     const pts: [number, number][] = [];
@@ -198,7 +207,7 @@ export function addOsmScape(group: THREE.Group): void {
       return inside;
     });
   // backdrop.ts's hand-made blocks, road and the library's cutting (the generator's keep-out boxes, minX maxX minZ maxZ).
-  const HANDMADE: [number, number, number, number][] = [[-66, 77, -90, -26], [-46, 53, 11, 58], [-53, -16, 11, 75], [16, 56, -141, 19], [-80, -52, -170, 70]]; // the last: Sullivans Creek and its banks (creek.ts)
+  const HANDMADE: [number, number, number, number][] = [[-66, 77, -90, -26], [-46, 53, 11, 58], [-53, -16, 11, 75], [16, 56, -141, 19]];
   let treeSeed = 4020;
   const rand = (): number => ((treeSeed = (treeSeed * 1103515245 + 12345) % 2147483648) / 2147483648);
   const want = RICH ? 260 : 120;
@@ -208,7 +217,7 @@ export function addOsmScape(group: THREE.Group): void {
     const out = 12 + rand() * 63;
     const x = Math.cos(ang) * (89 + out) * 1.05, z = Math.sin(ang) * (40 + out) * 1.4;
     if (Math.abs(x) < 89 + 10 && Math.abs(z) < 40 + 10) continue;
-    if (onRoad(x, z) || inBuilding(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
+    if (onRoad(x, z) || inBuilding(x, z) || inCreek(x, z) || HANDMADE.some(([a, b, c, d]) => x >= a && x <= b && z >= c && z <= d)) continue;
     spots.push(x, z);
     made++;
   }
