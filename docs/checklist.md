@@ -2,9 +2,8 @@
 
 > This is a translation of my own planning checklist (`Integreted_checklist.md`),
 > which I kept in Korean outside the repo for the whole project. It is
-> translated as it stood on 9 November 2026, so a few items marked open here
-> were finished that day (the README, PROCESS, diagrams 8–12, the final audit
-> and the research note). Their commits are in the history. Local network
+> translated as it stood at 07:10 on 9 November 2026, the submission state.
+> Local network
 > addresses, local file paths for secrets and account details were left out.
 > The item numbers are the same ones the commit messages and `docs/plan.md`
 > use.
@@ -15,8 +14,10 @@
 > **they never change**. New items start at 83.
 > Dates are commit dates (Canberra time), or the day it was checked when there
 > is no commit.
-> **As of the night of 11/4: next work on Sat 11/7. Start from "Next week (Sat
-> 11/7 – Mon 11/9 12:00)" under "To do".** Last push `3f7eba1` (CI passed).
+> **As of 11/9 07:10: the final submission state.** Last push `21a5d95` (CI
+> and deploy passed, repo public). Code freeze 08:00, due 12:00: the
+> submission is main's deployed state at the deadline. Spent this week: about
+> $298 of $500.
 
 ## How to use this file (when I say "update it")
 
@@ -219,7 +220,7 @@
 - [x] Bundle 1 (10/24, push `4e7c46e..8ec1bbe`), most of bundle 2 (10/24–25, up to push `0b671bb`): the order table is in the local backup, "order until the final"
 - [x] 113. 10/29 reflection material added at the bottom of the plan file (10/29)
 
-- [ ] research-note.md: **required for COMP8020** (confirmed by the user on 11/9: enrolled in COMP8020). 600–800 words, repo root, a quarter of the final. I write it in Korean, the documents helper translates → the main session commits and pushes (before 12:00)
+- [x] research-note.md: **required for COMP8020** (confirmed by the user on 11/9: enrolled in COMP8020). 600–800 words, repo root, a quarter of the final. I write it in Korean, the documents helper translates → the main session commits and pushes (before 12:00) ✅ (11/9, `46f51e3`: 784 words, 5 sources, my Korean draft → translated by the documents helper)
 
 ---
 
@@ -297,8 +298,8 @@
 
 - [~] 118. (partly ✅ 11/4 `3f7eba1` README demo clip, the rest → 119) (10/30, RICE v2 🟡) If time allows: place shortcut links, a pomodoro timer in meeting rooms, text size and reduced camera motion (accessibility), a panel of activities to join now. The rest of RICE v2's 4th–7th (board search, emote particles, draft autosave, birds, water sounds) are candidates too
 - [x] 117. (10/30) Crawl the rest of the 2027 catalogue: finished and uploaded on 11/4. Original note: → re-upload `knowledge.db` (starts by itself when the site answers, see "State" above)
-- [ ] 108. (→ "Next week ②" below) **Final polish** [request 19]: list where I think it falls short → helper QA walks every space once (PC and phone) → work that raises the finish
-- [ ] 97. (→ "Next week ②" below) **Final security and feature check** [request 7] (main's check on 11/4: the school information a guest can see is public pages only. One small problem = `/api/join` answered "Wrong password" when a student number had an account and "No account" when it didn't, so **you could tell whether that student number had signed up** → consider one message for both) (= 73c extended + what remains of 73a, starting 11/6. The workflow searches on Sonnet and verifies on Opus. The spec `rooms.test.ts` "shares one set of notes" failed once in a full run and passed on rerun = flaky, look at it too. Helper 8a: Robin's E spot doesn't line up with the desk label and is hard to find): server permission checks, input limits, secret exposure, S3 signing, rate limits, XSS, README claims ↔ spec ↔ CLAUDE.md ↔ real behaviour, desktop and phone screenshots of every space, gaps against the rubric
+- [x] 108. (→ "Next week ②" below) **Final polish** [request 19]: list where I think it falls short → helper QA walks every space once (PC and phone) → work that raises the finish ✅ (11/8–9: helper d1's PC and phone QA of every space and feature, then fixes; last batches `3165b11`, `db7b68d`, `45da885`)
+- [x] 97. (→ "Next week ②" below) **Final security and feature check** [request 7] (main's check on 11/4: the school information a guest can see is public pages only. One small problem = `/api/join` answered "Wrong password" when a student number had an account and "No account" when it didn't, so **you could tell whether that student number had signed up** → consider one message for both) (= 73c extended + what remains of 73a, starting 11/6. The workflow searches on Sonnet and verifies on Opus. The spec `rooms.test.ts` "shares one set of notes" failed once in a full run and passed on rerun = flaky, look at it too. Helper 8a: Robin's E spot doesn't line up with the desk label and is hard to find): server permission checks, input limits, secret exposure, S3 signing, rate limits, XSS, README claims ↔ spec ↔ CLAUDE.md ↔ real behaviour, desktop and phone screenshots of every space, gaps against the rubric ✅ (11/8 night: audit workflows 1 and 2 plus the service check, Sonnet finding and Opus verifying; one sign-in message `33e4795`)
 
 ## Next week (Sat 11/7 – Mon 11/9 12:00): the order the user set (11/4 night)
 
@@ -306,32 +307,32 @@
 
 ### ① Documents first
 
-- [ ] 120. **Settings → Credits screen**: the user's GitHub link, a README summary, the ANU course (COMP4020 Agentic Coding Studio), what the user did (planning, QA, AWS and so on). Main checks the facts, **the user's own sentences come in through a template**
-- [ ] Documents (the user writes them, main gives blank templates and checks facts): README 400–600 words (about 2,200 now), PROCESS from scratch (the plan file → checklist → bundles story is required), CLAUDE.md (rules only), spec list = README, `crit-8.md` under 300 words (352 now), decision records 003 onwards (roles, assistant RAG, voice). Details under "# Final Project" in the plan file
+- [x] 120. **Settings → Credits screen**: the user's GitHub link, a README summary, the ANU course (COMP4020 Agentic Coding Studio), what the user did (planning, QA, AWS and so on). Main checks the facts, **the user's own sentences come in through a template** ✅ (11/8–9, ABOUT.md + the README's argument + CREDITS, GitHub link, `25b2dab`)
+- [x] Documents (the user writes them, main gives blank templates and checks facts): README 400–600 words (about 2,200 now), PROCESS from scratch (the plan file → checklist → bundles story is required), CLAUDE.md (rules only), spec list = README, `crit-8.md` under 300 words (352 now), decision records 003 onwards (roles, assistant RAG, voice). Details under "# Final Project" in the plan file ✅ (11/8–9: README 600 words, PROCESS about 1,100 words, four reflections (final.md added, `10687bf`), decision records 003–006 `d4fa5c2`, proofreading `6712c9a`, "drafted in Korean, translated by Claude" notes `ef4a4ba`)
 - [ ] README "For markers": revise when Ed answers (`349e7fb`, never any qa_ names or passwords)
 - [ ] User check of the README demo clip (`3f7eba1`: the scene, 10.5 s, GIF 8.9 MB, or 7.2 MB at 640 px). To re-record = `qa-tools/demo.mjs` + `qa-tools/demo-scene-meet.mjs` (local :8090), about 2 minutes
-- [ ] 82. 🗺️ System architecture diagram (final version): browser ↔ WebSocket/HTTPS ↔ Fly (Hono, SQLite `/data`) ↔ AWS (S3, SES, Bedrock Nova and Haiku, EC2 LiveKit) + the assistant RAG flow + GitHub Actions. In `diagrams/`, for PROCESS and the stack docs. Check there are no IPs, account numbers or keys. The text is the user's
-- [ ] 94. Connect Seongsu's NPC to RAG (once the user points to the documents)
-- [ ] 91. **Translate this checklist and the plan file into English → submit them too** [request 3]. **Last of all**. English versions = the ANU repo + my personal repo, the Korean originals = personal repo only. Filter out secrets, IPs, accounts and photo-folder references
+- [x] 82. 🗺️ System architecture diagram (final version): browser ↔ WebSocket/HTTPS ↔ Fly (Hono, SQLite `/data`) ↔ AWS (S3, SES, Bedrock Nova and Haiku, EC2 LiveKit) + the assistant RAG flow + GitHub Actions. In `diagrams/`, for PROCESS and the stack docs. Check there are no IPs, account numbers or keys. The text is the user's ✅ (11/8–9, `diagrams/8`–`12`, placed in PROCESS `39b9ea0`)
+- [x] 94. Connect Seongsu's NPC to RAG (once the user points to the documents) ✅ (11/9, `2cfc2cf`: README, PROCESS, CLAUDE, decision records, reflections and self-hosting as "project" sources, AWS and AI example questions; greeting "Welcome to ANU Crossing!" `780e5b4`)
+- [~] 91. **Translate this checklist and the plan file into English → submit them too** [request 3]. **Last of all**. English versions = the ANU repo + my personal repo, the Korean originals = personal repo only. Filter out secrets, IPs, accounts and photo-folder references (partly ✅ 11/9 `21a5d95`: this English checklist, `docs/checklist.md`, linked from PROCESS. The plan file isn't translated: my personal repo gets a cleaned Korean copy instead)
 
 ### ② Workflow and QA first
 
-- [ ] 97. **Final security and feature check workflow** (= what remains of 73a + 73c, see 97 above): search on Sonnet, verify on Opus. Server permission checks, input limits, secret exposure, S3 signing, rate limits, XSS, README claims ↔ spec ↔ CLAUDE.md ↔ real behaviour, gaps against the rubric. Fix the results
+- [x] 97. **Final security and feature check workflow** (= what remains of 73a + 73c, see 97 above): search on Sonnet, verify on Opus. Server permission checks, input limits, secret exposure, S3 signing, rate limits, XSS, README claims ↔ spec ↔ CLAUDE.md ↔ real behaviour, gaps against the rubric. Fix the results ✅ (11/8 night: audits 1 and 2 + a service-check workflow, search on Sonnet, verify on Opus, results fixed and pushed)
   - Already known: in full spec runs, rooms.test "shares one set of notes" and the 5-second WebSocket timeout fail now and then (when the helper's Chrome is busy, pass on rerun). Robin's E spot doesn't line up with the desk label (helper 8a)
-- [ ] 108. Final polish (see 108 above): helper QA walks every space once on PC and phone → fix
-- [ ] Real browser QA (helper d1, qa_ accounts, main never does it itself): the "Last week's live QA" list above + the 11/4 items (outdoor voice falloff (iPhone), flickering lamp pools, notice positions, 155 shops, pillars and lights, Full screen in settings (PC), Priya on 2027 courses, ivory UI)
+- [x] 108. Final polish (see 108 above): helper QA walks every space once on PC and phone → fix ✅ (as above)
+- [x] Real browser QA (helper d1, qa_ accounts, main never does it itself): the "Last week's live QA" list above + the 11/4 items (outdoor voice falloff (iPhone), flickering lamp pools, notice positions, 155 shops, pillars and lights, Full screen in settings (PC), Priya on 2027 courses, ivory UI) ✅ (11/8–9: d1 ran browser QA as qa_ accounts every round on the local servers; only what passed went live)
 - [ ] High on real devices (MacBook and phone), whether the iPhone lamp blotches are gone: the user
 - [ ] a8's report (memory, Kai's follow-up questions) is applied in `9c3a9d4`: only the reply is left
 
 ### ③ RICE once more (v3)
 
-- [ ] 121. **RICE v3**: take out what was built after `ANU-Crossing-RICE-v2.md` (the 11/4 UI, night, 155, demo and so on), score again against the app as it is now → choose with the user, then build from the top within the post-11/6 rules (small things only)
-- [ ] 119. What remains of 118 (rescored in v3): text size and reduced camera motion (accessibility), a pomodoro timer in meeting rooms, place shortcut links, a panel of activities to join now, board search, emote particles, draft autosave, birds, water sounds
+- [x] 121. **RICE v3**: take out what was built after `ANU-Crossing-RICE-v2.md` (the 11/4 UI, night, 155, demo and so on), score again against the app as it is now → choose with the user, then build from the top within the post-11/6 rules (small things only) ✅ (11/8–9, `ANU-Crossing-RICE-v3.md`; what the user chose was built, see the 11/9 section below)
+- [x] 119. What remains of 118 (rescored in v3): text size and reduced camera motion (accessibility), a pomodoro timer in meeting rooms, place shortcut links, a panel of activities to join now, board search, emote particles, draft autosave, birds, water sounds ✅ (11/9: text size `9a223b6`, reduced motion, pomodoro → Focus timer `db7b68d`, place links and Join now `14efa2f`, board search, emote particles and draft saving are live; birds and water sounds only on the QA server)
 
 ### Finishing
 
-- [ ] 114. Decide on documents and the backup plan before submitting (an AWS instance or Render) [request 20] → together with 77
-- [ ] `pnpm check` + `pnpm check:evidence`, live check on desktop and phone, keep the deploy up until 11/9 12:00
+- [-] 114. Decide on documents and the backup plan before submitting (an AWS instance or Render) [request 20] → together with 77 → moved to after submission (with 77)
+- [x] `pnpm check` + `pnpm check:evidence`, live check on desktop and phone, keep the deploy up until 11/9 12:00 ✅ (11/9 06:55, spec 185 passed / 6 skipped, check:evidence confirmed 22 cited commits, live 200)
 
 ## Planned earlier but not done, or unclear (including candidates to drop)
 
@@ -349,6 +350,22 @@
 - [x] 34. Camera turns 90° (one ⟳ button + R, outside only) (10/29–30)
 - [ ] 20. Club, residence and college spaces (originally "on hold"): partly covered by 102 and 95, the spaces themselves are candidates to drop
 - [ ] The user's part: temporary IAM permissions for 86c (EC2 and Route 53, for Codex)
+
+## Last night, 11/9 (02:00 – 07:00, all live, CI and deploy passed)
+
+- [x] Settings: sound → text size → graphics → motion → full screen, step sliders (text 90/100/115/130, quality Low/Medium/High), Apply next to quality (`5b01b9c`) → then **four tabs** (Social / Sound & access / Graphics / Other), a one-line explanation for each social feature, a "🏅 My visit stamps" button (`45da885`)
+- [x] Sign-in screen footer = sign up with an ANU email, a PC is recommended; the classroom picker says "Only staff can open a classroom" (`3546949`)
+- [x] Music default 80 → 50 (`fb0dd85`), a new-version banner (`fb032ca`, at the top on phones `5bed1ea`)
+- [x] The white path in the north runs all the way east, no trees, the red-brick building twice as big (`197dcce`)
+- [x] 155's shop window frames go transparent with the building (`76abadb`)
+- [x] West walking limit: up to the riverside railing (x −56.8), lawn colour in front of Badger matched (`846634c`, `9cbbef2`)
+- [x] RICE and metaverse features (only what passed d1's browser QA is live, `3165b11`): interest tags `070f304`, follow notices `e5ebfce`, office hours `f81fc4a`, events timetable `7aa3a10`, visit stamps `463eb15` and rewards `a056978`, the Hub games table (quiz, Sketch & Guess) `d68b232`, watching a video together in meeting rooms `e140baa` and screen sharing `483fe46`, Canberra weather `0af35c4`, three reports hide an item automatically `5a22df0`, the screen-reader describe mode `73a035a`, emote particles, place links, Join now
+- [x] Meeting rooms: the personal timer replaced by one shared Focus timer + −5/+5 (1–60 minutes), video "Open in a new window", menu order Chat → Notes → Mic → Whiteboard → Share screen → Video → the rest (`db7b68d`)
+- [x] Finding a new place = a red "NEW PLACE FOUND!" stamp in the middle of the screen for about 1.5 s; the file attach button and dropdowns in the app's colours (`45da885`)
+- [-] Telstra Tower: d1 couldn't see it in the live build → only on the branch `pending-tower-birds` (`96a8717`), not live
+- [-] No birdsong at night: not checked by d1 → same branch (`e5117b2`), on the QA server (`69b29bb`)
+- [-] Real-scale outside map, new models, landscaping (pots, bins, bikes, stairs): only on the QA server (`qa-extras`). The user: "too out of place" → not put live
+- Small problems left (not fixed): if an upload fails the post window stays open, so pressing Post twice duplicates the post (old, rare live because S3 is there); the events dropdown is 34 px with a white background (the events CSS overrides it)
 
 ## After submission (after 11/9 12:00)
 
