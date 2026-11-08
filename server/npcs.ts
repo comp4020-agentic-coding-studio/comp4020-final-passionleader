@@ -170,7 +170,7 @@ export const NPCS: Npc[] = [
       { label: "IT security", url: "https://services.anu.edu.au/information-technology/information-security" },
     ],
     topic: "ANU IT password MFA email Wi-Fi Canvas Wattle ANUHub security",
-    hint: "People ask in their own words: \"ISIS\" is the old student system, now ANUHub; \"Wattle\" is the old learning system, being replaced by Canvas (say which the pages say to use now); \"uni Wi-Fi\" means ANU-Secure or eduroam; \"reset my password\" means the ANU ID password. For security, give the pages' do's and don'ts plainly (never share your password or MFA codes, report phishing). Never ask for or accept anyone's password, student number or codes.",
+    hint: "People ask in their own words: \"ISIS\" is the old student system, now ANUHub; \"Wattle\" is the old learning system, being replaced by Canvas (say which the pages say to use now); \"uni Wi-Fi\" means ANU-Secure or eduroam; \"reset my password\" means the ANU ID password. Forgot a password: lead with the pages' reset route for someone who can't sign in (not the steps for changing a password you still know). Asked whether Wattle or Canvas is in use: answer that first, from the Wattle and Canvas pages. Use ANU's own formats from the pages (u1234567@anu.edu.au), never a generic example. For security, give the pages' do's and don'ts plainly (never share your password or MFA codes, report phishing). Never ask for or accept anyone's password, student number or codes.",
     examples: ["How do I connect to eduroam?", "I forgot my ANU password. What do I do?"],
     greeting: "Hi, I'm the Computing & IT desk. Ask me about your ANU password and MFA, email, Wi-Fi (ANU-Secure, eduroam), Canvas, Wattle and ANUHub, or staying safe online.",
     voice: "female",
