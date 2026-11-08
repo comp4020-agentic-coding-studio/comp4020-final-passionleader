@@ -13,6 +13,7 @@ import { ICONS } from "./icons.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
 import { fart, sfx, step, warmUp } from "./sfx.ts";
+import { copyText, dropPlaceLink, parsePlaceLink, placeLink } from "./placelink.ts";
 import {
   voiceTicket,
   ApiError,
@@ -173,11 +174,56 @@ mountSettings({
   mute: () => muteDialog.open(),
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
+  copyPlace: () => void copyPlaceLink(),
   signOut: () => {
     board.close();
     signOut();
   },
 });
+/**
+ * "Copy link to this place" (settings): a link that puts whoever opens it here instead of at their
+ * saved spot. A meeting room is never linked to (it may be full, invite-only or gone when the link is
+ * opened, and its chat is private): its door in the parent space stands for it.
+ */
+async function copyPlaceLink(): Promise<void> {
+  if (!space) return;
+  const room = meetingRoom(space.id);
+  const at = room ? { space: room.parent, x: room.door.x + (room.door.x > 0 ? -1.8 : 1.8), z: room.door.z } : { space: space.id, x: player.position.x, z: player.position.z };
+  const ok = await copyText(placeLink(location.href, at.space, at.x, at.z));
+  toast(ok ? "Link copied" : "Couldn't copy the link: your browser didn't allow it.");
+}
+
+/** The spot a ?at= link asked for, read once when the page opens; used when someone gets in. */
+let pendingPlace = parsePlaceLink(location.search);
+if (!pendingPlace) dropPlaceLink();
+
+/**
+ * Where a link sends you, or null to use the saved spot. The server still has the last word: the
+ * "enter" that follows the welcome is clamped and checked there; this only picks a sensible spot
+ * and keeps a bad link from stranding anyone.
+ */
+function placeFromLink(): { space: SpaceId; x: number; z: number } | null {
+  const link = pendingPlace;
+  pendingPlace = null;
+  dropPlaceLink();
+  if (!link || !isSpaceId(link.space)) return null;
+  const room = meetingRoom(link.space);
+  if (room) {
+    if (!isSpaceId(room.parent)) return null;
+    return placeFromLinkIn(room.parent, room.door.x + (room.door.x > 0 ? -1.8 : 1.8), room.door.z);
+  }
+  return placeFromLinkIn(link.space, link.x, link.z);
+}
+function placeFromLinkIn(id: SpaceId, x: number, z: number): { space: SpaceId; x: number; z: number } {
+  const def = getSpace(id);
+  const p = new THREE.Vector3(x, 0, z);
+  keepIn(p, def.areas ?? [{ minX: -def.halfX, maxX: def.halfX, minZ: -def.halfZ, maxZ: def.halfZ }]);
+  // Not inside a wall or a table: the same push the walking does every frame.
+  pushOut(p, 0.35, def.colliders);
+  keepIn(p, def.areas ?? [{ minX: -def.halfX, maxX: def.halfX, minZ: -def.halfZ, maxZ: def.halfZ }]);
+  return { space: id, x: p.x, z: p.z };
+}
+
 function signOut(): void {
   // This browser forgets who it was; the join screen offers signing up or in.
   // (A guest going to sign up, or a member's Sign out in the settings.)
@@ -1774,7 +1820,8 @@ function enterWorld(): void {
   quests.show(false);
   guide.tourIfNew();
   chat.show();
-  const spawn = session.spawn;
+  // A link to a spot beats the saved one. Nothing is told to the server here: the welcome does that.
+  const spawn = placeFromLink() ?? session.spawn;
   setSpace(isSpaceId(spawn.space) ? spawn.space : "outdoor", spawn, false);
   goOnline(session.token);
   // Move focus out of the form so keystrokes go to the game, not a hidden input.
