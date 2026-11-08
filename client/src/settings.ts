@@ -67,6 +67,19 @@ let textSize = ((): number => {
 })();
 applyTextSize(textSize);
 
+/** The labels under a slider that stops at each step, spread to sit under its stops. */
+function stepTicks(labels: string[]): HTMLElement {
+  const row = document.createElement("div");
+  row.className = "settings-ticks";
+  row.setAttribute("aria-hidden", "true");
+  for (const l of labels) {
+    const t = document.createElement("span");
+    t.textContent = l;
+    row.append(t);
+  }
+  return row;
+}
+
 export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -126,22 +139,31 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const fieldset = document.createElement("fieldset");
   const legend = document.createElement("legend");
   legend.textContent = "Graphics quality";
-  fieldset.append(legend);
-  const options: [Quality, string][] = [
+  // A slider that stops at three levels (the user, 11/9), the level's line under it.
+  const LEVELS: [Quality, string][] = [
     ["low", `Low: smooth on any device${DEFAULT === "low" ? " (default)" : ""}`],
     ["medium", `Medium: trees, wind, reflections, no shadows${DEFAULT === "medium" ? " (default)" : ""}`],
     ["high", "High: shadows, rippling water, clearer reflections"],
   ];
-  for (const [value, text] of options) {
-    const label = document.createElement("label");
-    const radio = document.createElement("input");
-    radio.type = "radio";
-    radio.name = "quality";
-    radio.value = value;
-    radio.checked = value === QUALITY;
-    label.append(radio, ` ${text}`);
-    fieldset.append(label);
-  }
+  const qualityRange = document.createElement("input");
+  qualityRange.type = "range";
+  qualityRange.id = "quality-range";
+  qualityRange.min = "0";
+  qualityRange.max = "2";
+  qualityRange.step = "1";
+  qualityRange.value = String(Math.max(0, LEVELS.findIndex(([q]) => q === QUALITY)));
+  qualityRange.setAttribute("aria-label", "Graphics quality");
+  const qualityTicks = stepTicks(["Low", "Medium", "High"]);
+  const qualityText = document.createElement("p");
+  qualityText.className = "settings-step-text";
+  const showQuality = (): void => {
+    const [, text] = LEVELS[Number(qualityRange.value)]!;
+    qualityText.textContent = text;
+    qualityRange.setAttribute("aria-valuetext", text);
+  };
+  qualityRange.addEventListener("input", showQuality);
+  showQuality();
+  fieldset.append(legend, qualityRange, qualityTicks, qualityText);
   const note = document.createElement("p");
   note.className = "settings-note";
   note.textContent = "Changing quality reloads the page; your name is remembered.";
@@ -153,8 +175,11 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   close.textContent = "Close";
   const apply = document.createElement("button");
   apply.type = "submit";
-  apply.textContent = "Apply";
-  actions.append(close, apply);
+  apply.textContent = "Apply quality";
+  apply.className = "settings-apply";
+  // Only the graphics quality waits for Apply (it reloads the page); everything else applies at
+  // once, so the button sits with the quality slider (the user, 11/9) and the bottom keeps Close.
+  actions.append(close);
 
   // Something broken? A short report goes to the admin (bugreport.ts).
   const bug = document.createElement("button");
@@ -206,33 +231,29 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     }
   });
   motionLabel.append(motionBox, " Reduce motion (the camera doesn't glide; the sky and grass hold still)");
-  const sizeRow = document.createElement("div");
-  sizeRow.className = "settings-check";
-  sizeRow.setAttribute("role", "group");
-  sizeRow.setAttribute("aria-label", "Text size");
-  const sizeName = document.createElement("span");
-  sizeName.textContent = "Text size";
-  sizeRow.append(sizeName);
-  const sizeBtns = TEXT_SIZES.map((pct) => {
-    const b = document.createElement("button");
-    b.type = "button";
-    b.className = "settings-size";
-    b.textContent = `${pct}%`;
-    b.addEventListener("click", () => {
-      textSize = pct;
-      applyTextSize(pct);
-      try {
-        localStorage.setItem(TEXT_KEY, String(pct));
-      } catch {
-        // private mode: just for this visit
-      }
-      for (const x of sizeBtns) x.setAttribute("aria-pressed", String(x === b));
-    });
-    b.setAttribute("aria-pressed", String(pct === textSize));
-    return b;
+  const textBox = document.createElement("fieldset");
+  const textLegend = document.createElement("legend");
+  textLegend.textContent = "Text size";
+  const sizeRange = document.createElement("input");
+  sizeRange.type = "range";
+  sizeRange.min = "0";
+  sizeRange.max = String(TEXT_SIZES.length - 1);
+  sizeRange.step = "1";
+  sizeRange.value = String(Math.max(0, TEXT_SIZES.indexOf(textSize)));
+  sizeRange.setAttribute("aria-label", "Text size");
+  sizeRange.addEventListener("input", () => {
+    textSize = TEXT_SIZES[Number(sizeRange.value)]!;
+    applyTextSize(textSize);
+    sizeRange.setAttribute("aria-valuetext", `${textSize}%`);
+    try {
+      localStorage.setItem(TEXT_KEY, String(textSize));
+    } catch {
+      // private mode: just for this visit
+    }
   });
-  sizeRow.append(...sizeBtns);
-  screen.append(screenLegend, fsBtn, fsNote, motionLabel, sizeRow);
+  sizeRange.setAttribute("aria-valuetext", `${textSize}%`);
+  textBox.append(textLegend, sizeRange, stepTicks(TEXT_SIZES.map((n) => `${n}%`)));
+  screen.append(screenLegend, fsBtn, fsNote);
   const canFull = (): boolean => typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
   const standalone = (): boolean => window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
   const syncScreen = (): void => {
@@ -269,7 +290,15 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   topClose.textContent = "Close";
   topClose.setAttribute("aria-label", "Close the settings");
   head.append(title, topClose);
-  card.append(head, sound, fieldset, note, screen, verify, bug, person, mute, credits, out, actions);
+  const motionBox2 = document.createElement("fieldset");
+  const motionLegend = document.createElement("legend");
+  motionLegend.textContent = "Motion";
+  motionBox2.append(motionLegend, motionLabel);
+  const applyRow = document.createElement("div");
+  applyRow.className = "settings-apply-row";
+  applyRow.append(note, apply);
+  fieldset.append(applyRow);
+  card.append(head, sound, textBox, fieldset, motionBox2, screen, verify, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -315,7 +344,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   });
   card.addEventListener("submit", (e) => {
     e.preventDefault();
-    const picked = (card.querySelector("input:checked") as HTMLInputElement | null)?.value as Quality | undefined;
+    const picked = LEVELS[Number(qualityRange.value)]?.[0];
     if (!picked || picked === QUALITY) return hide();
     try {
       localStorage.setItem(KEY, picked);
