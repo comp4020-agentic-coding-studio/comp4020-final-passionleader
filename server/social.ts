@@ -20,6 +20,15 @@ export function validTags(v: unknown): string[] | null {
   return new Set(v).size === v.length ? (v as string[]) : null;
 }
 
+/** One knock per student per staff member a minute. */
+export const KNOCK_GAP_MS = 60_000;
+
+/** Office hours may name one of the Student Hub's six counselling rooms (1 to 6), or none (null); undefined when it is neither. */
+export function validOfficeRoom(v: unknown): number | null | undefined {
+  if (v === undefined || v === null) return null;
+  return typeof v === "number" && Number.isInteger(v) && v >= 1 && v <= 6 ? v : undefined;
+}
+
 /** Most people one member may follow. */
 export const MAX_FOLLOWS = 20;
 /** One "is on the campus" notice per follower and person every ten minutes, so a reload can't nag. */

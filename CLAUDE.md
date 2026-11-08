@@ -281,6 +281,14 @@ when a flow changes.
   minutes per person. Members at both ends. By default only mutual follows are
   told; the followed person may allow anyone who follows them in Settings. Checked
   on the server; nobody is shown who follows them.
+- Office hours: only staff and the admin open them (optionally naming one of the Hub's
+  counselling rooms), checked on the server and logged when refused; they last
+  while the staff member is online. An "Office hours" badge shows on their name
+  tag and the Student Hub's people see "Office hours now: <name>" in Who's here
+  (a name and a room number, never a position). A signed-up student in the Hub
+  may "Knock": the staff member alone gets the counselling-room invitation
+  prompt (they invite from inside a counselling room), at most one knock per
+  student per staff member a minute.
 - Interest tags: a member shows at most three, picked from a fixed list the server
   owns (course codes and fifteen interests, `server/social.ts`), never typed;
   anything off the list is refused on the server, they are kept with the account

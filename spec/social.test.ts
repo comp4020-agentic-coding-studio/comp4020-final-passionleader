@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { api, closeAll, connect, guest, visitor, type Msg } from "./helpers.ts";
+import { api, closeAll, connect, guest, staffMember, visitor, type Msg, type Socket } from "./helpers.ts";
 
 // Interest tags, presence alerts and office hours: all of them are fixed choices, checked on the
 // server, and what a person does here reaches only the people it is meant for.
@@ -91,5 +91,59 @@ describe("presence alerts", () => {
     expect((await follow(a.token, many[19]!.name)).status).toBe(400);
     expect((await follow(a.token, b.name, false)).status).toBe(200);
     expect((await follow(a.token, many[19]!.name)).status).toBe(200);
+  });
+});
+
+const inHub = async (token: string): Promise<Socket> => {
+  const s = await connect(token);
+  await s.next((m) => m.t === "welcome");
+  s.send({ t: "enter", space: "hub", x: 0, z: 5 });
+  await s.next((m) => m.t === "players" && (m.players as { name: string }[]).length > 0, 2000);
+  return s;
+};
+const officeList = (m: Msg) => m.t === "action" && m.kind === "office-now";
+const knockedBy = (name: string) => (m: Msg) => m.t === "action" && m.kind === "knocked" && m.from === name;
+
+describe("office hours", () => {
+  it("lets staff open them, shows the Hub who is open, and refuses a student", async () => {
+    const [staff, student] = await Promise.all([staffMember(), visitor()]);
+    const ss = await inHub(staff.token);
+    const st = await inHub(student.token);
+    // A student can't set office hours; nobody sees them open.
+    st.send({ t: "office", on: true });
+    await expect(st.next((m) => m.t === "action" && m.kind === "office-refused")).resolves.toMatchObject({ reason: "staff only" });
+    // Staff open them with a room: the badge flag is on their player, the Hub is told.
+    ss.send({ t: "office", on: true, room: 2 });
+    const list = await st.next((m) => officeList(m) && (m.list as { name: string }[]).some((o) => o.name === staff.name));
+    expect(list.list).toEqual([{ name: staff.name, room: 2 }]);
+    await expect(st.next((m) => m.t === "players" && (m.players as { name: string; office?: boolean }[]).some((p) => p.name === staff.name && p.office === true))).resolves.toBeTruthy();
+    // A room that doesn't exist is refused too.
+    ss.send({ t: "office", on: true, room: 99 });
+    await expect(ss.next((m) => m.t === "action" && m.kind === "office-refused" && m.reason === "no such room")).resolves.toBeTruthy();
+    // Closing clears it.
+    ss.send({ t: "office", on: false });
+    await expect(st.next((m) => officeList(m) && (m.list as unknown[]).length === 0)).resolves.toBeTruthy();
+  });
+
+  it("sends a knock to that staff member alone, once a minute per student", async () => {
+    const [staff, other, student, bystander] = await Promise.all([staffMember(), staffMember(), visitor(), visitor()]);
+    const ss = await inHub(staff.token);
+    const so = await inHub(other.token);
+    const st = await inHub(student.token);
+    const sb = await inHub(bystander.token);
+    ss.send({ t: "office", on: true });
+    await st.next((m) => officeList(m) && (m.list as { name: string }[]).some((o) => o.name === staff.name));
+    st.send({ t: "knock", name: staff.name });
+    await expect(ss.next(knockedBy(student.name))).resolves.toBeTruthy();
+    await expect(st.next((m) => m.t === "action" && m.kind === "knock-sent")).resolves.toBeTruthy();
+    // Nobody else hears it: not another staff member, not another student in the Hub.
+    expect(await so.sees(knockedBy(student.name), 500)).toBe(false);
+    expect(await sb.sees(knockedBy(student.name), 500)).toBe(false);
+    // A second knock inside the minute is refused.
+    st.send({ t: "knock", name: staff.name });
+    await expect(st.next((m) => m.t === "action" && m.kind === "knock-refused" && m.reason === "wait")).resolves.toBeTruthy();
+    // Knocking on someone whose office hours aren't open is refused.
+    st.send({ t: "knock", name: other.name });
+    await expect(st.next((m) => m.t === "action" && m.kind === "knock-refused" && m.reason === "not open")).resolves.toBeTruthy();
   });
 });

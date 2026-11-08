@@ -16,6 +16,10 @@ export interface WhoHereDeps {
   mayWhisper(): boolean;
   whisper(name: string): void;
   /** Who you follow now (lower-case names), and a way to follow or unfollow; null if you can't (a guest). */
+  /** Staff in the Student Hub with office hours open now (empty anywhere else), and whether you may knock (a signed-up student). */
+  officeNow(): { name: string; room: number | null }[];
+  mayKnock(): boolean;
+  knock(name: string): void;
   followed(): Set<string>;
   toggleFollow(name: string): Promise<void>;
 }
@@ -44,6 +48,26 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
     x.setAttribute("aria-label", "Close");
     x.addEventListener("click", close);
     head.append(h, x);
+    // Office hours (Student Hub): who is open now, and a Knock for students.
+    const open = deps.officeNow().filter((o) => o.name.toLowerCase() !== me);
+    const hours = document.createElement("div");
+    hours.className = "who-office";
+    for (const o of open) {
+      const row = document.createElement("p");
+      row.textContent = `Office hours now: ${o.name}${o.room ? ` (room ${o.room})` : ""} `;
+      if (deps.mayKnock()) {
+        const k = document.createElement("button");
+        k.type = "button";
+        k.textContent = "Knock";
+        k.title = `Ask ${o.name} to invite you in`;
+        k.addEventListener("click", () => {
+          deps.knock(o.name);
+          k.disabled = true;
+        });
+        row.append(k);
+      }
+      hours.append(row);
+    }
     const list = document.createElement("ul");
     const meLi = document.createElement("li");
     meLi.textContent = `${deps.me()} (you)`;
@@ -104,7 +128,7 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
     const hint = document.createElement("p");
     hint.className = "who-hint";
     hint.textContent = deps.mayWhisper() ? "Press a name to whisper to them." : "Members can press a name to whisper.";
-    panel.append(head, list, elsewhere, hint);
+    panel.append(head, hours, list, elsewhere, hint);
   }
 
   function open(): void {
