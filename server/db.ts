@@ -133,6 +133,8 @@ const wanted: Record<string, string> = {
   admin_pc: "INTEGER NOT NULL DEFAULT 0",
   // Up to three interest tags, a JSON list from server/social.ts's fixed list.
   tags: "TEXT",
+  // Presence alerts: 1 (the default) tells only people this member follows back; 0, anyone who follows them.
+  presence_mutual_only: "INTEGER NOT NULL DEFAULT 1",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
@@ -1300,3 +1302,39 @@ export function tagsOf(name: string): string[] {
   }
 }
 export const saveTags = (name: string, tags: string[]): void => void db.prepare("UPDATE visitors SET tags = ? WHERE name = ?").run(JSON.stringify(tags), name);
+
+// --- following (presence alerts) -------------------------------------------------------
+// Who follows whom decides only who is told when someone comes onto the campus (realtime.ts).
+// Private to the follower: nobody is shown their followers.
+
+db.exec(`
+  CREATE TABLE IF NOT EXISTS follows (
+    follower TEXT NOT NULL COLLATE NOCASE,
+    followed TEXT NOT NULL COLLATE NOCASE,
+    PRIMARY KEY (follower, followed)
+  );
+  CREATE INDEX IF NOT EXISTS follows_by_followed ON follows (followed);
+`);
+
+export const followsOf = (name: string): string[] =>
+  (db.prepare("SELECT followed FROM follows WHERE follower = ? ORDER BY followed").all(name) as { followed: string }[]).map((r) => r.followed);
+export const followersOf = (name: string): string[] =>
+  (db.prepare("SELECT follower FROM follows WHERE followed = ?").all(name) as { follower: string }[]).map((r) => r.follower);
+export const isFollowing = (follower: string, followed: string): boolean =>
+  !!db.prepare("SELECT 1 FROM follows WHERE follower = ? AND followed = ?").get(follower, followed);
+
+/** Follows or unfollows; "limit" when following one more would pass `max`. */
+export function setFollow(follower: string, followed: string, on: boolean, max: number): "ok" | "limit" {
+  if (!on) {
+    db.prepare("DELETE FROM follows WHERE follower = ? AND followed = ?").run(follower, followed);
+    return "ok";
+  }
+  if (!isFollowing(follower, followed) && followsOf(follower).length >= max) return "limit";
+  db.prepare("INSERT OR IGNORE INTO follows (follower, followed) VALUES (?, ?)").run(follower, followed);
+  return "ok";
+}
+
+export const presenceMutualOnly = (name: string): boolean =>
+  (db.prepare("SELECT presence_mutual_only AS m FROM visitors WHERE name = ?").get(name) as { m: number } | undefined)?.m !== 0;
+export const setPresenceMutualOnly = (name: string, on: boolean): void =>
+  void db.prepare("UPDATE visitors SET presence_mutual_only = ? WHERE name = ?").run(on ? 1 : 0, name);

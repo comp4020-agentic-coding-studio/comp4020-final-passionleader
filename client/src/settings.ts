@@ -80,7 +80,7 @@ function stepTicks(labels: string[]): HTMLElement {
   return row;
 }
 
-export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; interests(): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
+export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; interests(): void; follows(): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -199,6 +199,11 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   interests.type = "button";
   interests.className = "settings-bug";
   interests.textContent = "🏷️ My interests";
+  // Members only: who you follow, to be told when they come on (follows.ts).
+  const follows = document.createElement("button");
+  follows.type = "button";
+  follows.className = "settings-bug";
+  follows.textContent = "🔔 Tell me when they're on";
   // A guest's way to a real account (guests can't post, comment or stick notes).
   const verify = document.createElement("button");
   verify.type = "button";
@@ -309,7 +314,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   applyRow.className = "settings-apply-row";
   applyRow.append(note, apply);
   fieldset.append(applyRow);
-  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, interests, bug, person, mute, credits, out, actions);
+  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, interests, follows, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -322,6 +327,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     verify.hidden = !opts.isGuest();
     out.hidden = opts.isGuest();
     interests.hidden = opts.isGuest();
+    follows.hidden = opts.isGuest();
     dialog.hidden = false;
     (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
   });
@@ -342,6 +348,10 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   interests.addEventListener("click", () => {
     dialog.hidden = true;
     opts.interests();
+  });
+  follows.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.follows();
   });
   out.addEventListener("click", () => {
     dialog.hidden = true;

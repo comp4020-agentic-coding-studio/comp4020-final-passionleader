@@ -3,10 +3,11 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, keepRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, tagsOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
+import { dropRoomFiles, keepRoomFiles, findByName, findByToken, followersOf, isFollowing, isMember, presenceMutualOnly, keepChatLine, lastSpot, lookOf, tagsOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
-import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
+import { ROOM_CAP, clampTo, isSpace, roomOf, spaceInfo, type SpaceId } from "./spaces.ts";
+import { PRESENCE_GAP_MS, mayTell } from "./social.ts";
 
 // The real-time layer: one WebSocket per open tab, all to this one server.
 // Everything is per space: you only see, hear and get updates about people in
@@ -331,6 +332,34 @@ function roomLeft(space: SpaceId, name: string, who: { name: string; token: stri
   roomChanged(space);
 }
 
+// --- presence alerts ----------------------------------------------------------------
+// "Tell me when they're on": someone a member follows comes onto the campus and they get one
+// notice with the space's name, never a position. This is the one thing that leaves a person's
+// space besides head counts, so it is narrow: members at both ends, only to followers the followed
+// person allows (mutual follows by default), a meeting room is only ever "a room", and a follower
+// hears at most once every ten minutes about the same person.
+const lastTold = new Map<string, number>();
+
+/** What a follower is told about where someone is: the space's name, never more; a meeting room (and the easter egg's) is "a room". */
+const whereLabel = (space: SpaceId): string => (roomOf(space) || space === "poop" ? "a room" : (spaceInfo(space)?.label ?? "the campus"));
+
+/** `name` just came on (no other tab of theirs was open): tell the followers they allow. */
+function announceOn(visitor: { name: string; role: string }, space: SpaceId): void {
+  if (!isMember(visitor)) return;
+  const mutualOnly = presenceMutualOnly(visitor.name);
+  const now = Date.now();
+  for (const follower of followersOf(visitor.name)) {
+    const person = findByName(follower);
+    if (!person || !isMember(person)) continue;
+    if (!mayTell(isFollowing(visitor.name, follower), mutualOnly)) continue;
+    const key = `${follower.toLowerCase()}|${visitor.name.toLowerCase()}`;
+    if (now - (lastTold.get(key) ?? 0) < PRESENCE_GAP_MS) continue;
+    if (![...players.values()].some((p) => p.name.toLowerCase() === follower.toLowerCase())) continue;
+    lastTold.set(key, now);
+    tellPerson(follower, { t: "action", kind: "followed-on", name: visitor.name, where: whereLabel(space) });
+  }
+}
+
 function send(ws: WebSocket, msg: unknown): void {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 }
@@ -616,8 +645,10 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
     const tags = tagsOf(name);
     if (tags.length) player.tags = tags;
   }
+  const wasOnline = [...players.values()].some((p) => p.name.toLowerCase() === name.toLowerCase());
   players.set(ws, player);
   alive.add(ws);
+  if (!wasOnline) announceOn(visitor, player.space);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
   if (player.space === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
   send(ws, { t: "action", kind: "online", counts: onlineCounts() });

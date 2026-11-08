@@ -107,6 +107,10 @@ import {
   saveLook,
   saveTags,
   tagsOf,
+  followsOf,
+  setFollow,
+  presenceMutualOnly,
+  setPresenceMutualOnly,
   validLook,
   QA_HAT,
   removeClassroom,
@@ -117,7 +121,7 @@ import {
 import { browserTag, KEPT, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, tellPerson, roomSessionOf, roomShare, setLook, setTags } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
-import { COURSE_TAGS, INTEREST_TAGS, MAX_TAGS, validTags } from "./social.ts";
+import { COURSE_TAGS, INTEREST_TAGS, MAX_FOLLOWS, MAX_TAGS, validTags } from "./social.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
 import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
@@ -1582,6 +1586,43 @@ app.put("/api/tags", async (c) => {
   saveTags(v.name, tags);
   setTags(v.name, tags);
   return c.json({ tags });
+});
+
+// --- "tell me when they're on" ------------------------------------------------------
+// A member follows up to 20 other members by name; when one of them comes onto the campus the
+// follower gets one notice (realtime.ts announceOn). Members at both ends, and the followed person
+// decides whether people they don't follow back may be told (default: only mutual follows).
+
+app.post("/api/follows", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  return c.json({ follows: isMember(v) ? followsOf(v.name) : [], max: MAX_FOLLOWS, mutualOnly: isMember(v) ? presenceMutualOnly(v.name) : true });
+});
+
+app.put("/api/follows", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "follow");
+  if (guest) return guest;
+  if (typeof b.on !== "boolean") return c.json({ error: "Follow or unfollow." }, 400);
+  const target = typeof b.name === "string" ? findByName(b.name.normalize("NFKC").trim()) : undefined;
+  if (!target || !isMember(target)) return c.json({ error: "There's nobody signed up by that name." }, 404);
+  if (target.name.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "That's you." }, 400);
+  if (setFollow(v.name, target.name, b.on, MAX_FOLLOWS) === "limit") return c.json({ error: `You can follow up to ${MAX_FOLLOWS} people. Unfollow someone first.` }, 400);
+  return c.json({ follows: followsOf(v.name), max: MAX_FOLLOWS });
+});
+
+/** The followed person's one choice: may people they don't follow back be told when they come on? */
+app.put("/api/follows/mutual-only", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "follow");
+  if (guest) return guest;
+  if (typeof b.on !== "boolean") return c.json({ error: "On or off." }, 400);
+  setPresenceMutualOnly(v.name, b.on);
+  return c.json({ mutualOnly: b.on });
 });
 
 // Sketch & Guess, the drawing game on the Hub's arcade machine.

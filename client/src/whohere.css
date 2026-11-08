@@ -30,3 +30,8 @@ body:has(#toast:not(:empty)) #who-here { top: 100px; }
   #who-here, body:has(#toast:not(:empty)) #who-here { top: calc(124px + env(safe-area-inset-top, 0px)); }
 }
 #who-here .who-tags { display: block; margin: 1px 0 2px 8px; color: #7a6a52; font-size: 0.74rem; }
+#who-here li { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
+#who-here li > button:first-child { flex: 1 1 60%; width: auto; }
+#who-here li .who-follow { flex: none; width: auto; min-height: 32px; font-size: 0.78rem; padding: 2px 8px; }
+#who-here li .who-follow[aria-pressed="true"] { background: #23404f; color: #fff; border-color: #23404f; }
+#who-here li .who-tags { flex: 1 1 100%; }

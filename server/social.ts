@@ -19,3 +19,14 @@ export function validTags(v: unknown): string[] | null {
   if (!v.every((t) => typeof t === "string" && TAG_SET.has(t))) return null;
   return new Set(v).size === v.length ? (v as string[]) : null;
 }
+
+/** Most people one member may follow. */
+export const MAX_FOLLOWS = 20;
+/** One "is on the campus" notice per follower and person every ten minutes, so a reload can't nag. */
+export const PRESENCE_GAP_MS = 10 * 60_000;
+
+/**
+ * Whether a follower is told that the followed person came on. By default only a mutual follow is
+ * told; when the followed person turns "only people I follow back" off, anyone who follows them is.
+ */
+export const mayTell = (followedFollowsBack: boolean, mutualOnly: boolean): boolean => followedFollowsBack || !mutualOnly;

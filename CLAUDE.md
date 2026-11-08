@@ -274,6 +274,13 @@ when a flow changes.
   is one of those three values, never free text, at most one change every
   two seconds, checked on the server; kept in server memory with the
   socket (and in your browser), shown to your space only.
+- "Tell me when they're on": a member follows up to 20 other members by name
+  (from Who's here), kept in SQLite; when one comes onto the campus (no other tab
+  already open) the follower gets one notice, "<name> is on the campus (in <space
+  name>)", never a position, a meeting room only "a room", at most once every ten
+  minutes per person. Members at both ends. By default only mutual follows are
+  told; the followed person may allow anyone who follows them in Settings. Checked
+  on the server; nobody is shown who follows them.
 - Interest tags: a member shows at most three, picked from a fixed list the server
   owns (course codes and fifteen interests, `server/social.ts`), never typed;
   anything off the list is refused on the server, they are kept with the account

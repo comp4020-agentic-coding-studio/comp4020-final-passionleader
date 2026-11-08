@@ -15,6 +15,9 @@ export interface WhoHereDeps {
   /** Whether you may whisper (members only). */
   mayWhisper(): boolean;
   whisper(name: string): void;
+  /** Who you follow now (lower-case names), and a way to follow or unfollow; null if you can't (a guest). */
+  followed(): Set<string>;
+  toggleFollow(name: string): Promise<void>;
 }
 
 export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close(): void; isOpen(): boolean } {
@@ -65,6 +68,20 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
         deps.whisper(p.name);
       });
       li.append(b);
+      // Follow: be told once when they come onto the campus (members, and only members to follow).
+      if (deps.mayWhisper() && !/^guest/i.test(p.name)) {
+        const on = deps.followed().has(p.name.toLowerCase());
+        const f = document.createElement("button");
+        f.type = "button";
+        f.className = "who-follow";
+        f.textContent = on ? "🔔 Following" : "🔔 Follow";
+        f.setAttribute("aria-pressed", String(on));
+        f.title = on ? `Stop being told when ${p.name} comes on` : `Tell me when ${p.name} is on the campus`;
+        f.addEventListener("click", () => {
+          void deps.toggleFollow(p.name).then(draw);
+        });
+        li.append(f);
+      }
       // Their interest tags, small, only for the people already in your space.
       if (p.tags?.length) {
         const t = document.createElement("span");

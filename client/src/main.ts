@@ -63,6 +63,9 @@ import {
   saveLook,
   getTags,
   saveTags,
+  getFollows,
+  setFollow,
+  setMutualOnly,
   removePost,
   removePostComment,
   heartPostComment,
@@ -104,6 +107,7 @@ import { dogHappy } from "./spaces/dog.ts";
 import { poopMesh } from "./spaces/poop.ts";
 import { mountMute } from "./mute.ts";
 import { mountInterests } from "./interests.ts";
+import { mountFollows } from "./follows.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
@@ -186,12 +190,46 @@ const interestsDialog = mountInterests({
     }
   },
 });
+// "Tell me when they're on" (follows.ts): the list lives on the server; this keeps a copy so Who's here can show it.
+let followedNow = new Set<string>();
+const apiMessage = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
+/** Follows or unfollows `name`; an error text, or null when it went. */
+async function followPerson(name: string, on: boolean): Promise<string | null> {
+  if (!session) return "Join first.";
+  try {
+    await setFollow(session.token, name, on);
+    if (on) followedNow.add(name.toLowerCase());
+    else followedNow.delete(name.toLowerCase());
+    return null;
+  } catch (err) {
+    return apiMessage(err, "Could not change that.");
+  }
+}
+const followsDialog = mountFollows({
+  async load() {
+    if (!session) throw new Error("Join first.");
+    const s = await getFollows(session.token);
+    followedNow = new Set(s.follows.map((n) => n.toLowerCase()));
+    return s;
+  },
+  follow: followPerson,
+  async setMutualOnly(on) {
+    if (!session) return "Join first.";
+    try {
+      await setMutualOnly(session.token, on);
+      return null;
+    } catch (err) {
+      return apiMessage(err, "Could not save that.");
+    }
+  },
+});
 mountSettings({
   credits: () => webview.open({ label: "Credits and licences", url: "/credits/", embeddable: true }),
   reportBug: () => bugReport.open(),
   reportPerson: () => bugReport.open(true),
   mute: () => muteDialog.open(),
   interests: () => interestsDialog.open(),
+  follows: () => followsDialog.open(),
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
   copyPlace: () => void copyPlaceLink(),
@@ -1226,6 +1264,12 @@ mountWhoHere(hudOnline, {
   me: () => session?.name ?? "",
   mayWhisper: () => isMember(session),
   whisper: (name) => chat.prefill(`/w ${name} `),
+  followed: () => followedNow,
+  async toggleFollow(name) {
+    const on = !followedNow.has(name.toLowerCase());
+    const err = await followPerson(name, on);
+    toast(err ?? (on ? `You'll be told when ${name} is on the campus.` : `Not following ${name} any more.`));
+  },
 });
 
 async function loadClassrooms(): Promise<void> {
@@ -1399,7 +1443,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-ca
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || interestsDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || interestsDialog.isOpen() || followsDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 installDialogKeys();
 
@@ -1823,7 +1867,11 @@ async function enterAs(s: Session): Promise<void> {
   storage.set("campus.token", s.token);
   storage.set("campus.role", s.role);
   // Mail waiting since last time.
-  if (isMember(s)) void getMailbox(s.token).then((box) => showUnread(box.unread)).catch(() => {});
+  if (isMember(s)) {
+    void getMailbox(s.token).then((box) => showUnread(box.unread)).catch(() => {});
+    // Who they follow, for Who's here's Follow buttons.
+    void getFollows(s.token).then((f) => (followedNow = new Set(f.follows.map((n) => n.toLowerCase())))).catch(() => {});
+  }
   else {
     showUnread(0);
     guestNotice.maybeOpen();
@@ -1931,6 +1979,11 @@ function goOnline(token: string): void {
       // In a meeting room the map chat is hidden: show it in the room's window.
       if (roomPanel.isOpen()) roomPanel.add(line);
       else chat.add({ ...line, whisper: true });
+    },
+    followedOn(name, where) {
+      sfx("message");
+      tabAlert();
+      toast(`${name} is on the campus (in ${where})`);
     },
     invited(to, from) {
       sfx("message");

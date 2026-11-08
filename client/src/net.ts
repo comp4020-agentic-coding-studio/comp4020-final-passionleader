@@ -110,6 +110,8 @@ export interface NetHandlers {
   /** The admin put us out: stopped from coming in ("restricted"), or a one-off kick ("kicked"). */
   removed(why: "restricted" | "kicked"): void;
   status(online: boolean): void;
+  /** Someone you follow came onto the campus: their name and the space's name (never a position). */
+  followedOn(name: string, where: string): void;
 }
 
 // Matches the server's tick: no point sending faster than it broadcasts.
@@ -211,6 +213,7 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
           if (m.kind === "seat-refused") return on.seatRefused();
           if (m.kind === "restricted") return on.restricted(m.what as string, m.until as string);
+          if (m.kind === "followed-on" && typeof m.name === "string" && typeof m.where === "string") return on.followedOn(m.name, m.where);
           if (m.kind === "all-wait") return on.allWait(m.seconds as number);
       }
     };
