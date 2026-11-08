@@ -1296,6 +1296,9 @@ function showBadges(target: Target | null): void {
     b.obj.element.classList.remove("on");
   }
   if (lit && nearest) nearest.obj.element.classList.add("on");
+  // Two things side by side (ANUSA's PC and Sam): their badges ran into each other on a phone
+  // (helper QA, 11/8). Within 2 m of the nearest, only the nearest shows.
+  if (nearest) for (const b of badges) if (b !== nearest && Math.hypot(b.x - nearest.x, b.z - nearest.z) < 2) b.obj.visible = false;
 }
 
 // The AI campus assistants (plan 56): fetched once, stood in their spaces as
@@ -1410,6 +1413,11 @@ function placeNpcs(s: SpaceDef): void {
     npcFigures.push(a);
     npcById.set(n.id, a);
     a.group.userData.seated = n.seated === true;
+    // On a chair (the IT desk): the same sitting pose and height as a visitor on a seat.
+    if (n.seated) {
+      a.group.position.copy(seatedAt({ x: n.x, z: n.z, rot: n.rot, y: 0.45 }));
+      a.setMotion("sit");
+    }
     // You talk to them from in front (they face +z by default: so from +z).
     const reach = n.reach ?? 1.6;
     s.spots = [...(s.spots ?? []), { x: n.x + Math.sin(n.rot) * reach, z: n.z + Math.cos(n.rot) * reach, id: `npc:${n.id}`, label: `Talk to ${n.name} (${n.role})` }];

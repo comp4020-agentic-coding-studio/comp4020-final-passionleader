@@ -20,6 +20,10 @@ import { fetchedAt, finishRun, savePage, startRun, stats } from "./knowledge.ts"
 //   sport      anu-sport.com.au
 //   housing    study.anu.edu.au/accommodation
 //   intl       ANU's pages for international students (visa, OSHC, arrival)
+//   it         services.anu.edu.au IT pages (ID, MFA, email, Wi-Fi, security,
+//              Canvas/Wattle/ANUHub) and ANU's learning-platforms pages
+//   canberra   ANU transport and safety pages, Transport Canberra (buses,
+//              light rail, MyWay+), cost of living and food relief
 
 const UA = "ANU-Crossing-campus-guide/1.0 (unofficial student project, not an AI training crawler; contact u8321477@anu.edu.au)";
 const GAP_MS = Number(process.env.CRAWL_GAP_MS) || 2000;
@@ -283,6 +287,33 @@ export async function targets(only?: string[]): Promise<Target[]> {
   }
   if (want("computing")) add("computing", (await sitemap("https://comp.anu.edu.au/sitemap.xml")).filter((u) => /comp\.anu\.edu\.au\/study\//.test(u)));
   if (want("anusa")) add("anusa", await sitemap("https://anusa.com.au/wp-sitemap-posts-page-1.xml"));
+  // ANU's IT services site: the Computing & IT desk in the Hub (Taylor, 11/8) reads its pages on
+  // IDs and passwords, MFA, email, Wi-Fi, security, printing and the learning systems (Canvas,
+  // Wattle, ANUHub); the transport, safety and Canberra-life pages go to the lounge's Riley.
+  const services = want("it") || want("canberra") ? await sitemap("https://services.anu.edu.au/sitemap.xml") : [];
+  if (want("it")) {
+    const www = await sitemap("https://www.anu.edu.au/sitemap.xml");
+    add("it", [
+      ...services.filter((u) =>
+        /services\.anu\.edu\.au\/information-technology\/(id-and-password(-0)?|email\/(accessing-your-email|configuring-your-(desktop|mobile)-devices(\/[a-z-]+)?|filtering-and-security)|information-security(\/[a-z-]+)?|(remote-access-wi-fi|wi-fi-remote-access)(\/[a-z-]+)?|print-copy-scan\/student-and-guest-print-accounts|software-systems\/(canvas|wattle|anuhub)|login-access\/remote-access\/[a-z-]+|help-support\/accessing-help-support\/featured-faqs)$|services\.anu\.edu\.au\/(multi-factor-authentication-mfa|wattle-course-access|wattle-user-manual)$/.test(u),
+      ),
+      "https://www.anu.edu.au/passwordless",
+      "https://www.anu.edu.au/students/health-safety-wellbeing/living-legally-safe/scam-awareness",
+      ...www.filter((u) => /\/students\/learning-platforms(\/|$)/.test(u)),
+    ]);
+  }
+  if (want("canberra")) {
+    const TC = "https://www.transport.act.gov.au"; // asks for 20 s between pages (robots.txt), which crawl() honours
+    add("canberra", [
+      ...services.filter((u) => /\/campus-environment\/transport-parking\/(?!parking|paystay|warning|terms|ev-)|\/campus-environment\/safety-security(\/(anuok-app|emergencies-on-campus|safety-security-faq|duty-officer))?$/.test(u)),
+      "https://www.anu.edu.au/students/health-safety-wellbeing/living-legally-safe/safety-and-security-at-anu",
+      "https://www.anu.edu.au/students/health-safety-wellbeing/living-well/eating-well/food-relief-at-anu-and-in-canberra",
+      "https://www.anu.edu.au/students/program-administration/fees-payments/estimated-cost-of-living-in-canberra",
+      "https://anusa.com.au/transport-voucher-program/",
+      "https://anusa.com.au/grocery-voucher-program/",
+      ...["/getting-around", "/getting-around/timetables", "/getting-around/find-a-stop-or-map", "/getting-around/regional-guides/central", "/getting-around/visit-canberra", "/tickets-and-myway", "/tickets-and-myway/fares", "/tickets-and-myway/check-myway-balance", "/tickets-and-myway/concessions", "/travel-options/light-rail/using-light-rail", "/travel-options/bus/passenger-information", "/travel-options/e-scooters"].map((p) => TC + p),
+    ]);
+  }
   if (want("sport")) add("sport", ["https://anu-sport.com.au/", "https://anu-sport.com.au/gym", "https://anu-sport.com.au/gym/Memberships", "https://anu-sport.com.au/clubs", "https://anu-sport.com.au/footer/faqs"]);
   if (want("housing")) add("housing", (await sitemap("https://study.anu.edu.au/sitemap.xml")).filter((u) => /\/accommodation(\/|$)/.test(u)));
   if (want("catalogue")) {
