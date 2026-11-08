@@ -128,11 +128,11 @@ export const NPCS: Npc[] = [
     name: "Riley",
     role: "Getting around Canberra",
     space: "anusa",
-    // By the lounge's west windows, between them, facing into the room; clear of the way out (z 5).
-    x: -9.3,
-    z: -1.5,
-    rot: Math.PI / 2,
-    reach: 1.6,
+    // Behind the counter, Sam's mirror image across the PC (Sam east of it, Riley west; the user, 11/8).
+    x: -5.6,
+    z: -6.2,
+    rot: 0,
+    reach: 2.2,
     look: { body: 0, skin: 2, hair: 2, top: 3, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "Catching public transport", url: "https://services.anu.edu.au/campus-environment/transport-parking/catching-public-transport" },
@@ -154,12 +154,12 @@ export const NPCS: Npc[] = [
     name: "Taylor",
     role: "Computing & IT help",
     space: "hub",
-    // At a desk of the middle office pod, on the north side, facing south over it; you talk from the pod's south side.
+    // Standing at the middle office pod's north side (the user, 11/8: standing, not seated), facing
+    // south over the desks; you talk from the pod's south side.
     x: -2,
-    z: -9,
+    z: -9.6,
     rot: 0,
-    reach: 3.2,
-    seated: true,
+    reach: 3.6,
     look: { body: 1, skin: 0, hair: 4, top: 3, bottom: 1, hat: 0, hatColour: 1 },
     links: [
       { label: "ANU ID and password", url: "https://services.anu.edu.au/information-technology/id-and-password" },
