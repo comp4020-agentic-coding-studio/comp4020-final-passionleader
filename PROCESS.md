@@ -1,12 +1,5 @@
 # Process overview
 
-![How the browser, the server and AWS talk](diagrams/8-client-server-aws.png)
-
-The whole server is in [diagram 9](diagrams/9-server-whole.png), the AWS side
-and its one IAM user in [diagram 10](diagrams/10-aws-infrastructure.png),
-voice in [diagram 11](diagrams/11-voice-chat.png) and email sign-up in
-[diagram 12](diagrams/12-email-signup.png).
-
 ## The stack, and what it cost
 
 The course fixed the server's shape: one 256 MB Fly machine, one volume, no
@@ -16,6 +9,8 @@ looked at RDS early on, but for a small community with simple rules it would
 have been overkill. The cost is plain: one machine is one point of failure, and the database shares it
 with the server.
 
+![The whole server: one Fly machine, what lives in memory, SQLite on the volume, and the deploy path](diagrams/9-server-whole.png)
+
 Fly and GitHub Actions came with the course; AWS is what I added and set up
 myself. Media was the reason. A big club poster or a team's files won't fit on
 a 1 GB volume, so files go to a private S3 bucket
@@ -24,12 +19,16 @@ link, and the bucket deletes everything after 30 days. It costs a little; I had 
 Bedrock runs the assistants, and voice runs on my own t4g.small EC2 with
 LiveKit, since audio is too heavy for the app's machine.
 
+![How the browser, the server and AWS talk: files and voice go straight to AWS with a pass the server signs](diagrams/8-client-server-aws.png)
+
 The app reaches AWS as a single IAM user with three permissions, and I wrote
 that policy by hand, one action at a time. This was the part AI didn't do for
 me and shouldn't. Spending is capped in code: the assistants
 stop at a daily limit and say plainly when the credit has run out
 ([7354a25](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/7354a25)). AWS Budgets only emails me, since the free tier has no
 automatic stop; the server's own limit is the real brake.
+
+![The AWS side: one IAM user with three permissions, the services it may call, and the voice server](diagrams/10-aws-infrastructure.png)
 
 ## My position on the sources
 
@@ -104,6 +103,10 @@ Robin in the library ([efaffc0](https://github.com/comp4020-agentic-coding-studi
 from the app ([b718b00](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b718b00)) exist. The other big additions were email sign-up,
 assistants answering from crawled ANU pages ([98fc799](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/98fc799)), voice, the
 Career Hub and the campus at night.
+
+![Email sign-up, step by step: the code goes by SES and only its hash is kept](diagrams/12-email-signup.png)
+
+![Voice: the app signs a two-minute ticket, and audio goes through my LiveKit server, never recorded](diagrams/11-voice-chat.png)
 
 I did the phone QA myself, because a desktop browser can't reproduce a phone,
 and every UI issue came from my screenshots. The keyboard covered the AI
