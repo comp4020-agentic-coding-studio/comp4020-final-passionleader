@@ -1,5 +1,6 @@
 import type { Classroom, Comment, Note } from "./api.ts";
 import type { TableView } from "./gametable.ts";
+import type { VideoView } from "./roomscreen.ts";
 import type { Look } from "./lookpicker.ts";
 import type { SpaceId } from "./world.ts";
 
@@ -85,7 +86,11 @@ export interface NetHandlers {
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   /** The server let us into a meeting room: what's in it and what's been said. */
-  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }, timer: RoomTimer | null): void;
+  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }, timer: RoomTimer | null, video: VideoView | null): void;
+  /** The room's shared video changed: another, play, pause, seek, or none (null). */
+  video(video: VideoView | null): void;
+  /** Our video action wasn't taken (not a YouTube or Vimeo link, too quick…); the video as it stands. */
+  videoRefused(reason: string, video: VideoView | null): void;
   /** The room's timer was started, paused, moved on or reset (null: none). */
   timer(timer: RoomTimer | null): void;
   /** Someone else changed the room's shared notes. */
@@ -136,6 +141,8 @@ export interface Net {
   pad(text: string): void;
   /** Starts (or resumes), pauses or resets the room's shared timer. */
   timer(op: "start" | "pause" | "reset"): boolean;
+  /** The room's shared video: "set" (with `url`), "play", "pause", "seek" (with `pos`) or "clear". */
+  video(op: string, extra?: Record<string, unknown>): boolean;
   /** Asks a games table for something: "look", "pick" (a game), "join", "start", "answer" (a pick) or "leave". */
   table(table: string, op: string, extra?: Record<string, unknown>): boolean;
   /** Invites someone into the counselling room we're in. */
@@ -206,7 +213,9 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
-            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null }, (m.timer as RoomTimer | null) ?? null);
+            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null }, (m.timer as RoomTimer | null) ?? null, (m.video as VideoView | null) ?? null);
+          if (m.kind === "video") return on.video((m.video as VideoView | null) ?? null);
+          if (m.kind === "video-refused") return on.videoRefused(String(m.reason), (m.video as VideoView | null) ?? null);
           if (m.kind === "timer") return on.timer((m.timer as RoomTimer | null) ?? null);
           if (m.kind === "pad") return on.pad(m.text as string, m.by as string);
           if (m.kind === "room-invited" && typeof m.space === "string" && typeof m.from === "string") return on.invited(m.space, m.from);
@@ -274,6 +283,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     timer(op) {
       return sendNow({ t: "action", kind: "timer", op });
+    },
+    video(op, extra) {
+      return sendNow({ t: "action", kind: "video", op, ...extra });
     },
     table(table, op, extra) {
       return sendNow({ t: "action", kind: "table", table, op, ...extra });

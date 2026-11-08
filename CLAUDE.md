@@ -231,6 +231,15 @@ when a flow changes.
   (the drawing goes through Excalidraw's own encrypted relay, never ours).
   While a room's window is open, notices (a saved chat, the mic) show in a
   card over it.
+- A room's shared viewing screen (room menu, "Show a video to the room",
+  `server/video.ts`): a member pastes an https YouTube or Vimeo link; the
+  server accepts only those sites' own addresses, keeps just the provider and
+  video id (never the pasted text), and refuses anything else. Play, pause and
+  seek go through the server, the last one wins, at most one a second per
+  person, and the room is told where the video is now (never a clock). Only
+  people inside get it; it lives in the room's memory and goes when the room
+  empties. The players are the sites' own IFrame APIs, so watching reaches
+  YouTube or Vimeo (the room's other things never do).
 - Voice (through the author's LiveKit server on a t4g.small EC2; never recorded, never
   through this app): the server gives a ticket (a LiveKit token signed with
   the Fly secret, two minutes, so it is only good for joining now) only for the voice of where you are now: a

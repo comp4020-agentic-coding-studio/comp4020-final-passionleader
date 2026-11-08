@@ -40,7 +40,7 @@ export interface RoomLine {
 }
 
 /** What the room window shows: the menu, one of its views, or nothing (just the "Room" button). */
-type View = "menu" | "chat" | "notes" | "closed";
+type View = "menu" | "chat" | "notes" | "screen" | "closed";
 
 // The same rule as everywhere else for a user name.
 const NAME_RULE = /^[A-Za-z0-9_]{1,8}$/;
@@ -69,6 +69,10 @@ export function mountRoomPanel(opts: {
   onSave(what: "chat" | "notes"): void;
   /** The shared notes' own element (roompad.ts), shown as the Notes view. */
   notes: HTMLElement;
+  /** The shared screen's own element (roomscreen.ts): the room's video and shared screens, shown as the Screen view. */
+  screen: HTMLElement;
+  /** The Screen view came on or went off the screen. */
+  onScreenShown(on: boolean): void;
   /** Called when the window opens or closes, so the rest of the screen can make way. */
   onShown(open: boolean): void;
   /** Opens the Campus Guide at the rooms (plan 112). */
@@ -221,6 +225,7 @@ export function mountRoomPanel(opts: {
   addItem("📝", "Shared notes", "One Markdown page for the room", () =>
     show("notes"),
   );
+  addItem("📺", "Show a video to the room", "Paste a YouTube or Vimeo link; everyone here watches together", () => show("screen"));
   const voiceItem = addItem("🎙️", "Mic: off", "You hear everyone here; turn your mic on to be heard", () => opts.onVoice());
   addItem("🖍️", "Whiteboard", "Draw together in a new tab (Excalidraw; everyone here gets the same board)", () => opts.onWhiteboard());
   addItem(
@@ -318,6 +323,11 @@ export function mountRoomPanel(opts: {
   notesView.className = "room-view room-notes";
   notesView.append(viewHead("📝 Shared notes"), opts.notes);
 
+  // --- the screen view (roomscreen.ts draws inside) -------------------------------
+  const screenView = document.createElement("div");
+  screenView.className = "room-view room-screen";
+  screenView.append(viewHead("📺 Shared screen"), opts.screen);
+
   function viewHead(text: string): HTMLDivElement {
     const head = document.createElement("div");
     head.className = "room-head";
@@ -382,7 +392,7 @@ export function mountRoomPanel(opts: {
   lastOutCard.append(lastOutTitle, lastOutText, lastOutRow);
   lastOut.append(lastOutCard);
 
-  ui.append(menu, chatView, notesView);
+  ui.append(menu, chatView, notesView, screenView);
   document.body.append(ui, reopen, lastOut);
 
   let isOpen = false;
@@ -516,6 +526,7 @@ export function mountRoomPanel(opts: {
     menu.hidden = next !== "menu";
     chatView.hidden = next !== "chat";
     notesView.hidden = next !== "notes";
+    screenView.hidden = next !== "screen";
     if (next === "chat") {
       unread = 0;
       log.scrollTop = log.scrollHeight;
@@ -532,6 +543,8 @@ export function mountRoomPanel(opts: {
     else if (next === "notes")
       // The pad picks what to focus (its editor on a wide screen, the rendered notes on a narrow one).
       opts.notes.dispatchEvent(new Event("pad-focus"));
+    // The video player lives only while its view is on screen (its sound stops when you step back).
+    opts.onScreenShown(next === "screen");
     if (wasShowing !== (next !== "closed")) opts.onShown(next !== "closed");
   }
 
@@ -729,6 +742,7 @@ export function mountRoomPanel(opts: {
     const wasShowing = view !== "closed";
     isOpen = false;
     view = "closed";
+    opts.onScreenShown(false);
     lastOut.hidden = true;
     ui.hidden = true;
     reopen.hidden = true;

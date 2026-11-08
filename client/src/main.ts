@@ -109,6 +109,7 @@ import { mountGuide } from "./guide.ts";
 import { mountVoice } from "./voicechat.ts";
 import { mountInvitePopup } from "./invitepopup.ts";
 import { mountRoomPanel, type RoomInfo } from "./roompanel.ts";
+import { mountRoomScreen } from "./roomscreen.ts";
 import { mountProjectList } from "./projectlist.ts";
 import { mountLinkEditor } from "./linkeditor.ts";
 import { mountBugReport } from "./bugreport.ts";
@@ -991,6 +992,11 @@ const roomPad = mountRoomPad({
   },
   imageLink: async (id) => (session ? imageLink(session.token, id) : null),
 });
+const roomScreen = mountRoomScreen({
+  send: (op, extra) => !!net && net.video(op, extra),
+  onShare: () => {},
+  onNotSent: () => notSent(),
+});
 const roomPanel = mountRoomPanel({
   onSend: (text) => sayChat(text),
   onInvite: (name) => {
@@ -1001,6 +1007,8 @@ const roomPanel = mountRoomPanel({
     if (net && !net.saveChat(what)) notSent();
   },
   notes: roomPad.el,
+  screen: roomScreen.el,
+  onScreenShown: (on) => roomScreen.shown(on),
   onShown: (open) => {
     document.body.classList.toggle("room-open", open);
     if (open) stopMoving();
@@ -1609,6 +1617,7 @@ function setSpace(id: SpaceId, at: { x: number; z: number }, tell: boolean): voi
   if (roomPanel.isOpen() && !meetingRoom(id)) {
     roomPad.close();
     roomPanel.close();
+    roomScreen.reset();
     document.body.classList.remove("in-room");
     if (playing) chat.show();
   }
@@ -1829,6 +1838,7 @@ function showJoin(message = ""): void {
   chat.reset();
   lastWhisperFrom = "";
   roomPanel.close();
+  roomScreen.reset();
   document.body.classList.remove("in-room");
   net?.close();
   net = null;
@@ -1998,8 +2008,9 @@ function goOnline(token: string): void {
     pad(text, by) {
       roomPad.set(text, by);
     },
-    roomOpen(id, x, z, room, lines, players, pad, timer) {
+    roomOpen(id, x, z, room, lines, players, pad, timer, video) {
       roomPad.set(pad.text, pad.by);
+      roomScreen.video(video);
       if (space?.id !== id) setSpace(id, { x, z }, false);
       players.forEach(upsertOther);
       chat.hide();
@@ -2015,6 +2026,14 @@ function goOnline(token: string): void {
     },
     timer(t) {
       roomPanel.timer(t);
+    },
+    video(v) {
+      roomScreen.video(v);
+    },
+    videoRefused(reason, v) {
+      roomScreen.video(v);
+      if (reason === "link") roomScreen.note("Only YouTube and Vimeo links (https) can be shown.");
+      else if (reason === "slow down") roomScreen.note("One change a second, please.");
     },
     room(room) {
       if (space && roomPanel.isOpen()) roomPanel.update(roomInfo(space.id, room));
