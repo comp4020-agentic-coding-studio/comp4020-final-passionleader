@@ -199,7 +199,7 @@ Read before planning or building: `README.md` (what good means for this app),
   (the drawing goes through Excalidraw's own encrypted relay, never ours).
 - Voice (through the author's LiveKit server on EC2; never recorded, never
   through this app): the server gives a ticket (a LiveKit token signed with
-  the Fly secret, two hours) only for the voice of where you are now: a
+  the Fly secret, two minutes, so it is only good for joining now) only for the voice of where you are now: a
   meeting room's voice only to someone inside it this sitting (so its cap
   and invites hold), the open voice outside (hold V, on a computer; quieter
   with distance, silent past 18 m) only to someone outside. Everyone there

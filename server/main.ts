@@ -98,6 +98,7 @@ import {
   markFileReady,
   purgeFiles,
   uploadsToday,
+  dropFileRow,
   lookOf,
   saveLook,
   validLook,
@@ -129,13 +130,16 @@ app.get("/readme/", (c) => {
 </head><body><main>${body}</main><p><a href="/">Back to the campus</a></p></body></html>`);
 });
 
-// Credits and licences (13): the assets' sources and licences, from the same
+// Credits and licences (13, 120): who made it and for which course (ABOUT.md),
+// then the assets' sources and licences, from the same
 // file the build ships (client/public/assets/CREDITS.md), as a page the
 // settings dialog opens in the in-app window.
 app.get("/credits/", (c) => {
   const file = ["client/dist/assets/CREDITS.md", "client/public/assets/CREDITS.md"].find((f) => existsSync(f));
   if (!file) return c.text("No credits file.", 404);
-  const body = marked.parse(readFileSync(file, "utf8"), { async: false });
+  const about = ["client/dist/assets/ABOUT.md", "client/public/assets/ABOUT.md"].find((f) => existsSync(f));
+  const top = about ? marked.parse(readFileSync(about, "utf8"), { async: false }) : "";
+  const body = top + marked.parse(readFileSync(file, "utf8"), { async: false });
   return c.html(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -515,6 +519,9 @@ app.delete("/api/chats/:id", async (c) => {
 // (so its cap and its invites hold); outside, the open voice of the space
 // you're in. Anyone joined, guests too, as for the rooms. The log notes who
 // joined which voice, never what was said (it isn't recorded anywhere).
+// Short-lived: LiveKit checks it only when joining, so a ticket kept after
+// leaving (or passed on) is soon useless; the client asks again each time.
+const VOICE_TICKET_S = 120;
 app.post("/api/voice", async (c) => {
   const b = await body(c);
   const v = who(b);
@@ -535,7 +542,7 @@ app.post("/api/voice", async (c) => {
     return c.json({ error: "Voice works in meeting rooms and outside." }, 400);
   }
   log("voice-joined", v, { space: p.space }, { ip: ipOf(c) });
-  return c.json({ url: voiceUrl(), token: voiceToken(v.name, room), room, space: p.space });
+  return c.json({ url: voiceUrl(), token: voiceToken(v.name, room, VOICE_TICKET_S), room, space: p.space });
 });
 
 // --- the AI campus assistants (plan 56) ---------------------------------------
@@ -763,6 +770,10 @@ app.post("/api/classrooms", async (c) => {
   return c.json({ code, space: classroomSpace(code) }, 201);
 });
 
+// COMP8020 is the course's own room: always open, its boards fixed (db.ts
+// recreates it at start; the purge and the client leave it alone too).
+const COURSE_ROOM = "COMP8020";
+
 app.delete("/api/classrooms/:code", async (c) => {
   const v = who(await body(c));
   if (!v) return c.json({ error: "Join first." }, 401);
@@ -770,6 +781,10 @@ app.delete("/api/classrooms/:code", async (c) => {
   if (!isStaff(v)) {
     log("refused", v, { action: "remove classroom", code, reason: "not staff" }, { ip: ipOf(c) });
     return c.json({ error: "Only staff can close a classroom." }, 403);
+  }
+  if (code === COURSE_ROOM) {
+    log("refused", v, { action: "remove classroom", code, reason: "course room" }, { ip: ipOf(c) });
+    return c.json({ error: `${code} is always open.` }, 403);
   }
   const space = classroomSpace(code);
   // Anyone inside is sent back out first, so nobody is left in a room that's gone.
@@ -799,6 +814,10 @@ app.put("/api/classrooms/:code/link", async (c) => {
     return c.json({ error: "Only staff can set what the boards open." }, 403);
   }
   if (which !== "board" && which !== "side") return c.json({ error: "Which board?" }, 400);
+  if (code === COURSE_ROOM) {
+    log("refused", v, { action: "set classroom link", code, reason: "course room" }, { ip: ipOf(c) });
+    return c.json({ error: `${code}'s boards are fixed.` }, 403);
+  }
   let url: string | null = null;
   if (typeof b.url === "string" && b.url.trim()) {
     try {
@@ -1247,6 +1266,13 @@ app.delete("/api/admin/restrictions", async (c) => {
   const { v, b } = r;
   const what = RESTRICTABLE.find((k) => k === b.what);
   if (typeof b.name !== "string" || !what) return c.json({ error: "Lift what, from whom?" }, 400);
+  // Same limit as restricting: a holder of the admin PC can't lift what was
+  // put on the top admin or on another holder (themselves included).
+  const target = findByName(b.name.trim());
+  if (target && !mayAct(v, target)) {
+    log("refused", v, { action: "lift restriction", name: target.name, what }, { ip: ipOf(c) });
+    return c.json({ error: "You can't lift that one." }, 403);
+  }
   if (!lift(b.name.trim(), what)) return c.json({ error: "Already lifted." }, 404);
   log("restriction-lifted", v, { name: b.name.trim(), what }, { ip: ipOf(c) });
   return c.json({ ok: true });
@@ -1342,6 +1368,8 @@ app.post("/api/files", async (c) => {
     if (!post || post.author !== v.name) return refuse("Only on your own post.", 403);
     if (Date.now() - Date.parse(post.createdAt.replace(" ", "T") + "Z") > 24 * 3600 * 1000) return refuse("Files go on a post within a day of posting.", 403);
     if (filesOn("post", post.id, true).length >= 5) return refuse("Up to five files on a post.", 400);
+    const barred = stopped(c, v, "posts", { action: "upload", space: post.space, post: post.id });
+    if (barred) return barred;
     postId = post.id;
     space = post.space;
   } else {
@@ -1353,11 +1381,15 @@ app.post("/api/files", async (c) => {
   const id = randomUUID();
   const key = keyFor(kind, id, name);
   const type = typeOf(name);
+  // The row goes in before the await, so parallel requests count it against
+  // the limits above (a day's 50, five a post, one a report); dropped again
+  // if S3 won't sign.
+  addFile({ id, kind, owner: v.name, name, size: b.size as number, key, postId, bugId, room });
   try {
     const url = await uploadLink(key, type, b.size as number);
-    addFile({ id, kind, owner: v.name, name, size: b.size as number, key, postId, bugId, room });
     return c.json({ id, url, type }, 201);
   } catch (err) {
+    dropFileRow(id);
     log("refused", v, { action: "upload", kind, reason: err instanceof S3Failure ? err.code : "S3-NET" }, { ip: ipOf(c), content: name });
     return s3Error(c, err);
   }

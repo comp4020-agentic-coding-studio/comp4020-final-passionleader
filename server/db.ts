@@ -1175,6 +1175,11 @@ export type FileInfo = Pick<FileRow, "id" | "name" | "size">;
 const fileCols = "id, kind, owner, name, size, key, post_id AS postId, bug_id AS bugId, room, ready, created_at AS createdAt";
 const FRESH = "created_at > datetime('now', '-30 days')";
 
+/** Forget a file row whose upload never got a link (S3 refused to sign). */
+export function dropFileRow(id: string): void {
+  db.prepare("DELETE FROM files WHERE id = ?").run(id);
+}
+
 export function addFile(f: Omit<FileRow, "ready" | "createdAt">): void {
   db.prepare("INSERT INTO files (id, kind, owner, name, size, key, post_id, bug_id, room) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)").run(
     f.id, f.kind, f.owner, f.name, f.size, f.key, f.postId, f.bugId, f.room,
