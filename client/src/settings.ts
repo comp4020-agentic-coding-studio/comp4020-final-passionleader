@@ -33,6 +33,21 @@ export const HIGH = QUALITY === "high";
 /** Trees, flowers, wind, the drifting sky and reflective glass: Medium and High. */
 export const RICH = QUALITY !== "low";
 
+// Reduce motion (RICE v3, accessibility): the camera keeps up with you at once instead of
+// gliding after you, and the sky and the grass stop drifting. It starts from the device's own
+// "reduce motion" setting, and a choice made here is remembered in this browser.
+const MOTION_KEY = "campus.reduceMotion";
+let calm = ((): boolean => {
+  try {
+    const v = localStorage.getItem(MOTION_KEY);
+    if (v === "1" || v === "0") return v === "1";
+  } catch {
+    // private mode: the device's setting
+  }
+  return window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+})();
+export const reduceMotion = (): boolean => calm;
+
 export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -158,14 +173,29 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   fsBtn.className = "settings-bug";
   const fsNote = document.createElement("p");
   fsNote.className = "settings-note";
-  screen.append(screenLegend, fsBtn, fsNote);
+  const motionLabel = document.createElement("label");
+  motionLabel.className = "settings-check";
+  const motionBox = document.createElement("input");
+  motionBox.type = "checkbox";
+  motionBox.checked = calm;
+  motionBox.addEventListener("change", () => {
+    calm = motionBox.checked;
+    try {
+      localStorage.setItem(MOTION_KEY, calm ? "1" : "0");
+    } catch {
+      // private mode: just for this visit
+    }
+  });
+  motionLabel.append(motionBox, " Reduce motion (the camera doesn't glide; the sky and grass hold still)");
+  screen.append(screenLegend, fsBtn, fsNote, motionLabel);
   const canFull = (): boolean => typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
   const standalone = (): boolean => window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
   const syncScreen = (): void => {
-    screen.hidden = standalone() || (!canFull() && !window.matchMedia("(pointer: coarse)").matches);
-    fsBtn.hidden = !canFull();
+    // Always shown now: Reduce motion lives here too.
+    screen.hidden = false;
+    fsBtn.hidden = !canFull() || standalone();
     fsBtn.textContent = document.fullscreenElement ? "↙ Leave full screen" : "⛶ Full screen";
-    fsNote.hidden = canFull();
+    fsNote.hidden = canFull() || standalone() || !window.matchMedia("(pointer: coarse)").matches;
     fsNote.textContent = "For full screen on an iPhone: Share (□↑) → Add to Home Screen, then open ANU Crossing from its icon.";
   };
   fsBtn.addEventListener("click", () => {

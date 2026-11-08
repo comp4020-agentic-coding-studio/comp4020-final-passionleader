@@ -8,7 +8,7 @@ import { CSS2DObject, CSS2DRenderer } from "three/examples/jsm/renderers/CSS2DRe
 import { playTrack } from "./audio.ts";
 import { mountBgmPlayer } from "./bgmplayer.ts";
 import { say } from "./voice.ts";
-import { HIGH, RICH, mountSettings, settingsOpen } from "./settings.ts";
+import { HIGH, RICH, mountSettings, reduceMotion, settingsOpen } from "./settings.ts";
 import { ICONS } from "./icons.ts";
 import { Avatar, defaultLookFor, motionFor, preloadCharacters, variantOf, type Look, type Variant } from "./character.ts";
 import { mountLookPicker } from "./lookpicker.ts";
@@ -2546,15 +2546,16 @@ function update(dt: number, now: number): void {
 
   // Third-person camera, following across the floor but not up a jump.
   const desired = player.position.clone().setY(0).add(cameraOffset(space, player.position.z));
-  camera.position.lerp(desired, 1 - Math.exp(-8 * dt));
+  if (reduceMotion()) camera.position.copy(desired);
+  else camera.position.lerp(desired, 1 - Math.exp(-8 * dt));
   lookTarget.copy(player.position).setY(space.outdoor ? 1.8 : 1);
   camera.lookAt(lookTarget);
   skyDome.position.copy(camera.position);
   // High quality (plan 35a): the clouds drift, the dome turning slowly about
   // its axis (once in about 20 minutes), so the sky wraps round seamlessly.
   // The light stays where it is, so shading doesn't move with it.
-  if (RICH) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
-  if (RICH) wind.value += dt;
+  if (RICH && !reduceMotion()) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
+  if (RICH && !reduceMotion()) wind.value += dt;
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);
