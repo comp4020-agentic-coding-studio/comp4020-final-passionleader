@@ -165,7 +165,8 @@ export const NPCS: Npc[] = [
     z: -7.55,
     rot: 0,
     reach: 1.8,
-    look: { body: 1, skin: 0, hair: 4, top: 3, bottom: 1, hat: 0, hatColour: 1 },
+    // A yellow hard hat (the user, 11/9): the IT desk, at a glance.
+    look: { body: 1, skin: 0, hair: 4, top: 3, bottom: 1, hat: 7, hatColour: 1 },
     links: [
       { label: "ANU ID and password", url: "https://services.anu.edu.au/information-technology/id-and-password" },
       { label: "Multi-factor authentication", url: "https://services.anu.edu.au/multi-factor-authentication-mfa" },
