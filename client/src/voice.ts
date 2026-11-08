@@ -45,5 +45,9 @@ export function say(text: string, distance: number, kind: Voice, spread = 0): vo
   u.rate = 1.05;
   // Higher for women, lower for men, so it reads right even with one voice.
   u.pitch = (kind === "female" ? 1.3 : 0.8) + spread;
+  // Phones: a queue left paused (iOS after the tab was in the background, some Android Chrome builds)
+  // swallows every later line, so it's resumed first; and the voices load late there, so pick again.
+  if (!voice) pickVoice();
+  speechSynthesis.resume();
   speechSynthesis.speak(u);
 }

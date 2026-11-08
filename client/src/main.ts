@@ -2394,9 +2394,11 @@ function interact(): void {
     else if (target.id.startsWith("npc:")) {
       const npc = npcList.find((n) => `npc:${n.id}` === target.id);
       if (npc) {
+        // A spoken hello in their voice (plan 79), at the effects volume; Seongsu, the author, welcomes
+        // you instead (the user, 11/9). Said before the window opens: on a phone the window's text box
+        // takes focus and the keyboard coming up could cut the speech off.
+        say(npc.id === "seongsu" ? "Welcome to ANU Crossing!" : "Hi, how can I help you?", 0, npc.voice ?? "female");
         npcChat.open(npc);
-        // A spoken hello in their voice (plan 79), at the effects volume.
-        say("Hi, how can I help you?", 0, npc.voice ?? "female");
         npcById.get(npc.id)?.perform("wave");
       }
     }
