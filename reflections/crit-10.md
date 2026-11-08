@@ -9,8 +9,7 @@ documents, so it stopped asking me the same things again.
 
 The other half: UX is something AI doesn't know. It can't tell what feels
 awkward and what feels easy; only human experience can fix and improve
-that. I found the phone bugs by using the app myself. I also cared a lot
-about the music and assets, but the AI doesn't know what the real campus
+that. I found the phone bugs by using the app myself. The AI doesn't know what the real campus
 looks like, so I had to draw it or take photos for it. However good an LLM
 is, it can't fully carry real-world data across, and I think jobs might
 grow around exactly that.
