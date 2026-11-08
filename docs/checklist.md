@@ -321,8 +321,8 @@
   - Already known: in full spec runs, rooms.test "shares one set of notes" and the 5-second WebSocket timeout fail now and then (when the helper's Chrome is busy, pass on rerun). Robin's E spot doesn't line up with the desk label (helper 8a)
 - [x] 108. Final polish (see 108 above): helper QA walks every space once on PC and phone → fix ✅ (as above)
 - [x] Real browser QA (helper d1, qa_ accounts, main never does it itself): the "Last week's live QA" list above + the 11/4 items (outdoor voice falloff (iPhone), flickering lamp pools, notice positions, 155 shops, pillars and lights, Full screen in settings (PC), Priya on 2027 courses, ivory UI) ✅ (11/8–9: d1 ran browser QA as qa_ accounts every round on the local servers; only what passed went live)
-- [ ] High on real devices (MacBook and phone), whether the iPhone lamp blotches are gone: the user
-- [ ] a8's report (memory, Kai's follow-up questions) is applied in `9c3a9d4`: only the reply is left
+- [x] High on real devices (MacBook and phone), whether the iPhone lamp blotches are gone: the user ✅ (11/9, checked by the user)
+- [x] a8's report (memory, Kai's follow-up questions) is applied in `9c3a9d4`: only the reply is left ✅ (11/9, checked by the user)
 
 ### ③ RICE once more (v3)
 
