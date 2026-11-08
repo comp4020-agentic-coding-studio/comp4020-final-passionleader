@@ -102,7 +102,10 @@ export function mountVoice(deps: VoiceDeps): {
         else audio.delete(who.identity);
       });
       r.on(lk.RoomEvent.ParticipantDisconnected, (who) => detachAll(who.identity));
-      r.on(lk.RoomEvent.ActiveSpeakersChanged, (speakers) => deps.talking(new Set(speakers.map((s) => s.identity))));
+      r.on(lk.RoomEvent.ActiveSpeakersChanged, (speakers) => {
+        active = new Set(speakers.map((s) => s.identity));
+        report();
+      });
       r.on(lk.RoomEvent.Disconnected, () => {
         if (room === r) cleanup();
       });
@@ -125,10 +128,33 @@ export function mountVoice(deps: VoiceDeps): {
     return joining;
   }
 
+  // Who shows a mic: LiveKit's active speakers, plus anyone whose level is above a lower bar, held
+  // for a moment after (the server's bar missed someone speaking softly: the user, 11/9).
+  let active = new Set<string>();
+  const heard = new Map<string, number>();
+  let shown = "";
+  let lastLevelCheck = 0;
+  const QUIET_LEVEL = 0.008;
+  const HOLD_MS = 700;
+  function report(): void {
+    const now = performance.now();
+    const names = new Set(active);
+    for (const [who, at] of heard) {
+      if (now - at < HOLD_MS) names.add(who);
+      else heard.delete(who);
+    }
+    const key = [...names].sort().join("|");
+    if (key === shown) return;
+    shown = key;
+    deps.talking(names);
+  }
   function cleanup(): void {
     for (const who of [...audio.keys()]) detachAll(who);
     room = null;
     micState = false;
+    active = new Set();
+    heard.clear();
+    shown = "";
     deps.talking(new Set());
   }
 
@@ -163,6 +189,13 @@ export function mountVoice(deps: VoiceDeps): {
     },
     tick() {
       if (!room) return;
+      const now = performance.now();
+      if (now - lastLevelCheck > 150) {
+        lastLevelCheck = now;
+        for (const p of room.remoteParticipants.values()) if (p.audioLevel > QUIET_LEVEL) heard.set(p.identity, now);
+        if (room.localParticipant.audioLevel > QUIET_LEVEL) heard.set(room.localParticipant.identity, now);
+        report();
+      }
       const base = readVoiceVolume() / 100;
       const me = deps.me();
       for (const [who, tracks] of audio) {
