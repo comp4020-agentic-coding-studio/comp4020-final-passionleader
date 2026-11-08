@@ -256,7 +256,9 @@ export function addTelstraTower(group: THREE.Group): void {
   // the map's west side with the view turned; Black Mountain is really a little more to the west.
   // 600 m out, about 85 tall in all, so its top stays inside the outdoor camera's frame.
   const DIST = 600;
-  const cx = -Math.SQRT1_2 * DIST, cz = Math.SQRT1_2 * DIST;
+  // 235°: a little west of south-west, so it sits clear of the screen's top-right buttons in that view.
+  const BEARING = (235 * Math.PI) / 180;
+  const cx = -Math.sin(BEARING - Math.PI) * DIST, cz = -Math.cos(BEARING) * DIST;
   const own = (color: number, rough = 0.95): THREE.MeshStandardMaterial => {
     const m = new THREE.MeshStandardMaterial({ color, roughness: rough, metalness: 0, fog: false });
     m.userData.unique = true;
@@ -274,16 +276,16 @@ export function addTelstraTower(group: THREE.Group): void {
   // Long axis of the hill across the line of sight from the map.
   tower.rotation.y = Math.atan2(cx, cz) + Math.PI / 2;
   // Wide enough to read as a silhouette 600 m off (at true width the shaft was under a pixel: the
-  // helper saw nothing, 11/9), and short enough that its top stays in frame: about 92 tall in all.
+  // helper saw nothing, 11/9), and short enough that its top stays in frame: about 63 tall in all.
   tower.scale.set(2, 0.68, 2);
 
-  const HILL_H = 88; // about 60 after the squash: clear of the far buildings on that horizon
+  const HILL_H = 40; // about 27 after the squash: the hill at 60 alone filled the frame to its top (helper QA)
   const hill = new THREE.Mesh(new THREE.SphereGeometry(1, 28, 10, 0, Math.PI * 2, 0, Math.PI / 2), own(0x6f7d74));
   hill.scale.set(75, HILL_H, 55); // about 300 wide once the group is widened
   tower.add(hill);
 
   const base = HILL_H - 2;
-  const SHAFT = 40;
+  const SHAFT = 46;
   const grey = 0xc9ccd1;
   const shaft = new THREE.Mesh(new THREE.CylinderGeometry(1.6, 2.6, SHAFT, 10), own(grey, 0.7));
   shaft.position.y = base + SHAFT / 2;
@@ -307,7 +309,7 @@ export function addTelstraTower(group: THREE.Group): void {
   const upper = new THREE.Mesh(new THREE.CylinderGeometry(0.9, 1.1, topY - (y0 + 10.4) + 0.1, 8), own(grey, 0.7));
   upper.position.y = (topY + y0 + 10.4) / 2;
   tower.add(upper);
-  const MAST = 10;
+  const MAST = 8;
   const mast = new THREE.Mesh(new THREE.CylinderGeometry(0.15, 0.6, MAST, 6), own(0xdfe1e4, 0.6));
   mast.position.y = topY + MAST / 2;
   tower.add(mast);
