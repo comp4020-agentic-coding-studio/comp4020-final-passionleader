@@ -61,6 +61,8 @@ import {
   getProjects,
   sendBugReport,
   saveLook,
+  getTags,
+  saveTags,
   removePost,
   removePostComment,
   heartPostComment,
@@ -101,6 +103,7 @@ let walked = 0;
 import { dogHappy } from "./spaces/dog.ts";
 import { poopMesh } from "./spaces/poop.ts";
 import { mountMute } from "./mute.ts";
+import { mountInterests } from "./interests.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
@@ -170,11 +173,25 @@ const bugReport = mountBugReport({
 const highQuality = HIGH;
 // Mute (plan 33): someone's chat, bubbles and notes vanish from this screen only.
 const muteDialog = mountMute({ changed: () => syncMutedNotes() });
+// Interest tags (interests.ts): up to three from the server's fixed list, under your name tag.
+const interestsDialog = mountInterests({
+  load: () => (session ? getTags(session.token) : Promise.reject(new Error("Join first."))),
+  async save(tags) {
+    if (!session) return "Join first.";
+    try {
+      await saveTags(session.token, tags);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not save your interests.";
+    }
+  },
+});
 mountSettings({
   credits: () => webview.open({ label: "Credits and licences", url: "/credits/", embeddable: true }),
   reportBug: () => bugReport.open(),
   reportPerson: () => bugReport.open(true),
   mute: () => muteDialog.open(),
+  interests: () => interestsDialog.open(),
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
   copyPlace: () => void copyPlaceLink(),
@@ -708,6 +725,9 @@ interface OtherView {
   /** Their name tag's element, to show their status beside the name. */
   label: HTMLElement;
   status?: string;
+  /** Their interest tags, small under the name tag (a tag of its own, so the name keeps its pill). */
+  tagsKey: string;
+  tagsObj?: CSS2DObject;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
@@ -724,7 +744,7 @@ function upsertOther(p: RemotePlayer): void {
     const label = tag(group, p.staff ? `${p.name} · staff` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label").element;
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff, label };
+    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff, label, tagsKey: "" };
     others.set(p.id, view);
   }
   // A new look (they changed it while here): recolour in place.
@@ -741,6 +761,17 @@ function upsertOther(p: RemotePlayer): void {
     const base = p.staff ? `${p.name} · staff` : p.name;
     view.label.textContent = p.status ? `${statusText(p.status).icon} ${base}` : base;
     view.label.title = p.status ? statusText(p.status).label : "";
+  }
+  // Their interest tags, under the name tag, when they change.
+  const tagsKey = (p.tags ?? []).join("|");
+  if (tagsKey !== view.tagsKey) {
+    view.tagsKey = tagsKey;
+    if (view.tagsObj) {
+      view.tagsObj.element.remove();
+      view.group.remove(view.tagsObj);
+      view.tagsObj = undefined;
+    }
+    if (p.tags?.length) view.tagsObj = tag(view.group, p.tags.join(" · "), 1.98, "player-tags");
   }
   // Sitting: on the seat, facing its way, whatever their last step said.
   view.seat = p.seat ? seatAt(p.seat) : undefined;
@@ -1179,7 +1210,7 @@ const statusPicker = mountStatus(hudName, (s) => net?.status(s));
 // Press the online line: who's in this space by name, elsewhere as counts (whohere.ts).
 mountWhoHere(hudOnline, {
   // The status icon is shown beside the name, never part of it: in the name it went into "/w 👋 name" (RICE v3).
-  here: () => [...others.values()].map((o) => ({ name: o.name, icon: o.status ? statusText(o.status).icon : "", staff: o.staff })),
+  here: () => [...others.values()].map((o) => ({ name: o.name, icon: o.status ? statusText(o.status).icon : "", staff: o.staff, tags: o.tagsKey ? o.tagsKey.split("|") : [] })),
   counts: () => {
     const n = (id: string): number => onlineCounts[id] ?? 0;
     return [
@@ -1368,7 +1399,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-ca
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || interestsDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 installDialogKeys();
 

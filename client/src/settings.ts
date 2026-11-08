@@ -80,7 +80,7 @@ function stepTicks(labels: string[]): HTMLElement {
   return row;
 }
 
-export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
+export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; interests(): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -194,6 +194,11 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   mute.type = "button";
   mute.className = "settings-bug";
   mute.textContent = "🔇 Mute someone";
+  // Members only: interest tags shown under the name tag (interests.ts).
+  const interests = document.createElement("button");
+  interests.type = "button";
+  interests.className = "settings-bug";
+  interests.textContent = "🏷️ My interests";
   // A guest's way to a real account (guests can't post, comment or stick notes).
   const verify = document.createElement("button");
   verify.type = "button";
@@ -304,7 +309,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   applyRow.className = "settings-apply-row";
   applyRow.append(note, apply);
   fieldset.append(applyRow);
-  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, bug, person, mute, credits, out, actions);
+  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, interests, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -316,6 +321,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     syncScreen();
     verify.hidden = !opts.isGuest();
     out.hidden = opts.isGuest();
+    interests.hidden = opts.isGuest();
     dialog.hidden = false;
     (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
   });
@@ -332,6 +338,10 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   mute.addEventListener("click", () => {
     dialog.hidden = true;
     opts.mute();
+  });
+  interests.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.interests();
   });
   out.addEventListener("click", () => {
     dialog.hidden = true;

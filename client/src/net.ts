@@ -23,6 +23,8 @@ export interface RemotePlayer {
   staff?: boolean;
   /** How open they are to a chat, if they've said (RICE v2 #3). */
   status?: PlayerStatus;
+  /** Up to three interest tags from the server's fixed list. */
+  tags?: string[];
 }
 export type PlayerStatus = "chat" | "study" | "away";
 

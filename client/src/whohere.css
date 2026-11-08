@@ -29,3 +29,4 @@ body:has(#toast:not(:empty)) #who-here { top: 100px; }
 @media (max-width: 700px) {
   #who-here, body:has(#toast:not(:empty)) #who-here { top: calc(124px + env(safe-area-inset-top, 0px)); }
 }
+#who-here .who-tags { display: block; margin: 1px 0 2px 8px; color: #7a6a52; font-size: 0.74rem; }

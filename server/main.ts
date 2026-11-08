@@ -105,6 +105,8 @@ import {
   dropFileRow,
   lookOf,
   saveLook,
+  saveTags,
+  tagsOf,
   validLook,
   QA_HAT,
   removeClassroom,
@@ -113,8 +115,9 @@ import {
   type Visitor,
 } from "./db.ts";
 import { browserTag, KEPT, keepIn, log } from "./log.ts";
-import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, tellPerson, roomSessionOf, roomShare, setLook } from "./realtime.ts";
+import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, tellPerson, roomSessionOf, roomShare, setLook, setTags } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
+import { COURSE_TAGS, INTEREST_TAGS, MAX_TAGS, validTags } from "./social.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
 import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
@@ -1553,6 +1556,32 @@ app.put("/api/look", async (c) => {
   if (isMember(v)) saveLook(v.name, look);
   setLook(v.name, look);
   return c.json({ ok: true });
+});
+
+// --- interest tags -----------------------------------------------------------------
+// A member shows up to three tags from a fixed list (server/social.ts) under their name tag and in
+// Who's here. Never free text: anything off the list is refused here, not only hidden in the browser.
+
+app.post("/api/tags/mine", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  return c.json({ tags: isMember(v) ? tagsOf(v.name) : [], courses: COURSE_TAGS, interests: INTEREST_TAGS, max: MAX_TAGS });
+});
+
+app.put("/api/tags", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "tags");
+  if (guest) return guest;
+  const tags = validTags(b.tags);
+  if (!tags) {
+    log("refused", v, { action: "tags", reason: "not on the list" }, { ip: ipOf(c) });
+    return c.json({ error: `Pick up to ${MAX_TAGS} tags from the list.` }, 400);
+  }
+  saveTags(v.name, tags);
+  setTags(v.name, tags);
+  return c.json({ tags });
 });
 
 // Sketch & Guess, the drawing game on the Hub's arcade machine.

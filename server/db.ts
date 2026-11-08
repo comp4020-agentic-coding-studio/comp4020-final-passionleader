@@ -2,6 +2,7 @@ import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
 import { ARRIVAL, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
+import { validTags } from "./social.ts";
 
 // Four tables. Visitors: a name, the secret that reclaims it, a role, and
 // where they last stood. Notes: sticky notes on a space's floor, kept until
@@ -130,6 +131,8 @@ const wanted: Record<string, string> = {
   last_seen: "TEXT",
   // Use of the admin PC (log, reports, restrictions), given and taken by the top admin (plan 101).
   admin_pc: "INTEGER NOT NULL DEFAULT 0",
+  // Up to three interest tags, a JSON list from server/social.ts's fixed list.
+  tags: "TEXT",
 };
 for (const [col, type] of Object.entries(wanted)) {
   if (!columns().includes(col)) db.exec(`ALTER TABLE visitors ADD COLUMN ${col} ${type}`);
@@ -1283,3 +1286,17 @@ export function setCached(key: string, value: unknown): void {
     JSON.stringify(value),
   );
 }
+
+// --- interest tags --------------------------------------------------------------------
+// Up to three, from the fixed list in social.ts, kept with the account and shown to the space
+// the person is in (their name tag and Who's here), like their look.
+
+export function tagsOf(name: string): string[] {
+  const row = db.prepare("SELECT tags FROM visitors WHERE name = ?").get(name) as { tags: string | null } | undefined;
+  try {
+    return row?.tags ? (validTags(JSON.parse(row.tags)) ?? []) : [];
+  } catch {
+    return [];
+  }
+}
+export const saveTags = (name: string, tags: string[]): void => void db.prepare("UPDATE visitors SET tags = ? WHERE name = ?").run(JSON.stringify(tags), name);

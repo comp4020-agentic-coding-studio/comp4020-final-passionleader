@@ -17,3 +17,22 @@
 .mute-list li { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 6px 0; border-bottom: 1px solid #e6dcc0; }
 .mute-list button { min-height: 36px; }
 .mute-empty { opacity: 0.7; }
+
+/* The interests dialog is laid out like the mute one. */
+.mute-dialog-like {
+  position: fixed; inset: 0; z-index: 30; display: grid; place-items: center;
+  padding: 16px; background: rgba(20, 20, 20, 0.45);
+}
+.mute-dialog-like[hidden] { display: none; }
+.interest-row { display: flex; flex-wrap: wrap; gap: 6px; margin: 6px 0 12px; }
+.interest-row button {
+  min-height: 36px; padding: 0 12px; border-radius: 999px; border: 1px solid var(--accent, #6b3f1d);
+  background: var(--card, #f5efdf); color: inherit; font: inherit; cursor: pointer;
+}
+.interest-row button[aria-pressed="true"] { background: var(--accent, #6b3f1d); color: #fff; }
+.interest-row button:disabled { opacity: 0.45; cursor: default; }
+/* A person's tags under their name tag in the world: small, quiet. */
+.player-tags {
+  padding: 0 6px; border-radius: 7px; background: rgba(59, 42, 18, 0.7); color: #fff;
+  font: 600 calc(10px * var(--label-scale, 1)) system-ui, sans-serif; white-space: nowrap;
+}

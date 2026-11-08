@@ -3,7 +3,7 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, keepRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
+import { dropRoomFiles, keepRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, tagsOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
 import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
@@ -16,7 +16,7 @@ import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 // the spaces and what people do in them can keep changing.
 
 /** `seat` is the seat they're sitting on ("<space>:<n>"), if any; `look` how their figure looks. */
-export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true; status?: Status };
+export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true; status?: Status; tags?: string[] };
 /** How open someone is to a chat (RICE v2 #3): one of three, never free text, shown beside their name to their space. */
 export type Status = "chat" | "study" | "away";
 const STATUSES: ReadonlySet<string> = new Set(["chat", "study", "away"]);
@@ -65,6 +65,16 @@ const ONLINE_MS = 5_000;
 let lastOnline = "";
 
 const inSpace = (space: SpaceId): Player[] => [...players.values()].filter((p) => p.space === space);
+
+/** New interest tags for everyone called `name` (all their tabs), shown to their space at once. */
+export function setTags(name: string, tags: string[]): void {
+  for (const p of players.values()) {
+    if (p.name.toLowerCase() !== name.toLowerCase()) continue;
+    if (tags.length) p.tags = tags;
+    else delete p.tags;
+    dirty.add(p.space);
+  }
+}
 
 /** A new look for everyone called `name` (all their tabs), shown to their space at once. */
 export function setLook(name: string, look: Look): void {
@@ -601,6 +611,11 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   const player: Player = { id: randomUUID(), name, space: start.space, x: start.x, y: 0, z: start.z, rot: 0, look: lookOf(name) };
   // Staff (and the admin) carry a "staff" mark on their name tag (1c), so people know whom they're talking to.
   if (visitor.role === "staff" || visitor.role === "admin") player.staff = true;
+  // Interest tags are a member's, kept with the account (a guest has none).
+  if (isMember(visitor)) {
+    const tags = tagsOf(name);
+    if (tags.length) player.tags = tags;
+  }
   players.set(ws, player);
   alive.add(ws);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });

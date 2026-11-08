@@ -8,7 +8,7 @@ import "./whohere.css";
 
 export interface WhoHereDeps {
   /** The people in this space now: name and whether they're staff. */
-  here(): { name: string; icon?: string; staff: boolean }[];
+  here(): { name: string; icon?: string; staff: boolean; tags?: string[] }[];
   /** Head counts per place, labelled ("Hub", 3). */
   counts(): [string, number][];
   me(): string;
@@ -65,6 +65,13 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
         deps.whisper(p.name);
       });
       li.append(b);
+      // Their interest tags, small, only for the people already in your space.
+      if (p.tags?.length) {
+        const t = document.createElement("span");
+        t.className = "who-tags";
+        t.textContent = p.tags.join(" · ");
+        li.append(t);
+      }
       list.append(li);
     }
     if (!people.length) {

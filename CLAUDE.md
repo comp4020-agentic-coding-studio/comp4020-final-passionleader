@@ -274,6 +274,11 @@ when a flow changes.
   is one of those three values, never free text, at most one change every
   two seconds, checked on the server; kept in server memory with the
   socket (and in your browser), shown to your space only.
+- Interest tags: a member shows at most three, picked from a fixed list the server
+  owns (course codes and fifteen interests, `server/social.ts`), never typed;
+  anything off the list is refused on the server, they are kept with the account
+  and shown only to the people in the same space (name tag, Who's here). Guests
+  have none.
 - Outside follows Canberra's time of day (client only: sky, sun, lamps;
   indoors only the sun's shafts go at night, the windows stay as they are); `?hour=` shows another hour for checking.
 - Familiar places (README): the spaces follow the real campus. Buildings,
