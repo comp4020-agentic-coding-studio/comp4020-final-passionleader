@@ -87,11 +87,12 @@ export function mountSignIn(opts: {
   const sub = el("p", "join-sub", "A small 3D space to run into people: students, staff, anyone. Not an official ANU service.");
   const views = el("div", "si-views");
   const flavour = el("ul", "si-flavour");
-  // A phone has no keyboard: its tips name the on-screen buttons instead (11/4 UI pass).
-  const touch = window.matchMedia("(pointer: coarse)").matches;
-  const tips = touch
-    ? ["The arrow pad to walk, Jump to jump.", "Emotes for the menu: wave, dance, stick a note.", "Use to read a note or go through a door. Chat to talk."]
-    : ["WASD to walk, Space to jump.", "Q for the menu: wave, dance, stick a note.", "E to read a note or go through a door. Enter to chat."];
+  // Two recommendations instead of the controls (the user, 11/9): the in-game guide shows the
+  // keys, and these are what make the first visit go well.
+  const tips = [
+    "Strongly recommended: sign up with your ANU email. A guest can only walk, chat and use team rooms.",
+    "Strongly recommended: use a computer. The campus is built for a keyboard and a bigger screen. A phone works, with less room.",
+  ];
   for (const line of tips) {
     flavour.append(el("li", undefined, line));
   }

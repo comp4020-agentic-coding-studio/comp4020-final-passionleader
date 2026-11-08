@@ -363,3 +363,10 @@ body.fx-high #stage::before {
   content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
   background: radial-gradient(ellipse at 50% 40%, rgba(255, 250, 238, 0.13) 0%, rgba(255, 248, 232, 0.07) 60%, transparent 100%);
 }
+/* Stepped sliders in Settings (text size, graphics quality): the stops' names under the track. */
+#settings fieldset input[type="range"] { width: 100%; margin: 6px 0 0; accent-color: var(--accent, #6b3f1d); }
+.settings-ticks { display: flex; justify-content: space-between; font-size: 0.78rem; opacity: 0.8; margin: 2px 2px 0; }
+.settings-step-text { margin: 6px 0 0; font-size: 0.85rem; }
+.settings-apply-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
+.settings-apply-row .settings-note { margin: 0; }
+.settings-apply { flex: none; min-height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--accent, #6b3f1d); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }

@@ -45,6 +45,17 @@ Hard limits for the helper:
 - Test against `http://localhost:8080` only. Never send test traffic to the
   `*.fly.dev` URL.
 
+## Light session: Haiku (from 29 October)
+
+| Role | What it covers |
+| --- | --- |
+| Crawl checks | Reads what the crawler saved: empty pages, sign-in pages, text that didn't come through |
+| Assistant test questions | Writes and asks the assistants test questions on the local server, and marks each answer grounded, partly, wrong or made up, checked against the crawled text |
+
+Hard limits: read-only. No code edits, no `git`, no deploys, localhost only,
+at most the number of model questions the main session names (they cost
+money), and results go back to the main session.
+
 ## Commits
 
 One session commits (the main one), so the history reads as one story and two

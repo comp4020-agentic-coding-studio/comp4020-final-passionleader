@@ -212,3 +212,5 @@
   font-weight: 400;
   opacity: 0.75;
 }
+.class-staff-only { margin: 8px 0 0; font-size: 0.85rem; opacity: 0.8; }
+.class-staff-only[hidden] { display: none; }

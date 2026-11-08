@@ -8,7 +8,7 @@ became my two planning files, and the agent turned them into the repo's
 documents, so it stopped asking me the same things again.
 
 The other half: UX is something AI doesn't know. It can't tell what feels
-awkward and what feels easy; only human experience can fix and improve
+awkward and what feels easy. Only human experience can fix and improve
 that. I found the phone bugs by using the app myself. The AI doesn't know what the real campus
 looks like, so I had to draw it or take photos for it. However good an LLM
 is, it can't fully carry real-world data across, and I think jobs might
@@ -28,3 +28,5 @@ and the database in one process, and one bucket holds every kind of file.
 If I take this further, I want an internet-facing server kept apart from a
 database nothing outside can reach, and buckets split by how secret their
 files are.
+
+<sub>Drafted in Korean, translated by Claude.</sub>
