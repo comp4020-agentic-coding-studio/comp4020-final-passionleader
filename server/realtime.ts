@@ -209,9 +209,11 @@ function roomLeft(space: SpaceId, name: string, who: { name: string; token: stri
   }
   // The host walking out hands the room to someone still inside.
   const state = rooms.get(space)!;
-  if (state.host === name) state.host = inSpace(space)[0]!.name;
+  // Another tab of theirs still inside keeps their host role and invitation.
+  const stillHere = inSpace(space).some((p) => p.name.toLowerCase() === name.toLowerCase());
+  if (!stillHere && state.host === name) state.host = inSpace(space)[0]!.name;
   // An invitation is good for one visit (the user's call, 10/30): out again, it takes a new one.
-  if (roomOf(space)?.kind === "counselling") state.invited.delete(name.toLowerCase());
+  if (!stillHere && roomOf(space)?.kind === "counselling") state.invited.delete(name.toLowerCase());
   roomSay(space, { name, text: `${name} left`, system: true });
   roomChanged(space);
 }
@@ -325,6 +327,11 @@ function onMessage(ws: WebSocket, raw: string): void {
       send(ws, { t: "action", kind: "restricted", what: "chat", until: stopped.until });
       return;
     }
+    // "/w name" with nothing to say is refused, never sent as open chat.
+    if (/^\/w(\s|$)/i.test(raw) && !WHISPER.test(raw)) {
+      send(ws, { t: "action", kind: "whisper-refused", reason: "empty", name: (raw.split(/\s+/)[1] ?? "").slice(0, 20) });
+      return;
+    }
     const whisper = WHISPER.exec(raw);
     if (whisper) {
       // Members only, both ends; it goes to every tab the reader has open
@@ -367,7 +374,11 @@ function onMessage(ws: WebSocket, raw: string): void {
     // In a meeting room the line goes in the room's window, until the room
     // empties, and nowhere else. Map chat is kept a day, only so a report
     // about abuse can carry the last few minutes (db.ts, recentChat).
-    if (rooms.has(player.space)) rooms.get(player.space)!.lines.push({ name: player.name, text });
+    if (rooms.has(player.space)) {
+      const st = rooms.get(player.space)!;
+      st.lines.push({ name: player.name, text });
+      if (st.lines.length > ROOM_LINES) st.lines.shift();
+    }
     else keepChatLine(player.space, player.name, text);
   } else if (msg.t === "pad" && typeof msg.text === "string") {
     // The room's shared notes: whoever is inside writes, everyone inside

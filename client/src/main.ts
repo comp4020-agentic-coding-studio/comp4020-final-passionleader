@@ -1780,6 +1780,7 @@ function goOnline(token: string): void {
         nobody: `Nobody signed up is called ${name}.`,
         self: "That's you.",
         offline: `${name} isn't here right now. Try ✉️ mail.`,
+        empty: "Write something after the name: /w name message",
       };
       toast(why[reason] ?? "That whisper didn't go.");
     },
