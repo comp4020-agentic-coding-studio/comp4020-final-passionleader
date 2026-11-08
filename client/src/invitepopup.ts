@@ -5,7 +5,10 @@ import "./invitepopup.css";
 // Esc) lets it be. It's good for one visit: leave the room and it takes a
 // new one (server/realtime.ts). Several at once: the newest shows.
 
-export function mountInvitePopup(opts: { accept(space: string): void }): { show(space: string, from: string, title: string): void; isOpen(): boolean } {
+// A knock (office hours) reuses this window: "<name> knocks. Invite them in?" and its button
+// sends the ordinary invitation (server/realtime.ts "invite"), so the same room rules hold.
+
+export function mountInvitePopup(opts: { accept(space: string): void; invite(name: string): void }): { show(space: string, from: string, title: string): void; knock(from: string, room: number | null): void; isOpen(): boolean } {
   const root = document.createElement("div");
   root.id = "invite-popup";
   root.hidden = true;
@@ -31,18 +34,34 @@ export function mountInvitePopup(opts: { accept(space: string): void }): { show(
   document.body.append(root);
 
   let space = "";
+  // Set while showing a knock: the name to invite instead of a room to go into.
+  let knocker: string | null = null;
   const hide = (): void => void (root.hidden = true);
   no.addEventListener("click", hide);
   yes.addEventListener("click", () => {
     hide();
-    opts.accept(space);
+    if (knocker) opts.invite(knocker);
+    else opts.accept(space);
   });
   root.addEventListener("keydown", (e) => {
     e.stopPropagation();
     if (e.key === "Escape") hide();
   });
   return {
+    knock(from, room) {
+      knocker = from;
+      title.textContent = "Someone knocked";
+      yes.textContent = "Invite them in";
+      no.textContent = "Not now";
+      text.textContent = `${from} knocked on your office hours${room ? ` (counselling room ${room})` : ""}. Invite them in? You need to be in a counselling room to do that; the invitation is good for one visit.`;
+      root.hidden = false;
+      yes.focus();
+    },
     show(to, from, roomTitle) {
+      knocker = null;
+      title.textContent = "You're invited";
+      yes.textContent = "Accept and go in";
+      no.textContent = "Decline";
       space = to;
       text.textContent = `${from} invites you to ${roomTitle}. Accept to go in now; the invitation is good for one visit.`;
       root.hidden = false;

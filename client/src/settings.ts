@@ -80,7 +80,7 @@ function stepTicks(labels: string[]): HTMLElement {
   return row;
 }
 
-export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
+export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; interests(): void; follows(): void; isStaff(): boolean; office(): { on: boolean; room: number | null }; setOffice(on: boolean, room: number | null): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -194,6 +194,40 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   mute.type = "button";
   mute.className = "settings-bug";
   mute.textContent = "🔇 Mute someone";
+  // Members only: interest tags shown under the name tag (interests.ts).
+  const interests = document.createElement("button");
+  interests.type = "button";
+  interests.className = "settings-bug";
+  interests.textContent = "🏷️ My interests";
+  // Members only: who you follow, to be told when they come on (follows.ts).
+  const follows = document.createElement("button");
+  follows.type = "button";
+  follows.className = "settings-bug";
+  follows.textContent = "🔔 Tell me when they're on";
+  // Staff only: "Office hours: open", with a counselling room if they like. The server decides who may.
+  const officeBox = document.createElement("fieldset");
+  const officeLegend = document.createElement("legend");
+  officeLegend.textContent = "Office hours";
+  const officeLabel = document.createElement("label");
+  officeLabel.className = "settings-check";
+  const officeOn = document.createElement("input");
+  officeOn.type = "checkbox";
+  officeLabel.append(officeOn, " Office hours: open (a badge on your name tag, and students in the Student Hub can knock)");
+  const officeRoomLabel = document.createElement("label");
+  officeRoomLabel.className = "settings-check";
+  const officeRoom = document.createElement("select");
+  officeRoom.setAttribute("aria-label", "Office hours room");
+  for (const [v, text] of [["", "No room named"], ...[1, 2, 3, 4, 5, 6].map((n) => [String(n), `Counselling room ${n}`])] as [string, string][]) {
+    const o = document.createElement("option");
+    o.value = v;
+    o.textContent = text;
+    officeRoom.append(o);
+  }
+  officeRoomLabel.append("Room: ", officeRoom);
+  const sendOffice = (): void => opts.setOffice(officeOn.checked, officeRoom.value ? Number(officeRoom.value) : null);
+  officeOn.addEventListener("change", sendOffice);
+  officeRoom.addEventListener("change", () => officeOn.checked && sendOffice());
+  officeBox.append(officeLegend, officeLabel, officeRoomLabel);
   // A guest's way to a real account (guests can't post, comment or stick notes).
   const verify = document.createElement("button");
   verify.type = "button";
@@ -304,7 +338,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   applyRow.className = "settings-apply-row";
   applyRow.append(note, apply);
   fieldset.append(applyRow);
-  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, bug, person, mute, credits, out, actions);
+  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, interests, follows, officeBox, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -316,6 +350,12 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     syncScreen();
     verify.hidden = !opts.isGuest();
     out.hidden = opts.isGuest();
+    interests.hidden = opts.isGuest();
+    follows.hidden = opts.isGuest();
+    officeBox.hidden = !opts.isStaff();
+    const now = opts.office();
+    officeOn.checked = now.on;
+    officeRoom.value = now.room ? String(now.room) : "";
     dialog.hidden = false;
     (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
   });
@@ -332,6 +372,14 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   mute.addEventListener("click", () => {
     dialog.hidden = true;
     opts.mute();
+  });
+  interests.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.interests();
+  });
+  follows.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.follows();
   });
   out.addEventListener("click", () => {
     dialog.hidden = true;

@@ -61,6 +61,11 @@ import {
   getProjects,
   sendBugReport,
   saveLook,
+  getTags,
+  saveTags,
+  getFollows,
+  setFollow,
+  setMutualOnly,
   removePost,
   removePostComment,
   heartPostComment,
@@ -101,6 +106,8 @@ let walked = 0;
 import { dogHappy } from "./spaces/dog.ts";
 import { poopMesh } from "./spaces/poop.ts";
 import { mountMute } from "./mute.ts";
+import { mountInterests } from "./interests.ts";
+import { mountFollows } from "./follows.ts";
 import { mountBoard } from "./board.ts";
 import { mountCafeGuide } from "./cafeguide.ts";
 import { mountCalendar } from "./calendar.ts";
@@ -170,11 +177,69 @@ const bugReport = mountBugReport({
 const highQuality = HIGH;
 // Mute (plan 33): someone's chat, bubbles and notes vanish from this screen only.
 const muteDialog = mountMute({ changed: () => syncMutedNotes() });
+// Interest tags (interests.ts): up to three from the server's fixed list, under your name tag.
+const interestsDialog = mountInterests({
+  load: () => (session ? getTags(session.token) : Promise.reject(new Error("Join first."))),
+  async save(tags) {
+    if (!session) return "Join first.";
+    try {
+      await saveTags(session.token, tags);
+      return null;
+    } catch (err) {
+      return err instanceof ApiError ? err.message : "Could not save your interests.";
+    }
+  },
+});
+// Office hours (the Student Hub): who has them open now, as the server last told us (only sent to people in the Hub),
+// and whether ours are open (staff; the server forgets with the socket, so it goes up again on each connect).
+let officeOpen: { name: string; room: number | null }[] = [];
+let myOffice: { on: boolean; room: number | null } = { on: false, room: null };
+// "Tell me when they're on" (follows.ts): the list lives on the server; this keeps a copy so Who's here can show it.
+let followedNow = new Set<string>();
+const apiMessage = (err: unknown, fallback: string): string => (err instanceof ApiError ? err.message : fallback);
+/** Follows or unfollows `name`; an error text, or null when it went. */
+async function followPerson(name: string, on: boolean): Promise<string | null> {
+  if (!session) return "Join first.";
+  try {
+    await setFollow(session.token, name, on);
+    if (on) followedNow.add(name.toLowerCase());
+    else followedNow.delete(name.toLowerCase());
+    return null;
+  } catch (err) {
+    return apiMessage(err, "Could not change that.");
+  }
+}
+const followsDialog = mountFollows({
+  async load() {
+    if (!session) throw new Error("Join first.");
+    const s = await getFollows(session.token);
+    followedNow = new Set(s.follows.map((n) => n.toLowerCase()));
+    return s;
+  },
+  follow: followPerson,
+  async setMutualOnly(on) {
+    if (!session) return "Join first.";
+    try {
+      await setMutualOnly(session.token, on);
+      return null;
+    } catch (err) {
+      return apiMessage(err, "Could not save that.");
+    }
+  },
+});
 mountSettings({
   credits: () => webview.open({ label: "Credits and licences", url: "/credits/", embeddable: true }),
   reportBug: () => bugReport.open(),
   reportPerson: () => bugReport.open(true),
   mute: () => muteDialog.open(),
+  interests: () => interestsDialog.open(),
+  follows: () => followsDialog.open(),
+  isStaff: () => isStaff(session),
+  office: () => myOffice,
+  setOffice(on, room) {
+    myOffice = { on, room };
+    net?.office(on, room);
+  },
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
   copyPlace: () => void copyPlaceLink(),
@@ -708,6 +773,11 @@ interface OtherView {
   /** Their name tag's element, to show their status beside the name. */
   label: HTMLElement;
   status?: string;
+  /** Their office hours are open: a small badge after "staff". */
+  office?: boolean;
+  /** Their interest tags, small under the name tag (a tag of its own, so the name keeps its pill). */
+  tagsKey: string;
+  tagsObj?: CSS2DObject;
 }
 const others = new Map<string, OtherView>();
 let selfId = "";
@@ -721,10 +791,10 @@ function upsertOther(p: RemotePlayer): void {
     const variant = variantOf(look);
     const avatar = new Avatar(look);
     const group = avatar.group;
-    const label = tag(group, p.staff ? `${p.name} · staff` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label").element;
+    const label = tag(group, p.staff ? `${p.name} · staff${p.office ? " · Office hours" : ""}` : p.name, 2.2, p.staff ? "player-label staff-label" : "player-label").element;
     group.position.set(p.x, p.y, p.z);
     scene.add(group);
-    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff, label };
+    view = { name: p.name, avatar, variant, group, target: new THREE.Vector3(), rot: p.rot, speed: 0, lookKey: JSON.stringify(look), staff: !!p.staff, label, office: !!p.office, tagsKey: "" };
     others.set(p.id, view);
   }
   // A new look (they changed it while here): recolour in place.
@@ -736,11 +806,23 @@ function upsertOther(p: RemotePlayer): void {
     view.avatar.setLook(look);
   }
   // Their status beside the name ("👋 open to chat"), when it changes.
-  if ((p.status ?? "") !== (view.status ?? "")) {
+  if ((p.status ?? "") !== (view.status ?? "") || !!p.office !== !!view.office) {
     view.status = p.status;
-    const base = p.staff ? `${p.name} · staff` : p.name;
+    view.office = !!p.office;
+    const base = `${p.staff ? `${p.name} · staff` : p.name}${p.office ? " · Office hours" : ""}`;
     view.label.textContent = p.status ? `${statusText(p.status).icon} ${base}` : base;
-    view.label.title = p.status ? statusText(p.status).label : "";
+    view.label.title = p.status ? statusText(p.status).label : p.office ? "Office hours are open: open Who's here in the Student Hub to knock" : "";
+  }
+  // Their interest tags, under the name tag, when they change.
+  const tagsKey = (p.tags ?? []).join("|");
+  if (tagsKey !== view.tagsKey) {
+    view.tagsKey = tagsKey;
+    if (view.tagsObj) {
+      view.tagsObj.element.remove();
+      view.group.remove(view.tagsObj);
+      view.tagsObj = undefined;
+    }
+    if (p.tags?.length) view.tagsObj = tag(view.group, p.tags.join(" · "), 1.98, "player-tags");
   }
   // Sitting: on the seat, facing its way, whatever their last step said.
   view.seat = p.seat ? seatAt(p.seat) : undefined;
@@ -1179,7 +1261,7 @@ const statusPicker = mountStatus(hudName, (s) => net?.status(s));
 // Press the online line: who's in this space by name, elsewhere as counts (whohere.ts).
 mountWhoHere(hudOnline, {
   // The status icon is shown beside the name, never part of it: in the name it went into "/w 👋 name" (RICE v3).
-  here: () => [...others.values()].map((o) => ({ name: o.name, icon: o.status ? statusText(o.status).icon : "", staff: o.staff })),
+  here: () => [...others.values()].map((o) => ({ name: o.name, icon: o.status ? statusText(o.status).icon : "", staff: o.staff, tags: o.tagsKey ? o.tagsKey.split("|") : [] })),
   counts: () => {
     const n = (id: string): number => onlineCounts[id] ?? 0;
     return [
@@ -1195,6 +1277,17 @@ mountWhoHere(hudOnline, {
   me: () => session?.name ?? "",
   mayWhisper: () => isMember(session),
   whisper: (name) => chat.prefill(`/w ${name} `),
+  officeNow: () => (space?.id === "hub" ? officeOpen : []),
+  mayKnock: () => isMember(session) && !isStaff(session),
+  knock(name) {
+    net?.knock(name);
+  },
+  followed: () => followedNow,
+  async toggleFollow(name) {
+    const on = !followedNow.has(name.toLowerCase());
+    const err = await followPerson(name, on);
+    toast(err ?? (on ? `You'll be told when ${name} is on the campus.` : `Not following ${name} any more.`));
+  },
 });
 
 async function loadClassrooms(): Promise<void> {
@@ -1368,7 +1461,7 @@ for (const id of ["class-picker", "webview", "dog-prompt", "cafe-guide", "hub-ca
 }
 
 const busy = (): boolean =>
-  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
+  chat.isTyping() || roomPanel.isTyping() || muteDialog.isOpen() || interestsDialog.isOpen() || followsDialog.isOpen() || npcChat.isOpen() || mailbox.isOpen() || panel.isOpen() || composer.isOpen() || chooser.isOpen() || settingsOpen() || picker.isOpen() || webview.isOpen() || dogPrompt.isOpen() || cafeGuide.isOpen() || calendar.isOpen() || guide.isOpen() || invitePopup.isOpen() || board.isOpen() || projectList.isOpen() || linkEditor.isOpen() || bugReport.isOpen() || lookPicker.isOpen() || signupPrompt.isOpen();
 const keyGuide = mountKeyGuide();
 installDialogKeys();
 
@@ -1443,6 +1536,7 @@ const npcTags: { obj: CSS2DObject; at: THREE.Object3D }[] = [];
 const NPC_TAG_RANGE = 5.5;
 // An invitation into a counselling or interview room: accept to be taken straight in.
 const invitePopup = mountInvitePopup({
+  invite: (name) => void (net?.invite(name) || toast("Couldn't send that: reconnecting. Try again in a moment.")),
   accept(to) {
     const ref = meetingRoom(to);
     if (!ref) return;
@@ -1792,7 +1886,11 @@ async function enterAs(s: Session): Promise<void> {
   storage.set("campus.token", s.token);
   storage.set("campus.role", s.role);
   // Mail waiting since last time.
-  if (isMember(s)) void getMailbox(s.token).then((box) => showUnread(box.unread)).catch(() => {});
+  if (isMember(s)) {
+    void getMailbox(s.token).then((box) => showUnread(box.unread)).catch(() => {});
+    // Who they follow, for Who's here's Follow buttons.
+    void getFollows(s.token).then((f) => (followedNow = new Set(f.follows.map((n) => n.toLowerCase())))).catch(() => {});
+  }
   else {
     showUnread(0);
     guestNotice.maybeOpen();
@@ -1862,6 +1960,7 @@ function goOnline(token: string): void {
       selfId = id;
       // The status picked last time goes up again (the server forgets it with the socket).
       window.setTimeout(() => statusPicker.resend(), 300);
+      if (myOffice.on) window.setTimeout(() => net?.office(true, myOffice.room), 300);
       // The server may have us elsewhere after a reconnect: tell it where we are.
       if (space) net?.enter(space.id, player.position.x, player.position.z);
       players.forEach(upsertOther);
@@ -1900,6 +1999,31 @@ function goOnline(token: string): void {
       // In a meeting room the map chat is hidden: show it in the room's window.
       if (roomPanel.isOpen()) roomPanel.add(line);
       else chat.add({ ...line, whisper: true });
+    },
+    officeNow(list) {
+      officeOpen = list;
+    },
+    knocked(from, room) {
+      sfx("message");
+      tabAlert();
+      invitePopup.knock(from, room);
+    },
+    knockResult(ok, text) {
+      if (ok) return toast(`Knocked: ${text} has been asked to invite you in.`);
+      sfx("error");
+      toast(
+        text === "wait" ? "You knocked a moment ago. You can knock again in a minute."
+        : text === "staff only" ? "Only staff open office hours."
+        : text === "not open" ? "Their office hours have closed."
+        : text === "not in the hub" ? "Knock from the Student Hub."
+        : text === "guest" ? "Sign up to knock."
+        : "You can't do that.",
+      );
+    },
+    followedOn(name, where) {
+      sfx("message");
+      tabAlert();
+      toast(`${name} is on the campus (in ${where})`);
     },
     invited(to, from) {
       sfx("message");
@@ -2045,6 +2169,8 @@ function goOnline(token: string): void {
               ? "Staff open these rooms. A member of staff inside can invite you in."
             : reason === "no such user"
               ? "There's nobody with that name."
+            : reason === "not in a counselling room"
+              ? "Step into a counselling room first, then invite them."
               : reason === "invited a moment ago"
                 ? "You just invited them: you can ask again in a few seconds."
                 : "You can't do that here.",

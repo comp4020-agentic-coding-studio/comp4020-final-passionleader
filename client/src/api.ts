@@ -158,6 +158,15 @@ export const deleteMail = (token: string, id: number): Promise<{ unread: number 
 export const isStaff = (s: { role: string } | null | undefined): boolean => !!s && (s.role === "staff" || s.role === "admin");
 export const isMember = (s: { role: string } | null | undefined): boolean => !!s && s.role !== "guest";
 
+/** Your interest tags and the fixed list to pick from (members only; the server checks the pick). */
+export const getTags = (token: string): Promise<{ tags: string[]; courses: string[]; interests: string[]; max: number }> => request("/api/tags/mine", "POST", { token });
+export const saveTags = (token: string, tags: string[]): Promise<unknown> => request("/api/tags", "PUT", { token, tags });
+
+/** Who you follow for "tell me when they're on", and whether people you don't follow back may be told (members only; server-checked). */
+export const getFollows = (token: string): Promise<{ follows: string[]; max: number; mutualOnly: boolean }> => request("/api/follows", "POST", { token });
+export const setFollow = (token: string, name: string, on: boolean): Promise<unknown> => request("/api/follows", "PUT", { token, name, on });
+export const setMutualOnly = (token: string, on: boolean): Promise<unknown> => request("/api/follows/mutual-only", "PUT", { token, on });
+
 export const saveLook = (token: string, look: Look): Promise<unknown> => request("/api/look", "PUT", { token, look });
 
 export const getNotes = (space: SpaceId): Promise<Note[]> => request<Note[]>(`/api/notes?space=${space}`);

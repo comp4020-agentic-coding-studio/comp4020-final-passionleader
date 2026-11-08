@@ -8,13 +8,20 @@ import "./whohere.css";
 
 export interface WhoHereDeps {
   /** The people in this space now: name and whether they're staff. */
-  here(): { name: string; icon?: string; staff: boolean }[];
+  here(): { name: string; icon?: string; staff: boolean; tags?: string[] }[];
   /** Head counts per place, labelled ("Hub", 3). */
   counts(): [string, number][];
   me(): string;
   /** Whether you may whisper (members only). */
   mayWhisper(): boolean;
   whisper(name: string): void;
+  /** Who you follow now (lower-case names), and a way to follow or unfollow; null if you can't (a guest). */
+  /** Staff in the Student Hub with office hours open now (empty anywhere else), and whether you may knock (a signed-up student). */
+  officeNow(): { name: string; room: number | null }[];
+  mayKnock(): boolean;
+  knock(name: string): void;
+  followed(): Set<string>;
+  toggleFollow(name: string): Promise<void>;
 }
 
 export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close(): void; isOpen(): boolean } {
@@ -41,6 +48,26 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
     x.setAttribute("aria-label", "Close");
     x.addEventListener("click", close);
     head.append(h, x);
+    // Office hours (Student Hub): who is open now, and a Knock for students.
+    const open = deps.officeNow().filter((o) => o.name.toLowerCase() !== me);
+    const hours = document.createElement("div");
+    hours.className = "who-office";
+    for (const o of open) {
+      const row = document.createElement("p");
+      row.textContent = `Office hours now: ${o.name}${o.room ? ` (room ${o.room})` : ""} `;
+      if (deps.mayKnock()) {
+        const k = document.createElement("button");
+        k.type = "button";
+        k.textContent = "Knock";
+        k.title = `Ask ${o.name} to invite you in`;
+        k.addEventListener("click", () => {
+          deps.knock(o.name);
+          k.disabled = true;
+        });
+        row.append(k);
+      }
+      hours.append(row);
+    }
     const list = document.createElement("ul");
     const meLi = document.createElement("li");
     meLi.textContent = `${deps.me()} (you)`;
@@ -65,6 +92,27 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
         deps.whisper(p.name);
       });
       li.append(b);
+      // Follow: be told once when they come onto the campus (members, and only members to follow).
+      if (deps.mayWhisper() && !/^guest/i.test(p.name)) {
+        const on = deps.followed().has(p.name.toLowerCase());
+        const f = document.createElement("button");
+        f.type = "button";
+        f.className = "who-follow";
+        f.textContent = on ? "🔔 Following" : "🔔 Follow";
+        f.setAttribute("aria-pressed", String(on));
+        f.title = on ? `Stop being told when ${p.name} comes on` : `Tell me when ${p.name} is on the campus`;
+        f.addEventListener("click", () => {
+          void deps.toggleFollow(p.name).then(draw);
+        });
+        li.append(f);
+      }
+      // Their interest tags, small, only for the people already in your space.
+      if (p.tags?.length) {
+        const t = document.createElement("span");
+        t.className = "who-tags";
+        t.textContent = p.tags.join(" · ");
+        li.append(t);
+      }
       list.append(li);
     }
     if (!people.length) {
@@ -80,7 +128,7 @@ export function mountWhoHere(trigger: HTMLElement, deps: WhoHereDeps): { close()
     const hint = document.createElement("p");
     hint.className = "who-hint";
     hint.textContent = deps.mayWhisper() ? "Press a name to whisper to them." : "Members can press a name to whisper.";
-    panel.append(head, list, elsewhere, hint);
+    panel.append(head, hours, list, elsewhere, hint);
   }
 
   function open(): void {

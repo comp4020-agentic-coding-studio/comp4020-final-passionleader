@@ -21,8 +21,12 @@ export interface RemotePlayer {
   look?: Look | null;
   /** ANU staff (or the admin): a mark on their name tag. */
   staff?: boolean;
+  /** Their office hours are open (staff only). */
+  office?: boolean;
   /** How open they are to a chat, if they've said (RICE v2 #3). */
   status?: PlayerStatus;
+  /** Up to three interest tags from the server's fixed list. */
+  tags?: string[];
 }
 export type PlayerStatus = "chat" | "study" | "away";
 
@@ -108,6 +112,14 @@ export interface NetHandlers {
   /** The admin put us out: stopped from coming in ("restricted"), or a one-off kick ("kicked"). */
   removed(why: "restricted" | "kicked"): void;
   status(online: boolean): void;
+  /** Who in the Student Hub has office hours open (name and maybe a counselling room number). */
+  officeNow(list: { name: string; room: number | null }[]): void;
+  /** A student knocked on our office hours: invite them in. */
+  knocked(from: string, room: number | null): void;
+  /** Our knock went to `name`, or the server refused office hours or a knock (reason). */
+  knockResult(ok: boolean, text: string): void;
+  /** Someone you follow came onto the campus: their name and the space's name (never a position). */
+  followedOn(name: string, where: string): void;
 }
 
 // Matches the server's tick: no point sending faster than it broadcasts.
@@ -131,6 +143,10 @@ export interface Net {
   pad(text: string): void;
   /** Starts (or resumes), pauses or resets the room's shared timer. */
   timer(op: "start" | "pause" | "reset"): boolean;
+  /** Staff: opens or closes office hours (optionally naming a counselling room, 1 to 6); the server checks. */
+  office(on: boolean, room?: number | null): void;
+  /** A student knocks on a staff member's open office hours. */
+  knock(name: string): void;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): boolean;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -209,6 +225,11 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "room-refused") return on.roomRefused(m.space as SpaceId, m.reason as string);
           if (m.kind === "seat-refused") return on.seatRefused();
           if (m.kind === "restricted") return on.restricted(m.what as string, m.until as string);
+          if (m.kind === "followed-on" && typeof m.name === "string" && typeof m.where === "string") return on.followedOn(m.name, m.where);
+          if (m.kind === "office-now" && Array.isArray(m.list)) return on.officeNow(m.list as { name: string; room: number | null }[]);
+          if (m.kind === "knocked" && typeof m.from === "string") return on.knocked(m.from, typeof m.room === "number" ? m.room : null);
+          if (m.kind === "knock-sent") return on.knockResult(true, String(m.name));
+          if (m.kind === "knock-refused" || m.kind === "office-refused") return on.knockResult(false, String(m.reason));
           if (m.kind === "all-wait") return on.allWait(m.seconds as number);
       }
     };
@@ -265,6 +286,12 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     timer(op) {
       return sendNow({ t: "action", kind: "timer", op });
+    },
+    office(on, room) {
+      sendNow({ t: "office", on, room: room ?? null });
+    },
+    knock(name) {
+      sendNow({ t: "knock", name });
     },
     invite(name) {
       return sendNow({ t: "invite", name });

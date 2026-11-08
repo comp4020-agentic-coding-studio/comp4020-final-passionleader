@@ -3,10 +3,11 @@ import type { IncomingMessage, Server } from "node:http";
 import type { Duplex } from "node:stream";
 import { WebSocketServer, type WebSocket } from "ws";
 import { MAX_CHAT } from "./accounts.ts";
-import { dropRoomFiles, keepRoomFiles, findByName, findByToken, isMember, keepChatLine, lastSpot, lookOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
+import { isStaff, dropRoomFiles, keepRoomFiles, findByName, findByToken, followersOf, isFollowing, isMember, presenceMutualOnly, keepChatLine, lastSpot, lookOf, tagsOf, poopsNow, putPoop, restrictionOn, saveChat, saveLastSpot, seen, type Look } from "./db.ts";
 import { removeObjects } from "./files.ts";
 import { log } from "./log.ts";
-import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
+import { ROOM_CAP, clampTo, isSpace, roomOf, spaceInfo, type SpaceId } from "./spaces.ts";
+import { KNOCK_GAP_MS, PRESENCE_GAP_MS, mayTell, validOfficeRoom } from "./social.ts";
 
 // The real-time layer: one WebSocket per open tab, all to this one server.
 // Everything is per space: you only see, hear and get updates about people in
@@ -16,7 +17,7 @@ import { ROOM_CAP, clampTo, isSpace, roomOf, type SpaceId } from "./spaces.ts";
 // the spaces and what people do in them can keep changing.
 
 /** `seat` is the seat they're sitting on ("<space>:<n>"), if any; `look` how their figure looks. */
-export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true; status?: Status };
+export type Player = { id: string; name: string; space: SpaceId; x: number; y: number; z: number; rot: number; seat?: string; look?: Look | null; staff?: true; status?: Status; tags?: string[]; office?: true };
 /** How open someone is to a chat (RICE v2 #3): one of three, never free text, shown beside their name to their space. */
 export type Status = "chat" | "study" | "away";
 const STATUSES: ReadonlySet<string> = new Set(["chat", "study", "away"]);
@@ -65,6 +66,16 @@ const ONLINE_MS = 5_000;
 let lastOnline = "";
 
 const inSpace = (space: SpaceId): Player[] => [...players.values()].filter((p) => p.space === space);
+
+/** New interest tags for everyone called `name` (all their tabs), shown to their space at once. */
+export function setTags(name: string, tags: string[]): void {
+  for (const p of players.values()) {
+    if (p.name.toLowerCase() !== name.toLowerCase()) continue;
+    if (tags.length) p.tags = tags;
+    else delete p.tags;
+    dirty.add(p.space);
+  }
+}
 
 /** A new look for everyone called `name` (all their tabs), shown to their space at once. */
 export function setLook(name: string, look: Look): void {
@@ -321,6 +332,68 @@ function roomLeft(space: SpaceId, name: string, who: { name: string; token: stri
   roomChanged(space);
 }
 
+// --- office hours -------------------------------------------------------------------
+// Staff (and the admin) may open "Office hours", with a counselling room if they like, while they
+// are on the campus. It's an announcement they chose to make, so it is the one thing besides head
+// counts that leaves a person's space: the Student Hub's people are told who has office hours open
+// (a name and maybe a room number, never where the person is), and a "Office hours" badge shows on
+// their name tag to whoever sees it. A student's "Knock" goes to that staff member alone, who is
+// asked to invite them in (the counselling-room invitation). It's kept in memory with the sockets
+// and ends when the staff member's last tab closes.
+const office = new Map<string, { name: string; room: number | null }>(); // by lower-cased name
+const lastKnock = new Map<string, number>(); // "student|staff", lower-cased
+
+const officeList = (): { name: string; room: number | null }[] => [...office.values()];
+
+/** Tells everyone in the Student Hub (or just `ws`) who has office hours open. */
+function sendOffice(only?: WebSocket): void {
+  const msg = { t: "action", kind: "office-now", list: officeList() };
+  if (only) return send(only, msg);
+  broadcastSpace("hub", msg);
+}
+
+/** Opens or closes `name`'s office hours in all their tabs; the Hub and their name tag are told. */
+function setOffice(name: string, on: boolean, room: number | null): void {
+  const key = name.toLowerCase();
+  if (on) office.set(key, { name, room });
+  else office.delete(key);
+  for (const p of players.values()) {
+    if (p.name.toLowerCase() !== key) continue;
+    if (on) p.office = true;
+    else delete p.office;
+    dirty.add(p.space);
+  }
+  sendOffice();
+}
+
+// --- presence alerts ----------------------------------------------------------------
+// "Tell me when they're on": someone a member follows comes onto the campus and they get one
+// notice with the space's name, never a position. This is the one thing that leaves a person's
+// space besides head counts, so it is narrow: members at both ends, only to followers the followed
+// person allows (mutual follows by default), a meeting room is only ever "a room", and a follower
+// hears at most once every ten minutes about the same person.
+const lastTold = new Map<string, number>();
+
+/** What a follower is told about where someone is: the space's name, never more; a meeting room (and the easter egg's) is "a room". */
+const whereLabel = (space: SpaceId): string => (roomOf(space) || space === "poop" ? "a room" : (spaceInfo(space)?.label ?? "the campus"));
+
+/** `name` just came on (no other tab of theirs was open): tell the followers they allow. */
+function announceOn(visitor: { name: string; role: string }, space: SpaceId): void {
+  if (!isMember(visitor)) return;
+  const mutualOnly = presenceMutualOnly(visitor.name);
+  const now = Date.now();
+  for (const follower of followersOf(visitor.name)) {
+    const person = findByName(follower);
+    if (!person || !isMember(person)) continue;
+    if (!mayTell(isFollowing(visitor.name, follower), mutualOnly)) continue;
+    const key = `${follower.toLowerCase()}|${visitor.name.toLowerCase()}`;
+    if (now - (lastTold.get(key) ?? 0) < PRESENCE_GAP_MS) continue;
+    if (![...players.values()].some((p) => p.name.toLowerCase() === follower.toLowerCase())) continue;
+    lastTold.set(key, now);
+    tellPerson(follower, { t: "action", kind: "followed-on", name: visitor.name, where: whereLabel(space) });
+  }
+}
+
 function send(ws: WebSocket, msg: unknown): void {
   if (ws.readyState === ws.OPEN) ws.send(JSON.stringify(msg));
 }
@@ -398,6 +471,7 @@ function onMessage(ws: WebSocket, raw: string): void {
       roomLeft(from, player.name, owners.get(ws) ?? null);
       roomJoined(to, player.name);
       if (to === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
+      if (to === "hub") sendOffice(ws);
     }
     // Into a meeting room, the client waits for this before it walks in.
     const view = roomView(to);
@@ -556,6 +630,38 @@ function onMessage(ws: WebSocket, raw: string): void {
     roomChanged(player.space);
     // If they're on campus, they're asked at once: accept to be taken straight in.
     tellPerson(invitee.name, { t: "action", kind: "room-invited", space: player.space, from: player.name });
+  } else if (msg.t === "office" && typeof msg.on === "boolean") {
+    // Only staff and the admin open office hours; a student's try is refused and logged.
+    const who = owners.get(ws) ?? null;
+    const room = validOfficeRoom(msg.room);
+    if (!isStaff(who) || room === undefined) {
+      log("refused", who, { action: "office-hours", reason: !isStaff(who) ? "not staff" : "no such room" });
+      send(ws, { t: "action", kind: "office-refused", reason: !isStaff(who) ? "staff only" : "no such room" });
+      return;
+    }
+    setOffice(player.name, msg.on, msg.on ? room : null);
+    log("office-hours", who, { on: msg.on, room: msg.on ? room : null });
+  } else if (msg.t === "knock" && typeof msg.name === "string") {
+    // A student knocks on a staff member's open office hours, from the Student Hub where they're listed.
+    // It reaches that staff member alone, who is asked to invite them in.
+    const who = owners.get(ws) ?? null;
+    const target = office.get(msg.name.normalize("NFKC").trim().toLowerCase());
+    const reason = !who || !isMember(who) ? "guest" : isStaff(who) ? "staff" : player.space !== "hub" ? "not in the hub" : !target ? "not open" : null;
+    if (reason || !target) {
+      log("refused", who, { action: "knock", reason });
+      send(ws, { t: "action", kind: "knock-refused", reason });
+      return;
+    }
+    const key = `${player.name.toLowerCase()}|${target.name.toLowerCase()}`;
+    const now = Date.now();
+    if (now - (lastKnock.get(key) ?? 0) < KNOCK_GAP_MS) {
+      send(ws, { t: "action", kind: "knock-refused", reason: "wait" });
+      return;
+    }
+    lastKnock.set(key, now);
+    log("knock", who, { to: target.name });
+    tellPerson(target.name, { t: "action", kind: "knocked", from: player.name, room: target.room });
+    send(ws, { t: "action", kind: "knock-sent", name: target.name });
   } else if (msg.t === "poop" && player.space === "poop") {
     const key = player.name.toLowerCase();
     const now = Date.now();
@@ -601,10 +707,19 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
   const player: Player = { id: randomUUID(), name, space: start.space, x: start.x, y: 0, z: start.z, rot: 0, look: lookOf(name) };
   // Staff (and the admin) carry a "staff" mark on their name tag (1c), so people know whom they're talking to.
   if (visitor.role === "staff" || visitor.role === "admin") player.staff = true;
+  if (office.has(name.toLowerCase())) player.office = true;
+  // Interest tags are a member's, kept with the account (a guest has none).
+  if (isMember(visitor)) {
+    const tags = tagsOf(name);
+    if (tags.length) player.tags = tags;
+  }
+  const wasOnline = [...players.values()].some((p) => p.name.toLowerCase() === name.toLowerCase());
   players.set(ws, player);
   alive.add(ws);
+  if (!wasOnline) announceOn(visitor, player.space);
   send(ws, { t: "welcome", id: player.id, space: player.space, players: inSpace(player.space) });
   if (player.space === "poop") send(ws, { t: "action", kind: "poops", poops: poopList() });
+  if (player.space === "hub") sendOffice(ws);
   send(ws, { t: "action", kind: "online", counts: onlineCounts() });
   dirty.add(player.space);
   log("connect", visitor, { space: player.space, online: players.size }, { ip });
@@ -635,6 +750,8 @@ function onConnect(ws: WebSocket, visitor: { name: string; token: string; role: 
     }
     broadcastSpace(player.space, { t: "leave", id: player.id });
     roomLeft(player.space, player.name, visitor);
+    // Office hours end with the last tab: nobody is left to answer a knock.
+    if (office.has(player.name.toLowerCase()) && ![...players.values()].some((p) => p.name.toLowerCase() === player.name.toLowerCase())) setOffice(player.name, false, null);
   });
 }
 

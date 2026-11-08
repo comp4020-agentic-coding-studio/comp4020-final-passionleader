@@ -54,6 +54,8 @@ export type Event =
   | "classroom-removed"
   | "classroom-link"
   | "room-invite"
+  | "office-hours"
+  | "knock"
   | "room-closed"
   | "bug-report"
   | "person-report"

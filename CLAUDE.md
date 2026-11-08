@@ -274,6 +274,26 @@ when a flow changes.
   is one of those three values, never free text, at most one change every
   two seconds, checked on the server; kept in server memory with the
   socket (and in your browser), shown to your space only.
+- "Tell me when they're on": a member follows up to 20 other members by name
+  (from Who's here), kept in SQLite; when one comes onto the campus (no other tab
+  already open) the follower gets one notice, "<name> is on the campus (in <space
+  name>)", never a position, a meeting room only "a room", at most once every ten
+  minutes per person. Members at both ends. By default only mutual follows are
+  told; the followed person may allow anyone who follows them in Settings. Checked
+  on the server; nobody is shown who follows them.
+- Office hours: only staff and the admin open them (optionally naming one of the Hub's
+  counselling rooms), checked on the server and logged when refused; they last
+  while the staff member is online. An "Office hours" badge shows on their name
+  tag and the Student Hub's people see "Office hours now: <name>" in Who's here
+  (a name and a room number, never a position). A signed-up student in the Hub
+  may "Knock": the staff member alone gets the counselling-room invitation
+  prompt (they invite from inside a counselling room), at most one knock per
+  student per staff member a minute.
+- Interest tags: a member shows at most three, picked from a fixed list the server
+  owns (course codes and fifteen interests, `server/social.ts`), never typed;
+  anything off the list is refused on the server, they are kept with the account
+  and shown only to the people in the same space (name tag, Who's here). Guests
+  have none.
 - Outside follows Canberra's time of day (client only: sky, sun, lamps;
   indoors only the sun's shafts go at night, the windows stay as they are); `?hour=` shows another hour for checking.
 - Familiar places (README): the spaces follow the real campus. Buildings,
