@@ -276,6 +276,13 @@ when a flow changes.
   socket (and in your browser), shown to your space only.
 - Outside follows Canberra's time of day (client only: sky, sun, lamps;
   indoors only the sun's shafts go at night, the windows stay as they are); `?hour=` shows another hour for checking.
+- Outside also follows Canberra's weather: the server asks Open-Meteo (public
+  data, nothing about any visitor goes out) at most every 15 minutes, keeps it
+  in memory and the cache table and serves it at `/api/weather`; start-up never
+  waits for it and a failed fetch means clear. Cloud greys and dims the sky,
+  rain adds light rain on Medium and High (none with Reduce motion) and a
+  darker tone, wind sways the grass harder. Settings shows a "Weather" line;
+  `?weather=rain|cloud|clear` shows one for checking.
 - Familiar places (README): the spaces follow the real campus. Buildings,
   paths, the creek and the scenery past the edges keep their OpenStreetMap
   positions (one scale and turn, 0.742 and -35.8°, as in

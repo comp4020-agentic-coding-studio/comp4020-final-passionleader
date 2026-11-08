@@ -1,4 +1,5 @@
 import * as THREE from "three";
+import type { Weather } from "./weather.ts";
 
 // The campus's light follows Canberra's clock (RICE v2 #2, 10/30): a soft
 // golden hour before sunset, a blue dusk, a dark night with the lamps lit,
@@ -72,6 +73,32 @@ export function canberraHour(now = new Date(Date.now() + shift * 3_600_000)): { 
 
 const a = new THREE.Color();
 const b = new THREE.Color();
+/**
+ * Canberra's weather laid over the time of day (weather.ts): cloud greys and dims the sky and the
+ * sun, rain a little more and a soft darker tone, and rain brings the lamps on a touch sooner.
+ * Clear leaves the day exactly as it was. At night there's little left to grey, so it barely shows.
+ */
+export function withWeather(d: Daylight, w: Weather): Daylight {
+  // How much of the day is taken: cloud by its cover, rain by itself (heavier rain, darker).
+  const g = w.kind === "rain" ? Math.min(1, 0.7 + w.rain * 0.08) : w.kind === "cloud" ? 0.35 + 0.45 * THREE.MathUtils.clamp((w.cloud - 60) / 40, 0, 1) : 0;
+  if (g <= 0) return d;
+  const grey = (c: THREE.Color, level: number): THREE.Color => {
+    const lum = 0.2126 * c.r + 0.7152 * c.g + 0.0722 * c.b;
+    return c.clone().lerp(new THREE.Color(lum * level, lum * level, lum * level * 1.04), g);
+  };
+  return {
+    ...d,
+    // The sky photo is multiplied by this: toward a flat grey, darker in rain.
+    sky: grey(d.sky, w.kind === "rain" ? 0.62 : 0.8),
+    sunColour: grey(d.sunColour, 0.95),
+    sunIntensity: d.sunIntensity * (1 - 0.65 * g),
+    hemiIntensity: d.hemiIntensity * (1 - 0.1 * g),
+    fog: grey(d.fog, w.kind === "rain" ? 0.72 : 0.88),
+    lamps: Math.min(1, d.lamps + (w.kind === "rain" ? 0.18 * (1 - d.lamps) : 0)),
+    exposure: d.exposure * (1 - (w.kind === "rain" ? 0.14 : 0.06) * g),
+  };
+}
+
 export function daylightAt(hour: number, month: number): Daylight {
   const ks = keys(month);
   let i = 0;

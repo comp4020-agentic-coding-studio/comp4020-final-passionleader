@@ -12,6 +12,7 @@
 import { getBgmVolume, getSfxVolume, setBgmVolume, setSfxVolume } from "./audio.ts";
 import { readVoiceVolume, saveVoiceVolume } from "./voicechat.ts";
 import { ICONS } from "./icons.ts";
+import { weatherLine } from "./weather.ts";
 
 export type Quality = "low" | "medium" | "high";
 const KEY = "campus.quality";
@@ -304,7 +305,11 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   applyRow.className = "settings-apply-row";
   applyRow.append(note, apply);
   fieldset.append(applyRow);
-  card.append(head, sound, textBox, fieldset, motionBox2, screen, place, verify, bug, person, mute, credits, out, actions);
+  // What the weather is in Canberra now (weather.ts), read when the dialog opens.
+  const weather = document.createElement("p");
+  weather.className = "settings-note settings-weather";
+  weather.id = "settings-weather";
+  card.append(head, sound, textBox, fieldset, motionBox2, screen, weather, place, verify, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -314,6 +319,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   };
   button.addEventListener("click", () => {
     syncScreen();
+    weather.textContent = `Weather: ${weatherLine()}`;
     verify.hidden = !opts.isGuest();
     out.hidden = opts.isGuest();
     dialog.hidden = false;

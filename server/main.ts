@@ -116,6 +116,7 @@ import { browserTag, KEPT, keepIn, log } from "./log.ts";
 import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePlayer, noticeRestriction, tellPerson, roomSessionOf, roomShare, setLook } from "./realtime.ts";
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
+import { startWeather, weatherForClient } from "./weather.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
 import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
@@ -1424,6 +1425,12 @@ const s3Error = (c: Context, err: unknown): Response => {
 
 // A test server's clock shift (CLOCK_SHIFT_HOURS, never set on Fly): QA by day sees the campus at
 // night, and the other way round (the user's ask, 11/4). The client's time of day adds it.
+// Canberra's weather for the sky (weather.ts): the same answer for everyone, public data only.
+app.get("/api/weather", (c) => {
+  c.header("Cache-Control", "no-store");
+  return c.json(weatherForClient());
+});
+
 app.get("/api/clock", (c) => c.json({ shiftHours: Number(process.env.CLOCK_SHIFT_HOURS) || 0 }));
 
 app.get("/api/files/status", (c) => c.json({ ready: s3Ready(), code: s3Ready() ? null : "S3-CONFIG" }));
@@ -1621,6 +1628,8 @@ const purge = (): void => {
 };
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();
+// The weather is fetched in the background: start-up never waits for Open-Meteo.
+startWeather();
 
 // Seongsu answers from the project's own documents (projectdocs.ts), loaded on every start, so a
 // deploy that changes README, PROCESS, a decision record or CLAUDE.md changes what he knows.

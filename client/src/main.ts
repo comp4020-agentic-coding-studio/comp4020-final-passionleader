@@ -74,7 +74,9 @@ import { mountChat } from "./chatui.ts";
 import { mountJoinNow } from "./joinnow.ts";
 import { mountWhoHere } from "./whohere.ts";
 import { keepScreenOn } from "./wakelock.ts";
-import { canberraHour, clockReady, daylightAt, outside } from "./daylight.ts";
+import { canberraHour, clockReady, daylightAt, outside, withWeather } from "./daylight.ts";
+import { makeRain } from "./rain.ts";
+import { onWeather, weatherNow } from "./weather.ts";
 import { mountStatus, statusText } from "./status.ts";
 import { mountKeyGuide } from "./keyguide.ts";
 import { connect, type Emote, type Net, type RemotePlayer, type RoomState } from "./net.ts";
@@ -116,7 +118,7 @@ import { mountRadial } from "./radial.ts";
 import { getSpace, isSpaceId, meetingRoom, setClassrooms } from "./spaces/index.ts";
 import { roomArrival } from "./spaces/meeting.ts";
 import { materialsOf, occludersOf } from "./spaces/occluders.ts";
-import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
+import { SUN_DIR, addLights, buildNote, enableShadows, groundAt, gust, keepIn, loadModel, nightGlow, pushOut, wind, type Door, type Seat, type SpaceDef, type SpaceId } from "./world.ts";
 import { LAMP_HEADS } from "./spaces/streetscape.ts";
 import { canberraTime } from "./when.ts";
 import { clearAllDrafts } from "./drafts.ts";
@@ -491,12 +493,17 @@ function litByLamps(group: THREE.Object3D, night: number): void {
 // Canberra's time of day, outside (daylight.ts): checked on going out and once a minute.
 function applyDaylight(): void {
   const { hour, month } = canberraHour();
-  const d = daylightAt(hour, month);
+  // Indoors only the time of day counts (the sun's shafts through the windows); outside the weather
+  // lies over it (daylight.ts withWeather). Clear weather changes nothing.
+  const base = daylightAt(hour, month);
+  const d = space?.outdoor ? withWeather(base, weatherNow()) : base;
   // Rooms' windows read this (no sunbeams after sunset); the rest is outside only.
   outside.night = d.lamps;
   // Every lit window and shop front (world.ts nightGlow): bright after dark, faint (or off) by day.
   for (const g of nightGlow) g.m.emissiveIntensity = (g.day ?? 0) + (g.full - (g.day ?? 0)) * d.lamps;
   lampLights.intensity = d.lamps;
+  // The rain is there only outside (see applyWeather below).
+  rain.setVisible(RICH && !reduceMotion() && weatherNow().kind === "rain" && !!space?.outdoor);
   if (!space?.outdoor) return;
   skyDome.material.color.copy(d.sky);
   sun.color.copy(d.sunColour);
@@ -515,6 +522,18 @@ function applyDaylight(): void {
 }
 window.setInterval(applyDaylight, 60_000);
 clockReady.then = applyDaylight;
+
+// Rain and wind (weather.ts), outdoors on Medium and High (RICH); Reduce motion keeps the rain still,
+// so there is none. The sky's grey and the sun's dimming (above) apply on every setting.
+const rain = makeRain();
+scene.add(rain.group);
+function applyWeather(): void {
+  const w = weatherNow();
+  // The plants sway harder in wind: 1 in a breeze, up to 3 in a gale (a moving-grass effect, so Medium and High only).
+  gust.value = 1 + Math.min(2, Math.max(0, w.wind - 8) / 14);
+  applyDaylight();
+}
+onWeather(applyWeather);
 
 function applySky(): void {
   scene.background = null;
@@ -2733,6 +2752,7 @@ function update(dt: number, now: number): void {
   // The light stays where it is, so shading doesn't move with it.
   if (RICH && !reduceMotion()) skyDome.rotation.y += dt * ((Math.PI * 2) / 1200);
   if (RICH && !reduceMotion()) wind.value += dt;
+  rain.update(dt, player.position, weatherNow().wind);
 
   // Fade walls and buildings standing between the camera and the player.
   ray.origin.copy(camera.position);
