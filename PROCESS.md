@@ -114,7 +114,10 @@ I did the phone QA myself, because a desktop browser can't reproduce a phone,
 and every UI issue came from my screenshots. The keyboard covered the AI
 chat, a team room's panels filled the screen so the shared note was
 unusable, and lamp light turned into coloured speckles on iPhones for a
-while. ![The AI chat hidden under the phone keyboard](docs/screenshots/phone-ai-chat-under-keyboard.png)
+while.
+
+![The AI chat hidden under the phone keyboard](docs/screenshots/phone-ai-chat-under-keyboard.png)
+
 The fixes followed
 ([8371c85](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/8371c85), [0cbc1ed](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/0cbc1ed)). What is kept, and who sees it, is explained in
 [decision 001](docs/decisions/001-what-lasts-and-who-sees-it.md) and
