@@ -171,6 +171,10 @@ and its team rooms) — Music generated with Google AI (Gemini) for this project
 The Poop Room's fart is synthesised in the browser with the Web Audio API
 (`client/src/sfx.ts`, crit 8's sound); no recorded asset is used.
 
+The lawn's ambience (the stream by Sullivans Creek and the bird calls,
+`client/src/ambience.ts`) is synthesised the same way, from filtered noise and
+short gliding whistles; no recorded asset is used.
+
 The Campus Guide's clips (`guide/*.webp`) are screen recordings of the app
 itself, made by the author.
 

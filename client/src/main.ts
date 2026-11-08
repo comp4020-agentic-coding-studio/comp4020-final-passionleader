@@ -82,6 +82,8 @@ import { mountNoteChooser, type NoteChoice } from "./notechooser.ts";
 import { mountClassPicker } from "./classpicker.ts";
 import { mountWebView } from "./webview.ts";
 import { mountDogPrompt } from "./dogprompt.ts";
+import { emoteBurst } from "./emotefx.ts";
+import { updateAmbience } from "./ambience.ts";
 import { mountSignupPrompt } from "./signupprompt.ts";
 import { mountGuestNotice } from "./guestnotice.ts";
 import { mountRoomPad } from "./roompad.ts";
@@ -737,6 +739,7 @@ function showEmote(id: string, kind: Emote): void {
   const other = others.get(id);
   if (other && muteDialog.isMuted(other.name)) return;
   speak(figure, EMOTE_TEXT[kind], 3000);
+  emoteBurst(figure, kind);
   const avatar = id === selfId ? me : others.get(id)?.avatar;
   if (kind === "yes" || kind === "no") avatar?.gesture(kind);
   if (kind === "wave" || kind === "dance") avatar?.perform(kind);
@@ -2508,6 +2511,8 @@ const hit = new THREE.Vector3();
 function update(dt: number, now: number): void {
   if (!space) return;
   space.tick?.(dt);
+  // Only once you've joined (the Enter click is the gesture browsers need for sound).
+  updateAmbience(playing && !!space.outdoor, player.position.x, player.position.z);
   if (playing) {
     let moving = false;
     if (!busy()) {

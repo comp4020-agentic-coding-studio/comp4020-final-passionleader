@@ -26,6 +26,9 @@ const AVE = { z: -31, w: 18 };
 const BEND_FROM = -22;
 export const bend = (z: number): number => (z <= BEND_FROM ? 0 : -0.0022 * (z - BEND_FROM) ** 2);
 
+/** How far (m) from the water's edge a spot on the map is, following the bend; 0 over the water. The creek's sound fades with it. */
+export const creekDistance = (x: number, z: number): number => Math.max(0, Math.abs(x - (CREEK.x + bend(z))) - CREEK.water / 2);
+
 /**
  * A long strip along z from z0 to z1, its cross-section from (xa, ya) to
  * (xb, yb), shifted west by the creek's bend as it goes: water, a bank's

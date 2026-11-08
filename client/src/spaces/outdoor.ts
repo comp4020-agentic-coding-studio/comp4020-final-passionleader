@@ -4,6 +4,7 @@ import { RICH } from "../settings.ts";
 import { buildBackdrop } from "./backdrop.ts";
 import { addOsmScape } from "./osmscape.ts";
 import { DOG_SPOT, addDog } from "./dog.ts";
+import { addBirds } from "./birds.ts";
 import { HOUSING_TENT, SPORT_PC, housingTent, sportsTent } from "./sportstent.ts";
 import { building } from "./buildings.ts";
 import { CAFE_MENU, buildLabCoffee } from "./labcoffee.ts";
@@ -176,6 +177,7 @@ export function buildOutdoor(): SpaceDef {
   buildStreetscape(g, colliders);
   buildCreek(g, colliders);
   const dog = addDog(g, colliders);
+  const birds = addBirds(g);
 
   // Building 155: Marie Reay Teaching Centre. Six storeys of glass with the
   // timber structure showing through (warm mullions and floor edges), as
@@ -300,7 +302,10 @@ export function buildOutdoor(): SpaceDef {
       { minX: -50, maxX: -38, minZ: -2, maxZ: 16 },
     ],
     noteKeepClear: [DOG_SPOT, LAWN_BOARD, CAFE_MENU, SPORT_PC, HOUSING_TENT, STUDY_BOARD],
-    tick: dog,
+    tick: (dt) => {
+      dog(dt);
+      birds(dt);
+    },
     spots: [
       { ...DOG_SPOT, id: "dog", label: "Pat the dog" },
       { x: LAWN_BOARD.x, z: LAWN_BOARD.z + 0.9, id: "board", label: "Open the advertising board" },
