@@ -259,6 +259,15 @@ when a flow changes.
   & Guess. The server keeps the score and tells the table who won, and only
   people near it hear of the game or may act on it. In server memory, gone
   when the game ends; the log notes who started which game, nothing else.
+- Screen sharing (room menu, "Share screen"): through the same LiveKit
+  voice as the room, so the same room and the same six-person cap hold. Only a
+  meeting room's ticket allows it (`canPublishSources`: microphone, screen
+  share and its sound; never the camera), the open voice outside allows the
+  microphone only. Others see the share in the room window's Shared screen
+  view; it ends when the sharer stops, leaves, or the room's voice does. Never
+  recorded, never through this app. Without voice (no LiveKit, Voices volume
+  at 0, a browser that can't capture) the button says why. Not testable
+  without a LiveKit server: judged by people.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an

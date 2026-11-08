@@ -994,9 +994,17 @@ const roomPad = mountRoomPad({
 });
 const roomScreen = mountRoomScreen({
   send: (op, extra) => !!net && net.video(op, extra),
-  onShare: () => {},
+  onShare: (on) => void toggleShare(on),
   onNotSent: () => notSent(),
 });
+/** Starts or stops sharing our screen with the room (LiveKit, through the room's voice); says why if it can't. */
+async function toggleShare(on: boolean): Promise<void> {
+  const now = await voice.share(on);
+  if (on && now) {
+    toast("🖥 Sharing your screen: everyone in the room sees it in the Shared screen view.");
+    roomPanel.show("screen");
+  } else if (!on) toast("Stopped sharing your screen.");
+}
 const roomPanel = mountRoomPanel({
   onSend: (text) => sayChat(text),
   onInvite: (name) => {
@@ -1014,6 +1022,7 @@ const roomPanel = mountRoomPanel({
     if (open) stopMoving();
   },
   onHelp: () => guide.open("rooms"),
+  onShareScreen: () => void toggleShare(!voice.sharingOn()),
   onVoice: () => {
     // Everyone in the room already hears; this is whether they hear you.
     void voice.mic(!voice.micOn()).then((on) => {
@@ -1495,6 +1504,11 @@ const voice = mountVoice({
     }
     // In a room the window covers the scene (the whole screen on a phone): its member list shows it too (the user, 11/9).
     roomPanel.talking(names);
+  },
+  screen: (who, el) => roomScreen.remoteShare(who, el),
+  sharing(on) {
+    roomScreen.sharing(on);
+    roomPanel.setSharing(on);
   },
 });
 

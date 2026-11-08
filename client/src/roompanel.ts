@@ -81,6 +81,8 @@ export function mountRoomPanel(opts: {
   onWhiteboard(): void;
   /** Starts (or resumes), pauses or resets the room's shared 25/5 timer (RICE v3 #19); the server checks and tells everyone. */
   onTimer(op: "start" | "pause" | "reset"): void;
+  /** Starts or stops sharing your screen with the room (through its voice connection). */
+  onShareScreen(): void;
   /** Turns the room's voice on or off for you (plan 86). */
   onVoice(): void;
   /** Opens your saved chats and notes (the mailbox's Saved tab). */
@@ -106,6 +108,8 @@ export function mountRoomPanel(opts: {
   show(view: View): void;
   /** Says on the menu whether your voice is on. */
   setVoice(on: boolean): void;
+  /** Says on the menu whether you're sharing your screen. */
+  setSharing(on: boolean): void;
   /**
    * Leaving: straight out if anyone else is inside; if you're the last, a
    * warning first that the room's chat and files go when it empties.
@@ -227,6 +231,7 @@ export function mountRoomPanel(opts: {
   );
   addItem("📺", "Show a video to the room", "Paste a YouTube or Vimeo link; everyone here watches together", () => show("screen"));
   const voiceItem = addItem("🎙️", "Mic: off", "You hear everyone here; turn your mic on to be heard", () => opts.onVoice());
+  const shareItem = addItem("🖥️", "Share screen", "Show your screen to everyone here (they watch in the Shared screen view)", () => opts.onShareScreen());
   addItem("🖍️", "Whiteboard", "Draw together in a new tab (Excalidraw; everyone here gets the same board)", () => opts.onWhiteboard());
   addItem(
     "💾",
@@ -743,6 +748,8 @@ export function mountRoomPanel(opts: {
     isOpen = false;
     view = "closed";
     opts.onScreenShown(false);
+    shareItem.querySelector(".room-item-label")?.firstChild && (shareItem.querySelector(".room-item-label")!.firstChild!.textContent = "Share screen");
+    shareItem.classList.remove("is-on");
     lastOut.hidden = true;
     ui.hidden = true;
     reopen.hidden = true;
@@ -819,6 +826,11 @@ export function mountRoomPanel(opts: {
       const label = voiceItem.querySelector(".room-item-label");
       if (label?.firstChild) label.firstChild.textContent = on ? "Mic: on" : "Mic: off";
       voiceItem.classList.toggle("is-on", on);
+    },
+    setSharing(on) {
+      const label = shareItem.querySelector(".room-item-label");
+      if (label?.firstChild) label.firstChild.textContent = on ? "Stop sharing your screen" : "Share screen";
+      shareItem.classList.toggle("is-on", on);
     },
     focusInput() {
       if (!isOpen) return;
