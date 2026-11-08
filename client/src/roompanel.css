@@ -484,3 +484,44 @@
   animation: mic-pulse 1s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) { .room-chip.is-talking::after { animation: none; } }
+
+/* The focus timer on the menu (RICE v3, 15): yours alone, on this screen. At 390 px the time takes the
+   first row and the buttons wrap under it, each still 44 px tall. */
+.room-focus {
+  margin: 0 14px 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--card, #f5efdf);
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.room-focus h3 {
+  margin: 0 0 6px;
+  font-size: 0.95rem;
+}
+
+.room-focus-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+}
+
+.room-focus-time {
+  flex: 1 1 100%;
+  font-size: 1.6rem;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: 0.02em;
+}
+
+.room-focus-row button {
+  flex: 1 1 0;
+  min-width: 96px;
+}
+
+.room-reopen-timer {
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  opacity: 0.92;
+}

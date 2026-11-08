@@ -67,7 +67,7 @@ let textSize = ((): number => {
 })();
 applyTextSize(textSize);
 
-export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
+export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -175,6 +175,12 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   verify.className = "settings-bug settings-verify";
   verify.textContent = "✉️ Verify my ANU email (sign up)";
 
+  // A link that opens the campus at this spot (placelink.ts), for sending to a friend on a phone too.
+  const place = document.createElement("button");
+  place.type = "button";
+  place.className = "settings-bug";
+  place.textContent = "🔗 Copy link to this place";
+
   // Members only: a guest's way out is signing up, and their browser's token is how they come back.
   const out = document.createElement("button");
   out.type = "button";
@@ -269,7 +275,7 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   topClose.textContent = "Close";
   topClose.setAttribute("aria-label", "Close the settings");
   head.append(title, topClose);
-  card.append(head, sound, fieldset, note, screen, verify, bug, person, mute, credits, out, actions);
+  card.append(head, sound, fieldset, note, screen, place, verify, bug, person, mute, credits, out, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -301,6 +307,10 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   out.addEventListener("click", () => {
     dialog.hidden = true;
     opts.signOut();
+  });
+  place.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.copyPlace();
   });
   verify.addEventListener("click", () => {
     dialog.hidden = true;
