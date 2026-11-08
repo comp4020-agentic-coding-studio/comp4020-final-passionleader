@@ -1964,6 +1964,8 @@ function goOnline(token: string): void {
           ? "That room is full (6 people)."
           : reason === "not invited"
             ? "That room is invite-only. Ask someone inside to invite you."
+            : reason === "staff first"
+              ? "Staff open these rooms. A member of staff inside can invite you in."
             : reason === "no such user"
               ? "There's nobody with that name."
               : reason === "invited a moment ago"
@@ -1972,7 +1974,7 @@ function goOnline(token: string): void {
       );
       // Back from a reconnect into a room that won't have us: step outside it (not for a refused invitation).
       const out = meetingRoom(id);
-      if (out && space?.id === id && (reason === "full" || reason === "not invited")) setSpace(out.parent, { x: out.door.x + (out.door.x > 0 ? -1.8 : 1.8), z: out.door.z }, true);
+      if (out && space?.id === id && (reason === "full" || reason === "not invited" || reason === "staff first")) setSpace(out.parent, { x: out.door.x + (out.door.x > 0 ? -1.8 : 1.8), z: out.door.z }, true);
     },
     status(online) {
       if (session && space) {

@@ -182,12 +182,18 @@ export function roomShare(space: SpaceId, name: string, file: { id: string; name
   roomSay(space, { name, text: `shared ${file.name}`, file });
 }
 
-/** Why `name` can't come into `space`, or null if they can (any space that isn't a meeting room is open). */
-function roomRefusal(space: SpaceId, name: string): string | null {
+/**
+ * Why `name` can't come into `space`, or null if they can (any space that isn't a meeting room is
+ * open). A counselling or interview room (off the Student Hub or the Career Hub) is opened only by
+ * staff, the admin included: a student comes in only when someone inside invites them (the user,
+ * 11/9). Team rooms stay open to anyone.
+ */
+function roomRefusal(space: SpaceId, name: string, staff: boolean): string | null {
   const room = roomOf(space);
   if (!room) return null;
   if (inSpace(space).length >= ROOM_CAP) return "full";
   const state = rooms.get(space);
+  if (room.kind === "counselling" && !state && !staff) return "staff first";
   if (room.kind === "counselling" && state && !state.invited.has(name.toLowerCase())) return "not invited";
   return null;
 }
@@ -277,9 +283,10 @@ function onMessage(ws: WebSocket, raw: string): void {
     const from = player.space;
     const to = msg.space;
     if (from !== to) {
-      // A meeting room is full at six, and a counselling room lets in only
-      // the people someone inside has invited: checked here, not by the client.
-      const refusal = roomRefusal(to, player.name);
+      // A meeting room is full at six, a counselling room is opened by staff and then lets in
+      // only the people someone inside has invited: checked here, not by the client.
+      const role = owners.get(ws)?.role;
+      const refusal = roomRefusal(to, player.name, role === "staff" || role === "admin");
       if (refusal) {
         log("refused", owners.get(ws) ?? null, { action: "enter", space: to, reason: refusal });
         send(ws, { t: "action", kind: "room-refused", space: to, reason: refusal });

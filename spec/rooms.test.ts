@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it } from "vitest";
-import { api, closeAll, connect, guest, visitor, type Msg, type Socket } from "./helpers.ts";
+import { api, closeAll, connect, guest, staffMember, visitor, type Msg, type Socket } from "./helpers.ts";
 
 // The meeting rooms (plan 21, 6a, 26a, 30): six people at most, and the
 // counselling rooms let in only whoever someone inside has invited. The
@@ -50,7 +50,7 @@ describe("meeting rooms", () => {
   });
 
   it("asks an invitee who's online, and an invitation is good for one visit", async () => {
-    const host = await inRoom("career-5");
+    const host = await inRoom("career-5", staffMember);
     const b = await visitor();
     const sb = await connect(b.token);
     await sb.next((m) => m.t === "welcome");
@@ -70,7 +70,7 @@ describe("meeting rooms", () => {
   });
 
   it("keeps the Career Hub's interview rooms to the invited, like counselling rooms", async () => {
-    const host = await inRoom("career-2");
+    const host = await inRoom("career-2", staffMember);
     const b = await visitor();
     const sb = await connect(b.token);
     await sb.next((m) => m.t === "welcome");
@@ -82,9 +82,26 @@ describe("meeting rooms", () => {
     await expect(sb.next(opened("career-2"))).resolves.toBeTruthy();
   });
 
+  it("lets only staff open an empty counselling or interview room; a student comes in when invited", async () => {
+    const room = "counsel-4";
+    const student = await visitor();
+    const ss = await connect(student.token);
+    await ss.next((m) => m.t === "welcome");
+    ss.send({ t: "enter", space: room, x: 0, z: 0 });
+    await expect(ss.next(refused(room, "staff first"))).resolves.toBeTruthy();
+    ss.send({ t: "enter", space: "career-4", x: 0, z: 0 });
+    await expect(ss.next(refused("career-4", "staff first"))).resolves.toBeTruthy();
+    // A member of staff opens it and invites the student, who then comes in.
+    const host = await inRoom(room, staffMember);
+    host.s.send({ t: "invite", name: student.name });
+    await host.s.next((m) => m.t === "action" && m.kind === "room" && ((m.room as { invited: string[] }).invited ?? []).includes(student.name));
+    ss.send({ t: "enter", space: room, x: 0, z: 0 });
+    await expect(ss.next(opened(room))).resolves.toBeTruthy();
+  });
+
   it("keeps a counselling room to the people invited in", async () => {
     const room = "counsel-6";
-    const host = await inRoom(room);
+    const host = await inRoom(room, staffMember);
     const [b, c] = await Promise.all([visitor(), visitor()]);
     const sb = await connect(b.token);
     const sc = await connect(c.token);
@@ -169,7 +186,7 @@ describe("meeting rooms", () => {
 
   it("shows a newcomer what was said while they weren't there, and forgets it once the room empties", async () => {
     const room = "counsel-5";
-    const a = await inRoom(room);
+    const a = await inRoom(room, staffMember);
     const b = await visitor();
     a.s.send({ t: "chat", text: "first line" });
     await a.s.next((m) => m.t === "chat" && m.text === "first line");
@@ -186,7 +203,7 @@ describe("meeting rooms", () => {
     sb.send({ t: "enter", space: "hub", x: 0, z: 0 });
     a.s.send({ t: "enter", space: "hub", x: 0, z: 0 });
     await new Promise((r) => setTimeout(r, 200));
-    const c = await inRoom(room);
+    const c = await inRoom(room, staffMember);
     const fresh = await c.s.next(opened(room));
     expect((fresh.lines as { text: string }[]).some((l) => l.text === "first line")).toBe(false);
     expect((fresh.room as { host: string }).host).toBe(c.name);

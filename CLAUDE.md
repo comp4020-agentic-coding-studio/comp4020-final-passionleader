@@ -203,7 +203,8 @@ when a flow changes.
 - Meeting rooms (counselling rooms off the Hub, interview rooms off the
   Career Hub, team rooms off classrooms, the library and the ANUSA lounge)
   hold six people at most. Team rooms are open; a counselling or interview
-  room lets in only those someone inside has invited; the invitee, if on
+  room is opened only by staff (the admin included), and then lets in only
+  those someone inside has invited, which is how a student comes in; the invitee, if on
   campus, is asked at once (Accept takes them straight in; they can be asked
   again, once every ten seconds), and an invitation is good for one visit. Both are
   checked on the server and refusals are logged. A room's chat lives in
