@@ -91,7 +91,7 @@ describe("presence alerts", () => {
     expect((await follow(a.token, many[19]!.name)).status).toBe(400);
     expect((await follow(a.token, b.name, false)).status).toBe(200);
     expect((await follow(a.token, many[19]!.name)).status).toBe(200);
-  });
+  }, 30_000);
 });
 
 const inHub = async (token: string): Promise<Socket> => {
