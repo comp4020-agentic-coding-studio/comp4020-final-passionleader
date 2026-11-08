@@ -25,6 +25,11 @@ COPY server/ server/
 # operator tools, run over flyctl ssh: reset-db.ts and seed-accounts.ts
 COPY scripts/reset-db.ts scripts/seed-accounts.ts scripts/
 COPY README.md ./
+# Seongsu answers from these (server/projectdocs.ts loads them at start).
+COPY PROCESS.md CLAUDE.md ./
+COPY docs/self-hosting.md docs/roles.md docs/
+COPY docs/decisions/ docs/decisions/
+COPY reflections/ reflections/
 COPY --from=build /app/client/dist client/dist
 ENV NODE_ENV=production
 ENV DATABASE_PATH=/data/app.db

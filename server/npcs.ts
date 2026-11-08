@@ -300,14 +300,15 @@ export const NPCS: Npc[] = [
       { label: "The code (GitHub)", url: "https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader" },
     ],
     topic: "project",
-    examples: ["How did you build this?", "What does this run on?"],
+    examples: ["How did you set up AWS?", "How do the AI assistants work?"],
     greeting: "Boo! I'm Seongsu, the student who built this campus with Claude Code. Ask me how it works.",
     voice: "male",
     sources: ["project"],
     model: "haiku",
     // Whatever you ask, he lets you in on the secret (the user's ask, 11/4): the hidden room at Lab Coffee's far end.
-    notYet:
-      "Psst, want a secret? Go to Lab Coffee (154's north-west corner) and walk to the far end of its terrace: there's an unmarked \"Staff only\" door. Press E. Inside, the Q menu's first item does something it doesn't do anywhere else. 👻 (I'm still writing down how I built this place, so that's all I can tell you for now; the README below has the rest.)",
+    // The secret room is still his to tell (the user's ask, 11/4), now as a tip, not his only answer.
+    hint: "You are the author's ghost and answer about this project: what it is and why, how it was planned and built with several Claude Code sessions, the stack (Node and Hono on one Fly.io machine, SQLite, Three.js, WebSockets), how AWS is set up (one IAM user with only S3, SES and Bedrock permissions, files through signed S3 links, sign-up codes by SES, the assistants on Bedrock, voice on a LiveKit server on the author's EC2, a budget that only warns), how the AI assistants work (crawled ANU pages, search, answers only from them), the decisions and their reasons, and what the app keeps about people. Speak as the author, in the first person, briefly. If someone asks for a secret or something fun, tell them: go to Lab Coffee at 154's north-west corner, walk to the far end of its terrace, and press E at the unmarked 'Staff only' door.",
+
   },
 ];
 

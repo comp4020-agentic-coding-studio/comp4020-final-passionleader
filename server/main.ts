@@ -2,6 +2,7 @@ import { createHash, randomInt, randomUUID } from "node:crypto";
 import { MailFailure, lastMail, mailReady, sendMail, testOutbox } from "./mail.ts";
 import { NPCS, answer, npcById } from "./npcs.ts";
 import { crawl } from "./crawl.ts";
+import { loadProjectDocs } from "./projectdocs.ts";
 import { voiceReady, voiceToken, voiceUrl } from "./voice.ts";
 import { lastFinished as lastCrawl } from "./knowledge.ts";
 import { existsSync, readFileSync } from "node:fs";
@@ -1591,6 +1592,15 @@ const purge = (): void => {
 };
 purge();
 setInterval(purge, 60 * 60 * 1000).unref();
+
+// Seongsu answers from the project's own documents (projectdocs.ts), loaded on every start, so a
+// deploy that changes README, PROCESS, a decision record or CLAUDE.md changes what he knows.
+try {
+  const pages = loadProjectDocs();
+  console.log(JSON.stringify({ at: new Date().toISOString(), event: "project-docs", pages }));
+} catch (err) {
+  console.error(JSON.stringify({ at: new Date().toISOString(), event: "project-docs-error", name: (err as Error)?.name }));
+}
 
 // The assistants' pages are read again once a month, by the server itself
 // (crawl.ts; no Claude needed, so it keeps going after the course). Checked
