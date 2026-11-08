@@ -41,13 +41,13 @@ only from ANU's own pages.
 
 The name comes from 'crossing paths'. When I arrived, I had no idea where to
 ask simple questions, and my interviews for HCI and Responsible Practice
-(assessed, so not shared) pointed the same way: students and staff rarely meet
+(assessed, not shared) pointed the same way: students and staff rarely meet
 outside class, and opening up at the Student Hub feels hard.
 
 ## How to start
 
-Sign up with your ANU email for everything; guests can still walk, chat and
-ask the assistants. The 'Campus Guide' button (top right) shows each feature.
+Sign up with your ANU email for everything; guests can walk, chat and ask
+the assistants. The 'Campus Guide' button (top right) shows each feature.
 
 ## What good means here
 
@@ -55,9 +55,8 @@ Good means 'a place where students, staff and academics meet by chance',
 where people want to stay. Five conditions help.
 
 - **Reachable from anywhere.** ANU is big, and virtual spaces can lower that
-  barrier and draw more people in (Tiwari, 2026). Labs and students find each other on the Hub's board ([f13eaef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)), and
-  every space shows how many are inside, so nobody walks into an empty
-  room ([2e53582](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2e53582)).
+  barrier and draw more people in (Tiwari, 2026). Labs and students meet on the Hub's board ([f13eaef](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f13eaef)), and
+  every space shows how many are inside, so nobody enters an empty room ([2e53582](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/2e53582)).
 - **Present together.** Movement, chat, voice and shared notes reach everyone
   at once. Co-presence goes with satisfaction in virtual worlds (Bulu, 2012),
   and students rated teamwork higher on Gather.Town than on Zoom (Lee et al.,
@@ -66,13 +65,14 @@ where people want to stay. Five conditions help.
   ease feels safe (Reber et al., 2004); a familiar layout also leaves more
   attention for real work (Sweller, 1988). So I photographed and drew the
   campus myself.
-- **Rest, not another work screen.** It should feel closer to a game than to
-  the tools we use all day. I regenerated the music with Gemini until it
-  sounded like a lively campus, and I leave the site open to listen.
+- **Rest, not another work screen.** It should feel more like a game than a work
+  tool. I regenerated the music with Gemini until it
+  sounded like a lively campus, and liked it so much I gave it a player; I
+  often leave ANU Crossing open just to listen.
 - **Easy for shy people.** In one field study, metaverse platforms improved
   young people's social skills and sense of community (Youssef et al., 2024).
   Here a shy student can wave or leave a note before saying a word, and 'Ask
-  the Hub' lets newcomers ask what I badly wanted to ask.
+  the Hub' lets newcomers ask what I once couldn't.
 
 ## Against the alternatives
 
