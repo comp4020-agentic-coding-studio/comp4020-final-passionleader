@@ -46,6 +46,11 @@ function context(): AudioContext | null {
 /** The shared audio context (made on first use), for sounds that run on their own, like ambience.ts. */
 export const sfxContext = context;
 
+/** A decoded sound (cached; null if it can't be fetched or decoded), for ambience.ts. */
+export function sfxBuffer(name: string): Promise<AudioBuffer | null> {
+  return load(name);
+}
+
 function load(name: string): Promise<AudioBuffer | null> {
   let b = buffers.get(name);
   if (b) return b;

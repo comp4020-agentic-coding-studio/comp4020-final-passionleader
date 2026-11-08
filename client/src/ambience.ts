@@ -1,67 +1,49 @@
 import { getSfxVolume } from "./audio.ts";
-import { sfxContext } from "./sfx.ts";
+import { sfxBuffer, sfxContext } from "./sfx.ts";
 import { creekDistance } from "./spaces/creek.ts";
 
 // Outdoor ambience (RICE v3, 12): a soft, looping stream by Sullivans Creek,
-// louder the closer you walk to it, and now and then a magpie-ish call on the
-// lawn. Both are synthesised with the Web Audio API (filtered noise; a short
-// gliding whistle), so there's no recorded asset and no licence to carry. They
-// follow the sound-effects volume and stop the moment you go inside.
+// louder the closer you walk to it, and now and then a bird call on the lawn.
+// Both are recorded CC0 sounds (assets/sfx/creek_loop.ogg and bird_1..4.ogg,
+// credited in assets/CREDITS.md), played through the shared Web Audio context
+// at the sound-effects volume, and stopped the moment you go inside. A file
+// that fails to load just leaves its sound silent.
 
 /** Silent this far (m) from the water's edge. */
 const HEAR_WATER = 25;
-const WATER_LEVEL = 0.35;
-const BIRD_LEVEL = 0.22;
+/**
+ * The creek recording is quiet on purpose (peak about 0.2, RMS about 0.035, as
+ * the pack ships it), so unlike the footsteps (0.35 on peaks near 0.9) it
+ * needs a gain near 1 to sit under the background music at the water's edge.
+ */
+const WATER_LEVEL = 1.1;
+/** The bird calls are levelled to a 0.9 peak; 0.3 puts them near a footstep, well under the dog's bark (0.6). */
+const BIRD_LEVEL = 0.3;
+const BIRDS = ["bird_1", "bird_2", "bird_3", "bird_4"];
 
 let water: { src: AudioBufferSourceNode; gain: GainNode } | null = null;
+/** undefined: not asked for yet; null: failed to load (stay silent). */
+let creek: AudioBuffer | null | undefined;
 let birdTimer = 0;
-let noise: AudioBuffer | null = null;
+let lastBird = -1;
 
 function startWater(c: AudioContext): void {
-  if (!noise) {
-    // Four seconds of white noise on a loop; the filters below turn it into a stream.
-    noise = c.createBuffer(1, c.sampleRate * 4, c.sampleRate);
-    const d = noise.getChannelData(0);
-    for (let i = 0; i < d.length; i++) d[i] = Math.random() * 2 - 1;
+  if (creek === undefined) {
+    creek = null; // stay silent until it has arrived (and for good if it never does)
+    void sfxBuffer("creek_loop").then((b) => {
+      creek = b;
+    });
+    return;
   }
+  if (!creek) return;
   const src = c.createBufferSource();
-  src.buffer = noise;
+  src.buffer = creek;
   src.loop = true;
   const gain = c.createGain();
   gain.gain.value = 0;
-  // The body of the sound: a low-passed rush whose cutoff drifts slowly.
-  const body = c.createBiquadFilter();
-  body.type = "lowpass";
-  body.frequency.value = 700;
-  const drift = c.createOscillator();
-  drift.frequency.value = 0.23;
-  const driftDepth = c.createGain();
-  driftDepth.gain.value = 250;
-  drift.connect(driftDepth).connect(body.frequency);
-  drift.start();
-  // A brighter babble over it, at a different pace so it never repeats evenly.
-  const babble = c.createBiquadFilter();
-  babble.type = "bandpass";
-  babble.frequency.value = 1600;
-  babble.Q.value = 1.2;
-  const babbleGain = c.createGain();
-  babbleGain.gain.value = 0.25;
-  const swell = c.createOscillator();
-  swell.frequency.value = 0.61;
-  const swellDepth = c.createGain();
-  swellDepth.gain.value = 0.12;
-  swell.connect(swellDepth).connect(babbleGain.gain);
-  swell.start();
-  src.connect(body).connect(gain);
-  src.connect(babble).connect(babbleGain).connect(gain);
-  gain.connect(c.destination);
+  src.connect(gain).connect(c.destination);
   src.start();
   water = { src, gain };
-  // Stopping the loop stops its modulators' work too: they have no other path to the output.
-  src.onended = () => {
-    drift.stop();
-    swell.stop();
-  };
 }
 
 function stopWater(): void {
@@ -76,31 +58,25 @@ function stopWater(): void {
   w.gain.disconnect();
 }
 
-/** One call: three to five short whistles that slide up or down, a little different every time. */
+/** One call: a random one of the recordings (never the same twice running), a touch different in pitch each time. */
 function chirp(): void {
   const c = sfxContext();
   const volume = (getSfxVolume() / 100) * BIRD_LEVEL;
   if (!c || volume <= 0 || c.state !== "running") return;
-  const notes = 3 + Math.floor(Math.random() * 3);
-  const base = 900 + Math.random() * 500;
-  let at = c.currentTime + 0.02;
-  for (let i = 0; i < notes; i++) {
-    const len = 0.09 + Math.random() * 0.08;
-    const from = base * (1 + Math.random() * 0.6);
-    const to = from * (Math.random() < 0.5 ? 0.6 : 1.5);
-    const osc = c.createOscillator();
-    osc.type = "sine";
-    osc.frequency.setValueAtTime(from, at);
-    osc.frequency.exponentialRampToValueAtTime(to, at + len);
+  let i = Math.floor(Math.random() * BIRDS.length);
+  if (i === lastBird) i = (i + 1 + Math.floor(Math.random() * (BIRDS.length - 1))) % BIRDS.length;
+  lastBird = i;
+  void sfxBuffer(BIRDS[i]).then((buffer) => {
+    if (!buffer) return;
+    const src = c.createBufferSource();
+    src.buffer = buffer;
+    src.playbackRate.value = 0.96 + Math.random() * 0.08;
     const gain = c.createGain();
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(volume, at + 0.015);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + len);
-    osc.connect(gain).connect(c.destination);
-    osc.start(at);
-    osc.stop(at + len + 0.02);
-    at += len + 0.04 + Math.random() * 0.06;
-  }
+    gain.gain.value = volume;
+    src.connect(gain).connect(c.destination);
+    src.onended = () => gain.disconnect();
+    src.start();
+  });
 }
 
 function scheduleBird(first: boolean): void {
@@ -131,7 +107,7 @@ export function updateAmbience(outdoor: boolean, x: number, z: number): void {
   }
   if (!birdTimer) scheduleBird(true);
   if (level <= 0.0005) {
-    // Out of earshot: don't keep a noise loop running for nothing.
+    // Out of earshot: don't keep a loop running for nothing.
     stopWater();
     return;
   }

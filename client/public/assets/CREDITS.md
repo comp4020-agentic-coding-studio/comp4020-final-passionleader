@@ -171,9 +171,31 @@ and its team rooms) — Music generated with Google AI (Gemini) for this project
 The Poop Room's fart is synthesised in the browser with the Web Audio API
 (`client/src/sfx.ts`, crit 8's sound); no recorded asset is used.
 
-The lawn's ambience (the stream by Sullivans Creek and the bird calls,
-`client/src/ambience.ts`) is synthesised the same way, from filtered noise and
-short gliding whistles; no recorded asset is used.
+The lawn's ambience (`client/src/ambience.ts`) is recorded, not synthesised.
+All five files are CC0 1.0 (https://creativecommons.org/publicdomain/zero/1.0/),
+the licence read on each item's own OpenGameArt page. They come from two
+separate items by two authors.
+
+`sfx/bird_1.ogg`, `bird_2.ogg`, `bird_3.ogg`, `bird_4.ogg` (the occasional bird
+call on the lawn): four calls cut from "Ambient Bird Sounds"
+(`birds-isaiah658.ogg`, 30.7 s) at 14.90 s, 19.05 s, 7.82 s and 11.44 s, each
+1.2 to 2.5 s long. Each was mixed down to mono, levelled to a 0.9 peak, given a
+short fade in and out and re-encoded as Ogg Vorbis (14 to 26 KB each).
+
+- Title: Ambient Bird Sounds
+- Author: isaiah658 (https://opengameart.org/users/isaiah658)
+- Source: https://opengameart.org/content/ambient-bird-sounds
+- Licence: Creative Commons Zero (CC0 1.0). Credit is not required but is given here anyway.
+
+`sfx/creek_loop.ogg` (the stream by Sullivans Creek): `loop_water_02.ogg`
+from the pack "40 CC0 water / splash / slime SFX" (`water-splash-slime-sfx.zip`),
+unmodified and renamed. 7.0 s, 48 kHz stereo, 263 KB. The pack lists its water
+files as loop sounds, and this one's end joins its start without a step.
+
+- Title: 40 CC0 water / splash / slime SFX (file `loop_water_02.ogg`)
+- Author: rubberduck (https://opengameart.org/users/rubberduck)
+- Source: https://opengameart.org/content/40-cc0-water-splash-slime-sfx
+- Licence: Creative Commons Zero (CC0 1.0). Credit is not required but is given here anyway.
 
 The Campus Guide's clips (`guide/*.webp`) are screen recordings of the app
 itself, made by the author.
