@@ -74,6 +74,8 @@ export function mountRoomPanel(opts: {
 }): {
   open(info: RoomInfo, history: RoomLine[]): void;
   update(info: RoomInfo): void;
+  /** Who is speaking now: their chip in the member list shows a mic (the name tags are behind the window on a phone). */
+  talking(names: Set<string>): void;
   add(line: RoomLine): void;
   close(): void;
   isOpen(): boolean;
@@ -319,6 +321,7 @@ export function mountRoomPanel(opts: {
   let view: View = "closed";
   let unread = 0;
   let memberCount = 0;
+  let speaking = new Set<string>();
 
   function syncBadges(): void {
     for (const b of [badge, reopenBadge]) {
@@ -376,7 +379,8 @@ export function mountRoomPanel(opts: {
     members.replaceChildren(
       ...info.members.map((name) => {
         const li = document.createElement("li");
-        li.className = "room-chip" + (info.host === name ? " is-host" : "");
+        li.className = "room-chip" + (info.host === name ? " is-host" : "") + (speaking.has(name) ? " is-talking" : "");
+        li.dataset.name = name;
         li.append(document.createTextNode(name));
         if (info.host === name) {
           const tag = document.createElement("small");
@@ -591,6 +595,10 @@ export function mountRoomPanel(opts: {
         // Closed, so the pad and the HUD stay (no onShown: nothing covers the room).
         reopen.hidden = false;
       } else show("menu");
+    },
+    talking(names) {
+      speaking = names;
+      for (const li of members.querySelectorAll<HTMLElement>(".room-chip")) li.classList.toggle("is-talking", names.has(li.dataset.name ?? ""));
     },
     update(info) {
       // Only the header, the member chips and the invited line change, so
