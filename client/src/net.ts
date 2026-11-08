@@ -36,6 +36,14 @@ export interface RoomState {
   host?: string;
   invited?: string[];
 }
+/** A room's shared pomodoro as the server sends it: the time left now, not a clock. */
+export interface RoomTimer {
+  phase: "work" | "break";
+  running: boolean;
+  /** Milliseconds left when it was sent. */
+  left: number;
+  by: string;
+}
 export interface RoomLine {
   name: string;
   text: string;
@@ -76,7 +84,9 @@ export interface NetHandlers {
   /** The server moved us (the classroom we were in was closed). */
   moved(space: SpaceId, x: number, z: number, players: RemotePlayer[]): void;
   /** The server let us into a meeting room: what's in it and what's been said. */
-  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }): void;
+  roomOpen(space: SpaceId, x: number, z: number, room: RoomState, lines: RoomLine[], players: RemotePlayer[], pad: { text: string; by: string | null }, timer: RoomTimer | null): void;
+  /** The room's timer was started, paused, moved on or reset (null: none). */
+  timer(timer: RoomTimer | null): void;
   /** Someone else changed the room's shared notes. */
   pad(text: string, by: string): void;
   /** Who's in the room, or who's invited, changed. */
@@ -119,6 +129,8 @@ export interface Net {
   saveChat(what?: "chat" | "notes"): boolean;
   /** The room's shared notes, as we now have them. */
   pad(text: string): void;
+  /** Starts (or resumes), pauses or resets the room's shared timer. */
+  timer(op: "start" | "pause" | "reset"): boolean;
   /** Invites someone into the counselling room we're in. */
   invite(name: string): boolean;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
@@ -187,7 +199,8 @@ export function connect(token: string, on: NetHandlers): Net {
           if (m.kind === "whisper-refused") return on.whisperRefused(m.reason as string, m.name as string);
           if (m.kind === "poops") return on.poops(m.poops as { name: string; x: number; z: number }[]);
           if (m.kind === "room-open")
-            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null });
+            return on.roomOpen(m.space as SpaceId, m.x as number, m.z as number, m.room as RoomState, m.lines as RoomLine[], m.players as RemotePlayer[], (m.pad as { text: string; by: string | null }) ?? { text: "", by: null }, (m.timer as RoomTimer | null) ?? null);
+          if (m.kind === "timer") return on.timer((m.timer as RoomTimer | null) ?? null);
           if (m.kind === "pad") return on.pad(m.text as string, m.by as string);
           if (m.kind === "room-invited" && typeof m.space === "string" && typeof m.from === "string") return on.invited(m.space, m.from);
           if (m.kind === "whiteboard" && typeof m.url === "string") return on.whiteboard(m.url);
@@ -249,6 +262,9 @@ export function connect(token: string, on: NetHandlers): Net {
     },
     pad(text) {
       sendNow({ t: "pad", text });
+    },
+    timer(op) {
+      return sendNow({ t: "action", kind: "timer", op });
     },
     invite(name) {
       return sendNow({ t: "invite", name });

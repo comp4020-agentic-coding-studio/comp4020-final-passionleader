@@ -963,6 +963,9 @@ const roomPanel = mountRoomPanel({
       toast(on ? "🎙 Mic on: everyone in the room hears you." : "Mic off: you're still listening.");
     });
   },
+  onTimer: (op) => {
+    if (net && !net.timer(op)) notSent();
+  },
   onWhiteboard: () => {
     // The tab opens now, on the tap (a tab opened later, when the link arrives, is blocked as a pop-up); the link fills it.
     boardTab = window.open("about:blank", "_blank");
@@ -1935,7 +1938,7 @@ function goOnline(token: string): void {
     pad(text, by) {
       roomPad.set(text, by);
     },
-    roomOpen(id, x, z, room, lines, players, pad) {
+    roomOpen(id, x, z, room, lines, players, pad, timer) {
       roomPad.set(pad.text, pad.by);
       if (space?.id !== id) setSpace(id, { x, z }, false);
       players.forEach(upsertOther);
@@ -1947,7 +1950,11 @@ function goOnline(token: string): void {
       roomPanel.open(
         roomInfo(id, room),
         lines.map((l) => ({ ...l, self: !l.system && l.name === session?.name })),
+        timer,
       );
+    },
+    timer(t) {
+      roomPanel.timer(t);
     },
     room(room) {
       if (space && roomPanel.isOpen()) roomPanel.update(roomInfo(space.id, room));

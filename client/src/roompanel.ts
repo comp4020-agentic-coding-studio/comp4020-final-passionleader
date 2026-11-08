@@ -16,6 +16,7 @@
 // one out is warned in a popup of its own (askLeave, from the door).
 
 import "./roompanel.css";
+import type { RoomTimer } from "./net.ts";
 import { ACCEPT, MAX_FILE_BYTES, isImage, sizeLabel } from "./uploads.ts";
 
 export interface RoomInfo {
@@ -66,14 +67,18 @@ export function mountRoomPanel(opts: {
   onHelp(): void;
   /** Opens the room's shared whiteboard (plan 85). */
   onWhiteboard(): void;
+  /** Starts (or resumes), pauses or resets the room's shared 25/5 timer (RICE v3 #19); the server checks and tells everyone. */
+  onTimer(op: "start" | "pause" | "reset"): void;
   /** Turns the room's voice on or off for you (plan 86). */
   onVoice(): void;
   /** Opens your saved chats and notes (the mailbox's Saved tab). */
   onSaved(): void;
   maxLength: number;
 }): {
-  open(info: RoomInfo, history: RoomLine[]): void;
+  open(info: RoomInfo, history: RoomLine[], timer?: RoomTimer | null): void;
   update(info: RoomInfo): void;
+  /** The room's timer changed (null: none); shown on the menu and on the small button. */
+  timer(t: RoomTimer | null): void;
   /** Who is speaking now: their chip in the member list shows a mic (the name tags are behind the window on a phone). */
   talking(names: Set<string>): void;
   add(line: RoomLine): void;
@@ -148,6 +153,24 @@ export function mountRoomPanel(opts: {
   inviteError.setAttribute("role", "alert");
   invite.append(inviteRow, invitedNote, inviteError);
 
+  // The shared pomodoro (RICE v3 #19): 25 minutes of work, 5 of break, the same for everyone inside.
+  const timerBox = document.createElement("div");
+  timerBox.className = "room-timer";
+  timerBox.setAttribute("role", "group");
+  timerBox.setAttribute("aria-label", "Shared timer");
+  const timerPhase = document.createElement("span");
+  timerPhase.className = "room-timer-phase";
+  const timerClock = document.createElement("strong");
+  timerClock.className = "room-timer-clock";
+  const timerStart = document.createElement("button");
+  timerStart.type = "button";
+  timerStart.className = "room-primary";
+  const timerReset = document.createElement("button");
+  timerReset.type = "button";
+  timerReset.className = "room-secondary";
+  timerReset.textContent = "Reset";
+  timerBox.append(timerPhase, timerClock, timerStart, timerReset);
+
   const items = document.createElement("div");
   items.className = "room-items";
   /** A big button on the menu. Later items (whiteboard, voice, help) come through here. */
@@ -208,7 +231,7 @@ export function mountRoomPanel(opts: {
   leaveBtn.className = "room-leave-btn";
   leaveBtn.textContent = "🚪 Leave the room";
   leaveBtn.addEventListener("click", () => askLeave());
-  menu.append(menuHead, members, invite, items, leaveBtn);
+  menu.append(menuHead, members, invite, timerBox, items, leaveBtn);
 
   // --- the chat view ------------------------------------------------------------
   const chatView = document.createElement("div");
@@ -322,6 +345,39 @@ export function mountRoomPanel(opts: {
   let unread = 0;
   let memberCount = 0;
   let speaking = new Set<string>();
+  // The timer as last told, and when it was told (our own clock only measures the seconds since).
+  let timer: RoomTimer | null = null;
+  let timerAt = 0;
+  let timerTick: number | undefined;
+
+  const mmss = (ms: number): string => {
+    const total = Math.ceil(Math.max(0, ms) / 1000);
+    return `${Math.floor(total / 60)}:${String(total % 60).padStart(2, "0")}`;
+  };
+  /** The time left now: what the server said minus what has passed here since, if it's running. */
+  const timeLeft = (): number => (timer ? (timer.running ? timer.left - (performance.now() - timerAt) : timer.left) : 0);
+
+  function renderTimer(): void {
+    const running = !!timer?.running;
+    timerPhase.textContent = !timer ? "Pomodoro" : timer.phase === "work" ? "Focus" : "Break";
+    timerClock.textContent = timer ? mmss(timeLeft()) : "25:00";
+    timerStart.textContent = running ? "Pause" : timer ? "Resume" : "Start 25/5";
+    timerReset.hidden = !timer;
+    timerBox.classList.toggle("is-running", running);
+    timerBox.classList.toggle("is-break", timer?.phase === "break");
+    // The small button shows it too, so it's seen with the menu closed.
+    reopenLabel.textContent = timer ? `Open Room UI · ${timer.phase === "work" ? "⏱" : "☕"} ${mmss(timeLeft())}` : "Open Room UI";
+  }
+  function setTimer(next: RoomTimer | null): void {
+    timer = next;
+    timerAt = performance.now();
+    window.clearInterval(timerTick);
+    timerTick = undefined;
+    if (next?.running) timerTick = window.setInterval(renderTimer, 500);
+    renderTimer();
+  }
+  timerStart.addEventListener("click", () => opts.onTimer(timer?.running ? "pause" : "start"));
+  timerReset.addEventListener("click", () => opts.onTimer("reset"));
 
   function syncBadges(): void {
     for (const b of [badge, reopenBadge]) {
@@ -565,6 +621,7 @@ export function mountRoomPanel(opts: {
     reopen.hidden = true;
     log.replaceChildren();
     members.replaceChildren();
+    setTimer(null);
     input.value = "";
     inviteInput.value = "";
     inviteError.textContent = "";
@@ -577,8 +634,9 @@ export function mountRoomPanel(opts: {
   }
 
   return {
-    open(info, history) {
+    open(info, history, t = null) {
       renderInfo(info);
+      setTimer(t);
       log.replaceChildren();
       for (const line of history) append(line);
       input.value = "";
@@ -595,6 +653,9 @@ export function mountRoomPanel(opts: {
         // Closed, so the pad and the HUD stay (no onShown: nothing covers the room).
         reopen.hidden = false;
       } else show("menu");
+    },
+    timer(t) {
+      if (isOpen) setTimer(t);
     },
     talking(names) {
       speaking = names;

@@ -484,3 +484,20 @@
   animation: mic-pulse 1s ease-in-out infinite;
 }
 @media (prefers-reduced-motion: reduce) { .room-chip.is-talking::after { animation: none; } }
+
+/* The shared pomodoro (RICE v3 #19): between the member list and the menu's buttons. */
+.room-timer {
+  flex: none;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 4px 14px 8px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  background: var(--card, #f5efdf);
+  border: 1px solid rgba(107, 63, 29, 0.35);
+}
+.room-timer-phase { font-size: 0.8rem; color: var(--accent, #6b3f1d); font-weight: 700; }
+.room-timer-clock { flex: 1; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
+.room-timer.is-running .room-timer-clock { color: #2f7d58; }
+.room-timer.is-break .room-timer-clock { color: #8a5a00; }

@@ -203,3 +203,68 @@ describe("meeting rooms", () => {
     expect(await s.sees((m) => m.t === "action" && m.kind === "room-open", 500)).toBe(false);
   });
 });
+
+// The room's shared pomodoro (RICE v3 #19): started by anyone inside, seen by
+// everyone inside and nobody else; the server keeps it, with the room.
+describe("room timer", () => {
+  const timerMsg = (m: Msg) => m.t === "action" && m.kind === "timer";
+  const ask = (s: Socket, op: string) => s.send({ t: "action", kind: "timer", op });
+
+  it("shows a started timer to everyone in the room and to nobody outside it", async () => {
+    const a = await inRoom("team-comp8020-1");
+    const b = await inRoom("team-comp8020-1");
+    // Someone in another room, and someone on the lawn, are not told.
+    const other = await inRoom("team-anusa-2");
+    const v = await visitor();
+    const lawn = await connect(v.token);
+    await lawn.next((m) => m.t === "welcome");
+    const quiet = [other.s.seesNew(timerMsg, 600), lawn.seesNew(timerMsg, 600)];
+    ask(a.s, "start");
+    for (const s of [a.s, b.s]) {
+      const m = await s.next(timerMsg);
+      expect(m.timer).toMatchObject({ phase: "work", running: true, by: a.name });
+      expect(m.timer as { left: number }).toSatisfy((t: { left: number }) => t.left > 24 * 60_000 && t.left <= 25 * 60_000);
+    }
+    expect(await Promise.all(quiet)).toEqual([false, false]);
+    // Someone outside the room can't change it either, and a latecomer is handed the timer as it stands.
+    ask(lawn, "reset");
+    expect(await a.s.seesNew(timerMsg, 400)).toBe(false);
+    const late = await visitor();
+    const sl = await connect(late.token);
+    await sl.next((m) => m.t === "welcome");
+    sl.send({ t: "enter", space: "team-comp8020-1", x: 0, z: 0 });
+    const open = await sl.next(opened("team-comp8020-1"));
+    expect(open.timer).toMatchObject({ phase: "work", running: true });
+  });
+
+  it("lets anyone inside pause and reset it, but only once a second each", async () => {
+    const a = await inRoom("team-comp8020-2");
+    const b = await inRoom("team-comp8020-2");
+    ask(a.s, "start");
+    await b.s.next(timerMsg);
+    // Pressed again at once, the second press is dropped: the room never hears of a pause from a.
+    ask(a.s, "pause");
+    expect(await b.s.seesNew((m) => timerMsg(m) && (m.timer as { running: boolean } | null)?.running === false, 500)).toBe(false);
+    // Another person has their own second.
+    ask(b.s, "pause");
+    const paused = await a.s.next((m) => timerMsg(m) && (m.timer as { running: boolean } | null)?.running === false);
+    expect(paused.timer).toMatchObject({ by: b.name });
+    const left = (paused.timer as { left: number }).left;
+    await new Promise((r) => setTimeout(r, 1100));
+    ask(a.s, "reset");
+    const reset = await b.s.next((m) => timerMsg(m) && m.timer === null);
+    expect(reset.timer).toBeNull();
+    expect(left).toBeGreaterThan(24 * 60_000);
+  });
+
+  it("goes when the room empties", async () => {
+    const a = await inRoom("team-comp8020-1");
+    ask(a.s, "start");
+    await a.s.next(timerMsg);
+    a.s.ws.close();
+    await new Promise((r) => setTimeout(r, 300));
+    const b = await inRoom("team-comp8020-1");
+    const open = await b.s.next(opened("team-comp8020-1"));
+    expect(open.timer).toBeNull();
+  });
+});
