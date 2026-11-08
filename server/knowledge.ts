@@ -203,7 +203,8 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
   // Asked how to enrol (no course named), ANU's enrolment how-to pages lead, the first-time
   // and swap/drop ones before the special cases (overload, permission codes): "how do I
   // enrol in courses?" otherwise led with "Overload your enrolment" and course pages (11/8).
-  const enrolHow = !codes.length && /\b(how|steps?|where|when)\b.*\benrol\w*|\benrol\w*\b.*\b(how|steps?)\b|\b(add|drop|swap|change)\b.*\b(course|class|subject)/i.test(question);
+  // ("when" questions, such as the last day to drop, stay with the dates pages: audit, 11/8.)
+  const enrolHow = !codes.length && /\b(how|steps?)\b.*\b(enrol\w*|(add|drop|swap|change)\b.*\b(course|class|subject))|\benrol\w*\b.*\b(how|steps?)\b/i.test(question);
   const enrolGuide = (r: { url: string }): number =>
     !enrolHow ? 0 : /\/enrolment\/(enrol-for-the-first-time-as-a-coursework|re-enrol|swapping-or-dropping|how-to-enrol|enrolling)/.test(r.url) ? 2 : /\/(enrolment|timetabling)\//.test(r.url) && !/overload|permission/.test(r.url) ? 1 : 0;
   const catalogueLast = (r: { url: string; source: string }): number => (!codes.length && r.source === "catalogue" && /\/course\//.test(r.url) ? 1 : 0);

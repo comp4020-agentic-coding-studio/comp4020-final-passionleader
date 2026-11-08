@@ -209,13 +209,15 @@ export function mountMailbox(opts: {
     // A saved draft comes back on the plain Write tab, or when replying to the person it was for
     // (a draft to someone else isn't put into this one). Values are cut to the fields' limits.
     const saved = loadDraft(DRAFT);
-    if (saved && (!to || (saved.to ?? "").toLowerCase() === to.toLowerCase())) {
+    // A reply to someone else neither restores nor overwrites a draft meant for another person (audit, 11/8).
+    const other = !!saved && !!to && (saved.to ?? "").toLowerCase() !== to.toLowerCase();
+    if (saved && !other) {
       toIn.value = (saved.to ?? "").slice(0, toIn.maxLength);
       subjIn.value = (saved.subject ?? "").slice(0, subjIn.maxLength) || subjIn.value;
       textIn.value = (saved.text ?? "").slice(0, textIn.maxLength);
     }
     const keepDraft = (): void => saveDraft(DRAFT, { to: toIn.value, subject: subjIn.value, text: textIn.value });
-    for (const el of [toIn, subjIn, textIn]) el.addEventListener("input", keepDraft);
+    if (!other) for (const el of [toIn, subjIn, textIn]) el.addEventListener("input", keepDraft);
     form.append(mk("To (their name)", toIn), mk("Subject", subjIn), mk("Message", textIn), send);
     form.addEventListener("submit", (e) => {
       e.preventDefault();
@@ -232,7 +234,7 @@ export function mountMailbox(opts: {
           return;
         }
         draftTo = "";
-        clearDraft(DRAFT);
+        if (!other) clearDraft(DRAFT);
         status.textContent = "Sent.";
         void refresh("sent");
       });

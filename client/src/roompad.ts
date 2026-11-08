@@ -273,14 +273,31 @@ export function mountRoomPad(opts: {
   });
   head.prepend(addBtn, picker);
   text.addEventListener("focus", () => (typing = true));
+  /** Sends what's typed now rather than after the pause, so nothing unsent is left to be overwritten. */
+  function flush(): void {
+    if (!timer) return;
+    window.clearTimeout(timer);
+    timer = 0;
+    opts.onChange(text.value);
+    foot.textContent = "Saved for the room.";
+  }
   text.addEventListener("blur", () => {
     typing = false;
+    // Leaving the field sends at once: a room edit arriving in the pause after it would have
+    // replaced the last words before they were sent (audit, 11/8).
+    flush();
     // On a narrow screen leaving the field returns to the rendered notes.
     if (!wide.matches) closeEditor();
+  });
+  // A screen that narrows while the field isn't in use goes back to the rendered notes (the
+  // editor is hidden on a narrow screen unless you're in it).
+  wide.addEventListener("change", () => {
+    if (!wide.matches && document.activeElement !== text) closeEditor();
   });
   function onInput(): void {
     window.clearTimeout(timer);
     timer = window.setTimeout(() => {
+      timer = 0;
       opts.onChange(text.value);
       foot.textContent = "Saved for the room.";
     }, 400);
@@ -315,6 +332,9 @@ export function mountRoomPad(opts: {
   });
 
   function apply(value: string, by: string | null): void {
+    // Newer text in: a version held back earlier is out of date, so its "load" button goes (audit, 11/8).
+    pending = null;
+    load.hidden = true;
     text.value = value;
     foot.textContent = by ? `Last edited by ${by}.` : "";
     render();

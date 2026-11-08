@@ -147,14 +147,16 @@ function blocks(lines: string[], base: number, opts: MarkdownOptions): DocumentF
 function nestedList(run: string[], base: number, opts: MarkdownOptions): HTMLElement {
   const depth = (l: string): number => (/^\s*/.exec(l)![0].replace(/\t/g, "    ").length);
   let i = 0;
-  const build = (indent: number): HTMLElement => {
+  // The outermost list takes any line shallower than its first as its own depth: otherwise
+  // "  - a" then "- b" dropped b from the rendered notes (audit, 11/8).
+  const build = (indent: number, root = false): HTMLElement => {
     const first = run[i]!;
     const ordered = NUMBERED.test(first) && !BULLET.test(first);
     const list = document.createElement(ordered ? "ol" : "ul");
     if (opts.lines) list.dataset.line = String(base + i);
     while (i < run.length) {
       const l = run[i]!;
-      const d = depth(l);
+      const d = root ? Math.max(depth(l), indent) : depth(l);
       if (d < indent) break;
       if (d > indent) {
         // Deeper than this list: it belongs to the last item (or starts one if there is none).
@@ -178,7 +180,7 @@ function nestedList(run: string[], base: number, opts: MarkdownOptions): HTMLEle
     }
     return list;
   };
-  return build(depth(run[0]!));
+  return build(depth(run[0]!), true);
 }
 
 // `code`, **bold**, *italic* or _italic_, and [text](https://…). Earlier
