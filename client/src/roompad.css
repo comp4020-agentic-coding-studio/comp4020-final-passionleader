@@ -27,7 +27,10 @@
 @media (min-width: 900px) {
   #room-ui:has(.room-notes:not([hidden])) { width: min(1040px, calc(100vw - 24px)); }
   #room-pad .pad-body { flex-direction: row; }
-  #room-pad .pad-editor, #room-pad .pad-view { display: block; flex: 1 1 0; min-height: 0; height: 100%; }
+  /* Both panes always, editing or not: "pad-editing" left over from a narrow moment (a resize, the
+     room window opening) hid the rendered pane, leaving only the source (the user, 11/8). */
+  #room-pad .pad-editor, #room-pad .pad-view,
+  #room-pad.pad-editing .pad-editor, #room-pad.pad-editing .pad-view { display: block; flex: 1 1 0; min-height: 0; height: 100%; }
   #room-pad .pad-view { cursor: default; }
 }
 

@@ -292,7 +292,8 @@ export function mountRoomPad(opts: {
   // A screen that narrows while the field isn't in use goes back to the rendered notes (the
   // editor is hidden on a narrow screen unless you're in it).
   wide.addEventListener("change", () => {
-    if (!wide.matches && document.activeElement !== text) closeEditor();
+    if (wide.matches) root.classList.remove("pad-editing");
+    else if (document.activeElement !== text) closeEditor();
   });
   function onInput(): void {
     window.clearTimeout(timer);
