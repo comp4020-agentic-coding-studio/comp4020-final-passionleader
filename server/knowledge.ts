@@ -195,6 +195,12 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
   const placed = (r: { body: string }): number => (WHERE_Q.test(question) && ADDRESS.test(r.body) ? 1 : 0);
   const hoursFirst = (r: { title: string }): number => (when && /\bhours\b/i.test(r.title) ? 1 : 0);
   const ownCourse = (r: { url: string }): number => (codes.length === 1 && r.url.toLowerCase().endsWith(`/course/${codes[0]}`) ? 1 : 0);
+  // Asked how to enrol (no course named), ANU's enrolment how-to pages lead, the first-time
+  // and swap/drop ones before the special cases (overload, permission codes): "how do I
+  // enrol in courses?" otherwise led with "Overload your enrolment" and course pages (11/8).
+  const enrolHow = !codes.length && /\b(how|steps?|where|when)\b.*\benrol\w*|\benrol\w*\b.*\b(how|steps?)\b|\b(add|drop|swap|change)\b.*\b(course|class|subject)/i.test(question);
+  const enrolGuide = (r: { url: string }): number =>
+    !enrolHow ? 0 : /\/enrolment\/(enrol-for-the-first-time-as-a-coursework|re-enrol|swapping-or-dropping|how-to-enrol|enrolling)/.test(r.url) ? 2 : /\/(enrolment|timetabling)\//.test(r.url) && !/overload|permission/.test(r.url) ? 1 : 0;
   const catalogueLast = (r: { url: string; source: string }): number => (!codes.length && r.source === "catalogue" && /\/course\//.test(r.url) ? 1 : 0);
   const scored = rows
     .filter((r) => !(asked && r.year !== null && r.year !== year))
@@ -212,7 +218,7 @@ function searchPieces(sources: string[], question: string, limit: number): Piece
     .filter((x) => (x.hits >= need || x.prices >= 4) && (!codes.length || codes.some((c) => x.text.includes(c))))
     // On a tie, a general page before one of the catalogue's thousands of course pages, unless a course code was asked about.
     // Asked about one course by its code, its own page comes before others that only mention it (as a prerequisite, say).
-    .sort((a, b) => ownCourse(b.r) - ownCourse(a.r) || hoursFirst(b.r) - hoursFirst(a.r) || requisite(b.r) - requisite(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
+    .sort((a, b) => ownCourse(b.r) - ownCourse(a.r) || enrolGuide(b.r) - enrolGuide(a.r) || hoursFirst(b.r) - hoursFirst(a.r) || requisite(b.r) - requisite(a.r) || placed(b.r) - placed(a.r) || b.weight - a.weight || b.prices - a.prices || catalogueLast(a.r) - catalogueLast(b.r) || a.i - b.i);
   const picked: Piece[] = [];
   const perUrl = new Map<string, number>();
   for (const { r } of scored) {

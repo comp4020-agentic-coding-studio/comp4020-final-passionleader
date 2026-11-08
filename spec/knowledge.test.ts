@@ -72,6 +72,14 @@ describe("what the assistants know", () => {
     expect(k.search(["library"], "what time does the library close")[0]?.url).toBe("https://example.anu/hours");
   });
 
+  it("asked how to enrol, leads with ANU's enrolment how-to page, not a special case or a course page", () => {
+    const E = "https://www.anu.edu.au/students/program-administration/enrolment";
+    k.savePage({ url: `${E}/overload-your-enrolment`, source: "enrolq", year: null, title: "Overload your enrolment", pieces: ["To enrol in more courses than a full load, ask to overload your enrolment. Enrol courses overload enrolment courses."] });
+    k.savePage({ url: "https://example.anu/2026/course/MATH9999", source: "enrolq", year: 2026, title: "Some course", pieces: ["Enrol in courses: to enrol in this course you must have completed MATH1000."] });
+    k.savePage({ url: `${E}/enrol-for-the-first-time-as-a-coursework-student`, source: "enrolq", year: null, title: "Enrol for the first time", pieces: ["Use ANUHub to enrol in your courses before the semester starts."] });
+    expect(k.search(["enrolq"], "How do I enrol in courses?")[0]?.url).toBe(`${E}/enrol-for-the-first-time-as-a-coursework-student`);
+  });
+
   it("each has sources and a model; with no model, it says it's offline", async () => {
     const { answer, NPCS } = await import("../server/npcs.ts");
     for (const n of NPCS) {
