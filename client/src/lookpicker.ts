@@ -6,6 +6,7 @@
 // the saving and the wiring happen outside.
 
 import "./lookpicker.css";
+import type { StampCard } from "./api.ts";
 
 export interface Look {
   body: 0 | 1;
@@ -63,6 +64,8 @@ export function mountLookPicker(opts: {
   preview(look: Look): void;
   /** Save pressed: resolve to an error message or null. */
   save(look: Look): Promise<string | null>;
+  /** The visit stamps collected so far (null if the server can't be reached). */
+  stamps(): Promise<StampCard | null>;
 }): {
   open(current: Look): void;
   close(): void;
@@ -129,6 +132,8 @@ export function mountLookPicker(opts: {
   let original: Look = copy(DEFAULT_LOOK);
   let isOpen = false;
   let saving = false;
+  // The visit stamps so far (until the server answers the card stays hidden).
+  let stampCard: StampCard | null = null;
 
   function changed(): void {
     opts.preview(copy(look));
@@ -201,6 +206,29 @@ export function mountLookPicker(opts: {
   );
   rows.append(hatColourRow);
   inputs.get("hat")?.[QA_HAT]?.closest("label")?.classList.add("look-qa-only");
+
+  // Under the hat rows: the stamps collected so far.
+  const stampBox = document.createElement("section");
+  stampBox.className = "look-stamps";
+  stampBox.setAttribute("aria-label", "Visit stamps");
+  rows.append(stampBox);
+
+  /** Draws the stamps card. */
+  function refreshStamps(): void {
+    const head = document.createElement("h3");
+    head.textContent = stampCard ? `Stamps ${stampCard.count}/${stampCard.total}` : "Stamps";
+    const grid = document.createElement("ul");
+    for (const st of stampCard?.stamps ?? []) {
+      const li = document.createElement("li");
+      li.className = st.got ? "is-got" : "";
+      li.textContent = `${st.got ? "✓" : "○"} ${st.label}`;
+      grid.append(li);
+    }
+    const hint = document.createElement("p");
+    hint.textContent = "Walk into each place for the first time to earn its stamp.";
+    stampBox.replaceChildren(head, grid, hint);
+    stampBox.hidden = !stampCard;
+  }
 
   /** Greys out the hat colour row with no hat, or the hard hat (always yellow). */
   function syncHatColourRow(): void {
@@ -311,7 +339,14 @@ export function mountLookPicker(opts: {
       for (const el of root.querySelectorAll<HTMLElement>(".look-qa-only")) el.hidden = !opts.qaHats();
       look = clean(current);
       original = copy(look);
+      refreshStamps();
       show(look);
+      // The stamps may have grown since last time: ask, then redraw the card.
+      void opts.stamps().then((c) => {
+        if (!isOpen || !c) return;
+        stampCard = c;
+        refreshStamps();
+      }, () => {});
       error.textContent = "";
       saving = false;
       save.disabled = false;

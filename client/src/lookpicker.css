@@ -199,3 +199,10 @@
     flex: 1;
   }
 }
+
+/* The visit stamps card under the hat rows. */
+.look-stamps h3 { margin: 4px 0 4px; font-size: 0.95rem; }
+.look-stamps ul { list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 6px; }
+.look-stamps li { padding: 3px 8px; border: 2px dashed rgba(107, 63, 29, 0.4); border-radius: 8px; font-size: 0.8rem; color: #7a6a52; }
+.look-stamps li.is-got { border-style: solid; border-color: var(--accent, #6b3f1d); color: var(--ink, #3b2a12); font-weight: 700; background: rgba(107, 63, 29, 0.08); }
+.look-stamps p { margin: 6px 0 0; font-size: 0.78rem; color: #7a6a52; }

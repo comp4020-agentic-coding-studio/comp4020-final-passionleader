@@ -61,6 +61,7 @@ import {
   getProjects,
   sendBugReport,
   saveLook,
+  getStamps,
   removePost,
   removePostComment,
   heartPostComment,
@@ -579,6 +580,7 @@ function becomeAvatar(_name: string): void {
 const lookPicker = mountLookPicker({
   // Before joining, go by the name typed; after, by the name signed in with.
   qaHats: () => RESERVED_RE.test(session?.name ?? storage.get("campus.name")),
+  stamps: () => getStamps(session?.token).catch(() => null),
   preview(look) {
     previewAvatar?.setLook(look);
   },
@@ -2001,6 +2003,10 @@ function goOnline(token: string): void {
     },
     classrooms(list) {
       useClassrooms(list);
+    },
+    stamp(label, count, total) {
+      sfx("message");
+      toast(`New stamp: ${label} (${count}/${total})`);
     },
     board() {
       if (board.isOpen()) board.refresh();

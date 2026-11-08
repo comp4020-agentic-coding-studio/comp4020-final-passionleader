@@ -75,6 +75,8 @@ export interface NetHandlers {
   mail(unread: number): void;
   /** The Poop Room's poops, one per person (only sent in there). */
   poops(list: { name: string; x: number; z: number }[]): void;
+  /** The server gave us a visit stamp (members only): `count` of `total` so far. */
+  stamp(label: string, count: number, total: number): void;
   /** The admin opened or closed a classroom. */
   classrooms(list: Classroom[]): void;
   /** Something on this classroom's board changed. */
@@ -187,6 +189,7 @@ export function connect(token: string, on: NetHandlers): Net {
           return on.moved(m.space as SpaceId, m.x as number, m.z as number, m.players as RemotePlayer[]);
         case "action":
           if (m.kind === "classrooms") return on.classrooms(m.classrooms as Classroom[]);
+          if (m.kind === "stamp" && typeof m.label === "string") return on.stamp(m.label, Number(m.count), Number(m.total));
           if (m.kind === "board") return on.board();
           if (m.kind === "online") return on.online(m.counts as Record<string, number>);
           if (m.kind === "note") return on.note(m.note as Note);

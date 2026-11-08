@@ -611,6 +611,25 @@ export const poopsNow = (): { name: string; x: number; z: number }[] =>
   db.prepare(`SELECT name, x, z FROM poops WHERE ${freshPoop} ORDER BY at`).all() as { name: string; x: number; z: number }[];
 export const purgeOldPoops = (): number => Number(db.prepare(`DELETE FROM poops WHERE NOT (${freshPoop})`).run().changes);
 
+// --- visit stamps ------------------------------------------------------------
+// A member earns a stamp the first time they come into each kind of main space
+// (spaces.ts STAMPS). The server records it when it accepts the move; nothing the
+// client sends can grant one. Guests keep nothing, so they earn none.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS stamps (
+    name  TEXT NOT NULL REFERENCES visitors(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    stamp TEXT NOT NULL,
+    at    TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (name, stamp)
+  );
+`);
+/** Records the stamp; true only the first time. */
+export const addStamp = (name: string, stamp: string): boolean =>
+  Number(db.prepare("INSERT OR IGNORE INTO stamps (name, stamp) VALUES (?, ?)").run(name, stamp).changes) > 0;
+export const stampsOf = (name: string): { stamp: string; at: string }[] =>
+  db.prepare("SELECT stamp, at FROM stamps WHERE name = ? ORDER BY at, stamp").all(name) as { stamp: string; at: string }[];
+export const stampCount = (name: string): number => (db.prepare("SELECT COUNT(*) AS n FROM stamps WHERE name = ?").get(name) as { n: number }).n;
+
 // --- the events timetable ----------------------------------------------------------
 // A member puts an event on the timetable: a title, a space, a start in the next 30 days and
 // a length. It shows as "Coming up", then as a banner in its space while it's on, and is

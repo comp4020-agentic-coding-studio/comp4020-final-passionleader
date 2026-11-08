@@ -331,3 +331,15 @@ export const getEvents = (): Promise<EventList> => request<EventList>("/api/even
 /** `start` is a Canberra date and time ("2026-11-12T14:30"), `minutes` 15 to 180. */
 export const createEvent = (token: string, e: { title: string; space: SpaceId; start: string; minutes: number }): Promise<EventView> => request<EventView>("/api/events", "POST", { token, ...e });
 export const removeEvent = (token: string, id: number): Promise<unknown> => request(`/api/events/${id}`, "DELETE", { token });
+
+// --- visit stamps and what they unlock (server/db.ts, spaces.ts STAMPS) ----------------
+
+export interface StampCard {
+  member: boolean;
+  /** Every stamp there is; the Poop Room's is a secret place until it is found. */
+  stamps: { id: string; label: string; got: boolean }[];
+  count: number;
+  total: number;
+}
+/** Without a token (the join screen) it is an empty card, so the look window still knows what is locked. */
+export const getStamps = (token?: string): Promise<StampCard> => request<StampCard>("/api/stamps", "POST", { token });

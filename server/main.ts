@@ -107,6 +107,8 @@ import {
   saveLook,
   validLook,
   QA_HAT,
+  stampsOf,
+  stampCount,
   addEvent,
   deleteEvent,
   eventsNow,
@@ -122,7 +124,7 @@ import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePla
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
-import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, spaceInfo, teamRoomsOf } from "./spaces.ts";
+import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SECRET_STAMP_LABEL, SPACES, STAMPS, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, spaceInfo, teamRoomsOf } from "./spaces.ts";
 import { EVENT_AHEAD_DAYS, EVENT_MAX_MINUTES, EVENT_MIN_MINUTES, canberraToEpoch, eventTitle } from "./events.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
@@ -1559,6 +1561,18 @@ app.put("/api/look", async (c) => {
   if (isMember(v)) saveLook(v.name, look);
   setLook(v.name, look);
   return c.json({ ok: true });
+});
+
+// --- visit stamps -------------------------------------------------------------------
+// What a member has collected and what the stamps unlock. Read-only: the server grants a stamp
+// itself when it accepts a move into a space (realtime.ts), never on the client's word.
+// Also answers before anyone has joined (the look window on the join screen needs the locks): then it is an empty card.
+app.post("/api/stamps", async (c) => {
+  const v = who(await body(c));
+  const got = new Map(v ? stampsOf(v.name).map((s) => [s.stamp, s.at]) : []);
+  // The Poop Room is an easter egg: its stamp stays unnamed until it has been found.
+  const stamps = STAMPS.map((s) => ({ id: s.id, label: s.id === "poop" && !got.has("poop") ? SECRET_STAMP_LABEL : s.label, got: got.has(s.id) }));
+  return c.json({ member: !!v && isMember(v), stamps, count: v ? stampCount(v.name) : 0, total: STAMPS.length });
 });
 
 // --- the events timetable -------------------------------------------------------------
