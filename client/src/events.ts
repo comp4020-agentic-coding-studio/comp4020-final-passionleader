@@ -188,6 +188,7 @@ export function mountEvents(
     title.setAttribute("aria-label", "Title");
     const space = document.createElement("select");
     space.setAttribute("aria-label", "Place");
+    space.className = "pretty-select";
     for (const s of list.spaces) space.append(new Option(s.label, s.id));
     const start = document.createElement("input");
     start.type = "datetime-local";
@@ -198,6 +199,7 @@ export function mountEvents(
     start.value = canberraNowLocal(now + 3600).replace(/:\d\d$/, ":00");
     const minutes = document.createElement("select");
     minutes.setAttribute("aria-label", "Length");
+    minutes.className = "pretty-select";
     for (const [label, m] of [["15 min", 15], ["30 min", 30], ["45 min", 45], ["1 hour", 60], ["1 h 30", 90], ["2 hours", 120], ["2 h 30", 150], ["3 hours", 180]] as const) minutes.append(new Option(label, String(m)));
     minutes.value = "60";
     const note = document.createElement("small");

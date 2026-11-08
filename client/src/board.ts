@@ -6,6 +6,7 @@
 // delete what; this only hides the buttons a visitor couldn't use. A post can
 // carry up to five files (200 MB each), which upload once the post is up.
 
+import { clearFile, prettyFile } from "./filepick.ts";
 import "./board.css";
 import { clearDraft, loadDraft, saveDraft } from "./drafts.ts";
 import { renderMarkdown } from "./markdown.ts";
@@ -360,7 +361,7 @@ export function mountBoard(h: {
   submitBtn.className = "board-primary";
   submitBtn.textContent = "Post";
   writeRow.append(writeCount, cancelBtn, submitBtn);
-  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, filesInput, uploadStatus, privateLabel, groupSize, writeRow);
+  writeView.append(titleLabel, titleInput, textLabel, textInput, filesLabel, prettyFile(filesInput), uploadStatus, privateLabel, groupSize, writeRow);
 
   let isOpen = false;
   let config: BoardConfig = { title: "", tabs: [] };
@@ -1034,7 +1035,7 @@ export function mountBoard(h: {
         clearDraft(sentDraft);
         titleInput.value = "";
         textInput.value = "";
-        filesInput.value = "";
+        clearFile(filesInput);
         privateBox.checked = false;
         sizeInput.value = "5";
         uploadStatus.textContent = "";
@@ -1115,7 +1116,7 @@ export function mountBoard(h: {
       setWriteMode(false);
       resetFilter();
       loadPostDraft();
-      filesInput.value = "";
+      clearFile(filesInput);
       privateBox.checked = false;
       uploadStatus.textContent = "";
       commentBox.value = "";

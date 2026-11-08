@@ -370,3 +370,32 @@ body.fx-high #stage::before {
 .settings-apply-row { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 8px; }
 .settings-apply-row .settings-note { margin: 0; }
 .settings-apply { flex: none; min-height: 36px; padding: 0 14px; border-radius: 8px; border: 0; background: var(--accent, #6b3f1d); color: #fff; font: inherit; font-weight: 600; cursor: pointer; }
+
+/* Settings in four tabs (settings.ts, the user 11/9): a row of soft pills under the title, sticky
+   with it on a phone; each panel holds its own fieldsets and buttons. */
+#settings .settings-card { width: min(420px, 100%); }
+.settings-tabs { display: flex; gap: 6px; margin: 0 0 14px; padding: 4px; border-radius: 12px; background: #ece2c8; }
+.settings-tab {
+  flex: 1 1 0; min-height: 40px; padding: 0 6px; border: 0; border-radius: 9px;
+  background: transparent; color: var(--ink); font: inherit; font-size: 0.86rem; font-weight: 700; cursor: pointer;
+}
+.settings-tab[aria-selected="true"] { background: var(--paper, #fcf8ec); color: var(--accent, #6b3f1d); box-shadow: 0 1px 3px rgba(0, 0, 0, 0.18); }
+.settings-tab:focus-visible { outline: 3px solid var(--accent, #6b3f1d); outline-offset: 1px; }
+.settings-panel[hidden] { display: none; }
+.settings-panel > * + * { margin-top: 12px; }
+.settings-panel .settings-bug { margin-bottom: 0; }
+.settings-item[hidden] { display: none; }
+.settings-item-line { margin: 4px 2px 0; font-size: 0.8rem; line-height: 1.35; opacity: 0.78; }
+.settings-select-row { display: flex; align-items: center; gap: 10px; margin-top: 8px; font-size: 0.88rem; }
+
+/* A select in the app's own style (the user, 11/9: the browser's grey box looked out of place). */
+.pretty-select {
+  appearance: none; -webkit-appearance: none;
+  flex: 1; min-height: 44px; padding: 0 40px 0 14px; border-radius: 10px;
+  border: 1px solid var(--accent, #6b3f1d); color: var(--ink, #2b2118); font: inherit; cursor: pointer;
+  background: var(--card, #f5efdf) url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='14' height='9' viewBox='0 0 14 9'%3E%3Cpath d='M1 1l6 6 6-6' fill='none' stroke='%236b3f1d' stroke-width='2.2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E") no-repeat right 14px center;
+  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
+}
+.pretty-select:hover { background-color: #efe4c8; }
+.pretty-select:focus-visible { outline: 3px solid var(--accent, #6b3f1d); outline-offset: 2px; }
+@media (max-width: 420px) { .settings-tab { font-size: 0.78rem; } }

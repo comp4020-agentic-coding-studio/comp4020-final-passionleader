@@ -1,3 +1,4 @@
+import { clearFile, prettyFile } from "./filepick.ts";
 import "./bugreport.css";
 import type { ItemRef } from "./api.ts";
 import { ACCEPT_IMAGES, MAX_FILE_BYTES } from "./uploads.ts";
@@ -65,7 +66,9 @@ export function mountBugReport(opts: {
   const shot = document.createElement("input");
   shot.type = "file";
   shot.accept = ACCEPT_IMAGES;
-  shotLabel.append(shot);
+  shotLabel.htmlFor = "bug-shot-file";
+  shot.id = "bug-shot-file";
+  const shotPick = prettyFile(shot, "🖼️ Choose a screenshot");
   const status = document.createElement("p");
   status.className = "bug-status";
   status.setAttribute("role", "status");
@@ -79,7 +82,7 @@ export function mountBugReport(opts: {
   send.className = "bug-send";
   send.textContent = "Send";
   actions.append(cancel, send);
-  card.append(title, hint, whoLabel, chatLabel, text, shotLabel, status, actions);
+  card.append(title, hint, whoLabel, chatLabel, text, shotLabel, shotPick, status, actions);
   root.append(card);
   document.body.append(root);
 
@@ -125,7 +128,7 @@ export function mountBugReport(opts: {
     send.disabled = false;
     if (sent) {
       text.value = "";
-      shot.value = "";
+      clearFile(shot);
       who.value = "";
     }
     if (error) {

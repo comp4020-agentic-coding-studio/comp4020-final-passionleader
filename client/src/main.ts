@@ -83,6 +83,7 @@ import { mountWhoHere } from "./whohere.ts";
 import { keepScreenOn } from "./wakelock.ts";
 import { canberraHour, clockReady, daylightAt, outside, withWeather } from "./daylight.ts";
 import { makeRain } from "./rain.ts";
+import { stampFx } from "./stampfx.ts";
 import { onWeather, weatherNow } from "./weather.ts";
 import { mountDescribe } from "./describeui.ts";
 import { mountStatus, statusText } from "./status.ts";
@@ -250,6 +251,11 @@ mountSettings({
   isGuest: () => !!session && !isMember(session),
   signUp: () => signUpFromGuest(),
   copyPlace: () => void copyPlaceLink(),
+  stamps: () => {
+    openLookPicker();
+    // The stamps card sits under the hat rows: bring it into view once it has drawn.
+    window.setTimeout(() => document.querySelector(".look-stamps")?.scrollIntoView({ block: "center", behavior: "smooth" }), 400);
+  },
   signOut: () => {
     board.close();
     signOut();
@@ -1706,9 +1712,9 @@ function placeNpcs(s: SpaceDef): void {
 // The campus minimap (plan 53): the walkable ground and buildings outside,
 // and the places you can go in. Same bounds as spaces/outdoor.ts.
 const minimap = mountMinimap({
-  bounds: { minX: -55, maxX: 27, minZ: -41, maxZ: 28 },
+  bounds: { minX: -58, maxX: 27, minZ: -41, maxZ: 28 },
   areas: [
-    { minX: -53, maxX: 5, minZ: -39.4, maxZ: -2 },
+    { minX: -56.8, maxX: 5, minZ: -39.4, maxZ: -2 },
     { minX: 5, maxX: 26, minZ: -39.4, maxZ: -20 },
     { minX: -9.6, maxX: 5.4, minZ: -2, maxZ: 26.6 },
   ],
@@ -2191,7 +2197,9 @@ function goOnline(token: string): void {
     },
     stamp(label, count, total) {
       sfx("message");
-      toast(`New stamp: ${label} (${count}/${total})`);
+      // Big and red for a moment (the user, 11/9), then a line saying where the stamps are kept.
+      stampFx(label, count, total);
+      toast(`New stamp: ${label} (${count}/${total}). See them in the look window (👕) or Settings.`);
     },
     board() {
       if (board.isOpen()) board.refresh();

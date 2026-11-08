@@ -96,7 +96,7 @@ function stepTicks(labels: string[]): HTMLElement {
   return row;
 }
 
-export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; interests(): void; follows(): void; isStaff(): boolean; office(): { on: boolean; room: number | null }; setOffice(on: boolean, room: number | null): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void }): void {
+export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; interests(): void; follows(): void; isStaff(): boolean; office(): { on: boolean; room: number | null }; setOffice(on: boolean, room: number | null): void; isGuest(): boolean; signUp(): void; signOut(): void; copyPlace(): void; stamps(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
   button.id = "settings-btn";
@@ -220,6 +220,11 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   follows.type = "button";
   follows.className = "settings-bug";
   follows.textContent = "🔔 Tell me when they're on";
+  // Where the visit stamps are (the user, 11/9: couldn't find them): they live in the look window.
+  const stamps = document.createElement("button");
+  stamps.type = "button";
+  stamps.className = "settings-bug";
+  stamps.textContent = "🏅 My visit stamps";
   // Staff only: "Office hours: open", with a counselling room if they like. The server decides who may.
   const officeBox = document.createElement("fieldset");
   const officeLegend = document.createElement("legend");
@@ -233,13 +238,15 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   officeRoomLabel.className = "settings-check";
   const officeRoom = document.createElement("select");
   officeRoom.setAttribute("aria-label", "Office hours room");
+  officeRoom.className = "pretty-select";
   for (const [v, text] of [["", "No room named"], ...[1, 2, 3, 4, 5, 6].map((n) => [String(n), `Counselling room ${n}`])] as [string, string][]) {
     const o = document.createElement("option");
     o.value = v;
     o.textContent = text;
     officeRoom.append(o);
   }
-  officeRoomLabel.append("Room: ", officeRoom);
+  officeRoomLabel.classList.add("settings-select-row");
+  officeRoomLabel.append("Room", officeRoom);
   const sendOffice = (): void => opts.setOffice(officeOn.checked, officeRoom.value ? Number(officeRoom.value) : null);
   officeOn.addEventListener("change", sendOffice);
   officeRoom.addEventListener("change", () => officeOn.checked && sendOffice());
@@ -378,7 +385,93 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   const weather = document.createElement("p");
   weather.className = "settings-note settings-weather";
   weather.id = "settings-weather";
-  card.append(head, sound, textBox, fieldset, weather, motionBox2, describeBox2, screen, place, verify, interests, follows, officeBox, bug, person, mute, credits, out, actions);
+  // Four tabs (the user, 11/9: one long list was too much): Social, Sound and accessibility,
+  // Graphics, Other. Each social button says in a line what it does. The last tab is remembered.
+  const described = (button: HTMLElement, line: string): HTMLElement => {
+    const box = document.createElement("div");
+    box.className = "settings-item";
+    const p = document.createElement("p");
+    p.className = "settings-item-line";
+    p.textContent = line;
+    box.append(button, p);
+    // Hiding the button (a guest, say) hides its line too.
+    new MutationObserver(() => (box.hidden = button.hidden)).observe(button, { attributes: true, attributeFilter: ["hidden"] });
+    return box;
+  };
+  const officeLine = document.createElement("p");
+  officeLine.className = "settings-item-line";
+  officeLine.textContent = "Staff: shows that you're free to talk, so students in the Student Hub can knock on your door.";
+  officeLegend.after(officeLine);
+  const TABS: [string, string, HTMLElement[]][] = [
+    ["social", "Social", [
+      described(interests, "Up to three tags (your courses or interests) under your name, so people who share them can find you."),
+      described(follows, "Pick members to follow; you get a notice when one of them comes online."),
+      described(stamps, "A stamp for each kind of place you visit; some hat styles unlock with them. In the look window (👕)."),
+      described(place, "Copies a link that opens the campus right here, to send to a friend."),
+      officeBox,
+      described(mute, "Hides someone's chat, notes, emotes and voice, on your screen only. They aren't told."),
+      described(person, "Tells the admin about someone, with the last five minutes of chat here attached."),
+    ]],
+    ["sound", "Sound & access", [sound, motionBox2, describeBox2]],
+    ["graphics", "Graphics", [fieldset, textBox, screen, weather]],
+    ["other", "Other", [verify, described(bug, "Something broken? A short note to the admin, with a screenshot if you like."), credits, out]],
+  ];
+  const TAB_KEY = "campus.settingsTab";
+  const tabList = document.createElement("div");
+  tabList.className = "settings-tabs";
+  tabList.setAttribute("role", "tablist");
+  tabList.setAttribute("aria-label", "Settings sections");
+  const tabButtons: HTMLButtonElement[] = [];
+  const panels: HTMLElement[] = [];
+  const pickTab = (id: string, focus = false): void => {
+    TABS.forEach(([tid], i) => {
+      const on = tid === id;
+      tabButtons[i]!.setAttribute("aria-selected", String(on));
+      tabButtons[i]!.tabIndex = on ? 0 : -1;
+      panels[i]!.hidden = !on;
+      if (on && focus) tabButtons[i]!.focus();
+    });
+    try {
+      localStorage.setItem(TAB_KEY, id);
+    } catch {
+      // private mode: just for this visit
+    }
+  };
+  TABS.forEach(([id, label, items], i) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "settings-tab";
+    b.id = `settings-tab-${id}`;
+    b.setAttribute("role", "tab");
+    b.setAttribute("aria-controls", `settings-panel-${id}`);
+    b.textContent = label;
+    b.addEventListener("click", () => pickTab(id));
+    // Arrow keys move between tabs, as a tab list should.
+    b.addEventListener("keydown", (e) => {
+      if (e.key !== "ArrowRight" && e.key !== "ArrowLeft") return;
+      e.preventDefault();
+      const next = TABS[(i + (e.key === "ArrowRight" ? 1 : TABS.length - 1)) % TABS.length]![0];
+      pickTab(next, true);
+    });
+    tabButtons.push(b);
+    tabList.append(b);
+    const panel = document.createElement("div");
+    panel.className = "settings-panel";
+    panel.id = `settings-panel-${id}`;
+    panel.setAttribute("role", "tabpanel");
+    panel.setAttribute("aria-labelledby", b.id);
+    panel.append(...items);
+    panels.push(panel);
+  });
+  let firstTab = "social";
+  try {
+    const saved = localStorage.getItem(TAB_KEY);
+    if (saved && TABS.some(([id]) => id === saved)) firstTab = saved;
+  } catch {
+    // private mode: the first tab
+  }
+  pickTab(firstTab);
+  card.append(head, tabList, ...panels, actions);
   dialog.append(card);
   document.body.append(dialog);
 
@@ -393,12 +486,13 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     out.hidden = opts.isGuest();
     interests.hidden = opts.isGuest();
     follows.hidden = opts.isGuest();
+    stamps.hidden = opts.isGuest();
     officeBox.hidden = !opts.isStaff();
     const now = opts.office();
     officeOn.checked = now.on;
     officeRoom.value = now.room ? String(now.room) : "";
     dialog.hidden = false;
-    (card.querySelector("input:checked") as HTMLInputElement | null)?.focus();
+    (tabList.querySelector('[aria-selected="true"]') as HTMLElement | null)?.focus();
   });
   close.addEventListener("click", hide);
   topClose.addEventListener("click", hide);
@@ -421,6 +515,10 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
   follows.addEventListener("click", () => {
     dialog.hidden = true;
     opts.follows();
+  });
+  stamps.addEventListener("click", () => {
+    dialog.hidden = true;
+    opts.stamps();
   });
   out.addEventListener("click", () => {
     dialog.hidden = true;
