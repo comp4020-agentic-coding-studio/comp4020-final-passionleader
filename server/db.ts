@@ -1,6 +1,7 @@
 import { mkdirSync } from "node:fs";
 import { dirname } from "node:path";
 import { DatabaseSync } from "node:sqlite";
+import { EVENTS_PER_PERSON, EVENT_COOLDOWN_SECONDS } from "./events.ts";
 import { ARRIVAL, FIRST_SPACE, SPACES, classroomSpace, isSpace, setClassrooms, type SpaceId } from "./spaces.ts";
 
 // Four tables. Visitors: a name, the secret that reclaims it, a role, and
@@ -125,6 +126,8 @@ const wanted: Record<string, string> = {
   last_note_at: "TEXT",
   last_comment_at: "TEXT",
   last_post_at: "TEXT",
+  // When they last put an event on the timetable (one every 30 seconds).
+  last_event_at: "TEXT",
   look: "TEXT",
   email: "TEXT",
   last_seen: "TEXT",
@@ -485,7 +488,7 @@ export function noteCount(author: string, space: SpaceId): number {
 }
 
 /** Seconds left before this visitor may post again, or 0. */
-function cooldownLeft(name: string, column: "last_note_at" | "last_comment_at" | "last_post_at", seconds: number): number {
+function cooldownLeft(name: string, column: "last_note_at" | "last_comment_at" | "last_post_at" | "last_event_at", seconds: number): number {
   const row = db
     .prepare(`SELECT ${seconds} - (unixepoch('now') - unixepoch(${column})) AS left FROM visitors WHERE name = ?`)
     .get(name) as { left: number | null } | undefined;
@@ -607,6 +610,55 @@ export const putPoop = (name: string, x: number, z: number): void =>
 export const poopsNow = (): { name: string; x: number; z: number }[] =>
   db.prepare(`SELECT name, x, z FROM poops WHERE ${freshPoop} ORDER BY at`).all() as { name: string; x: number; z: number }[];
 export const purgeOldPoops = (): number => Number(db.prepare(`DELETE FROM poops WHERE NOT (${freshPoop})`).run().changes);
+
+// --- the events timetable ----------------------------------------------------------
+// A member puts an event on the timetable: a title, a space, a start in the next 30 days and
+// a length. It shows as "Coming up", then as a banner in its space while it's on, and is
+// deleted once it has ended. Times are stored as epoch seconds; Canberra's clock is only how
+// they are typed and shown (events.ts).
+db.exec(`
+  CREATE TABLE IF NOT EXISTS events (
+    id         INTEGER PRIMARY KEY AUTOINCREMENT,
+    author     TEXT NOT NULL REFERENCES visitors(name) ON DELETE CASCADE ON UPDATE CASCADE,
+    space      TEXT NOT NULL,
+    title      TEXT NOT NULL,
+    starts_at  INTEGER NOT NULL,
+    ends_at    INTEGER NOT NULL,
+    created_at TEXT NOT NULL DEFAULT (datetime('now'))
+  );
+  CREATE INDEX IF NOT EXISTS events_by_end ON events (ends_at);
+`);
+
+export interface EventRow {
+  id: number;
+  author: string;
+  space: SpaceId;
+  title: string;
+  /** Epoch seconds. */
+  start: number;
+  end: number;
+}
+const eventCols = "id, author, space, title, starts_at AS start, ends_at AS end";
+const nowSeconds = (): number => Math.floor(Date.now() / 1000);
+
+export type AddEventResult = { ok: true; event: EventRow } | { ok: false; why: "wait"; wait: number } | { ok: false; why: "full" };
+
+/** Adds an event, unless they posted one under 30 seconds ago or already have five that haven't ended. */
+export function addEvent(author: string, space: SpaceId, title: string, start: number, end: number): AddEventResult {
+  const wait = cooldownLeft(author, "last_event_at", EVENT_COOLDOWN_SECONDS);
+  if (wait > 0) return { ok: false, why: "wait", wait };
+  if (upcomingEventCount(author) >= EVENTS_PER_PERSON) return { ok: false, why: "full" };
+  const { lastInsertRowid } = db.prepare("INSERT INTO events (author, space, title, starts_at, ends_at) VALUES (?, ?, ?, ?, ?)").run(author, space, title, start, end);
+  db.prepare("UPDATE visitors SET last_event_at = datetime('now') WHERE name = ?").run(author);
+  return { ok: true, event: db.prepare(`SELECT ${eventCols} FROM events WHERE id = ?`).get(lastInsertRowid) as unknown as EventRow };
+}
+export const upcomingEventCount = (author: string): number =>
+  (db.prepare("SELECT COUNT(*) AS n FROM events WHERE author = ? AND ends_at > ?").get(author, nowSeconds()) as { n: number }).n;
+/** Events that haven't ended, soonest first (the ones on now come first). */
+export const eventsNow = (): EventRow[] => (db.prepare(`SELECT ${eventCols} FROM events WHERE ends_at > ? ORDER BY starts_at, id`).all(nowSeconds()) as unknown as EventRow[]).filter((e) => isSpace(e.space));
+export const findEvent = (id: number): EventRow | undefined => db.prepare(`SELECT ${eventCols} FROM events WHERE id = ?`).get(id) as unknown as EventRow | undefined;
+export const deleteEvent = (id: number): void => void db.prepare("DELETE FROM events WHERE id = ?").run(id);
+export const purgeEndedEvents = (): number => Number(db.prepare("DELETE FROM events WHERE ends_at <= ?").run(nowSeconds()).changes);
 
 // --- saved meeting-room chats (plan 37) ---------------------------------------
 // A member in a meeting room can keep its chat so far (text lines and the
@@ -805,6 +857,7 @@ export function removeClassroom(code: string): boolean {
     const { changes } = db.prepare("DELETE FROM classrooms WHERE code = ?").run(code);
     db.prepare("DELETE FROM notes WHERE space = ?").run(space);
     db.prepare("DELETE FROM posts WHERE space = ?").run(space);
+    db.prepare("DELETE FROM events WHERE space = ?").run(space);
     // Out of a closed classroom is outside, by 155's door (as evictSpace does for those online),
     // not where newcomers arrive.
     db.prepare("UPDATE visitors SET last_space = ?, last_x = ?, last_z = ? WHERE last_space = ?").run(FIRST_SPACE, -8.4, 7, space);

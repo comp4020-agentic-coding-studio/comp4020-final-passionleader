@@ -107,6 +107,11 @@ import {
   saveLook,
   validLook,
   QA_HAT,
+  addEvent,
+  deleteEvent,
+  eventsNow,
+  findEvent,
+  purgeEndedEvents,
   removeClassroom,
   setClassroomLink,
   type Post,
@@ -117,7 +122,8 @@ import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePla
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
-import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
+import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, spaceInfo, teamRoomsOf } from "./spaces.ts";
+import { EVENT_AHEAD_DAYS, EVENT_MAX_MINUTES, EVENT_MIN_MINUTES, canberraToEpoch, eventTitle } from "./events.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
 keepIn(addAudit);
@@ -1555,6 +1561,66 @@ app.put("/api/look", async (c) => {
   return c.json({ ok: true });
 });
 
+// --- the events timetable -------------------------------------------------------------
+// A member puts an event on: a title, a space, a start (Canberra time, within 30 days) and a
+// length. Everyone reads the list, guests too. Each is shown as "Coming up", then as a banner in
+// its space while it's on, and deleted once it has ended. Nothing is pushed to other people's
+// screens (what a person does reaches only their own space); the browser asks again every minute.
+
+/** The spaces an event may be in: every main space and classroom, no meeting rooms, never the Poop Room (its door is never signposted). */
+const eventSpaces = (): { id: string; label: string }[] =>
+  [...Object.keys(SPACES), ...classroomList().map((r) => classroomSpace(r.code))].filter((id) => id !== "poop").map((id) => ({ id, label: spaceInfo(id)!.label }));
+
+const eventView = (e: { id: number; author: string; space: string; title: string; start: number; end: number }) => ({ ...e, spaceLabel: spaceInfo(e.space)?.label ?? e.space });
+
+app.get("/api/events", (c) => c.json({ now: Math.floor(Date.now() / 1000), events: eventsNow().map(eventView), spaces: eventSpaces() }));
+
+app.post("/api/events", async (c) => {
+  const b = await body(c);
+  const v = who(b);
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const guest = guestRefused(c, v, "event");
+  if (guest) return guest;
+  const barred = stopped(c, v, "posts", { action: "event" });
+  if (barred) return barred;
+  const refuse = (error: string, status: 400 | 429 = 400, extra: Record<string, unknown> = {}) => {
+    log("refused", v, { action: "event", reason: error }, { ip: ipOf(c), content: typeof b.title === "string" ? b.title.slice(0, 200) : null });
+    return c.json({ error, ...extra }, status);
+  };
+  const title = eventTitle(b.title);
+  if (!title.ok) return refuse(title.error);
+  if (typeof b.space !== "string" || !eventSpaces().some((s) => s.id === b.space)) return refuse("Pick a place on the campus (not a meeting room).");
+  const start = canberraToEpoch(b.start);
+  if (start === null) return refuse("Give a start time as a Canberra date and time.");
+  const now = Math.floor(Date.now() / 1000);
+  // A minute's grace: a time picker only reaches whole minutes, so "now" is already a few seconds ago.
+  if (start < now - 60) return refuse("That time has already passed.");
+  if (start > now + EVENT_AHEAD_DAYS * 86400) return refuse(`Events can be at most ${EVENT_AHEAD_DAYS} days ahead.`);
+  const minutes = b.minutes;
+  if (typeof minutes !== "number" || !Number.isInteger(minutes) || minutes < EVENT_MIN_MINUTES || minutes > EVENT_MAX_MINUTES) return refuse(`An event lasts ${EVENT_MIN_MINUTES} to ${EVENT_MAX_MINUTES} minutes.`);
+  const result = addEvent(v.name, b.space, title.title, start, start + minutes * 60);
+  if (!result.ok) {
+    if (result.why === "wait") return refuse(`One event every 30 seconds. Wait ${result.wait}s.`, 429, { wait: result.wait });
+    return refuse("You already have 5 events coming up. Remove one first.");
+  }
+  log("event-added", v, { space: b.space, event: result.event.id, minutes }, { ip: ipOf(c), content: title.title });
+  return c.json(eventView(result.event), 201);
+});
+
+app.delete("/api/events/:id", async (c) => {
+  const v = who(await body(c));
+  if (!v) return c.json({ error: "Join first." }, 401);
+  const e = findEvent(Number(c.req.param("id")));
+  if (!e) return c.json({ error: "That event is gone." }, 404);
+  if (!mayRemove(v, e.author)) {
+    log("refused", v, { action: "remove event", event: e.id, owner: e.author, reason: "not the author" }, { ip: ipOf(c), content: e.title });
+    return c.json({ error: "Only its author can remove this event." }, 403);
+  }
+  deleteEvent(e.id);
+  log("event-removed", v, { space: e.space, event: e.id, owner: e.author }, { ip: ipOf(c), content: e.title });
+  return c.json({ ok: true });
+});
+
 // Sketch & Guess, the drawing game on the Hub's arcade machine.
 sketchRoutes(app);
 
@@ -1614,6 +1680,7 @@ const purge = (): void => {
   purgeOldMail();
   purgeOldChats();
   purgeOldPoops();
+  purgeEndedEvents();
   const guestsGone = purgeIdleGuests();
   if (guestsGone) log("guests-purged", null, { count: guestsGone });
   removeObjects(purgeFiles());

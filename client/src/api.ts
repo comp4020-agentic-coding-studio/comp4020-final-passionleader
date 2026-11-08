@@ -307,3 +307,27 @@ export interface Activity {
 }
 /** What is open to join or answer now; with a token, your own private questions too. */
 export const getActivity = (token?: string): Promise<Activity> => request<Activity>(`/api/activity${token ? `?token=${encodeURIComponent(token)}` : ""}`);
+
+// --- events timetable (see events.ts) ---------------------------------------------
+
+export interface EventView {
+  id: number;
+  author: string;
+  space: SpaceId;
+  spaceLabel: string;
+  title: string;
+  /** Epoch seconds. */
+  start: number;
+  end: number;
+}
+export interface EventList {
+  /** The server's clock (epoch seconds), so a skewed computer clock doesn't move the banner. */
+  now: number;
+  events: EventView[];
+  /** Where an event may be held. */
+  spaces: { id: SpaceId; label: string }[];
+}
+export const getEvents = (): Promise<EventList> => request<EventList>("/api/events");
+/** `start` is a Canberra date and time ("2026-11-12T14:30"), `minutes` 15 to 180. */
+export const createEvent = (token: string, e: { title: string; space: SpaceId; start: string; minutes: number }): Promise<EventView> => request<EventView>("/api/events", "POST", { token, ...e });
+export const removeEvent = (token: string, id: number): Promise<unknown> => request(`/api/events/${id}`, "DELETE", { token });

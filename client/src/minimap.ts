@@ -20,7 +20,7 @@ export function mountMinimap(view: {
   buildings: (MapArea & { name: string })[];
   /** Doors and places, labelled. */
   places: { x: number; z: number; name: string }[];
-}): { show(on: boolean): void; draw(x: number, z: number, heading: number): void } {
+}): { show(on: boolean): void; draw(x: number, z: number, heading: number): void; mark(spots: { x: number; z: number }[]): void } {
   // As tall as fits; as wide as the campus is, so no empty strip at the side.
   const { bounds: b } = view;
   const pad = 8;
@@ -42,6 +42,8 @@ export function mountMinimap(view: {
   const px = (x: number): number => (pad + (x - b.minX) * scale) * 2;
   const pz = (z: number): number => (pad + (z - b.minZ) * scale) * 2;
   let on = false;
+  // Where an event is on now (a small amber star), set by main from the events timetable.
+  let marks: { x: number; z: number }[] = [];
 
   // Each place's label goes where it overlaps nothing labelled before it: above
   // its dot, else below, right or left, kept inside the map (the 11/4 sweep:
@@ -77,6 +79,9 @@ export function mountMinimap(view: {
       on = want && desktop.matches;
       canvas.hidden = !on;
     },
+    mark(spots) {
+      marks = spots;
+    },
     draw(x, z, heading) {
       if (!on) return;
       ctx.clearRect(0, 0, canvas.width, canvas.height);
@@ -100,6 +105,23 @@ export function mountMinimap(view: {
       ctx.textAlign = "left";
       ctx.fillStyle = "#3b2a12";
       for (const l of labels) ctx.fillText(l.name, l.x, l.y);
+      // An event on now: an amber star with a dark rim, so it reads on grey and on paths.
+      for (const m of marks) {
+        const sx = px(m.x);
+        const sz = pz(m.z) - 14;
+        ctx.beginPath();
+        for (let i = 0; i < 10; i++) {
+          const r = i % 2 === 0 ? 9 : 4;
+          const a = (Math.PI / 5) * i - Math.PI / 2;
+          ctx.lineTo(sx + Math.cos(a) * r, sz + Math.sin(a) * r);
+        }
+        ctx.closePath();
+        ctx.fillStyle = "#f2a900";
+        ctx.fill();
+        ctx.lineWidth = 2;
+        ctx.strokeStyle = "#3b2a12";
+        ctx.stroke();
+      }
       // You: a dot with a nose in the direction you face.
       const cx = px(x);
       const cz = pz(z);
