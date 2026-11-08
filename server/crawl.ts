@@ -125,7 +125,11 @@ export function pageText(html: string): { title: string; text: string } {
     (_m, d: string, mo: string, y: string, label: string) => `<p>${label.replace(/<[^>]+>/g, " ").trim()}: ${Number(d)} ${mo} ${y}</p>`,
   );
   body = body
-    .replace(/<(script|style|nav|header|footer|svg|noscript|form|button|iframe|template)\b[\s\S]*?<\/\1>/gi, " ")
+    .replace(/<(script|style|svg|noscript|form|button|iframe|template)\b[\s\S]*?<\/\1>/gi, " ")
+    // Menus, headers and footers: each block from its own opening tag, never across another one of
+    // the same kind. A page with two <nav>s and one </nav> (Transport Canberra's fares, 11/8) lost
+    // everything between the first menu and its footer.
+    .replace(/<(nav|header|footer)\b(?:(?!<\1\b)[\s\S])*?<\/\1>/gi, " ")
     .replace(/<!--[\s\S]*?-->/g, " ")
     .replace(/<h[1-4][^>]*>([\s\S]*?)<\/h[1-4]>/gi, (_m, h: string) => `\n## ${h.replace(/<[^>]+>/g, " ")}\n`)
     .replace(/<(li)[^>]*>/gi, "\n- ")

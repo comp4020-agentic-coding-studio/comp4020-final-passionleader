@@ -113,6 +113,15 @@ describe("the reply's language", () => {
   });
 });
 
+describe("the crawler's reading", () => {
+  it("keeps a page's text when it has two menus but only one closes", () => {
+    const menu = `<html><body><nav>Home Fares Timetables</nav><div><h1>Fares</h1><p>Adult single: $5.29</p></div></body></html>`;
+    expect(crawl.pageText(menu).text).not.toContain("Timetables"); // a menu that closes is still dropped
+    const unbalanced = `<html><body><nav id="top">Menu<ul><li>Home</li></ul><nav class="mobile">More<ul><li>x</li></ul></nav><div><h1>Fares</h1><p>Adult single: $5.29</p></div><footer>Foot</footer></body></html>`;
+    expect(crawl.pageText(unbalanced).text).toContain("$5.29");
+  });
+});
+
 describe("the crawler's manners", () => {
   it("names itself and its author, never as a known AI bot", async () => {
     const src = await import("node:fs").then((fs) => fs.readFileSync("server/crawl.ts", "utf8"));
