@@ -33,7 +33,9 @@ body:has(#toast:not(:empty)) #who-here { top: 100px; }
 #who-here li { display: flex; flex-wrap: wrap; gap: 4px; align-items: center; }
 #who-here li > button:first-child { flex: 1 1 60%; width: auto; }
 #who-here li .who-follow { flex: none; width: auto; min-height: 32px; font-size: 0.78rem; padding: 2px 8px; }
-#who-here li .who-follow[aria-pressed="true"] { background: #23404f; color: #fff; border-color: #23404f; }
+#who-here li .who-follow[aria-pressed="true"], #who-here li .who-follow[aria-pressed="true"]:hover:not(:disabled) { background: #23404f; color: #fff; border-color: #23404f; }
+/* Not following: dark text on white, clearly a button (helper QA, 11/9: the pale one read as blank). */
+#who-here li .who-follow:not([aria-pressed="true"]) { color: #23404f; border-color: #23404f; font-weight: 600; }
 #who-here li .who-tags { flex: 1 1 100%; }
 #who-here .who-office p { margin: 4px 0; padding: 4px 8px; border-radius: 8px; background: #fff3d6; border: 1px solid #d6b45a; font-size: 0.85rem; }
 #who-here .who-office button { margin-left: 6px; min-height: 28px; padding: 0 10px; border-radius: 8px; border: 1px solid #6b3f1d; background: #6b3f1d; color: #fff; cursor: pointer; font: inherit; }
