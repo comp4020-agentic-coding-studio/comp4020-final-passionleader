@@ -867,7 +867,7 @@ function removeNote(id: number): void {
 async function loadNotes(id: SpaceId): Promise<void> {
   const ticket = noteRequest;
   try {
-    const list = await getNotes(id);
+    const list = await getNotes(id, session?.token);
     if (ticket === noteRequest) list.forEach(upsertNote);
   } catch (err) {
     toast(err instanceof ApiError ? err.message : "Could not load notes.");
@@ -888,7 +888,7 @@ const heartsOf = (c: { author: string; heartedBy?: string[] }): { hearts: number
 const commentViews = (list: Comment[]): CommentView[] => list.map((c) => ({ ...c, canDelete: mine(c.author), ...heartsOf(c) }));
 
 async function refreshComments(noteId: number): Promise<void> {
-  const list = await getComments(noteId);
+  const list = await getComments(noteId, session?.token);
   panel.setComments(noteId, commentViews(list));
   const view = notes.get(noteId);
   if (view) upsertNote({ ...view.note, comments: list.length });
@@ -1688,7 +1688,7 @@ async function openNote(id: number): Promise<void> {
   if (!view) return;
   stopMoving();
   try {
-    const list = await getComments(id);
+    const list = await getComments(id, session?.token);
     panel.open({ ...view.note, canDelete: mine(view.note.author) }, commentViews(list));
   } catch (err) {
     toast(err instanceof ApiError ? err.message : "Could not open that note.");
@@ -1963,6 +1963,13 @@ function goOnline(token: string): void {
     emote: showEmote,
     note: upsertNote,
     noteRemoved: removeNote,
+    // Hidden after reports: it goes from every screen but its author's and the admin's, which keep it (marked).
+    noteHidden(id, author) {
+      if (mine(author)) {
+        const view = notes.get(id);
+        if (view) upsertNote({ ...view.note, hidden: true });
+      } else removeNote(id);
+    },
     comment(c) {
       if (panel.openNoteId() === c.noteId) void refreshComments(c.noteId);
       else {

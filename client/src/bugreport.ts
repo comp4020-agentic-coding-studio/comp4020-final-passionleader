@@ -1,4 +1,5 @@
 import "./bugreport.css";
+import type { ItemRef } from "./api.ts";
 import { ACCEPT_IMAGES, MAX_FILE_BYTES } from "./uploads.ts";
 
 // The bug report form, opened from the settings dialog: what went wrong, and
@@ -18,10 +19,10 @@ export function mountBugReport(opts: {
    * the report itself went (it may have, with the screenshot failing after).
    * `progress` gets 0..1 while the image uploads.
    */
-  send(text: string, shot: File | null, progress: (done: number) => void, about: { name: string; withChat: boolean } | null): Promise<{ sent: boolean; error: string | null }>;
+  send(text: string, shot: File | null, progress: (done: number) => void, about: { name: string; withChat: boolean; item?: ItemRef } | null): Promise<{ sent: boolean; error: string | null }>;
 }): {
   /** Opens the bug form, or with `person` the person form; `about` fills in who and what (a post, note or comment). */
-  open(person?: boolean, about?: { name: string; item: string }): void;
+  open(person?: boolean, about?: { name: string; item: string; ref?: ItemRef }): void;
   isOpen(): boolean;
 } {
   const root = document.createElement("div");
@@ -118,7 +119,8 @@ export function mountBugReport(opts: {
       (done) => {
         status.textContent = `Uploading the screenshot… ${Math.round(done * 100)}%`;
       },
-      person ? { name, withChat: withChat.checked } : null,
+      // Reporting one thing someone wrote (its Report button): the report names it, so three members hide it. Only while "Who?" still names its author.
+      person ? { name, withChat: withChat.checked, item: pointing && pointing.name.toLowerCase() === name.toLowerCase() ? pointing.ref : undefined } : null,
     );
     send.disabled = false;
     if (sent) {
@@ -135,9 +137,12 @@ export function mountBugReport(opts: {
   });
 
   let person = false;
+  /** The note, post or comment the open form is about, if it was opened from its Report button. */
+  let pointing: { name: string; ref: ItemRef } | null = null;
   return {
     open(aboutPerson = false, about) {
       person = aboutPerson || !!about;
+      pointing = about?.ref ? { name: about.name, ref: about.ref } : null;
       title.textContent = person ? "🚩 Report someone" : "🐞 Report a bug";
       hint.textContent = person
         ? "What did they do? Only the admin reads this, and can stop someone chatting, posting or coming in. Your name and the place you're in are sent with it."

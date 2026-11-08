@@ -26,6 +26,7 @@
   label.check { display: inline-flex; gap: 6px; align-items: center; font-size: 0.9rem; }
   main { padding: 10px 14px 40px; }
   .hint { color: var(--muted); font-size: 0.85rem; margin: 4px 0 10px; }
+  h2.sub { font-size: 1rem; margin: 14px 0 4px; }
   .error { color: #a02020; min-height: 1.3em; }
   table { width: 100%; border-collapse: collapse; background: var(--card); border: 1px solid var(--line); }
   th, td { text-align: left; vertical-align: top; padding: 6px 8px; border-bottom: 1px solid var(--line); }
@@ -143,6 +144,11 @@
       <button type="button" class="more" id="older" hidden>Load older</button>
     </section>
     <section id="bug-view" hidden>
+      <h2 class="sub" id="hidden-title">Hidden, awaiting review (<span id="hidden-count">0</span>)</h2>
+      <p class="hint">A note, post or comment that three different members reported within 24 hours is hidden at once for everyone except the person who wrote it and you. Restore puts it back for everyone and it stays (more reports won't hide it again); Remove deletes it. Both are logged.</p>
+      <p class="error" id="hidden-error" role="alert"></p>
+      <div id="hidden"></div>
+      <h2 class="sub">Bug reports and reports about people</h2>
       <p class="hint">Bug reports and reports about people, sent from the settings dialog (the gear). Kept 28 days, or until marked done; a screenshot is kept 30 days at most. A report about someone may carry the last five minutes of that space's chat, attached by the server (map chat is kept a day for this; meeting rooms' never).</p>
       <p class="error" id="bug-error" role="alert"></p>
       <div id="bugs"></div>
@@ -245,7 +251,7 @@
     if (event === "refused" || event === "join-refused" || event === "person-report") return "refused";
     if (event.endsWith("-removed") || event === "note-replaced" || event === "note-expired") return "removed";
     if (["join", "connect", "disconnect"].includes(event)) return "signin";
-    if (event.startsWith("classroom") || event.startsWith("restrict") || event === "room-invite" || event === "role-changed" || event === "kicked") return "admin";
+    if (event.startsWith("classroom") || event.startsWith("restrict") || event === "room-invite" || event === "role-changed" || event === "kicked" || event === "item-hidden" || event === "item-restored") return "admin";
     return "content";
   }
   function summary(e) {
@@ -254,7 +260,7 @@
     if (d.action) parts.push(`tried to ${d.action}`);
     if (d.reason) parts.push(`reason: ${d.reason}`);
     if (d.owner) parts.push(`owner: ${d.owner}`);
-    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online", "name", "what", "until", "about", "chatLines", "role", "adminPc"]) {
+    for (const k of ["tab", "note", "post", "comment", "report", "kind", "size", "code", "which", "url", "how", "words", "chars", "wait", "invited", "by", "count", "online", "name", "what", "until", "about", "chatLines", "role", "adminPc", "kind", "item", "reporters", "needed", "review"]) {
       if (d[k] !== undefined && d[k] !== null) parts.push(`${k}: ${d[k]}`);
     }
     return parts.join(" · ");
@@ -311,7 +317,7 @@
   const EVENT_GROUPS = [
     ["Sign-ins", ["join", "join-refused", "connect", "disconnect", "signed-up", "password-reset"]],
     ["Content", ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-edited", "post-removed", "post-expired", "post-comment", "post-comment-edited", "post-comment-removed", "file"]],
-    ["Reports and refusals", ["bug-report", "person-report", "refused"]],
+    ["Reports and refusals", ["bug-report", "person-report", "item-hidden", "item-restored", "refused"]],
     ["Admin and rooms", ["restricted", "restriction-lifted", "kicked", "role-changed", "classroom-created", "classroom-removed", "classroom-link", "room-invite"]],
   ];
   const ticks = new Map();
@@ -376,8 +382,47 @@
     }
   }
 
+  // --- hidden after reports, awaiting review ---
+  const KIND_WORDS = { note: "sticky note", comment: "comment on a sticky note", post: "board post", "post-comment": "comment on a board post" };
+  async function loadHidden() {
+    $("hidden-error").textContent = "";
+    try {
+      const { items } = await api("/api/admin/hidden", "POST", {});
+      $("hidden-count").textContent = String(items.length);
+      const list = $("hidden");
+      list.replaceChildren();
+      if (!items.length) list.append(el("p", "hint", "Nothing is hidden."));
+      for (const it of items) {
+        const card = el("div", "card");
+        const meta = el("div", "meta");
+        meta.append(el("strong", "", it.author), el("span", "", ` · ${KIND_WORDS[it.kind] || it.kind} · ${it.space || "no space"} · hidden ${dayOf(it.hiddenAt.replace(" ", "T") + "Z")} ${timeOf(it.hiddenAt.replace(" ", "T") + "Z")}`));
+        const by = el("div", "meta", `Reported by ${it.reporters.join(", ")}`);
+        const text = el("div", "text", it.title ? `${it.title}\n\n${it.text}` : it.text);
+        const restore = el("button", "primary", "Restore");
+        restore.type = "button";
+        restore.addEventListener("click", async () => {
+          try { await api(`/api/admin/hidden/${it.kind}/${it.id}/restore`, "POST", {}); loadHidden(); }
+          catch (err) { $("hidden-error").textContent = err.message; loadHidden(); }
+        });
+        const remove = el("button", "", "Remove");
+        remove.type = "button";
+        remove.addEventListener("click", async () => {
+          if (!confirm("Delete this for good?")) return;
+          try { await api(`/api/admin/hidden/${it.kind}/${it.id}`, "DELETE", {}); loadHidden(); }
+          catch (err) { $("hidden-error").textContent = err.message; loadHidden(); }
+        });
+        card.append(meta, by, text, restore, " ", remove);
+        list.append(card);
+      }
+    } catch (err) {
+      if (err.status === 401 || err.status === 403) return showSignin(err.message);
+      $("hidden-error").textContent = err.message;
+    }
+  }
+
   // --- bug reports ---
   async function loadBugs() {
+    loadHidden();
     $("bug-error").textContent = "";
     try {
       const { bugs } = await api("/api/admin/bugs", "POST", {});

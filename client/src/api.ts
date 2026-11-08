@@ -26,6 +26,8 @@ export interface Note {
   /** When it disappears: a month after it was stuck (UTC). */
   expiresAt: string;
   comments: number;
+  /** Hidden after reports, awaiting the admin: only you (its author) or the admin get it. */
+  hidden?: boolean;
 }
 
 export interface Comment {
@@ -38,6 +40,8 @@ export interface Comment {
   heartedBy?: string[];
   /** The most-hearted comment, pinned on top. */
   hot?: boolean;
+  /** Hidden after reports, awaiting the admin: only its author and the admin get it. */
+  hidden?: boolean;
 }
 
 export class ApiError extends Error {
@@ -160,7 +164,8 @@ export const isMember = (s: { role: string } | null | undefined): boolean => !!s
 
 export const saveLook = (token: string, look: Look): Promise<unknown> => request("/api/look", "PUT", { token, look });
 
-export const getNotes = (space: SpaceId): Promise<Note[]> => request<Note[]>(`/api/notes?space=${space}`);
+/** A space's notes; with a token, a note of yours that was hidden after reports (or any, for the admin) comes too, marked hidden. */
+export const getNotes = (space: SpaceId, token?: string): Promise<Note[]> => request<Note[]>(`/api/notes?space=${space}${token ? `&token=${encodeURIComponent(token)}` : ""}`);
 
 export const myNoteCount = (token: string, space: SpaceId): Promise<{ count: number; limit: number }> =>
   request("/api/notes/mine", "POST", { token, space });
@@ -170,7 +175,8 @@ export const postNote = (token: string, space: SpaceId, x: number, z: number, te
 
 export const deleteNote = (token: string, id: number): Promise<unknown> => request(`/api/notes/${id}`, "DELETE", { token });
 
-export const getComments = (noteId: number): Promise<Comment[]> => request<Comment[]>(`/api/notes/${noteId}/comments`);
+export const getComments = (noteId: number, token?: string): Promise<Comment[]> =>
+  request<Comment[]>(`/api/notes/${noteId}/comments${token ? `?token=${encodeURIComponent(token)}` : ""}`);
 
 export const postComment = (token: string, noteId: number, text: string): Promise<Comment> =>
   request<Comment>(`/api/notes/${noteId}/comments`, "POST", { token, text });
@@ -206,8 +212,13 @@ export const setClassroomLink = (token: string, code: string, which: "board" | "
 export const getProjects = (): Promise<{ projects: { name: string; url: string }[]; checkedAt: string | null }> =>
   request("/api/projects");
 
-export const sendBugReport = (token: string, text: string, space: SpaceId | null, about?: { name: string; withChat: boolean } | null): Promise<{ id: number }> =>
-  request("/api/bugs", "POST", { token, text, space, about: about?.name, withChat: about?.withChat });
+/** `about.item` names the one note, post or comment a report is about: three members reporting it hide it for review. */
+export const sendBugReport = (token: string, text: string, space: SpaceId | null, about?: { name: string; withChat: boolean; item?: ItemRef } | null): Promise<{ id: number }> =>
+  request("/api/bugs", "POST", { token, text, space, about: about?.name, withChat: about?.withChat, item: about?.item });
+export interface ItemRef {
+  kind: "note" | "comment" | "post" | "post-comment";
+  id: number;
+}
 
 export type BoardTab = string;
 export interface BoardConfig {
@@ -245,6 +256,8 @@ export interface Post {
   files?: FileInfo[];
   /** Only its author and staff see it. */
   private?: boolean;
+  /** Hidden after reports, awaiting the admin: only its author and the admin get it. */
+  hidden?: boolean;
   /** A study group's size, and who has joined (its writer first). */
   capacity?: number | null;
   members?: string[];
@@ -257,6 +270,8 @@ export interface PostComment {
   createdAt: string;
   editedAt?: string | null;
   heartedBy?: string[];
+  /** Hidden after reports, awaiting the admin: only its author and the admin get it. */
+  hidden?: boolean;
 }
 
 /** A board's posts; with a token, private ones of yours (or all of them, for the admin) too. */

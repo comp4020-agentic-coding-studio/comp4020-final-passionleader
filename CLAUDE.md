@@ -85,6 +85,12 @@ when a flow changes.
   the rest stay oldest first. A
   comment's hearts go with it. Anyone may report someone's note, post or
   comment (the person report, with who and a quote filled in).
+  Three different members reporting the same note, post or comment within 24
+  hours hide it at once for everyone except its author (who is told) and the
+  admin; two don't, and one person reporting twice counts once. The admin
+  page's "Hidden, awaiting review" lists them with Restore (back for everyone,
+  and it stays) and Remove (deleted); both are checked on the server and
+  logged (`item-hidden`, `item-restored`, and the usual removal event).
 - Classroom boards (Q&A, Notices, Board): posts up to 500 words (and 3000
   characters) with a title of up to 80, one every 30 seconds; comments as
   for notes. Authors edit their own posts and comments (same limits; they

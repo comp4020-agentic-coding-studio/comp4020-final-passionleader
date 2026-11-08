@@ -42,6 +42,8 @@ export interface Note {
   /** When it disappears (UTC, "YYYY-MM-DD HH:MM:SS"). */
   expiresAt: string;
   comments: number;
+  /** Hidden after reports and awaiting the admin: sent only to its author and the admin. */
+  hidden?: true;
 }
 export interface Comment {
   id: number;
@@ -296,6 +298,36 @@ db.exec(`
     BEGIN DELETE FROM hearts WHERE kind = 'post' AND target = OLD.id; END;
 `);
 
+// Reports on one thing someone wrote (a note, post or comment) and what they lead to. Three
+// different members reporting the same item within 24 hours hide it at once, for everyone but its
+// author and the admin, until the admin restores or removes it. One row per reporter and item,
+// so one person can't hide something alone by reporting it again. "restored" is the admin's
+// verdict: it stays visible however many report it afterwards. Both go with the item.
+db.exec(`
+  CREATE TABLE IF NOT EXISTS item_reports (
+    kind     TEXT NOT NULL,
+    target   INTEGER NOT NULL,
+    reporter TEXT NOT NULL COLLATE NOCASE,
+    at       TEXT NOT NULL DEFAULT (datetime('now')),
+    PRIMARY KEY (kind, target, reporter)
+  );
+  CREATE TABLE IF NOT EXISTS hidden_items (
+    kind      TEXT NOT NULL,
+    target    INTEGER NOT NULL,
+    hidden_at TEXT NOT NULL DEFAULT (datetime('now')),
+    status    TEXT NOT NULL DEFAULT 'hidden',
+    PRIMARY KEY (kind, target)
+  );
+  CREATE TRIGGER IF NOT EXISTS review_note_gone AFTER DELETE ON notes
+    BEGIN DELETE FROM item_reports WHERE kind = 'note' AND target = OLD.id; DELETE FROM hidden_items WHERE kind = 'note' AND target = OLD.id; END;
+  CREATE TRIGGER IF NOT EXISTS review_comment_gone AFTER DELETE ON comments
+    BEGIN DELETE FROM item_reports WHERE kind = 'comment' AND target = OLD.id; DELETE FROM hidden_items WHERE kind = 'comment' AND target = OLD.id; END;
+  CREATE TRIGGER IF NOT EXISTS review_post_gone AFTER DELETE ON posts
+    BEGIN DELETE FROM item_reports WHERE kind = 'post' AND target = OLD.id; DELETE FROM hidden_items WHERE kind = 'post' AND target = OLD.id; END;
+  CREATE TRIGGER IF NOT EXISTS review_post_comment_gone AFTER DELETE ON post_comments
+    BEGIN DELETE FROM item_reports WHERE kind = 'post-comment' AND target = OLD.id; DELETE FROM hidden_items WHERE kind = 'post-comment' AND target = OLD.id; END;
+`);
+
 // The classroom there's always been. (COMMON, the room for anyone, was the
 // second until the ANUSA Student Lounge replaced it; main.ts clears it out.)
 db.prepare("INSERT OR IGNORE INTO classrooms (code) VALUES (?)").run("COMP8020");
@@ -469,10 +501,14 @@ const live = `n.created_at > datetime('now', '-${NOTE_DAYS} days')`;
 
 const noteCols = `n.id, n.space, n.author, n.x, n.z, n.text, n.created_at AS createdAt,
   datetime(n.created_at, '+${NOTE_DAYS} days') AS expiresAt,
-  (SELECT COUNT(*) FROM comments c WHERE c.note_id = n.id) AS comments`;
+  (SELECT COUNT(*) FROM comments c WHERE c.note_id = n.id AND NOT EXISTS (SELECT 1 FROM hidden_items h WHERE h.kind = 'comment' AND h.target = c.id AND h.status = 'hidden')) AS comments`;
 
-export function notesIn(space: SpaceId): Note[] {
-  return db.prepare(`SELECT ${noteCols} FROM notes n WHERE n.space = ? AND ${live} ORDER BY n.created_at, n.id`).all(space) as unknown as Note[];
+/** A space's notes. Hidden ones (reportItem) are left out unless `mayView` allows this viewer (their author, the admin), and come marked. */
+export function notesIn(space: SpaceId, mayView?: (author: string) => boolean): Note[] {
+  const gone = hiddenIds("note");
+  return (db.prepare(`SELECT ${noteCols} FROM notes n WHERE n.space = ? AND ${live} ORDER BY n.created_at, n.id`).all(space) as unknown as Note[])
+    .filter((n) => !gone.has(n.id) || !!mayView?.(n.author))
+    .map((n) => (gone.has(n.id) ? { ...n, hidden: true as const } : n));
 }
 
 export function findNote(id: number): Note | undefined {
@@ -715,10 +751,18 @@ export function toggleHeart(kind: HeartKind, target: number, name: string): bool
   return true;
 }
 
-export function commentsOn(noteId: number): Comment[] {
-  const rows = db.prepare(`SELECT ${commentCols} FROM comments WHERE note_id = ? ORDER BY created_at, id`).all(noteId) as unknown as Omit<Comment, "heartedBy">[];
+/**
+ * A note's comments. A comment hidden after reports (see reportItem) is left out unless `mayView`
+ * says this viewer may see it (its author, the admin); it's dropped before the hot one is
+ * picked, so a hidden comment can't hold the pinned place, and it comes marked `hidden`.
+ */
+export function commentsOn(noteId: number, mayView?: (author: string) => boolean): (Comment & { hidden?: true })[] {
+  const gone = hiddenIds("comment");
+  const rows = (db.prepare(`SELECT ${commentCols} FROM comments WHERE note_id = ? ORDER BY created_at, id`).all(noteId) as unknown as Omit<Comment, "heartedBy">[]).filter(
+    (r) => !gone.has(r.id) || !!mayView?.(r.author),
+  );
   const hearts = heartsFor("note", rows.map((r) => r.id));
-  return byHearts(rows.map((r) => ({ ...r, heartedBy: hearts.get(r.id) ?? [] })));
+  return byHearts(rows.map((r) => ({ ...r, heartedBy: hearts.get(r.id) ?? [], ...(gone.has(r.id) ? { hidden: true as const } : {}) })));
 }
 
 export function findComment(id: number): Comment | undefined {
@@ -854,7 +898,7 @@ export interface PostComment {
 }
 
 const postCols = `p.id, p.space, p.tab, p.author, p.title, p.text, p.created_at AS createdAt, p.edited_at AS editedAt,
-  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id) AS comments, p.private, p.capacity`;
+  (SELECT COUNT(*) FROM post_comments c WHERE c.post_id = p.id AND NOT EXISTS (SELECT 1 FROM hidden_items h WHERE h.kind = 'post-comment' AND h.target = c.id AND h.status = 'hidden')) AS comments, p.private, p.capacity`;
 const membersOf = (postId: number): string[] =>
   (db.prepare("SELECT name FROM group_members WHERE post_id = ? ORDER BY rowid").all(postId) as { name: string }[]).map((r) => r.name);
 const asPost = (r: unknown): Post => {
@@ -919,12 +963,14 @@ export function deletePost(id: number): void {
 
 const postCommentCols = "id, post_id AS postId, author, text, created_at AS createdAt, edited_at AS editedAt";
 
-export function postCommentsOn(postId: number): PostComment[] {
-  const rows = db
-    .prepare(`SELECT ${postCommentCols} FROM post_comments WHERE post_id = ? ORDER BY created_at, id`)
-    .all(postId) as unknown as Omit<PostComment, "heartedBy">[];
+/** A post's comments, with hidden ones left out for whoever may not see them (as commentsOn). */
+export function postCommentsOn(postId: number, mayView?: (author: string) => boolean): (PostComment & { hidden?: true })[] {
+  const gone = hiddenIds("post-comment");
+  const rows = (
+    db.prepare(`SELECT ${postCommentCols} FROM post_comments WHERE post_id = ? ORDER BY created_at, id`).all(postId) as unknown as Omit<PostComment, "heartedBy">[]
+  ).filter((r) => !gone.has(r.id) || !!mayView?.(r.author));
   const hearts = heartsFor("post", rows.map((r) => r.id));
-  return byHearts(rows.map((r) => ({ ...r, heartedBy: hearts.get(r.id) ?? [] })));
+  return byHearts(rows.map((r) => ({ ...r, heartedBy: hearts.get(r.id) ?? [], ...(gone.has(r.id) ? { hidden: true as const } : {}) })));
 }
 
 export function findPostComment(id: number): PostComment | undefined {
@@ -1096,6 +1142,69 @@ export function restrictionOn(name: string, what: Restrictable): Restriction | u
 export function restrictions(): Restriction[] {
   db.prepare("DELETE FROM restrictions WHERE until <= ?").run(new Date().toISOString());
   return db.prepare("SELECT name, what, until, by, reason FROM restrictions ORDER BY until").all() as unknown as Restriction[];
+}
+
+// --- reports on one item, and hiding it (RICE v3) ------------------------------------
+
+export type ReviewKind = "note" | "comment" | "post" | "post-comment";
+export const REVIEW_KINDS: readonly ReviewKind[] = ["note", "comment", "post", "post-comment"];
+/** Different members it takes, and the window they must fall in. */
+export const REPORTS_TO_HIDE = 3;
+export const REPORT_WINDOW_HOURS = 24;
+
+/** The ids of this kind that are hidden now, for filtering a list in one query. */
+export function hiddenIds(kind: ReviewKind): Set<number> {
+  const rows = db.prepare("SELECT target FROM hidden_items WHERE kind = ? AND status = 'hidden'").all(kind) as { target: number }[];
+  return new Set(rows.map((r) => r.target));
+}
+
+export const isHidden = (kind: ReviewKind, target: number): boolean =>
+  !!db.prepare("SELECT 1 FROM hidden_items WHERE kind = ? AND target = ? AND status = 'hidden'").get(kind, target);
+
+/**
+ * Records `reporter`'s report on an item (the caller has checked it's real, visible to them,
+ * someone else's and not the admin's). A repeat from the same person counts once. Returns whether
+ * this report hid the item, and how many different members reported it in the window.
+ */
+export function reportItem(kind: ReviewKind, target: number, reporter: string): { hidden: boolean; reporters: number } {
+  db.prepare("INSERT OR IGNORE INTO item_reports (kind, target, reporter) VALUES (?, ?, ?)").run(kind, target, reporter);
+  const { n } = db
+    .prepare(`SELECT COUNT(DISTINCT reporter) AS n FROM item_reports WHERE kind = ? AND target = ? AND at > datetime('now', '-${REPORT_WINDOW_HOURS} hours')`)
+    .get(kind, target) as { n: number };
+  if (n < REPORTS_TO_HIDE) return { hidden: false, reporters: n };
+  // INSERT OR IGNORE: already hidden, or restored by the admin (their verdict stands): nothing changes.
+  const { changes } = db.prepare("INSERT OR IGNORE INTO hidden_items (kind, target) VALUES (?, ?)").run(kind, target);
+  return { hidden: changes > 0, reporters: n };
+}
+
+/** Everything hidden and waiting, newest first, with who reported it. */
+export function hiddenList(): { kind: ReviewKind; target: number; hiddenAt: string; reporters: string[] }[] {
+  const rows = db.prepare("SELECT kind, target, hidden_at AS hiddenAt FROM hidden_items WHERE status = 'hidden' ORDER BY hidden_at DESC, rowid DESC LIMIT 200").all() as {
+    kind: ReviewKind;
+    target: number;
+    hiddenAt: string;
+  }[];
+  return rows.map((r) => ({
+    ...r,
+    reporters: (db.prepare("SELECT reporter FROM item_reports WHERE kind = ? AND target = ? ORDER BY at, rowid").all(r.kind, r.target) as { reporter: string }[]).map((x) => x.reporter),
+  }));
+}
+
+/** The admin's Restore: visible again, and it stays so (further reports don't hide it a second time). False if it wasn't hidden. */
+export function restoreItem(kind: ReviewKind, target: number): boolean {
+  return db.prepare("UPDATE hidden_items SET status = 'restored' WHERE kind = ? AND target = ? AND status = 'hidden'").run(kind, target).changes > 0;
+}
+
+/** Reports older than the window, for items not waiting on the admin, are forgotten (their reporters aren't kept longer than they count). */
+export function purgeOldItemReports(): number {
+  return Number(
+    db
+      .prepare(
+        `DELETE FROM item_reports WHERE at <= datetime('now', '-${REPORT_WINDOW_HOURS} hours')
+           AND NOT EXISTS (SELECT 1 FROM hidden_items h WHERE h.kind = item_reports.kind AND h.target = item_reports.target AND h.status = 'hidden')`,
+      )
+      .run().changes,
+  );
 }
 
 // --- bug reports -----------------------------------------------------------------

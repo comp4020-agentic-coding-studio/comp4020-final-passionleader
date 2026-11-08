@@ -48,6 +48,15 @@ import {
   staleClassrooms,
   postIdsIn,
   toggleHeart,
+  hiddenIds,
+  hiddenList,
+  isHidden,
+  purgeOldItemReports,
+  reportItem,
+  restoreItem,
+  REPORTS_TO_HIDE,
+  type ReviewKind,
+  REVIEW_KINDS,
   toggleMember,
   sendMailTo,
   inboxOf,
@@ -117,7 +126,7 @@ import { attachRealtime, broadcastAll, broadcastSpace, evictSpace, kick, livePla
 import { S3Failure, arrivedSize, cleanName, downloadLink, fileError, isImage, keyFor, removeObjects, s3Message, s3Ready, typeOf, uploadLink, type FileKind } from "./files.ts";
 import { sketchRoutes } from "./sketch/routes.ts";
 import { startWeather, weatherForClient } from "./weather.ts";
-import { boardOf, expiringBoards, maySeePost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
+import { boardOf, expiringBoards, maySeePost as maySeeUnhiddenPost, mayPostIn, spaceOfBoard, tabOf } from "./boards.ts";
 import { ARRIVAL, CLASSROOM_CODE, FIRST_SPACE, OLD_COMMON, SPACES, clampTo, classroomSpace, isSpace, noteSpotError, roomOf, teamRoomsOf } from "./spaces.ts";
 
 // Lines the admin can read back for seven days go into SQLite as well.
@@ -661,12 +670,30 @@ app.get("/api/test/mail", (c) => {
   return m ? c.json(m) : c.json({ error: "Nothing sent there." }, 404);
 });
 
+
+// --- hidden after reports (RICE v3) -----------------------------------------------
+// A note, post or comment that three different members reported within 24 hours is hidden at
+// once (db.ts reportItem) and waits for the admin's Restore or Remove (the admin page's "Hidden,
+// awaiting review"). Everyone but its author and the admin (anyone with the admin PC) gets it
+// left out of every list, and a direct ask for it answers "gone", as if it weren't there.
+const mayReview = (v: { role: string; adminPc?: number } | null | undefined): boolean => mayUseAdminPc(v);
+/** Whether `v` sees a hidden item that `author` wrote: only the author and the admin. */
+const mayViewHidden = (v: Visitor | null | undefined, author: string): boolean => !!v && (mayReview(v) || v.name.toLowerCase() === author.toLowerCase());
+/** The filter db.ts's lists take for this viewer. */
+const hiddenFor = (v: Visitor | null | undefined) => (author: string): boolean => mayViewHidden(v, author);
+/** maySeePost, and not hidden for someone who may not see it. */
+const maySeePost = (v: Visitor | null | undefined, post: { id?: number; author: string; private?: boolean }): boolean =>
+  maySeeUnhiddenPost(v, post) && (post.id === undefined || !isHidden("post", post.id) || mayViewHidden(v, post.author));
+/** A note a viewer may open (comment on, read the comments of): it's there and not hidden from them. */
+const noteVisibleTo = (v: Visitor | null | undefined, note: { id: number; author: string }): boolean => !isHidden("note", note.id) || mayViewHidden(v, note.author);
+
 // --- sticky notes ----------------------------------------------------------
 
 app.get("/api/notes", (c) => {
   const space = c.req.query("space");
   if (!isSpace(space)) return c.json({ error: "No such place." }, 404);
-  return c.json(notesIn(space));
+  // The token (if any) only decides whether a note hidden after reports is yours to see.
+  return c.json(notesIn(space, hiddenFor(who({ token: c.req.query("token") }))));
 });
 
 app.post("/api/notes", async (c) => {
@@ -735,9 +762,10 @@ app.delete("/api/notes/:id", async (c) => {
 // --- comments --------------------------------------------------------------
 
 app.get("/api/notes/:id/comments", (c) => {
+  const viewer = who({ token: c.req.query("token") });
   const note = findNote(Number(c.req.param("id")));
-  if (!note) return c.json({ error: "That note is gone." }, 404);
-  return c.json(commentsOn(note.id));
+  if (!note || !noteVisibleTo(viewer, note)) return c.json({ error: "That note is gone." }, 404);
+  return c.json(commentsOn(note.id, hiddenFor(viewer)));
 });
 
 app.post("/api/notes/:id/comments", async (c) => {
@@ -747,7 +775,7 @@ app.post("/api/notes/:id/comments", async (c) => {
   const guest = guestRefused(c, v, "comment");
   if (guest) return guest;
   const note = findNote(Number(c.req.param("id")));
-  if (!note) return c.json({ error: "That note is gone." }, 404);
+  if (!note || !noteVisibleTo(v, note)) return c.json({ error: "That note is gone." }, 404);
   const barred = stopped(c, v, "notes", { action: "comment", space: note.space, note: note.id });
   if (barred) return barred;
   const bad = textError(b.text);
@@ -761,7 +789,8 @@ app.post("/api/notes/:id/comments", async (c) => {
     return c.json({ error: `One comment every 10 seconds. Wait ${result.wait}s.`, wait: result.wait }, 429);
   }
   log("comment", v, { space: note.space, note: note.id, comment: result.comment.id, words: wordCount(result.comment.text) }, { ip: ipOf(c), content: result.comment.text });
-  broadcastSpace(note.space, { t: "action", kind: "comment", comment: result.comment });
+  // On a note hidden after reports (its author replying, or the admin) the text doesn't go to the space.
+  if (!isHidden("note", note.id)) broadcastSpace(note.space, { t: "action", kind: "comment", comment: result.comment });
   return c.json(result.comment, 201);
 });
 
@@ -774,7 +803,7 @@ app.post("/api/comments/:id/heart", async (c) => {
   const guest = guestRefused(c, v, "heart");
   if (guest) return guest;
   const comment = findComment(Number(c.req.param("id")));
-  if (!comment) return c.json({ error: "That comment is gone." }, 404);
+  if (!comment || (isHidden("comment", comment.id) && !mayViewHidden(v, comment.author))) return c.json({ error: "That comment is gone." }, 404);
   if (comment.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "You can't heart your own comment." }, 400);
   const hearted = toggleHeart("note", comment.id, v.name);
   const note = findNote(comment.noteId);
@@ -788,7 +817,7 @@ app.post("/api/board-comments/:id/heart", async (c) => {
   const guest = guestRefused(c, v, "heart");
   if (guest) return guest;
   const comment = findPostComment(Number(c.req.param("id")));
-  if (!comment) return c.json({ error: "That comment is gone." }, 404);
+  if (!comment || (isHidden("post-comment", comment.id) && !mayViewHidden(v, comment.author))) return c.json({ error: "That comment is gone." }, 404);
   if (comment.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "You can't heart your own comment." }, 400);
   const post = findPost(comment.postId);
   if (post && !maySeePost(v, post)) return c.json({ error: "That comment is gone." }, 404);
@@ -993,9 +1022,10 @@ app.get("/api/board", (c) => {
   const tab = tabOf(board, c.req.query("tab"));
   if (!tab) return c.json({ error: "No such tab." }, 400);
   const viewer = who({ token: c.req.query("token") });
+  const hidden = hiddenIds("post");
   const posts = postsIn(space!, tab.id, board.keepDays)
     .filter((p) => maySeePost(viewer, p))
-    .map((p) => ({ ...p, files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
+    .map((p) => ({ ...p, ...(hidden.has(p.id) ? { hidden: true } : {}), files: filesOn("post", p.id).map(({ id, name, size }) => ({ id, name, size })) }));
   return c.json(tab.staffOnly ? [{ ...pinnedNotice(tab.label), tab: tab.id }, ...posts] : posts);
 });
 
@@ -1139,9 +1169,10 @@ app.patch("/api/board/:id", async (c) => {
 });
 
 app.get("/api/board/:id/comments", (c) => {
+  const viewer = who({ token: c.req.query("token") });
   const post = findPost(Number(c.req.param("id")));
-  if (!post || !maySeePost(who({ token: c.req.query("token") }), post)) return c.json({ error: "That post is gone." }, 404);
-  return c.json(postCommentsOn(post.id));
+  if (!post || !maySeePost(viewer, post)) return c.json({ error: "That post is gone." }, 404);
+  return c.json(postCommentsOn(post.id, hiddenFor(viewer)));
 });
 
 app.post("/api/board/:id/comments", async (c) => {
@@ -1211,13 +1242,96 @@ app.delete("/api/board-comments/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+
+// --- reports on one item: hiding it, and the admin's review ----------------------------
+
+type Found = { author: string; space: string | null; text: string; title?: string };
+
+/** The item as someone reporting it may see it, or null if it's gone or hidden from them. */
+function reportableItem(v: Visitor, kind: ReviewKind, id: number): Found | null {
+  if (kind === "note") {
+    const n = findNote(id);
+    return n && noteVisibleTo(v, n) ? { author: n.author, space: n.space, text: n.text } : null;
+  }
+  if (kind === "comment") {
+    const cm = findComment(id);
+    const n = cm && findNote(cm.noteId);
+    return cm && n && noteVisibleTo(v, n) && (!isHidden("comment", cm.id) || mayViewHidden(v, cm.author)) ? { author: cm.author, space: n.space, text: cm.text } : null;
+  }
+  if (kind === "post") {
+    const p = findPost(id);
+    return p && maySeePost(v, p) ? { author: p.author, space: p.space, text: p.text, title: p.title } : null;
+  }
+  const cm = findPostComment(id);
+  const p = cm && findPost(cm.postId);
+  return cm && p && maySeePost(v, p) && (!isHidden("post-comment", cm.id) || mayViewHidden(v, cm.author)) ? { author: cm.author, space: p.space, text: cm.text } : null;
+}
+
+/** Tells the people looking at an item's place that it's now hidden (or back), so their screens follow without a reload. */
+function announceReview(kind: ReviewKind, id: number, hiddenNow: boolean): void {
+  if (kind === "note") {
+    const n = findNote(id);
+    if (!n) return;
+    // Clients drop a hidden note unless it's theirs to see (or the admin's), and put it back on restore.
+    broadcastSpace(n.space, hiddenNow ? { t: "action", kind: "note-hidden", id, author: n.author } : { t: "action", kind: "note", note: n });
+  } else if (kind === "comment") {
+    const cm = findComment(id);
+    const n = cm && findNote(cm.noteId);
+    if (cm && n) broadcastSpace(n.space, hiddenNow ? { t: "action", kind: "comment-removed", id, noteId: n.id } : { t: "action", kind: "comment", comment: cm });
+  } else {
+    const cm = kind === "post-comment" ? findPostComment(id) : undefined;
+    const p = kind === "post" ? findPost(id) : cm && findPost(cm.postId);
+    if (p) broadcastSpace(spaceOfBoard(p.space), { t: "action", kind: "board", tab: p.tab });
+  }
+}
+
+/** Three members have reported it: hidden now, in the admin's log, and gone from other screens. */
+function hideItem(v: Visitor, c: Context, kind: ReviewKind, id: number, reporters: number): void {
+  const f = reportableItem({ ...v, role: "admin" }, kind, id);
+  log("item-hidden", v, { space: f?.space ?? undefined, kind, item: id, owner: f?.author, reporters, needed: REPORTS_TO_HIDE }, { ip: ipOf(c), content: f ? (f.title ? `${f.title}\n\n${f.text}` : f.text) : null });
+  announceReview(kind, id, true);
+}
+
+/** Deletes one item as the admin's Remove does (the same deletions as the authors' own routes), returning what the log needs. */
+function removeReviewed(kind: ReviewKind, id: number): { owner: string; space: string | null; content: string; event: "note-removed" | "comment-removed" | "post-removed" | "post-comment-removed"; tab?: string } | null {
+  if (kind === "note") {
+    const n = findNote(id);
+    if (!n) return null;
+    deleteNote(id);
+    broadcastSpace(n.space, { t: "action", kind: "note-removed", id });
+    return { owner: n.author, space: n.space, content: n.text, event: "note-removed" };
+  }
+  if (kind === "comment") {
+    const cm = findComment(id);
+    if (!cm) return null;
+    const n = findNote(cm.noteId);
+    deleteComment(id);
+    if (n) broadcastSpace(n.space, { t: "action", kind: "comment-removed", id, noteId: n.id });
+    return { owner: cm.author, space: n?.space ?? null, content: cm.text, event: "comment-removed" };
+  }
+  if (kind === "post") {
+    const p = findPost(id);
+    if (!p) return null;
+    removeObjects(filesOn("post", p.id, true).map((f) => f.key));
+    deletePost(id);
+    broadcastSpace(spaceOfBoard(p.space), { t: "action", kind: "board", tab: p.tab });
+    return { owner: p.author, space: p.space, content: `${p.title}\n\n${p.text}`, event: "post-removed", tab: p.tab };
+  }
+  const cm = findPostComment(id);
+  if (!cm) return null;
+  const p = findPost(cm.postId);
+  deletePostComment(id);
+  if (p) broadcastSpace(spaceOfBoard(p.space), { t: "action", kind: "board", tab: p.tab });
+  return { owner: cm.author, space: p?.space ?? null, content: cm.text, event: "post-comment-removed" };
+}
+
 // --- the admin's log and bug reports -------------------------------------------
 // The Student Hub's admin PC opens /admin/ (and so can a browser tab, for
 // reading along during a crit). Only the admin reads either, checked here on
 // every request; anyone joined may send a bug report.
 
 const AUDIT_GROUPS: Record<string, string[]> = {
-  admin: ["restricted", "restriction-lifted", "kicked", "role-changed", "classroom-created", "classroom-removed", "classroom-link"],
+  admin: ["restricted", "restriction-lifted", "kicked", "role-changed", "item-hidden", "item-restored", "classroom-created", "classroom-removed", "classroom-link"],
   content: ["note", "note-replaced", "note-removed", "note-expired", "comment", "comment-removed", "post", "post-removed", "post-comment", "post-comment-removed", "bug-report", "person-report", "file"],
   signin: ["join", "join-refused", "connect", "disconnect"],
   refused: ["refused", "join-refused"],
@@ -1311,6 +1425,44 @@ app.delete("/api/admin/bugs/:id", async (c) => {
   return c.json({ ok: true });
 });
 
+// Hidden after reports, awaiting review: the admin sees what each says, who wrote it, who
+// reported it and when it was hidden; Restore puts it back for everyone (and it stays), Remove deletes it.
+app.post("/api/admin/hidden", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const admin = { ...r.v, role: "admin" } as Visitor;
+  const items = hiddenList().flatMap((h) => {
+    const f = reportableItem(admin, h.kind, h.target);
+    return f ? [{ kind: h.kind, id: h.target, author: f.author, space: f.space, title: f.title ?? null, text: f.text, hiddenAt: h.hiddenAt, reporters: h.reporters }] : [];
+  });
+  return c.json({ items });
+});
+
+app.post("/api/admin/hidden/:kind/:id/restore", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const kind = REVIEW_KINDS.find((k) => k === c.req.param("kind"));
+  const id = Number(c.req.param("id"));
+  if (!kind || !restoreItem(kind, id)) return c.json({ error: "Already dealt with." }, 404);
+  const f = reportableItem({ ...r.v, role: "admin" }, kind, id);
+  log("item-restored", r.v, { space: f?.space ?? undefined, kind, item: id, owner: f?.author }, { ip: ipOf(c), content: f ? (f.title ? `${f.title}\n\n${f.text}` : f.text) : null });
+  announceReview(kind, id, false);
+  return c.json({ ok: true });
+});
+
+app.delete("/api/admin/hidden/:kind/:id", async (c) => {
+  const r = await asAdmin(c);
+  if (r instanceof Response) return r;
+  const kind = REVIEW_KINDS.find((k) => k === c.req.param("kind"));
+  const id = Number(c.req.param("id"));
+  if (!kind || !isHidden(kind, id)) return c.json({ error: "Already dealt with." }, 404);
+  const gone = removeReviewed(kind, id);
+  if (!gone) return c.json({ error: "Already gone." }, 404);
+  // The same event the author's own removal writes, so the log reads the same; `by` says it was a review.
+  log(gone.event, r.v, { space: gone.space ?? undefined, tab: gone.tab, [kind === "post-comment" ? "comment" : kind]: id, owner: gone.owner, review: true }, { ip: ipOf(c), content: gone.content });
+  return c.json({ ok: true });
+});
+
 // Stopping someone doing one thing (notes, board posts, chat, or coming in
 // at all) for a while; the server checks before each of those. The admin
 // can't be restricted, and every change is logged.
@@ -1398,9 +1550,27 @@ app.post("/api/bugs", async (c) => {
     if (!target) return c.json({ error: `No one is called "${b.about.trim().slice(0, 20)}". Check the name above their head.` }, 404);
     about = target.name;
   }
+  // A report that points at one note, post or comment (the Report buttons on them) also counts
+  // towards hiding it. The item must exist, be visible to the reporter, be written by the person
+  // reported, and not be the reporter's own; it's checked before anything is filed.
+  let item: { kind: ReviewKind; id: number } | null = null;
+  if (b.item !== undefined && b.item !== null) {
+    const asked = b.item as { kind?: unknown; id?: unknown };
+    const kind = REVIEW_KINDS.find((k) => k === asked.kind);
+    const id = typeof asked.id === "number" && Number.isInteger(asked.id) ? asked.id : NaN;
+    const found = kind && about ? reportableItem(v, kind, id) : null;
+    if (!kind || !about || !found) return c.json({ error: "That is gone, so there's nothing to report." }, 404);
+    if (found.author.toLowerCase() !== about.toLowerCase()) return c.json({ error: "That isn't theirs." }, 400);
+    if (found.author.toLowerCase() === v.name.toLowerCase()) return c.json({ error: "That's yours: you can remove it yourself." }, 400);
+    item = { kind, id };
+  }
   const chat = about && b.withChat === true && space ? recentChat(space) : null;
   const result = addBugReport({ author: v.name, browser: browserTag(v.token), ip: ipOf(c), space, userAgent, text, about, chat });
   if (!result.ok) return c.json({ error: `One report a minute. Wait ${result.wait}s.` }, 429);
+  if (item) {
+    const counted = reportItem(item.kind, item.id, v.name);
+    if (counted.hidden) hideItem(v, c, item.kind, item.id, counted.reporters);
+  }
   // A report about a person is its own event in the log, so it doesn't read as a bug.
   if (about) log("person-report", v, { space, report: result.id, chars: text.length, about, chatLines: chat?.length ?? 0 }, { ip: ipOf(c), content: text });
   else log("bug-report", v, { space, report: result.id, chars: text.length }, { ip: ipOf(c), content: text });
@@ -1617,6 +1787,7 @@ const purge = (): void => {
     if (ids.length) log("post-expired", null, { space, count: ids.length });
   }
   purgeOldAudit();
+  purgeOldItemReports();
   purgeOldChat();
   purgeOldMail();
   purgeOldChats();
