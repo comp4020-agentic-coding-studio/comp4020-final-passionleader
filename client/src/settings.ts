@@ -49,6 +49,24 @@ let calm = ((): boolean => {
 })();
 export const reduceMotion = (): boolean => calm;
 
+// Text size (RICE v3, accessibility; the user, 11/9): the page's base size, which the UI's rem sizes
+// follow, and the name tags with it. Remembered in this browser; applied as soon as this loads.
+const TEXT_KEY = "campus.textSize";
+const TEXT_SIZES = [90, 100, 115, 130];
+function applyTextSize(pct: number): void {
+  document.documentElement.style.fontSize = pct === 100 ? "" : `${pct}%`;
+  document.documentElement.style.setProperty("--label-scale", String(pct / 100));
+}
+let textSize = ((): number => {
+  try {
+    const v = Number(localStorage.getItem(TEXT_KEY));
+    return TEXT_SIZES.includes(v) ? v : 100;
+  } catch {
+    return 100;
+  }
+})();
+applyTextSize(textSize);
+
 export function mountSettings(opts: { credits(): void; reportBug(): void; reportPerson(): void; mute(): void; isGuest(): boolean; signUp(): void; signOut(): void }): void {
   const button = document.createElement("button");
   button.type = "button";
@@ -188,7 +206,33 @@ export function mountSettings(opts: { credits(): void; reportBug(): void; report
     }
   });
   motionLabel.append(motionBox, " Reduce motion (the camera doesn't glide; the sky and grass hold still)");
-  screen.append(screenLegend, fsBtn, fsNote, motionLabel);
+  const sizeRow = document.createElement("div");
+  sizeRow.className = "settings-check";
+  sizeRow.setAttribute("role", "group");
+  sizeRow.setAttribute("aria-label", "Text size");
+  const sizeName = document.createElement("span");
+  sizeName.textContent = "Text size";
+  sizeRow.append(sizeName);
+  const sizeBtns = TEXT_SIZES.map((pct) => {
+    const b = document.createElement("button");
+    b.type = "button";
+    b.className = "settings-size";
+    b.textContent = `${pct}%`;
+    b.addEventListener("click", () => {
+      textSize = pct;
+      applyTextSize(pct);
+      try {
+        localStorage.setItem(TEXT_KEY, String(pct));
+      } catch {
+        // private mode: just for this visit
+      }
+      for (const x of sizeBtns) x.setAttribute("aria-pressed", String(x === b));
+    });
+    b.setAttribute("aria-pressed", String(pct === textSize));
+    return b;
+  });
+  sizeRow.append(...sizeBtns);
+  screen.append(screenLegend, fsBtn, fsNote, motionLabel, sizeRow);
   const canFull = (): boolean => typeof document.documentElement.requestFullscreen === "function" && document.fullscreenEnabled;
   const standalone = (): boolean => window.matchMedia("(display-mode: fullscreen), (display-mode: standalone)").matches || (navigator as { standalone?: boolean }).standalone === true;
   const syncScreen = (): void => {
