@@ -594,7 +594,7 @@ app.post("/api/voice", async (c) => {
 
 // --- the AI campus assistants (plan 56) ---------------------------------------
 // Where they stand and what they cover (npcs.ts). Anyone joined may ask, guests
-// too, one question every three seconds, thirty a day, 500 characters;
+// too, one question every two seconds, thirty a day, 500 characters;
 // nothing is stored or logged but that someone asked whom.
 app.get("/api/npcs", (c) =>
   c.json(

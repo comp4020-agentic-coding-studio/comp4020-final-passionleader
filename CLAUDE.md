@@ -1,17 +1,22 @@
 # Harness — ANU Crossing (Unofficial) (was Poop Room)
 
-The app is a small 3D, real-time social space for the ANU community, where
-students and staff who rarely meet informally can bump into each other, and
-anyone can ask what they don't know. It started in crit 8 as Poop Room (one
-toilet, one poop each); from crit 9 it grew into ANU spaces joined by doors
-(a stretch of campus outside, the Student Hub, classrooms, Chifley Library,
-meeting rooms), with chat, emotes, sticky notes and boards. The
+The app is a small 3D, real-time piece of the ANU campus where students, staff
+and academics meet by chance, and anyone can ask what they don't know. It
+started in crit 8 as Poop Room (one toilet, one poop each); it is now the
+campus between 155 and 154 with its surroundings from OpenStreetMap, the
+Student Hub, the ANUSA lounge, the Career Hub, Chifley Library, classrooms and
+meeting rooms, with chat, whispers, mail, voice, emotes, sticky notes, boards,
+shared notes and AI campus assistants that answer from ANU's own pages. The
 implementation order and the final project's three bundles are in
 `docs/plan.md`; its numbers match the commit messages.
 
 Read before planning or building: `README.md` (what good means for this app),
 `spec/README.md` and `spec/*.test.ts` (what is enforced), and the
 [final project brief](https://comp.anu.edu.au/courses/comp4020-agentic-coding-studio/assessments/final-project/).
+The architecture is drawn in `diagrams/8`–`12` (browser, server and AWS; the
+whole server; the AWS side and its IAM user; voice on the author's t4g.small EC2;
+email sign-up) and the big decisions are in `docs/decisions/`. Keep both true
+when a flow changes.
 
 ## Rules
 
@@ -21,12 +26,13 @@ Read before planning or building: `README.md` (what good means for this app),
   to `main` in batches, not after every commit: each push deploys.
 - Write every file in this repo in English (docs, comments, commit messages).
 - `PROCESS.md`, `README.md`'s argument and `reflections/` are mine and are
-  written once, after the build is finished (bundle 3 in `docs/plan.md`);
-  don't rewrite them while building. Keep `README.md`'s facts and its list of
+  written once, after the build is finished (bundle 3 in `docs/plan.md`; the
+  README's argument was written on 8 November); don't rewrite them while
+  building. Keep `README.md`'s facts and its list of
   what is checked true as features land. `PROCESS.md` has no History section:
   the commit messages and the `crit-*` tags carry the history.
 - Work in the current bundle of `docs/plan.md`, in its order. Big
-  implementation ends Friday 30 October; from Friday 6 November only bugs,
+  implementation ended on Friday 30 October; from Friday 6 November only bugs,
   hotfixes, small things and the documents. The final project is due Monday
   9 November, 12:00; the deployed app must stay up through it.
 - Before a push, `pnpm check` and `pnpm check:evidence` pass; after it, the
@@ -57,8 +63,12 @@ Read before planning or building: `README.md` (what good means for this app),
   server (bug reports are open to anyone). A guest leaves as little as
   possible in the database: their row (name and token) only, gone a day
   after they were last seen; their spot and look aren't saved. A newcomer, and a guest every
-  time, comes in at the south end of Chifley Library's middle aisle, facing Robin. Signing in by
-  student number or email never says whether that address has an account. `qa_` names are reserved for the test accounts, which sign in
+  time, comes in at the south end of Chifley Library's middle aisle, facing
+  Robin, and the tutorial's first two steps are the library and Robin;
+  someone in a classroom that closes comes back outside. Signing in by
+  student number or email never says whether that address has an account,
+  and ten wrong passwords from one address for one name mean a fifteen-minute
+  wait. `qa_` names are reserved for the test accounts, which sign in
   with a password. The free-name accounts from before sign-up are retired:
   their notes and posts stay, nobody can sign in as them.
 - Sticky notes: up to 100 words (and 600 characters), one per person every
@@ -112,7 +122,12 @@ Read before planning or building: `README.md` (what good means for this app),
   report; the log notes who to and how long, never the text). Mute hides someone's chat, bubbles, emotes and notes on your
   own screen only (kept in your browser; the server never knows).
   Wave, yes, no and "mate" go once every two seconds at most (dance as
-  often as you like), checked on the server.
+  often as you like), checked on the server. Chat and emote gaps count per
+  person, not per tab. In the chat box, the up arrow brings back your last
+  line and "/r message" answers whoever whispered last (made into "/w" in
+  the browser, so the server's whisper rules hold); both are forgotten on
+  the join screen. A line that can't go (reconnecting) says so. A tab in the
+  background shows a count of new whispers, mail and invites in its title.
   Map chat (not meeting rooms') is kept one day in `chat_lines`, read only
   when someone reports a person: the server then attaches that space's last
   five minutes to the report (never text from the browser). Only the admin
@@ -122,6 +137,11 @@ Read before planning or building: `README.md` (what good means for this app),
   and may delete it, its sender sees what they sent; kept 30 days. If the
   reader is online their mailbox lights up at once. The log notes that mail
   went and to whom, never what it said. Guests neither send nor receive it.
+  A half-written note, post or mail is kept in the browser (one draft per
+  place, board tab or the mail form; a reply to someone else leaves a draft
+  for another person alone) and cleared when it's sent or on signing out.
+  A board's search box and "Unanswered only" (Q&A) only narrow the posts
+  already fetched; nothing new is asked of the server.
 - The AI campus assistants (server/npcs.ts) answer anyone joined, guests
   too, one question every two seconds and thirty a day each, 500
   characters; fifty a day per assistant (`NPC_PER_DAY`), which is the only
@@ -138,7 +158,12 @@ Read before planning or building: `README.md` (what good means for this app),
   turned into English search words by the cheap model (the pages are
   English); the reply's language is named in the brief from the question's
   letters (Hangul Korean, Latin English…). The window shows "Thinking…"
-  while it waits. Courses, careers and accommodation run on Claude
+  while it waits. Taylor (Computing & IT, standing between the Hub's office
+  pods) reads ANU's IT pages; Riley (getting around Canberra, behind the
+  ANUSA counter opposite Sam) reads ANU's transport and safety pages and
+  Transport Canberra's, and only for a food or grocery question also
+  ANUSA's pages; it says the pages name no particular supermarket rather
+  than guess one. Courses, careers and accommodation run on Claude
   Haiku, the rest on Amazon Nova 2 Lite, both on Amazon Bedrock with the S3
   keys (no new key; or Claude by `ANTHROPIC_API_KEY` when `NPC_MODEL` names
   one); no key is ever in the repo. 400 tokens at most, told it's an
@@ -192,13 +217,19 @@ Read before planning or building: `README.md` (what good means for this app),
   room that they saved it. Only its owner lists,
   reads or deletes a saved chat, checked on the server. No notes in
   meeting rooms. A room also has one shared Markdown note (5000
-  characters, last write wins, in server memory with the room's chat, gone
+  characters, rendered live as you type: on a wide screen source and
+  rendering side by side, on a phone the rendering, a tap editing that
+  block; leaving the field sends at once, and someone else's edit waits
+  behind "load their version" while you type; last write wins, in server
+  memory with the room's chat, gone
   when it empties; a saved chat takes a copy; a picture dropped in it is
   shared like any room file and goes with them), and one whiteboard: an
   Excalidraw collaboration link the server makes at random for that room
   when first asked, given only to people inside, forgotten when it empties
   (the drawing goes through Excalidraw's own encrypted relay, never ours).
-- Voice (through the author's LiveKit server on EC2; never recorded, never
+  While a room's window is open, notices (a saved chat, the mic) show in a
+  card over it.
+- Voice (through the author's LiveKit server on a t4g.small EC2; never recorded, never
   through this app): the server gives a ticket (a LiveKit token signed with
   the Fly secret, two minutes, so it is only good for joining now) only for the voice of where you are now: a
   meeting room's voice only to someone inside it this sitting (so its cap
@@ -207,8 +238,9 @@ Read before planning or building: `README.md` (what good means for this app),
   hears without doing anything; to be heard, the room menu's Mic switch in
   a room, or hold V outside. Leaving the place ends it; the Voices volume
   at 0 turns it off. Muting someone silences their
-  voice too. The chat restriction stops voice as well. The log notes who
-  joined which voice, never what was said.
+  voice too. The chat restriction stops voice as well. Whoever is speaking
+  shows a mic on their name tag. The log notes who joined which voice,
+  never what was said.
 - Files (a bug report's screenshot, up to five on your own board post within
   a day of posting, and any shared in the meeting room you're in): png, jpg,
   gif, webp, pdf, txt, md, docx, pptx, xlsx, zip only (a screenshot an
@@ -249,6 +281,17 @@ Read before planning or building: `README.md` (what good means for this app),
   sound settings can turn it down or off), soft game-like art in the app's
   ivory and brown UI, and no productivity-tool look (no dashboards, no
   notification badges beyond mail and invites). Judged by people, not by the spec.
+- Easy for shy people (README): a newcomer can wave, emote or leave a note
+  before saying anything, and nothing forces chat or voice (voice starts
+  muted; the mic or V is the person's own choice). Judged by people, not by
+  the spec.
+- Running for real: an error in one message or on leaving is caught and
+  logged (name and message only) and the one shared server keeps running;
+  WebSocket frames over 64 KB and API bodies over 256 KB are refused;
+  every response says nosniff, frame-ancestors 'self' and a strict referrer
+  policy; the built files go gzipped, hashed bundles cached a year. Reduce motion (in Settings) is
+  off until ticked. The Credits page opens with who made it and the README's
+  argument, read from README.md each time.
 - The server never trusts the client's coordinates: they're clamped to the room.
 - Everything works keyboard-only (WASD move, Space jump, E use, hold Q menu,
   Enter chat) and on a phone (D-pad + Menu, Jump and Use buttons).
