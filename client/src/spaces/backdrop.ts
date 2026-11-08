@@ -301,7 +301,9 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   floor(backdrop, 9, 130, 36, -61, asphaltMat(9, 130), 0.008); // x 31.5..40.5, z -126..4, then down the ramp (buildSouth)
   // The road's pale paving carries on east across the asphalt, as on campus:
   // the asphalt cuts across it (drawn on top), rather than the road ending in grass.
-  road(60, 18, 70.5, -31); // x 40.5..100.5
+  // ...and on east out of sight, a straight pale road with nothing on it (the user, 11/9: looking
+  // east from the lawn it should run on and on, not end in trees).
+  road(299.5, 18, 190.25, -31); // x 40.5..340
 
   // The row's upper floors fade when the camera, turned to look north to
   // south, stands behind them (the user, 10/30); facing north they're never in the way.
@@ -392,6 +394,10 @@ export function buildBackdrop(g: THREE.Group, colliders: Box[]): void {
   // on its west side.
   block(backdrop, red, 50, -48, 16, 12, 3, 0, 0x6f6a64);
   block(backdrop, red, 52, -66, 20, 14, 4, 0, 0x6f6a64);
+  // Two more along the road to the east (the user, 11/9: about twice the row), so the road east
+  // has the same low red-brick fronts, not an empty field.
+  block(backdrop, red, 70, -48, 16, 12, 3, 0, 0x6f6a64);
+  block(backdrop, red, 90, -48, 18, 12, 4, 0, 0x6f6a64);
 
   buildSouth(backdrop, colliders);
 
