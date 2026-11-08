@@ -212,3 +212,6 @@
 .look-stamps li { padding: 3px 8px; border: 2px dashed rgba(107, 63, 29, 0.4); border-radius: 8px; font-size: 0.8rem; color: #7a6a52; }
 .look-stamps li.is-got { border-style: solid; border-color: var(--accent, #6b3f1d); color: var(--ink, #3b2a12); font-weight: 700; background: rgba(107, 63, 29, 0.08); }
 .look-stamps p { margin: 6px 0 0; font-size: 0.78rem; color: #7a6a52; }
+/* A locked colour reads as locked at a glance (helper QA, 11/9: a tiny lock on a dimmed circle was easy to miss). */
+.look-locked .look-swatch { background-image: repeating-linear-gradient(45deg, rgba(255, 255, 255, 0.55) 0 3px, transparent 3px 7px); outline: 2px dashed #7a6a52; outline-offset: 1px; }
+.look-locked .look-swatch + .look-lock { font-size: 0.85rem; text-shadow: 0 0 3px #fff, 0 0 3px #fff; }

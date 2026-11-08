@@ -95,6 +95,9 @@ export function mountJoinNow(
 
   async function open(): Promise<void> {
     const token = ++loadToken;
+    // One panel in that corner at a time: the Events panel sits in the same place (helper QA, 11/9).
+    const other = document.getElementById("events-panel");
+    if (other && !other.hidden) document.getElementById("events-btn")?.click();
     panel.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
     panel.replaceChildren(Object.assign(document.createElement("p"), { className: "jn-empty", textContent: "Loading…" }));

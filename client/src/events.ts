@@ -282,6 +282,9 @@ export function mountEvents(
 
   async function open(): Promise<void> {
     deps.onOpen();
+    // One panel in that corner at a time: Join now sits in the same place (helper QA, 11/9).
+    const other = document.getElementById("join-now");
+    if (other && !other.hidden) document.getElementById("join-now-btn")?.click();
     panel.hidden = false;
     trigger.setAttribute("aria-expanded", "true");
     draw();
