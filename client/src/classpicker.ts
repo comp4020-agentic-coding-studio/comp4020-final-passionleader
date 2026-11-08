@@ -73,7 +73,11 @@ export function mountClassPicker(h: {
   closeBtn.textContent = "Close";
   actions.append(closeBtn);
 
-  card.append(title, list, enter, form, error, actions);
+  // Everyone else sees why there's no "Open classroom" box (the user, 11/9).
+  const staffOnly = document.createElement("p");
+  staffOnly.className = "class-staff-only";
+  staffOnly.textContent = "Only staff can open a classroom.";
+  card.append(title, list, enter, form, staffOnly, error, actions);
   root.append(card);
   document.body.append(root);
 
@@ -271,6 +275,7 @@ export function mountClassPicker(h: {
       // COMP8020 (the server sends it first) is selected to begin with.
       selected = items[0]?.code ?? null;
       form.hidden = !isAdmin;
+      staffOnly.hidden = isAdmin;
       error.textContent = "";
       input.value = "";
       open = true;
