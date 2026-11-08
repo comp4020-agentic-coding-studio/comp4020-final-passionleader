@@ -28,3 +28,5 @@ and the database in one process, and one bucket holds every kind of file.
 If I take this further, I want an internet-facing server kept apart from a
 database nothing outside can reach, and buckets split by how secret their
 files are.
+
+<sub>Drafted in Korean, translated by Claude.</sub>

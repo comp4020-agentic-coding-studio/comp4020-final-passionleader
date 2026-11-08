@@ -113,4 +113,4 @@ rule that positions are never written per move is in `CLAUDE.md`.
 
 ---
 
-<sub>I drafted this record myself, in Korean, and AI translated it into English and corrected the grammar.</sub>
+<sub>I drafted this record myself, in Korean, and Claude translated it into English and corrected the grammar.</sub>

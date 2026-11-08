@@ -125,5 +125,4 @@ The fixes followed
 
 ---
 
-<sub>I drafted this document and `README.md` myself, in Korean, and AI translated
-them into English and corrected the grammar.</sub>
+<sub>This and `README.md` drafted in Korean, translated by Claude.</sub>

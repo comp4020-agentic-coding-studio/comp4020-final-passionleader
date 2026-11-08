@@ -135,6 +135,9 @@ and asked people I invited through Instagram what got in their way.
 - [hop.earth](https://hop.earth/) and [FrameVR](https://learn.framevr.io/):
   real-time spaces in the browser.
 
+<sub>I drafted this README myself, in Korean, and Claude translated it into
+English and corrected the grammar.</sub>
+
 ## Using this code
 
 All rights reserved: see [`LICENSE`](LICENSE). The repository is public for

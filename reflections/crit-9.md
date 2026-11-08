@@ -29,3 +29,5 @@ academics is a known gap (Belinda mentioned it). I hope this project gets notice
 one day and becomes something solid enough to be used in the real Student
 Hub. That's the developer I want to be: one who builds things that are
 actually used.
+
+<sub>Drafted in Korean, translated by Claude.</sub>

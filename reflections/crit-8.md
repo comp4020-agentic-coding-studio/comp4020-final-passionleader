@@ -28,3 +28,8 @@ actually work? I'll need that for the final project. People say real-time
 needs Redis, but on a single small instance I doubt caching buys much.
 
 ![From crit 8 to the final project: REST writes now, WebSockets and in-memory positions next](../diagrams/3-crit8-to-final.png)
+
+---
+
+<sub>I drafted this reflection myself, in Korean, and Claude translated it
+into English and corrected the grammar.</sub>

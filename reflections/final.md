@@ -28,5 +28,5 @@ right.
 
 ---
 
-<sub>I drafted this reflection myself, in Korean, and AI translated it into
+<sub>I drafted this reflection myself, in Korean, and Claude translated it into
 English and corrected the grammar.</sub>
