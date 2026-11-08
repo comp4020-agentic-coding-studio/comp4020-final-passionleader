@@ -867,10 +867,37 @@ const composer = mountNoteComposer(async (text) => {
 
 // --- chat and the Q menu ---------------------------------------------------
 
+// A whisper, mail or invitation while this tab is in the background puts a count in its title
+// ("(2) ANU Crossing"), gone when you come back (RICE v3); a visible tab's title never changes.
+const baseTitle = document.title;
+let unseen = 0;
+function tabAlert(): void {
+  if (!document.hidden) return;
+  unseen += 1;
+  document.title = `(${unseen}) ${baseTitle}`;
+}
+document.addEventListener("visibilitychange", () => {
+  if (document.hidden || !unseen) return;
+  unseen = 0;
+  document.title = baseTitle;
+});
+
 let net: Net | null = null;
+// "/r message" answers whoever whispered to you last: turned into "/w name message" here, so the
+// server's whisper rules are the only ones (RICE v3).
+let lastWhisperFrom = "";
+function sayChat(text: string): void {
+  const reply = /^\/r(?:\s+([\s\S]*))?$/i.exec(text);
+  if (reply) {
+    if (!lastWhisperFrom) return toast("Nobody has whispered to you yet.");
+    if (!reply[1]?.trim()) return toast("Write something after /r: /r message");
+    text = `/w ${lastWhisperFrom} ${reply[1].trim()}`;
+  }
+  net?.chat(text);
+}
 const chat = mountChat({
   onSend: (text) => {
-    net?.chat(text);
+    sayChat(text);
     quests.done("chat");
   },
   maxLength: 200,
@@ -890,7 +917,7 @@ const roomPad = mountRoomPad({
   imageLink: async (id) => (session ? imageLink(session.token, id) : null),
 });
 const roomPanel = mountRoomPanel({
-  onSend: (text) => net?.chat(text),
+  onSend: (text) => sayChat(text),
   onInvite: (name) => net?.invite(name),
   onSave: (what) => (isMember(session) ? net?.saveChat(what) : signupPrompt.open(what === "notes" ? "save the notes" : "save a chat")),
   notes: roomPad.el,
@@ -1757,7 +1784,11 @@ function goOnline(token: string): void {
     whisper(from, to, text) {
       const mineToo = !!session && from.toLowerCase() === session.name.toLowerCase();
       if (!mineToo && muteDialog.isMuted(from)) return;
-      if (!mineToo) sfx("message");
+      if (!mineToo) {
+        sfx("message");
+        lastWhisperFrom = from;
+        tabAlert();
+      }
       const line = { name: mineToo ? `→ ${to}` : `${from} → you`, text, self: mineToo };
       // In a meeting room the map chat is hidden: show it in the room's window.
       if (roomPanel.isOpen()) roomPanel.add(line);
@@ -1765,6 +1796,7 @@ function goOnline(token: string): void {
     },
     invited(to, from) {
       sfx("message");
+      tabAlert();
       invitePopup.show(to, from, meetingRoom(to)?.title ?? "a room");
     },
     whiteboard(url) {
@@ -1818,6 +1850,7 @@ function goOnline(token: string): void {
     mail(unread) {
       showUnread(unread);
       sfx("message");
+      tabAlert();
       toast(`✉️ New mail (${unread} unread).`);
     },
     hearts(noteId) {

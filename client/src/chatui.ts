@@ -47,9 +47,9 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
   input.type = "text";
   // Room for "/all " or "/w name " in front of a full-length line (the server counts the line itself).
   input.maxLength = opts.maxLength + 12;
-  input.placeholder = "Say something · /all everyone · /w name to one";
+  input.placeholder = "Say something · /all everyone · /w name to one · /r reply";
   input.autocomplete = "off";
-  input.setAttribute("aria-label", "Chat message. Start with /all to reach every space, or /w and a name to whisper to one person.");
+  input.setAttribute("aria-label", "Chat message. Start with /all to reach every space, /w and a name to whisper to one person, or /r to answer the last whisper. Up arrow brings back your last line.");
   inputRow.append(input);
 
   root.append(log, controls, inputRow);
@@ -92,13 +92,23 @@ export function mountChat(opts: { onSend(text: string): void; maxLength: number 
     input.focus();
   }
 
+  // ↑ in an empty box brings back the last line you sent (RICE v3), to fix a typo or say it again.
+  let lastSent = "";
   input.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") {
+    if (e.key === "ArrowUp" && !input.value && lastSent) {
+      e.preventDefault();
+      e.stopPropagation();
+      input.value = lastSent;
+      input.setSelectionRange(lastSent.length, lastSent.length);
+    } else if (e.key === "Enter") {
       e.preventDefault();
       e.stopPropagation();
       const text = input.value.trim();
       closeInput();
-      if (text) opts.onSend(text);
+      if (text) {
+        lastSent = text;
+        opts.onSend(text);
+      }
     } else if (e.key === "Escape") {
       e.preventDefault();
       e.stopPropagation();
