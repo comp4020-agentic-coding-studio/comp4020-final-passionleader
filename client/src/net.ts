@@ -106,7 +106,7 @@ const SEND_MS = 100;
 export interface Net {
   sendMove(p: { x: number; y: number; z: number; rot: number }): void;
   enter(space: SpaceId, x: number, z: number): void;
-  chat(text: string): void;
+  chat(text: string): boolean;
   emote(kind: Emote): void;
   /** Says how open we are to a chat (or clears it); shown beside our name to our space. */
   status(s: PlayerStatus | null): void;
@@ -116,11 +116,11 @@ export interface Net {
   /** Asks for the room's shared whiteboard (plan 85). */
   whiteboard(): void;
   /** Keeps the room's chat (or only its shared notes) for me, 30 days. */
-  saveChat(what?: "chat" | "notes"): void;
+  saveChat(what?: "chat" | "notes"): boolean;
   /** The room's shared notes, as we now have them. */
   pad(text: string): void;
   /** Invites someone into the counselling room we're in. */
-  invite(name: string): void;
+  invite(name: string): boolean;
   /** Sits on a seat ("<space>:<n>") at its spot, or stands up with null. */
   sit(seat: string | null, at?: { x: number; z: number }): void;
   close(): void;
@@ -137,8 +137,11 @@ export function connect(token: string, on: NetHandlers): Net {
   url.protocol = location.protocol === "https:" ? "wss:" : "ws:";
   url.searchParams.set("token", token);
 
-  const sendNow = (msg: unknown): void => {
-    if (ws?.readyState === WebSocket.OPEN) ws.send(JSON.stringify(msg));
+  /** Sends if connected; false if not (a reconnect, a deploy), so a chat line can say it didn't go. */
+  const sendNow = (msg: unknown): boolean => {
+    if (ws?.readyState !== WebSocket.OPEN) return false;
+    ws.send(JSON.stringify(msg));
+    return true;
   };
 
   function open(): void {
@@ -227,7 +230,7 @@ export function connect(token: string, on: NetHandlers): Net {
       sendNow({ t: "enter", space, x, z });
     },
     chat(text) {
-      sendNow({ t: "chat", text });
+      return sendNow({ t: "chat", text });
     },
     emote(kind) {
       sendNow({ t: "emote", kind });
@@ -242,13 +245,13 @@ export function connect(token: string, on: NetHandlers): Net {
       sendNow({ t: "whiteboard" });
     },
     saveChat(what = "chat") {
-      sendNow({ t: "save-chat", what });
+      return sendNow({ t: "save-chat", what });
     },
     pad(text) {
       sendNow({ t: "pad", text });
     },
     invite(name) {
-      sendNow({ t: "invite", name });
+      return sendNow({ t: "invite", name });
     },
     sit(seat, at) {
       // The seat's spot goes with it, and the next move from there isn't news.

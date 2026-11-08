@@ -313,7 +313,23 @@ const sun = addLights(scene, highQuality);
 const camera = new THREE.PerspectiveCamera(55, 1, 0.1, 3000);
 // Full float precision in every shader: at mediump an iPhone's lighting overflowed under the lamps
 // into coloured speckles over the paving (the user, 11/4, twice).
-const renderer = new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance", precision: "highp" });
+const renderer = ((): THREE.WebGLRenderer => {
+  try {
+    return new THREE.WebGLRenderer({ antialias: highQuality, powerPreference: "high-performance", precision: "highp" });
+  } catch (err) {
+    // No WebGL (hardware acceleration off, an old browser): say so on the join screen rather than
+    // leave "Loading…" for ever (service check, 11/8).
+    const join = document.getElementById("join");
+    if (join) {
+      const p = document.createElement("p");
+      p.setAttribute("role", "alert");
+      p.style.cssText = "margin:0;padding:14px 18px;border-radius:12px;background:#fcf8ec;color:#3b2a10;font:1rem/1.5 system-ui,sans-serif;max-width:420px;text-align:center";
+      p.textContent = "ANU Crossing needs 3D graphics (WebGL), which this browser couldn't start. Turn on hardware acceleration in its settings, or try Chrome, Edge, Firefox or Safari.";
+      join.replaceChildren(p);
+    }
+    throw err;
+  }
+})();
 // Medium and High: up to one and a half times the screen's pixels (a Retina or phone screen is
 // dense; twice, on High, made a MacBook lag for little you could see: the user, 11/4); Low: one.
 renderer.setPixelRatio(RICH ? Math.min(window.devicePixelRatio, 1.5) : 1);
@@ -889,6 +905,10 @@ let net: Net | null = null;
 // "/r message" answers whoever whispered to you last: turned into "/w name message" here, so the
 // server's whisper rules are the only ones (RICE v3).
 let lastWhisperFrom = "";
+/** Said when a line or an action couldn't go: the connection is down for a moment (a reconnect, a deploy). */
+function notSent(): void {
+  toast("Not connected: reconnecting. Try again in a moment (↑ brings your line back).");
+}
 function sayChat(text: string): void {
   const reply = /^\/r(?:\s+([\s\S]*))?$/i.exec(text);
   if (reply) {
@@ -896,7 +916,7 @@ function sayChat(text: string): void {
     if (!reply[1]?.trim()) return toast("Write something after /r: /r message");
     text = `/w ${lastWhisperFrom} ${reply[1].trim()}`;
   }
-  net?.chat(text);
+  if (net && !net.chat(text)) notSent();
 }
 const chat = mountChat({
   onSend: (text) => {
@@ -921,8 +941,13 @@ const roomPad = mountRoomPad({
 });
 const roomPanel = mountRoomPanel({
   onSend: (text) => sayChat(text),
-  onInvite: (name) => net?.invite(name),
-  onSave: (what) => (isMember(session) ? net?.saveChat(what) : signupPrompt.open(what === "notes" ? "save the notes" : "save a chat")),
+  onInvite: (name) => {
+    if (net && !net.invite(name)) notSent();
+  },
+  onSave: (what) => {
+    if (!isMember(session)) return signupPrompt.open(what === "notes" ? "save the notes" : "save a chat");
+    if (net && !net.saveChat(what)) notSent();
+  },
   notes: roomPad.el,
   onShown: (open) => {
     document.body.classList.toggle("room-open", open);

@@ -43,6 +43,9 @@
 
     <!-- The join screen: signin.ts builds it (sign in, sign up, reset, guest). -->
     <div id="join" role="dialog" aria-modal="true" aria-labelledby="join-title">
+      <!-- Until the code has loaded (about 300 KB): something on screen, not a blank page. signin.ts replaces it. -->
+      <p role="status" style="margin:0;padding:12px 18px;border-radius:12px;background:#fcf8ec;color:#3b2a10;font:600 1.05rem system-ui,sans-serif;text-align:center">Loading ANU Crossing…</p>
+      <noscript><p style="margin:8px 0 0;padding:12px 18px;border-radius:12px;background:#fcf8ec;color:#3b2a10;font:1rem system-ui,sans-serif;text-align:center">ANU Crossing needs JavaScript turned on.</p></noscript>
     </div>
 
     <script type="module" src="/src/main.ts"></script>

@@ -104,12 +104,16 @@ export function mountSignIn(opts: {
     for (const b of buttons) b.disabled = true;
     form.setAttribute("aria-busy", "true");
     error.textContent = "";
+    // A slow server or email: say it's still going, so nobody reloads in the middle (service check, 11/8).
+    const slow = window.setTimeout(() => (error.textContent = "Still working… this can take a few seconds."), 2500);
     try {
       const r = await request();
+      window.clearTimeout(slow);
       if (typeof r === "string") error.textContent = r;
       else onOk(r);
     } catch {
-      error.textContent = "Something went wrong. Try again.";
+      window.clearTimeout(slow);
+      error.textContent = "Couldn't reach the campus. Check your connection and try again.";
     } finally {
       for (const b of buttons) b.disabled = false;
       form.removeAttribute("aria-busy");

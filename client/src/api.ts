@@ -82,7 +82,8 @@ async function request<T>(path: string, method = "GET", body?: unknown): Promise
     // Non-JSON body: fall through to the generic message below.
   }
   if (!res.ok) {
-    const msg = (data as { error?: string } | null)?.error ?? `Server error (${res.status}).`;
+    // A deploy restarts the one server for a few seconds: say so rather than a bare code.
+    const msg = (data as { error?: string } | null)?.error ?? (res.status === 502 || res.status === 503 || res.status === 504 ? "The campus server is restarting. Wait a moment and try again." : `Server error (${res.status}).`);
     if ((data as { signup?: boolean } | null)?.signup) onSignupNeeded?.();
     throw new ApiError(res.status, msg, (data as Record<string, unknown> | null) ?? {});
   }
