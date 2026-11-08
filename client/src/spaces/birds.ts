@@ -6,7 +6,7 @@ import { RICH } from "../settings.ts";
 // draw call per mesh and no model file, so they cost next to nothing; they
 // don't cast shadows (a moving speck on the grass read as a glitch).
 
-/** The lawn's middle (outdoor.ts: x -29..-9, z -22..-6), what they circle. */
+/** The lawn's middle (outdoor.ts: x -29..-9, z -22..-6), what they circle, within 20 m of it. */
 const CENTRE = { x: -19, z: -14 };
 
 const bodyMat = new THREE.MeshStandardMaterial({ color: 0x23262b, roughness: 0.9, side: THREE.DoubleSide });
@@ -78,8 +78,8 @@ export function addBirds(g: THREE.Group): (dt: number) => void {
       angle: (i / count) * Math.PI * 2 + Math.random(),
       // About 3 m/s along the circle: a slow, lazy turn.
       speed: dir * (0.2 + Math.random() * 0.08),
-      radius: 9 + Math.random() * 6,
-      height: 12 + Math.random() * 8,
+      radius: 9 + Math.random() * 6, // stays within 20 m of the lawn centre
+      height: 8 + Math.random() * 4,
       phase: Math.random() * 6,
     });
   }
