@@ -65,11 +65,11 @@ Canberra's clock came second, so it got built ([11a6335](https://github.com/comp
 I worked with several Claude sessions at once. The main session (Opus) builds
 and commits, a helper (Sonnet) runs browser QA, and a cheaper one (Haiku)
 puts test questions to the assistants. Their limits are in `docs/roles.md`, and I plan,
-decide and check.
+decide, check.
 
 When something went wrong, I tried to fix the rule as well as the result.
 
-- **An audit, not a retry.** For the final check I ran a multi-agent
+- An audit, not a retry. For the final check I ran a multi-agent
   workflow: Sonnet agents searched the code for problems, and Opus verified
   each one. The fixes went into the code, some with a new check in `spec/`:
   admin-PC holders could lift each other's restrictions ([0d920b2](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/0d920b2)), and
@@ -77,12 +77,12 @@ When something went wrong, I tried to fix the rule as well as the result.
   time, I put every searching agent on Opus. It burned budget
   and finished one area in thirty minutes, so I stopped it, and
   'search on Sonnet, verify on Opus' became the rule.
-- **Finding the cause, then a test.** An assistant's E badge kept landing on a
+- Finding the cause, then a test. An assistant's E badge kept landing on a
   PC. The cause was that `/api/npcs` never sent each assistant's reach. Now it
   does, and the spec checks it ([3810938](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/3810938)).
-- **A rule written down twice.** Where newcomers arrive went into `CLAUDE.md`
+- A rule written down twice. Where newcomers arrive went into `CLAUDE.md`
   and the spec together ([99c0bec](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/99c0bec)), so no later change can move it.
-- **QA that wasn't QA.** Early on, the main session claimed testing from spec
+- QA that wasn't QA. Early on, the main session claimed testing from spec
   runs and a guest screenshot, and I found the test login broken myself.
   Since then browser QA goes to the helper, and untested means reported as
   untested. Haiku's results get rechecked too: many
@@ -104,7 +104,7 @@ every feature. That is why the minimap
 Robin in the library ([efaffc0](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/efaffc0)) and a Campus Guide with clips recorded
 from the app ([b718b00](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/b718b00)) exist. The other big additions were email sign-up,
 assistants answering from crawled ANU pages ([98fc799](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/98fc799)), voice, the
-Career Hub and the campus at night.
+Career Hub, the campus at night.
 
 ![Email sign-up, step by step: the code goes by SES and only its hash is kept](diagrams/12-email-signup.png)
 

@@ -18,7 +18,7 @@ and the app's own server is one 256 MB Fly machine.
 
 ## Decision
 
-**C.** The app gives out a two-minute ticket, only for the voice of the place
+I chose C. The app gives out a two-minute ticket, only for the voice of the place
 you're in now. The audio never passes through the app's server, and nothing
 is recorded ([7d000b9](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/7d000b9), [f9bca64](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/f9bca64)).
 
@@ -31,9 +31,9 @@ working, and only voice stops.
 
 ## Trade-offs
 
-- **One more server to look after**, with its own ports, certificates and
+- One more server to look after, with its own ports, certificates,
   DNS (see [diagram 10](../../diagrams/10-aws-infrastructure.png)).
-- **It costs credit** every hour it runs, used or not.
+- It costs credit every hour it runs, used or not.
 
 ## How it's checked
 

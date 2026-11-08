@@ -15,7 +15,7 @@ expensive.
 
 ## Decision
 
-**B.** The main session (Opus) builds and commits. A helper (Sonnet) runs
+I chose B. The main session (Opus) builds and commits. A helper (Sonnet) runs
 browser QA, and Haiku checks the crawled data and puts test questions to the
 assistants. What each may touch is written in `docs/roles.md`
 ([238efdf](https://github.com/comp4020-agentic-coding-studio/comp4020-final-passionleader/commit/238efdf)). For review workflows the rule is 'search on Sonnet, verify on Opus'.
@@ -27,12 +27,12 @@ got a model that fits it.
 
 ## Trade-offs
 
-- **Results need checking.** Haiku marked answers as made up that were really
+- Results need checking. Haiku marked answers as made up that were really
   on another crawled page, so the main session checks helpers' findings
   against the data.
-- **Only one session commits**, so helpers hand their work over, which adds
+- Only one session commits, so helpers hand their work over, which adds
   a step.
-- **Getting the model wrong is costly.** The first review workflow ran every
+- Getting the model wrong is costly. The first review workflow ran every
   searching agent on Opus and burned budget before I stopped it.
 
 ## How it's checked

@@ -26,20 +26,20 @@ doesn't follow you around forever.
 
 ## Options
 
-**What lasts**
+What lasts
 
 - A. Everything is kept: chat history and notes both persist.
 - B. Nothing is kept: chat and notes both vanish when you leave.
 - C. Chat is ephemeral (never stored, gone from screens after a minute),
   while sticky notes stay until their author or an admin removes them.
 
-**Who sees it**
+Who sees it
 
 - D. Everyone online sees everything, wherever they are.
 - E. Only people in the same space see and hear each other, chat, emotes and
   notes. Moving through a door changes who you're with.
 
-**Where it lives**
+Where it lives
 
 - F. Managed Postgres for what lasts, Redis for live state and fan-out.
 - G. One SQLite file on the machine's volume for what lasts, with live positions
@@ -47,7 +47,7 @@ doesn't follow you around forever.
 
 ## Decision
 
-**C, E and G.**
+I chose C, E and G.
 
 Chat is for the people in the room right now, so it's never stored and fades
 after a minute. A sticky note is the deliberate trace, the one thing that's
@@ -73,29 +73,29 @@ written, so someone coming back starts where they left.
 
 ## Trade-offs
 
-- **Losing chat.** Someone who arrives a minute late misses the conversation,
+- Losing chat. Someone who arrives a minute late misses the conversation,
   and nothing can be quoted back later. Anything worth keeping has to become a
   note.
   *Crit 10:* "nothing can be quoted back" also meant nobody could show the
   admin what someone said. Map chat is now kept one day, read only when
   someone reports a person, and the server attaches that space's last five
   minutes itself. Meeting rooms' chat is still never stored.
-- **Notes that never expire.** Old notes pile up and can go stale, and removal
+- Notes that never expire. Old notes pile up and can go stale, and removal
   depends on authors and on me as admin.
   *Crit 10:* that came true sooner than expected, so notes now go a month
   after they're stuck, and the note says the day.
-- **Spaces kept apart.** You can't see who's in the Hub from outside, so the
+- Spaces kept apart. You can't see who's in the Hub from outside, so the
   campus can look empty while the Hub is busy. Option D would have been simpler
   (one broadcast for everything) and better for a nearly empty app, but in a
   full room hearing everyone at once would be noise.
-- **One small node.** With many people at once, one low-spec fly.dev machine
+- One small node. With many people at once, one low-spec fly.dev machine
   will likely not be enough. If ANU ever adopted the service, I would move
   without hesitation to several nodes with Postgres and Redis caching.
-- **Failure.** The server runs as a single dedicated machine, with no load
+- Failure. The server runs as a single dedicated machine, with no load
   balancer. My plan is cold standby rather than load balancing: back up the
   database regularly, and if the whole region goes down, start a server in
   another region from the latest database snapshot.
-- **What the machine size cost me.** I wanted file sharing and real-time voice
+- What the machine size cost me. I wanted file sharing and real-time voice
   chat, and to set `min_machines_running = 1` so the machine never idles and a
   connection is always ready. With this spec I had to give those up. The
   machine still stops when nobody is connected, so the first visitor waits for
