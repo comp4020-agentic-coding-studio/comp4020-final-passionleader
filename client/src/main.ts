@@ -1339,7 +1339,12 @@ const voice = mountVoice({
   isMuted: (name) => muteDialog.isMuted(name),
   say: (msg) => toast(msg),
   talking(names) {
-    for (const v of others.values()) v.group.userData.talking = names.has(v.name);
+    // A mic beside the name tag of whoever is speaking now (11/8), so you can tell who it is.
+    for (const v of others.values()) {
+      const on = names.has(v.name);
+      v.group.userData.talking = on;
+      v.label.classList.toggle("talking", on);
+    }
   },
 });
 

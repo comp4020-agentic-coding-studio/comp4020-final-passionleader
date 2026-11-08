@@ -139,7 +139,9 @@ app.get("/credits/", (c) => {
   if (!file) return c.text("No credits file.", 404);
   const about = ["client/dist/assets/ABOUT.md", "client/public/assets/ABOUT.md"].find((f) => existsSync(f));
   const top = about ? marked.parse(readFileSync(about, "utf8"), { async: false }) : "";
-  const body = top + marked.parse(readFileSync(file, "utf8"), { async: false });
+  // It opens in the in-app window, where outside sites would load blank (most
+  // refuse to be framed): every outside link opens a new tab instead.
+  const body = (top + marked.parse(readFileSync(file, "utf8"), { async: false })).replaceAll('<a href="http', '<a target="_blank" rel="noopener" href="http');
   return c.html(`<!doctype html>
 <html lang="en"><head><meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
