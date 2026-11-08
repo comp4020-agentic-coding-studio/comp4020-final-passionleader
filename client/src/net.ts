@@ -156,7 +156,7 @@ export interface Net {
   /** The room's shared notes, as we now have them. */
   pad(text: string): void;
   /** Starts (or resumes), pauses or resets the room's shared timer. */
-  timer(op: "start" | "pause" | "reset"): boolean;
+  timer(op: "start" | "pause" | "reset" | "more" | "less"): boolean;
   /** Staff: opens or closes office hours (optionally naming a counselling room, 1 to 6); the server checks. */
   office(on: boolean, room?: number | null): void;
   /** A student knocks on a staff member's open office hours. */

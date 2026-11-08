@@ -259,7 +259,11 @@ when a flow changes.
   when first asked, given only to people inside, forgotten when it empties
   (the drawing goes through Excalidraw's own encrypted relay, never ours).
   While a room's window is open, notices (a saved chat, the mic) show in a
-  card over it.
+  card over it. A room has one Focus timer, shared by everyone inside (25
+  minutes of work, then 5 of break; anyone inside starts, pauses, resets or
+  moves it by five minutes, within a minute and an hour, once a second each;
+  in server memory with the room, gone when it empties). The menu runs: chat,
+  shared notes, mic, whiteboard, share screen, the video, then the rest.
 - A room's shared viewing screen (room menu, "Show a video to the room",
   `server/video.ts`): a member pastes an https YouTube or Vimeo link; the
   server accepts only those sites' own addresses, keeps just the provider and
@@ -268,7 +272,9 @@ when a flow changes.
   person, and the room is told where the video is now (never a clock). Only
   people inside get it; it lives in the room's memory and goes when the room
   empties. The players are the sites' own IFrame APIs, so watching reaches
-  YouTube or Vimeo (the room's other things never do).
+  YouTube or Vimeo (the room's other things never do). "Open in a new
+  window" opens the same video on its own site from where the room is, for
+  that person alone and not kept in step.
 - Voice (through the author's LiveKit server on a t4g.small EC2; never recorded, never
   through this app): the server gives a ticket (a LiveKit token signed with
   the Fly secret, two minutes, so it is only good for joining now) only for the voice of where you are now: a

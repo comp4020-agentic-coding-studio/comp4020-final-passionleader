@@ -274,6 +274,24 @@ describe("room timer", () => {
     expect(left).toBeGreaterThan(24 * 60_000);
   });
 
+  it("moves by five minutes either way, within a minute and an hour", async () => {
+    const a = await inRoom("team-comp8020-3");
+    const b = await inRoom("team-comp8020-3");
+    // No timer yet: -5 does nothing, +5 sets a paused 30-minute one.
+    ask(a.s, "less");
+    expect(await b.s.seesNew(timerMsg, 400)).toBe(false);
+    await new Promise((r) => setTimeout(r, 1100));
+    ask(a.s, "more");
+    const set = await b.s.next(timerMsg);
+    expect(set.timer).toMatchObject({ phase: "work", running: false, left: 30 * 60_000, by: a.name });
+    ask(b.s, "start");
+    await a.s.next((m) => timerMsg(m) && (m.timer as { running: boolean } | null)?.running === true);
+    await new Promise((r) => setTimeout(r, 1100));
+    ask(b.s, "less");
+    const less = await a.s.next((m) => timerMsg(m) && (m.timer as { left: number } | null)!.left < 26 * 60_000);
+    expect((less.timer as { left: number }).left).toBeGreaterThan(24 * 60_000);
+  });
+
   it("goes when the room empties", async () => {
     const a = await inRoom("team-comp8020-1");
     ask(a.s, "start");

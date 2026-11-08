@@ -16,3 +16,6 @@
 .rs-status { margin: 0; font-size: 0.85rem; opacity: 0.85; min-height: 1.2em; }
 .rs-clear { align-self: flex-start; }
 @media (min-width: 900px) { #room-ui:has(.room-screen:not([hidden])) { width: min(900px, calc(100vw - 24px)); } }
+/* "Stop the video for everyone" and "Open in a new window" side by side, wrapping on a phone. */
+.rs-buttons { display: flex; flex-wrap: wrap; gap: 8px; }
+.rs-buttons .rs-clear { align-self: auto; }

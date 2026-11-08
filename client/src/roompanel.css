@@ -485,47 +485,7 @@
 }
 @media (prefers-reduced-motion: reduce) { .room-chip.is-talking::after { animation: none; } }
 
-/* The focus timer on the menu (RICE v3, 15): yours alone, on this screen. At 390 px the time takes the
-   first row and the buttons wrap under it, each still 44 px tall. */
-.room-focus {
-  margin: 0 14px 8px;
-  padding: 10px 12px;
-  border-radius: 10px;
-  background: var(--card, #f5efdf);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.12);
-}
-
-.room-focus h3 {
-  margin: 0 0 6px;
-  font-size: 0.95rem;
-}
-
-.room-focus-row {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px;
-}
-
-.room-focus-time {
-  flex: 1 1 100%;
-  font-size: 1.6rem;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-  letter-spacing: 0.02em;
-}
-
-.room-focus-row button {
-  flex: 1 1 0;
-  min-width: 96px;
-}
-
-.room-reopen-timer {
-  font-variant-numeric: tabular-nums;
-  font-weight: 700;
-  opacity: 0.92;
-}
-/* The shared pomodoro (RICE v3 #19): between the member list and the menu's buttons. */
+/* The room's Focus timer (RICE v3 #19): between the member list and the menu's buttons. */
 .room-timer {
   flex: none;
   display: flex;
@@ -541,3 +501,9 @@
 .room-timer-clock { flex: 1; font-size: 1.4rem; font-variant-numeric: tabular-nums; }
 .room-timer.is-running .room-timer-clock { color: #2f7d58; }
 .room-timer.is-break .room-timer-clock { color: #8a5a00; }
+/* The Focus timer: phase and time on one row, then −5, +5, Start and Reset (44 px each, wrapping at 390 px). */
+.room-timer { flex-direction: column; align-items: stretch; }
+.room-timer-head { display: flex; align-items: baseline; gap: 8px; }
+.room-timer-buttons { display: flex; flex-wrap: wrap; gap: 6px; }
+.room-timer-buttons button { flex: 1 1 0; min-width: 56px; min-height: 44px; }
+.room-timer-step { font-variant-numeric: tabular-nums; }

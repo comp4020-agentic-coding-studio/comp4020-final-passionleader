@@ -137,6 +137,10 @@ const WORK_MS = 25 * 60_000;
 const BREAK_MS = 5 * 60_000;
 // Anyone inside may change it, but one change a second each, so it can't be hammered.
 const TIMER_GAP_MS = 1000;
+// The +5 and -5 buttons: a phase never runs past an hour or under a minute.
+const STEP_MS = 5 * 60_000;
+const MAX_MS = 60 * 60_000;
+const MIN_MS = 60_000;
 const lastTimer = new Map<string, number>(); // by name, so a second tab doesn't double it
 const PAD_MAX = 5000;
 const rooms = new Map<SpaceId, RoomState>();
@@ -190,14 +194,14 @@ function timerEnded(space: SpaceId): void {
 
 /**
  * The shared timer (RICE v3 #19): "start" starts a 25-minute round, or resumes
- * a paused one; "pause" and "reset" stop it. Anyone inside may, never someone
+ * a paused one; "pause" and "reset" stop it; "more" and "less" move it by five minutes. Anyone inside may, never someone
  * outside (they have no room state), at most once a second each.
  */
 function roomTimerAction(space: SpaceId, player: Player, msg: Record<string, unknown>): void {
   const state = rooms.get(space);
   if (!state) return;
   const op = msg.op;
-  if (op !== "start" && op !== "pause" && op !== "reset") return;
+  if (op !== "start" && op !== "pause" && op !== "reset" && op !== "more" && op !== "less") return;
   const now = Date.now();
   const key = player.name.toLowerCase();
   if (now - (lastTimer.get(key) ?? 0) < TIMER_GAP_MS) return;
@@ -209,6 +213,21 @@ function roomTimerAction(space: SpaceId, player: Player, msg: Record<string, unk
     else state.timer = { phase: "work", running: true, endsAt: now + WORK_MS, left: WORK_MS, by: player.name };
     armTimer(space, state);
     roomSay(space, { name: player.name, text: `${player.name} ${t ? "resumed" : "started"} the timer`, system: true });
+  } else if (op === "more" || op === "less") {
+    // Plus or minus five minutes on the phase now going (the user, 11/9): set or not, running or paused.
+    // Never past an hour, never under a minute; with no timer yet, "+5" sets a paused 30-minute one.
+    const step = op === "more" ? STEP_MS : -STEP_MS;
+    if (!t && op === "less") return;
+    const cur = t ?? (state.timer = { phase: "work", running: false, endsAt: 0, left: WORK_MS, by: player.name });
+    const left = cur.running ? cur.endsAt - now : cur.left;
+    const next = Math.min(MAX_MS, Math.max(MIN_MS, left + step));
+    if (t && Math.abs(next - left) < 1000) return; // already at the hour or the minute
+    cur.by = player.name;
+    if (cur.running) {
+      cur.endsAt = now + next;
+      armTimer(space, state);
+    } else cur.left = next;
+    roomSay(space, { name: player.name, text: `${player.name} ${op === "more" ? "added" : "took off"} 5 minutes`, system: true });
   } else if (op === "pause") {
     if (!t?.running) return;
     clearTimeout(t.ends);

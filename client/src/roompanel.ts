@@ -45,13 +45,6 @@ type View = "menu" | "chat" | "notes" | "screen" | "closed";
 // The same rule as everywhere else for a user name.
 const NAME_RULE = /^[A-Za-z0-9_]{1,8}$/;
 const MAX_LINES = 200;
-// The personal focus timer on the menu (RICE v3, 15): the classic 25 minutes of focus, then 5 of rest.
-const FOCUS_MS = 25 * 60_000;
-const BREAK_MS = 5 * 60_000;
-const mmss = (ms: number): string => {
-  const s = Math.max(0, Math.ceil(ms / 1000));
-  return `${String(Math.floor(s / 60)).padStart(2, "0")}:${String(s % 60).padStart(2, "0")}`;
-};
 // A phone (the app's breakpoint, as in main.ts and style.css).
 const phone = (): boolean => window.matchMedia("(pointer: coarse), (max-width: 700px)").matches;
 
@@ -80,7 +73,7 @@ export function mountRoomPanel(opts: {
   /** Opens the room's shared whiteboard (plan 85). */
   onWhiteboard(): void;
   /** Starts (or resumes), pauses or resets the room's shared 25/5 timer (RICE v3 #19); the server checks and tells everyone. */
-  onTimer(op: "start" | "pause" | "reset"): void;
+  onTimer(op: "start" | "pause" | "reset" | "more" | "less"): void;
   /** Starts or stops sharing your screen with the room (through its voice connection). */
   onShareScreen(): void;
   /** Turns the room's voice on or off for you (plan 86). */
@@ -171,11 +164,12 @@ export function mountRoomPanel(opts: {
   inviteError.setAttribute("role", "alert");
   invite.append(inviteRow, invitedNote, inviteError);
 
-  // The shared pomodoro (RICE v3 #19): 25 minutes of work, 5 of break, the same for everyone inside.
+  // The room's one timer, the Focus timer (RICE v3 #19; the personal one went, the user's call 11/9):
+  // 25 minutes of work, 5 of break, the same for everyone inside, and anyone may add or take 5 minutes.
   const timerBox = document.createElement("div");
   timerBox.className = "room-timer";
   timerBox.setAttribute("role", "group");
-  timerBox.setAttribute("aria-label", "Shared timer");
+  timerBox.setAttribute("aria-label", "Focus timer (everyone in the room)");
   const timerPhase = document.createElement("span");
   timerPhase.className = "room-timer-phase";
   const timerClock = document.createElement("strong");
@@ -187,7 +181,23 @@ export function mountRoomPanel(opts: {
   timerReset.type = "button";
   timerReset.className = "room-secondary";
   timerReset.textContent = "Reset";
-  timerBox.append(timerPhase, timerClock, timerStart, timerReset);
+  const timerLess = document.createElement("button");
+  timerLess.type = "button";
+  timerLess.className = "room-secondary room-timer-step";
+  timerLess.textContent = "−5";
+  timerLess.setAttribute("aria-label", "Take 5 minutes off the timer");
+  const timerMore = document.createElement("button");
+  timerMore.type = "button";
+  timerMore.className = "room-secondary room-timer-step";
+  timerMore.textContent = "+5";
+  timerMore.setAttribute("aria-label", "Add 5 minutes to the timer");
+  const timerHead = document.createElement("div");
+  timerHead.className = "room-timer-head";
+  timerHead.append(timerPhase, timerClock);
+  const timerButtons = document.createElement("div");
+  timerButtons.className = "room-timer-buttons";
+  timerButtons.append(timerLess, timerMore, timerStart, timerReset);
+  timerBox.append(timerHead, timerButtons);
 
   const items = document.createElement("div");
   items.className = "room-items";
@@ -229,10 +239,11 @@ export function mountRoomPanel(opts: {
   addItem("📝", "Shared notes", "One Markdown page for the room", () =>
     show("notes"),
   );
-  addItem("📺", "Show a video to the room", "Paste a YouTube or Vimeo link; everyone here watches together", () => show("screen"));
+  // The order the user set (11/9): chat, notes, mic, whiteboard, screen share, video, then the rest.
   const voiceItem = addItem("🎙️", "Mic: off", "You hear everyone here; turn your mic on to be heard", () => opts.onVoice());
-  const shareItem = addItem("🖥️", "Share screen", "Show your screen to everyone here (they watch in the Shared screen view)", () => opts.onShareScreen());
   addItem("🖍️", "Whiteboard", "Draw together in a new tab (Excalidraw; everyone here gets the same board)", () => opts.onWhiteboard());
+  const shareItem = addItem("🖥️", "Share screen", "Show your screen to everyone here (they watch in the Shared screen view)", () => opts.onShareScreen());
+  addItem("📺", "Show a video to the room", "Paste a YouTube or Vimeo link; everyone here watches together", () => show("screen"));
   addItem(
     "💾",
     "Save chat",
@@ -244,37 +255,6 @@ export function mountRoomPanel(opts: {
   );
   addItem("📂", "My saved chats and notes", "Read what you've saved (yours only, 30 days)", () => opts.onSaved());
   addItem("❓", "Help", "How rooms work, in the Campus Guide", () => opts.onHelp());
-  // --- the focus timer ---------------------------------------------------------
-  // Yours alone: no server, no one else sees it. It counts by the clock (an end time, not a tick
-  // count), so a hidden tab or a closed menu never makes it drift; it lives here, not in the menu's
-  // view, so it keeps going when the menu closes, and it ends with the room (hide) or a different one (open).
-  const focus = document.createElement("section");
-  focus.className = "room-focus";
-  focus.setAttribute("aria-labelledby", "room-focus-title");
-  const focusTitle = document.createElement("h3");
-  focusTitle.id = "room-focus-title";
-  focusTitle.textContent = "⏱️ My timer (only you)";
-  const focusRow = document.createElement("div");
-  focusRow.className = "room-focus-row";
-  const focusTime = document.createElement("div");
-  focusTime.className = "room-focus-time";
-  // A timer role never announces each second; what a screen reader hears is the phase's end (focusNote).
-  focusTime.setAttribute("role", "timer");
-  focusTime.setAttribute("aria-live", "off");
-  const focusStart = document.createElement("button");
-  focusStart.type = "button";
-  focusStart.className = "room-primary";
-  const focusReset = document.createElement("button");
-  focusReset.type = "button";
-  focusReset.className = "room-secondary";
-  focusReset.textContent = "Reset";
-  focusReset.setAttribute("aria-label", "Reset the focus timer");
-  focusRow.append(focusTime, focusStart, focusReset);
-  const focusNote = document.createElement("p");
-  focusNote.className = "room-note";
-  focusNote.setAttribute("role", "status");
-  focus.append(focusTitle, focusRow, focusNote);
-
   // Last on the menu: leaving (the user's call, 10/30), the same as walking
   // out by the door, so the last one out is warned first.
   const leaveBtn = document.createElement("button");
@@ -282,7 +262,7 @@ export function mountRoomPanel(opts: {
   leaveBtn.className = "room-leave-btn";
   leaveBtn.textContent = "🚪 Leave the room";
   leaveBtn.addEventListener("click", () => askLeave());
-  menu.append(menuHead, members, invite, timerBox, items, focus, leaveBtn);
+  menu.append(menuHead, members, invite, timerBox, items, leaveBtn);
 
   // --- the chat view ------------------------------------------------------------
   const chatView = document.createElement("div");
@@ -359,11 +339,7 @@ export function mountRoomPanel(opts: {
   const reopenBadge = document.createElement("span");
   reopenBadge.className = "room-badge";
   reopenBadge.hidden = true;
-  // The timer's time, so a phone with the menu closed still sees it.
-  const reopenTimer = document.createElement("span");
-  reopenTimer.className = "room-reopen-timer";
-  reopenTimer.hidden = true;
-  reopen.append(reopenLabel, reopenTimer, reopenBadge);
+  reopen.append(reopenLabel, reopenBadge);
   reopen.addEventListener("click", () => show("menu"));
 
   // Shown when the last person in the room goes to leave: a popup of its own.
@@ -420,7 +396,7 @@ export function mountRoomPanel(opts: {
   function renderTimer(): void {
     const running = !!timer?.running;
     // Named apart from the personal timer below (helper QA, 11/9: both read "Focus 24:5x").
-    timerPhase.textContent = !timer ? "Room timer (everyone)" : timer.phase === "work" ? "Room focus" : "Room break";
+    timerPhase.textContent = !timer ? "Focus timer (everyone)" : timer.phase === "work" ? "Focus timer" : "Break";
     timerClock.textContent = timer ? mmss(timeLeft()) : "25:00";
     timerStart.textContent = running ? "Pause" : timer ? "Resume" : "Start 25/5";
     timerReset.hidden = !timer;
@@ -430,6 +406,10 @@ export function mountRoomPanel(opts: {
     reopenLabel.textContent = timer ? `Open Room UI · ${timer.phase === "work" ? "⏱" : "☕"} ${mmss(timeLeft())}` : "Open Room UI";
   }
   function setTimer(next: RoomTimer | null): void {
+    // A phase ending on its own (work into break, a break into nothing) sounds softly, as the
+    // personal timer did; a button press (someone's "by" changes, or a pause) doesn't.
+    if (timer?.running && timer.by === next?.by && timer.phase === "work" && next.phase === "break") ding();
+    else if (timer?.running && timer.phase === "break" && !next && timeLeft() < 3000) sfx("message");
     timer = next;
     timerAt = performance.now();
     window.clearInterval(timerTick);
@@ -439,6 +419,8 @@ export function mountRoomPanel(opts: {
   }
   timerStart.addEventListener("click", () => opts.onTimer(timer?.running ? "pause" : "start"));
   timerReset.addEventListener("click", () => opts.onTimer("reset"));
+  timerLess.addEventListener("click", () => opts.onTimer("less"));
+  timerMore.addEventListener("click", () => opts.onTimer("more"));
 
   function syncBadges(): void {
     for (const b of [badge, reopenBadge]) {
@@ -454,74 +436,6 @@ export function mountRoomPanel(opts: {
       unread ? `Open the room menu, ${unread} unread` : "Open the room menu",
     );
   }
-
-  // The timer: which phase, how long is left (running: until `endsAt`; paused or waiting: `left`).
-  let phase: "focus" | "break" = "focus";
-  let endsAt = 0;
-  let left = FOCUS_MS;
-  let running = false;
-  let tick = 0;
-
-  function renderFocus(): void {
-    const remaining = running ? endsAt - Date.now() : left;
-    const text = mmss(remaining);
-    focusTime.textContent = `${phase === "focus" ? "Focus" : "Break"} ${text}`;
-    focusTime.setAttribute("aria-label", `${phase === "focus" ? "Focus" : "Break"}, ${text} left${running ? "" : ", not running"}`);
-    focusStart.textContent = running ? "Pause" : left < (phase === "focus" ? FOCUS_MS : BREAK_MS) ? "Resume" : "Start";
-    // Untouched, the timer stays off the Room button; started, it follows you around.
-    const touched = running || left < FOCUS_MS || phase === "break";
-    reopenTimer.hidden = !touched;
-    reopenTimer.textContent = touched ? `${phase === "focus" ? "⏱" : "☕"} ${text}` : "";
-  }
-
-  function stopTick(): void {
-    window.clearInterval(tick);
-    tick = 0;
-  }
-
-  function startTimer(): void {
-    running = true;
-    endsAt = Date.now() + left;
-    stopTick();
-    tick = window.setInterval(onTick, 500);
-    renderFocus();
-  }
-
-  function pauseTimer(): void {
-    if (running) left = Math.max(0, endsAt - Date.now());
-    running = false;
-    stopTick();
-    renderFocus();
-  }
-
-  function resetTimer(): void {
-    running = false;
-    stopTick();
-    phase = "focus";
-    left = FOCUS_MS;
-    focusNote.textContent = "";
-    renderFocus();
-  }
-
-  function onTick(): void {
-    if (endsAt - Date.now() > 0) return renderFocus();
-    // The phase is over: a soft sound and a notice, then the other phase waits, ready for Start.
-    running = false;
-    stopTick();
-    const wasFocus = phase === "focus";
-    phase = wasFocus ? "break" : "focus";
-    left = wasFocus ? BREAK_MS : FOCUS_MS;
-    const msg = wasFocus ? "Focus time is over. Take a 5-minute break: press Start." : "Break is over. Ready for another 25 minutes of focus?";
-    focusNote.textContent = msg;
-    if (wasFocus) ding();
-    else sfx("message");
-    opts.onNotice(`⏱️ ${msg}`);
-    renderFocus();
-  }
-
-  focusStart.addEventListener("click", () => (running ? pauseTimer() : startTimer()));
-  focusReset.addEventListener("click", resetTimer);
-  renderFocus();
 
   function show(next: View): void {
     if (!isOpen) return;
@@ -762,8 +676,6 @@ export function mountRoomPanel(opts: {
     inviteError.textContent = "";
     invitedNote.textContent = "";
     say(null);
-    // The timer is for this stay: leaving the room ends it.
-    resetTimer();
     unread = 0;
     syncBadges();
     (document.activeElement as HTMLElement | null)?.blur();
@@ -772,8 +684,6 @@ export function mountRoomPanel(opts: {
 
   return {
     open(info, history, t = null) {
-      // Straight into another room (not the same one again after a reconnect): its timer starts fresh.
-      if (isOpen && title.textContent !== info.title) resetTimer();
       renderInfo(info);
       setTimer(t);
       log.replaceChildren();

@@ -159,7 +159,17 @@ export function mountRoomScreen(opts: {
   clear.type = "button";
   clear.className = "room-secondary rs-clear";
   clear.textContent = "Stop the video for everyone";
-  vid.append(form, stage, status, clear);
+  // Beside it: the same video on its own site in a new window, from where the room is now (the
+  // user, 11/9). That window is yours alone and isn't kept in step with the room.
+  const popOut = document.createElement("button");
+  popOut.type = "button";
+  popOut.className = "room-secondary rs-clear";
+  popOut.textContent = "Open in a new window";
+  popOut.title = "Opens the video on YouTube or Vimeo; that window plays on its own, not in step with the room";
+  const videoButtons = document.createElement("div");
+  videoButtons.className = "rs-buttons";
+  videoButtons.append(clear, popOut);
+  vid.append(form, stage, status, videoButtons);
   root.append(shares, vid);
 
   let open = false;
@@ -325,9 +335,23 @@ export function mountRoomScreen(opts: {
     input.value = "";
   });
   clear.addEventListener("click", () => send("clear"));
+  popOut.addEventListener("click", () => {
+    const v = state;
+    if (!v) return;
+    const at = Math.max(0, Math.floor(expected()));
+    // Only checked ids reach the address, as with the player.
+    let url = "";
+    if (v.provider === "youtube" && YT_ID.test(v.id)) url = `https://www.youtube.com/watch?v=${v.id}&t=${at}s`;
+    else if (v.provider === "vimeo" && VIMEO_ID.test(v.id) && (!v.hash || VIMEO_KEY.test(v.hash))) url = `https://vimeo.com/${v.id}${v.hash ? `/${v.hash}` : ""}#t=${at}s`;
+    if (!url) return say("That video can't be opened.");
+    // The local player pauses so the two don't play over each other.
+    adapter?.pause();
+    window.open(url, "_blank", "noopener,popup,width=960,height=600");
+  });
 
   function render(): void {
     clear.hidden = !state;
+    popOut.hidden = !state;
     if (!state) {
       destroy();
       say("Nothing is on yet. Paste a YouTube or Vimeo link, and everyone in the room sees it, playing in step.");
@@ -345,6 +369,7 @@ export function mountRoomScreen(opts: {
       if (!v) return render();
       const same = before && before.provider === v.provider && before.id === v.id && before.hash === v.hash;
       clear.hidden = false;
+      popOut.hidden = false;
       if (open && same && adapter) sync();
       else render();
     },
@@ -381,6 +406,7 @@ export function mountRoomScreen(opts: {
       mine.hidden = true;
       shares.hidden = true;
       clear.hidden = true;
+      popOut.hidden = true;
       input.value = "";
       say("");
       open = false;
